@@ -35,14 +35,14 @@ export default function App() {
         }}
       >
         {/* The Welcome screen is the entry point of the app. */}
-        <Stack.Screen
+        {/* <Stack.Screen
           name="Welcome"
           component={WelcomeScreen}
           // The Welcome screen does not need a header.
-        />
+        /> */}
 
         {/* The Home screen is the main hub after the welcome page. */}
-        <Stack.Screen
+        {/* <Stack.Screen
           name="Home"
           component={HomeScreen}
           // We override the global settings to show a custom-styled header for the Home screen.
@@ -57,7 +57,7 @@ export default function App() {
               fontWeight: 'bold',
             },
           }}
-        />
+        /> */}
 
         {/* The Plant Library screen displays a list of plants. */}
         <Stack.Screen
