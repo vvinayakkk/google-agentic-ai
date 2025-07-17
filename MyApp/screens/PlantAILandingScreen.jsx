@@ -1,10 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
-// --- Main Component ---
 export default function PlantAILandingScreen({ navigation }) {
-
-  // Helper function to navigate to the chat screen with a predefined question
   const goToChat = (question) => {
     navigation.navigate('PlantAssistant', { initialQuery: question });
   };
@@ -12,7 +9,7 @@ export default function PlantAILandingScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: 'https://i.imgur.com/25sL5i2.png' }} // Using a placeholder image for the plant
+        source={{ uri: 'https://i.imgur.com/25sL5i2.png' }}
         style={styles.plantImage}
       />
       <Text style={styles.mainTitle}>Plant AI Assistant</Text>
@@ -48,7 +45,6 @@ export default function PlantAILandingScreen({ navigation }) {
   );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,

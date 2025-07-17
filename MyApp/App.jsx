@@ -15,6 +15,7 @@ import PlantAssistantScreen from './screens/PlantAssistantScreen';
 // Import your custom header component
 import CustomHeader from './components/CustomHeader';
 import DiseaseHistory from './screens/DiseaseHistory';
+import ScanPlantScreen from './screens/ScanPlantScreen'; 
 // Initialize the stack navigator
 const Stack = createStackNavigator();
 
@@ -28,7 +29,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="DiseaseHistory" component={DiseaseHistory} />
+        <Stack.Screen name="DiseaseHistory" component={ScanPlantScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
