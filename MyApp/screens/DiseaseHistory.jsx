@@ -13,7 +13,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import Svg, { G, Circle } from 'react-native-svg';
 
-// --- Theme & Design System (as requested, in one file) ---
+
 const theme = {
   colors: {
     primaryGreen: '#4CAF50',

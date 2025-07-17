@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, SafeAreaView, Image, TouchableOpacity, ScrollView, UIManager, LayoutAnimation, Animated, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // --- Theme ---
 const theme = {
@@ -26,18 +31,18 @@ const theme = {
     },
 };
 
-// --- Mock Data (with updated images) ---
+// --- Mock Data ---
 const diseaseDetails = {
     name: 'Late Blight',
     diseaseName: 'Potato__late_blight',
     scientificName: 'Phytophthora infestans',
     alsoKnownAs: 'Late Blight',
     description: 'Late blight is one of the most devastating diseases of potatoes, caused by the oomycete pathogen Phytophthora infestans. It affects both the foliage and tubers of potato plants, leading to significant yield loss and poor tuber quality. Under favorable wet and cool conditions, late blight can spread rapidly through a crop, causing complete defoliation within a few weeks.',
-    mainImage: 'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg', // Plant leaf
+    mainImage: 'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg',
     images: [
-        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg', // Close-up of plant leaves
-        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg',  // Another angle of leaves
-        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg', // Wider shot of a plant
+        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg',
+        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg',
+        'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg',
     ],
     symptoms: [
         { title: 'Leaf Lesions', content: 'Initial symptoms appear as small, water-soaked, dark green to purplish-black lesions, often with a pale green or yellow halo.' },
@@ -45,49 +50,97 @@ const diseaseDetails = {
         { title: 'Stem Lesions', content: 'Dark brown to black lesions may form on stems, typically starting at the nodes. In moist conditions, a white, downy mildew may be visible.' },
     ],
     solutions: [
-        { title: 'Fungicide Application', content: 'Timely application of fungicides such as chlorothalonil, metalaxyl, or mancozeb can help contain late blight outbreaks. Fungicides are most effective when applied preventatively or at the first signs of infection in the crop. During prolonged wet weather, repeated applications are recommended according to manufacturer instructions or local guidelines. Selecting fungicides with systemic properties can offer protection to both existing foliage and new growth during active outbreaks.' },
+        { title: 'Fungicide Application', content: 'Timely application of fungicides such as chlorothalonil, metalaxyl, or mancozeb can help contain late blight outbreaks. Fungicides are most effective when applied preventatively or at the first signs of infection in the crop. During prolonged wet weather, repeated applications are recommended according to manufacturer instructions or local guidelines.' },
         { title: 'Sanitation', content: 'Removing infected plants and plant debris from the field reduces the source of inoculum. Destroying cull piles and volunteer potato plants is crucial.' },
         { title: 'Resistant Varieties', content: 'Planting potato varieties with genetic resistance to late blight is one of the most effective long-term strategies for managing the disease.' },
     ],
 };
 
+
 // --- Reusable Components ---
 
-const AccordionItem = ({ icon, title, content, index }) => {
+// Custom hook for fade-in animations
+const useFadeInAnimation = (delay = 0) => {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.timing(anim, {
+            toValue: 1,
+            duration: 500,
+            delay,
+            useNativeDriver: true,
+        }).start();
+    }, [anim]);
+
+    return {
+        opacity: anim,
+        transform: [
+            {
+                translateY: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                }),
+            },
+        ],
+    };
+};
+
+const AnimatedView = ({ children, delay }) => {
+    const animation = useFadeInAnimation(delay);
+    return <Animated.View style={animation}>{children}</Animated.View>;
+};
+
+const AccordionItem = ({ title, content, index }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const animation = useFadeInAnimation(index * 100); // Staggered animation
+
+    const toggleExpand = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+        setIsExpanded(!isExpanded);
+    };
+
     return (
-        <View style={styles.accordionContainer}>
-            <TouchableOpacity style={styles.accordionHeader} onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.8}>
-                <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <View style={styles.accordionIndex}>
-                        <Text style={styles.accordionIndexText}>{index}</Text>
+        <Animated.View style={[styles.accordionContainer, animation]}>
+            <TouchableOpacity style={styles.accordionHeader} onPress={toggleExpand} activeOpacity={0.8}>
+                <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+                    <View style={[styles.accordionIndex, {backgroundColor: isExpanded ? theme.colors.accent : theme.colors.lightAccent}]}>
+                        <Text style={[styles.accordionIndexText, {color: isExpanded ? theme.colors.white : theme.colors.accent}]}>{index}</Text>
                     </View>
-                    <Text style={styles.accordionTitle}>{title}</Text>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.accordionTitle} numberOfLines={1}>{title}</Text>
+                        {!isExpanded && (
+                             <Text style={styles.accordionSubtitle} numberOfLines={1}>{content}</Text>
+                        )}
+                    </View>
                 </View>
                 <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={22} color={theme.colors.secondaryText} />
             </TouchableOpacity>
             {isExpanded && (
                 <View style={styles.accordionContent}>
-                    <Text style={theme.typography.body}>{content}</Text>
+                    <View style={styles.detailsBox}>
+                        <Text style={styles.detailsTitle}>Details</Text>
+                        <Text style={theme.typography.body}>{content}</Text>
+                    </View>
                 </View>
             )}
-        </View>
+        </Animated.View>
     );
 };
 
 const Section = ({ icon, title, subtitle, children }) => (
-    <View style={styles.sectionContainer}>
-        <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-                <Feather name={icon} size={24} color={theme.colors.accent} />
+    <AnimatedView>
+        <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                    <Feather name={icon} size={24} color={theme.colors.accent} />
+                </View>
+                <View>
+                    <Text style={styles.sectionTitle}>{title}</Text>
+                    <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+                </View>
             </View>
-            <View>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-            </View>
+            {children}
         </View>
-        {children}
-    </View>
+    </AnimatedView>
 );
 
 
@@ -98,57 +151,63 @@ export default function DiseaseDetailScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header Image */}
-                <View style={styles.headerImageContainer}>
-                    <Image source={{ uri: diseaseDetails.mainImage }} style={styles.headerImage} />
-                    <TouchableOpacity style={styles.backButton}>
-                        <Feather name="chevron-left" size={28} color={theme.colors.primaryText} />
-                    </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false} style={{backgroundColor: theme.colors.white}}>
+                 <View style={{backgroundColor: theme.colors.background}}>
+                    <AnimatedView>
+                        <View style={styles.headerImageContainer}>
+                            <Image source={{ uri: diseaseDetails.mainImage }} style={styles.headerImage} />
+                            <TouchableOpacity style={styles.backButton}>
+                                <Feather name="chevron-left" size={28} color={theme.colors.primaryText} />
+                            </TouchableOpacity>
+                        </View>
+                    </AnimatedView>
+                    
+                    <View style={styles.contentContainer}>
+                        <AnimatedView>
+                            <Text style={styles.title}>{diseaseDetails.name}</Text>
+                            <Text style={styles.detailText}>
+                                <Text style={{fontWeight: 'bold'}}>Disease Name:</Text> {diseaseDetails.diseaseName}
+                            </Text>
+                            <Text style={styles.detailText}>
+                                <Text style={{fontWeight: 'bold'}}>Scientific Name:</Text> {diseaseDetails.scientificName}
+                            </Text>
+                            <Text style={styles.detailText}>
+                                <Text style={{fontWeight: 'bold'}}>Also known as:</Text> {diseaseDetails.alsoKnownAs}
+                            </Text>
+                        </AnimatedView>
+
+                        <AnimatedView delay={100}>
+                            <View style={styles.descriptionContainer}>
+                                <Text style={styles.sectionTitle}>Description</Text>
+                                <Text style={theme.typography.body} numberOfLines={isReadMore ? undefined : 4}>
+                                    {diseaseDetails.description}
+                                </Text>
+                                <TouchableOpacity onPress={() => setIsReadMore(!isReadMore)}>
+                                    <Text style={styles.readMoreText}>{isReadMore ? 'Read less' : 'Read more'}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </AnimatedView>
+                        
+                        <AnimatedView delay={200}>
+                            <View style={styles.descriptionContainer}>
+                                <Text style={styles.sectionTitle}>Disease Images</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    {diseaseDetails.images.map((img, index) => (
+                                        <Image key={index} source={{ uri: img }} style={styles.galleryImage} />
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </AnimatedView>
+                    </View>
                 </View>
-                
-                <View style={styles.contentContainer}>
-                    {/* Disease Info */}
-                    <Text style={styles.title}>{diseaseDetails.name}</Text>
-                    <Text style={styles.detailText}>
-                        <Text style={{fontWeight: 'bold'}}>Disease Name:</Text> {diseaseDetails.diseaseName}
-                    </Text>
-                    <Text style={styles.detailText}>
-                        <Text style={{fontWeight: 'bold'}}>Scientific Name:</Text> {diseaseDetails.scientificName}
-                    </Text>
-                    <Text style={styles.detailText}>
-                        <Text style={{fontWeight: 'bold'}}>Also known as:</Text> {diseaseDetails.alsoKnownAs}
-                    </Text>
 
-                    {/* Description with Read More */}
-                    <View style={styles.descriptionContainer}>
-                        <Text style={styles.sectionTitle}>Description</Text>
-                        <Text style={theme.typography.body} numberOfLines={isReadMore ? undefined : 4}>
-                            {diseaseDetails.description}
-                        </Text>
-                        <TouchableOpacity onPress={() => setIsReadMore(!isReadMore)}>
-                            <Text style={styles.readMoreText}>{isReadMore ? 'Read less' : 'Read more'}</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Image Gallery */}
-                    <View style={styles.descriptionContainer}>
-                        <Text style={styles.sectionTitle}>Disease Images</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {diseaseDetails.images.map((img, index) => (
-                                <Image key={index} source={{ uri: img }} style={styles.galleryImage} />
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* Symptoms Section */}
+                <View style={styles.bottomContent}>
                     <Section icon="activity" title="Symptoms" subtitle={`${diseaseDetails.symptoms.length} has been registered`}>
                         {diseaseDetails.symptoms.map((item, index) => (
                             <AccordionItem key={index} title={item.title} content={item.content} index={index + 1} />
                         ))}
                     </Section>
 
-                    {/* Solutions Section */}
                      <Section icon="shield" title="Solutions" subtitle={`${diseaseDetails.solutions.length} solutions found`}>
                         {diseaseDetails.solutions.map((item, index) => (
                             <AccordionItem key={index} title={item.title} content={item.content} index={index + 1} />
@@ -166,6 +225,7 @@ const styles = StyleSheet.create({
     headerImageContainer: {
         height: 250,
         position: 'relative',
+        backgroundColor: theme.colors.white,
     },
     headerImage: {
         width: '100%',
@@ -173,7 +233,7 @@ const styles = StyleSheet.create({
     },
     backButton: {
         position: 'absolute',
-        top: theme.spacing.large,
+        top: 40,
         left: theme.spacing.medium,
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
         padding: theme.spacing.small,
@@ -181,10 +241,13 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         padding: theme.spacing.medium,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        backgroundColor: theme.colors.white,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+    },
+    bottomContent: {
+        padding: theme.spacing.medium,
         backgroundColor: theme.colors.background,
-        marginTop: -20,
     },
     title: {
         ...theme.typography.h1,
@@ -225,10 +288,14 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing.medium,
     },
     sectionIcon: {
-        backgroundColor: theme.colors.lightAccent,
+        backgroundColor: theme.colors.white,
         padding: 12,
         borderRadius: 12,
         marginRight: theme.spacing.medium,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
     },
     sectionSubtitle: {
         ...theme.typography.caption,
@@ -237,8 +304,14 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.white,
         borderRadius: 12,
         marginBottom: theme.spacing.medium,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     accordionHeader: {
         flexDirection: 'row',
@@ -247,26 +320,40 @@ const styles = StyleSheet.create({
         padding: theme.spacing.medium,
     },
     accordionIndex: {
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
         borderRadius: 8,
-        backgroundColor: theme.colors.lightAccent,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: theme.spacing.medium,
     },
     accordionIndexText: {
-        color: theme.colors.accent,
         fontWeight: 'bold',
     },
     accordionTitle: {
         ...theme.typography.h2,
         fontSize: 16,
         color: theme.colors.primaryText,
-        flex: 1,
+        fontWeight: 'bold',
+    },
+    accordionSubtitle: {
+        ...theme.typography.caption,
+        color: theme.colors.secondaryText,
+        marginTop: 2,
     },
     accordionContent: {
+        paddingHorizontal: theme.spacing.medium,
+        paddingBottom: theme.spacing.medium,
+    },
+    detailsBox: {
+        backgroundColor: theme.colors.lightAccent,
+        borderRadius: 8,
         padding: theme.spacing.medium,
-        paddingTop: 0,
+    },
+    detailsTitle: {
+        ...theme.typography.body,
+        fontWeight: 'bold',
+        color: theme.colors.accent,
+        marginBottom: theme.spacing.small,
     },
 });
