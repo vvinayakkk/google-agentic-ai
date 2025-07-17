@@ -21,7 +21,8 @@ const theme = {
     primaryGreen: '#4CAF50',
     secondaryGreen: '#66BB6A',
     darkGreen: '#2E7D32',
-    lightGreen: '#A5D6A7', // A lighter green for variation
+    lightGreen: '#A5D6A7', 
+    lightGreenBg: 'rgba(165, 214, 167, 0.2)', // For card backgrounds
     skyBlue: '#2196F3',
     lightBlue: '#64B5F6',
     orange: '#FF9800',
@@ -122,34 +123,33 @@ const ListView = ({ data }) => (
   </View>
 );
 
-// --- Bar Chart with Animation ---
-const AnimatedBar = ({ value, maxValue, color }) => {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(widthAnim, {
-      toValue: (value / maxValue) * 100,
-      duration: 900,
-      useNativeDriver: false,
-    }).start();
-  }, [value, maxValue]);
-  return (
-    <Animated.View
-      style={{
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: color,
-        width: widthAnim.interpolate({
-          inputRange: [0, 100],
-          outputRange: ['0%', '100%'],
-        }),
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 2,
-      }}
-    />
-  );
+// --- [FIXED] Bar Chart View ---
+const ProgressBar = ({ value, maxValue, color }) => {
+    const widthAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.timing(widthAnim, {
+            toValue: (value / maxValue) * 100,
+            duration: 800,
+            useNativeDriver: false,
+        }).start();
+    }, [value, maxValue]);
+
+    return (
+        <View style={styles.progressBarContainer}>
+            <Animated.View
+                style={[
+                    styles.progressBarFill,
+                    {
+                        backgroundColor: color,
+                        width: widthAnim.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: ['0%', '100%'],
+                        }),
+                    },
+                ]}
+            />
+        </View>
+    );
 };
 
 const BarChartView = ({ data }) => {
@@ -160,47 +160,59 @@ const BarChartView = ({ data }) => {
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
     }, []);
 
     return (
         <View>
             <SectionHeader icon="bar-chart" title="Disease Frequency" />
             <Text style={styles.sectionSubtitle}>Visualize the most common diseases in your farm</Text>
+
+            <View style={styles.instructionCard}>
+                <Feather name="info" size={16} color={theme.colors.gray} />
+                <Text style={styles.instructionText}>Tap on a bar to see more details</Text>
+            </View>
+
             <Animated.View style={[styles.summaryCardGreen, { opacity: fadeAnim }]}>
-                <View style={styles.summaryItemLeftGreen}>
-                    <Text style={styles.summaryLabelWhite}>TOTAL OCCURRENCES</Text>
-                    <Text style={styles.summaryValueLgWhite}>{totalOccurrences}</Text>
-                    <Text style={styles.summarySubValueWhite}>times</Text>
-                    <Feather name="trending-up" size={24} color={'#fff'} style={{ marginTop: 8 }} />
+                <View style={styles.summaryTopSection}>
+                    <View>
+                        <Text style={styles.summaryLabelWhite}>TOTAL OCCURRENCES</Text>
+                        <Text style={styles.summaryValueLgWhite}>{totalOccurrences} times</Text>
+                    </View>
+                    <View style={styles.summaryIconCircle}>
+                        <Feather name="trending-up" size={24} color={theme.colors.darkGreen} />
+                    </View>
                 </View>
-                <View style={styles.summaryDividerGreen} />
-                <View style={styles.summaryItemRightGreen}>
-                    <View style={styles.summaryDetailRow}>
-                        <Text style={styles.summaryLabelWhite}>MOST COMM.</Text>
+                <View style={styles.summaryBottomSection}>
+                    <View style={styles.summaryDetailCard}>
+                        <Feather name="star" size={16} color={theme.colors.white} style={{marginBottom: 4}} />
                         <Text style={styles.summaryValueWhite}>{mostCommon.name}</Text>
                         <Text style={styles.summarySubValueWhite}>{mostCommon.savedCount} times</Text>
                     </View>
-                    <View style={styles.summaryDetailRow}>
-                        <Text style={styles.summaryLabelWhite}>AVERAGE</Text>
+                    <View style={styles.summaryDetailCard}>
+                         <Feather name="bar-chart-2" size={16} color={theme.colors.white} style={{marginBottom: 4}} />
                         <Text style={styles.summaryValueWhite}>{average.toFixed(1)}</Text>
                         <Text style={styles.summarySubValueWhite}>per disease</Text>
                     </View>
                 </View>
             </Animated.View>
-            <View style={styles.barChartContainer}>
+
+            <View>
                 {data.map((item, index) => (
-                    <TouchableOpacity key={item.id} style={styles.barRow}>
-                        <Text style={styles.barIndex}>{index + 1}</Text>
-                        <Text style={styles.barLabel}>{item.name}</Text>
-                        <View style={styles.barWrapper}>
-                            <AnimatedBar value={item.savedCount} maxValue={maxValue} color={item.color} />
+                    <TouchableOpacity key={item.id} style={styles.barItemCard}>
+                        <View style={styles.barItemHeader}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                <Text style={styles.barItemIndex}>{index + 1}</Text>
+                                <Text style={styles.barItemName}>{item.name}</Text>
+                            </View>
+                            <View style={[styles.barItemCountCircle, { backgroundColor: item.color }]}>
+                                <Text style={styles.barItemCountText}>{item.savedCount}</Text>
+                            </View>
                         </View>
-                        <Text style={styles.barValue}>{item.savedCount}</Text>
+                        <ProgressBar value={item.savedCount} maxValue={maxValue} color={item.color} />
+                        <Text style={styles.barItemPercentage}>
+                            {((item.savedCount / maxValue) * 100).toFixed(1)}%
+                        </Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -208,7 +220,8 @@ const BarChartView = ({ data }) => {
     );
 };
 
-// --- [FIXED] Pie Chart View ---
+
+// --- Pie Chart View ---
 const PieChartView = ({ data }) => {
     const total = data.reduce((sum, item) => sum + item.savedCount, 0);
     const mostCommon = data.reduce((prev, current) => (prev.savedCount > current.savedCount) ? prev : current);
@@ -300,7 +313,7 @@ const PieChartView = ({ data }) => {
 
 // --- Main Screen Component ---
 const DiseaseHistoryScreen = () => {
-  const [activeView, setActiveView] = useState('Pie Chart');
+  const [activeView, setActiveView] = useState('Bar Chart');
 
   const renderContent = () => {
     switch (activeView) {
@@ -331,55 +344,131 @@ const DiseaseHistoryScreen = () => {
 
 // --- Styles using Theme ---
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: theme.colors.lightGray },
-  container: { flex: 1, paddingHorizontal: theme.layout.horizontalPadding, paddingBottom: 30 },
+  safeArea: { flex: 1, backgroundColor: theme.colors.white },
+  container: { flex: 1, backgroundColor: theme.colors.white, paddingHorizontal: theme.layout.horizontalPadding, paddingBottom: 30 },
   header: { alignItems: 'center', marginVertical: theme.spacing.medium },
   headerTitle: { ...theme.typography.headingMedium, color: theme.colors.darkGreen, fontFamily: 'serif', fontWeight: '700', letterSpacing: 0.2 },
   headerSubtitle: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginTop: 4 },
-  toggleContainer: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: theme.colors.white, borderRadius: theme.components.button.borderRadius, padding: 4, marginBottom: theme.spacing.large },
+  toggleContainer: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: theme.colors.lightGray, borderRadius: theme.components.button.borderRadius, padding: 4, marginBottom: theme.spacing.large },
   toggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing.small, borderRadius: theme.components.button.borderRadius },
   toggleButtonActive: { backgroundColor: theme.colors.primaryGreen, shadowColor: theme.colors.primaryGreen, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
   toggleButtonText: { ...theme.typography.bodyMedium, color: theme.colors.primaryGreen, marginLeft: theme.spacing.small },
   toggleButtonTextActive: { color: theme.colors.white, fontWeight: 'bold' },
   sectionHeaderContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.small, },
   sectionTitle: { ...theme.typography.headingSmall, color: theme.colors.darkGreen, marginLeft: theme.spacing.small, fontFamily: 'serif', fontWeight: '700', letterSpacing: 0.2 },
-  sectionSubtitle: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginBottom: theme.spacing.small, marginLeft: 32 },
+  sectionSubtitle: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginBottom: theme.spacing.medium, marginLeft: 32 },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.medium },
   recordCount: { backgroundColor: theme.colors.secondaryGreen, paddingHorizontal: theme.spacing.medium, paddingVertical: 4, borderRadius: 15 },
   recordCountText: { ...theme.typography.bodySmall, color: theme.colors.white, fontWeight: 'bold' },
-  diseaseCard: { flexDirection: 'row', backgroundColor: theme.colors.white, borderRadius: theme.components.card.borderRadius, padding: theme.spacing.medium, marginBottom: theme.spacing.medium, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 },
+  diseaseCard: { flexDirection: 'row', backgroundColor: theme.colors.white, borderRadius: theme.components.card.borderRadius, padding: theme.spacing.medium, marginBottom: theme.spacing.medium, borderWidth: 1, borderColor: theme.colors.lightGray },
   diseaseImage: { width: 60, height: 60, borderRadius: theme.components.card.borderRadius },
   diseaseInfo: { flex: 1, marginLeft: theme.spacing.medium, justifyContent: 'center' },
   diseaseName: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.darkGreen },
   diseaseDescription: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginVertical: 4 },
   diseaseSavedCount: { ...theme.typography.bodySmall, color: theme.colors.primaryGreen, fontWeight: 'bold', marginTop: 4 },
   
-  // Bar Chart Styles
+  // --- [NEW] Bar Chart Styles ---
+  instructionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.lightGray,
+    borderRadius: theme.components.card.borderRadius,
+    padding: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
+  },
+  instructionText: {
+    ...theme.typography.bodyMedium,
+    color: theme.colors.gray,
+    marginLeft: theme.spacing.small,
+  },
   summaryCardGreen: {
-      flexDirection: 'row',
       backgroundColor: theme.colors.primaryGreen,
       borderRadius: theme.components.card.borderRadius,
       padding: theme.spacing.medium,
       marginBottom: theme.spacing.large,
-      alignItems: 'stretch',
-      shadowColor: theme.colors.primaryGreen, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
   },
-  summaryItemLeftGreen: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingRight: theme.spacing.medium, },
-  summaryItemRightGreen: { flex: 1.5, justifyContent: 'space-around', paddingLeft: theme.spacing.medium, },
+  summaryTopSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.medium,
+  },
+  summaryIconCircle: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.colors.lightGreenBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  summaryBottomSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+  },
+  summaryDetailCard: {
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      borderRadius: theme.components.card.borderRadius,
+      padding: theme.spacing.medium,
+      width: '48.5%',
+  },
   summaryLabelWhite: { ...theme.typography.caption, color: theme.colors.white, textTransform: 'uppercase', marginBottom: 2, opacity: 0.9 },
   summaryValueLgWhite: { ...theme.typography.headingLarge, color: theme.colors.white, lineHeight: 32 },
-  summarySubValueWhite: { ...theme.typography.bodySmall, color: theme.colors.white, opacity: 0.9 },
-  summaryDividerGreen: { width: 1, backgroundColor: theme.colors.lightGreen, opacity: 0.5 },
-  summaryDetailRow: {},
   summaryValueWhite: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.white },
-  barChartContainer: { backgroundColor: theme.colors.white, borderRadius: theme.components.card.borderRadius, padding: theme.spacing.medium, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2, },
-  barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.large, minHeight: 32 },
-  barIndex: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginRight: theme.spacing.medium, width: 20, textAlign: 'right' },
-  barLabel: { ...theme.typography.bodyLarge, color: theme.colors.darkGreen, flex: 1, fontWeight: '500' },
-  barWrapper: { height: 14, backgroundColor: theme.colors.lightGray, borderRadius: 7, flex: 2, marginHorizontal: theme.spacing.medium, borderWidth: 1, borderColor: '#E0E0E0', overflow: 'hidden', justifyContent: 'center' },
-  barValue: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.darkGreen, width: 32, textAlign: 'right' },
-
-  // --- [NEW] Pie Chart Styles ---
+  summarySubValueWhite: { ...theme.typography.bodySmall, color: theme.colors.white, opacity: 0.9, marginTop: 2 },
+  barItemCard: {
+      backgroundColor: theme.colors.white,
+      borderRadius: theme.components.card.borderRadius,
+      padding: theme.spacing.medium,
+      marginBottom: theme.spacing.medium,
+      borderWidth: 1,
+      borderColor: theme.colors.lightGray,
+  },
+  barItemHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.medium,
+  },
+  barItemIndex: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.gray,
+      marginRight: theme.spacing.medium,
+  },
+  barItemName: {
+      ...theme.typography.bodyLarge,
+      color: theme.colors.darkGreen,
+      fontWeight: '600',
+  },
+  barItemCountCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  barItemCountText: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.white,
+      fontWeight: 'bold',
+  },
+  progressBarContainer: {
+      height: 10,
+      backgroundColor: theme.colors.lightGray,
+      borderRadius: 5,
+      overflow: 'hidden',
+  },
+  progressBarFill: {
+      height: '100%',
+      borderRadius: 5,
+  },
+  barItemPercentage: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.gray,
+      textAlign: 'right',
+      marginTop: theme.spacing.small,
+  },
+  
+  // --- Pie Chart Styles ---
   pieChartDisplayCard: {
     backgroundColor: theme.colors.white,
     borderRadius: theme.components.card.borderRadius,
@@ -387,11 +476,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: theme.spacing.medium,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1, 
+    borderColor: theme.colors.lightGray,
   },
   pieChartCenter: {
     position: 'absolute',
@@ -416,7 +502,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.small,
   },
   legendPill: {
-    width: '48.5%', // Two items per row with a small gap
+    width: '48.5%',
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: theme.components.card.borderRadius,
@@ -424,14 +510,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
   },
   legendPillActive: {
-    backgroundColor: theme.colors.lightGreen,
+    backgroundColor: theme.colors.lightGreenBg,
     borderWidth: 1.5,
     borderColor: theme.colors.primaryGreen,
   },
   legendPillInactive: {
     backgroundColor: theme.colors.white,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: theme.colors.lightGray,
   },
   legendPillDot: {
     width: 12,
