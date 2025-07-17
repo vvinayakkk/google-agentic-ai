@@ -8,6 +8,7 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import { PlantLibraryScreen } from './screens/PlantLibraryScreen';
 import { PlantDetailScreen } from './screens/PlantDetailScreen';
+import CustomHeader from './components/CustomHeader';
 
 // Initialize the stack navigator
 const Stack = createStackNavigator();
@@ -26,70 +27,33 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        // The first screen to be displayed is the Welcome screen
         initialRouteName="Welcome"
-        // Global screen options: hide the default header for all screens.
-        // Individual screens can override this to show a header if needed.
         screenOptions={{
-          headerShown: false,
+          header: () => <CustomHeader />,
         }}
       >
-        {/* The Welcome screen is the entry point of the app. */}
-        {/* <Stack.Screen
+        <Stack.Screen
           name="Welcome"
-          component={WelcomeScreen}
-          // The Welcome screen does not need a header.
-        /> */}
-
-        {/* The Home screen is the main hub after the welcome page. */}
-        {/* <Stack.Screen
+          component={HomeScreen}
+        />
+        {/*
+        <Stack.Screen
           name="Home"
           component={HomeScreen}
-          // We override the global settings to show a custom-styled header for the Home screen.
-          options={{
-            headerShown: true,
-            title: 'App Home',
-            headerStyle: {
-              backgroundColor: '#388E3C', // A green background for the header
-            },
-            headerTintColor: '#fff', // White color for the title and back button
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
-        /> */}
-
-        {/* The Plant Library screen displays a list of plants. */}
+        />
         <Stack.Screen
           name="PlantLibrary"
           component={PlantLibraryScreen}
-          // This screen uses its own custom header component, so we hide the default one.
         />
-
-        {/* The Plant Detail screen shows information about a specific plant. */}
         <Stack.Screen
           name="PlantDetail"
           component={PlantDetailScreen}
-          // This screen also has a custom UI and does not need the default header.
         />
-
-        {/* The Profile screen, brought in from the other version. */}
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
-          // We'll give the Profile screen a standard header as well.
-          options={{
-            headerShown: true,
-            title: 'Your Profile',
-             headerStyle: {
-              backgroundColor: '#388E3C',
-            },
-            headerTintColor: '#fff',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
         />
+        */}
       </Stack.Navigator>
     </NavigationContainer>
   );
