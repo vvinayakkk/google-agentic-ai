@@ -10,7 +10,10 @@ import {
   Image,
   Dimensions,
   Modal,
+  ActivityIndicator,
+  Modal as RNModal,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Svg, Path } from 'react-native-svg';
 
 // --- Theme & Design System ---
@@ -176,6 +179,52 @@ const HomeScreen = () => {
     const [activeTab, setActiveTab] = useState('Community');
     const [userCrops, setUserCrops] = useState(initialUserCrops);
     const [isCropModalVisible, setCropModalVisible] = useState(false);
+    // Heal flow state
+    const [healStep, setHealStep] = useState('take'); // 'take', 'confirm', 'diagnosis', 'diagnosisResult', 'medicine', 'medicineResult'
+    const [healImage, setHealImage] = useState(null);
+    const [showHealModal, setShowHealModal] = useState(false);
+
+    // Camera handler
+    const handleTakePicture = async () => {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Camera permission is required!');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setHealImage(result.assets[0].uri);
+        setHealStep('confirm');
+        setShowHealModal(true);
+      }
+    };
+
+    // Confirm image and proceed to diagnosis
+    const handleConfirmImage = () => {
+      setHealStep('diagnosis');
+      setTimeout(() => setHealStep('diagnosisResult'), 2000);
+    };
+    // Proceed to get medicine
+    const handleProceedMedicine = () => {
+      setHealStep('medicine');
+      setTimeout(() => setHealStep('medicineResult'), 2000);
+    };
+    // Retake image
+    const handleRetake = () => {
+      setHealImage(null);
+      setHealStep('take');
+      setShowHealModal(false);
+    };
+    // Close modal and reset
+    const handleCloseHealModal = () => {
+      setHealImage(null);
+      setHealStep('take');
+      setShowHealModal(false);
+    };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -230,22 +279,67 @@ const HomeScreen = () => {
           <View style={styles.healStepsRowTheme}>
             <View style={styles.healStepTheme}>
               <Text style={styles.healStepIconTheme}>📷</Text>
-              <Text style={styles.healStepLabelTheme}>Take a picture</Text>
+              <Text style={[styles.healStepLabelTheme, healStep === 'take' && {color: theme.colors.primaryGreen, fontWeight: 'bold'}]}>Take a picture</Text>
             </View>
             <Text style={styles.healStepArrowTheme}>›</Text>
             <View style={styles.healStepTheme}>
               <Text style={styles.healStepIconTheme}>📄</Text>
-              <Text style={styles.healStepLabelTheme}>See diagnosis</Text>
+              <Text style={[styles.healStepLabelTheme, (healStep === 'diagnosis' || healStep === 'diagnosisResult') && {color: theme.colors.primaryGreen, fontWeight: 'bold'}]}>See diagnosis</Text>
             </View>
             <Text style={styles.healStepArrowTheme}>›</Text>
             <View style={styles.healStepTheme}>
               <Text style={styles.healStepIconTheme}>💊</Text>
-              <Text style={styles.healStepLabelTheme}>Get medicine</Text>
+              <Text style={[styles.healStepLabelTheme, (healStep === 'medicine' || healStep === 'medicineResult') && {color: theme.colors.primaryGreen, fontWeight: 'bold'}]}>Get medicine</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.healButtonTheme}>
-            <Text style={styles.healButtonTextTheme}>Take a picture</Text>
-          </TouchableOpacity>
+          {healStep === 'take' && (
+            <TouchableOpacity style={styles.healButtonTheme} onPress={handleTakePicture}>
+              <Text style={styles.healButtonTextTheme}>Take a picture</Text>
+            </TouchableOpacity>
+          )}
+          {/* Modal for confirm/diagnosis/medicine steps */}
+          <RNModal visible={showHealModal} transparent animationType="fade" onRequestClose={handleCloseHealModal}>
+            <View style={styles.healModalOverlay}>
+              <View style={styles.healModalCard}>
+                {healStep === 'confirm' && healImage && (
+                  <>
+                    <Image source={{uri: healImage}} style={styles.healModalImage} />
+                    <Text style={styles.healModalText}>Is this picture clear?</Text>
+                    <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: 16}}>
+                      <TouchableOpacity style={[styles.healModalBtn, {backgroundColor: theme.colors.lightGray}]} onPress={handleRetake}><Text style={[styles.healModalBtnText, {color: theme.colors.textPrimary}]}>Retake</Text></TouchableOpacity>
+                      <TouchableOpacity style={[styles.healModalBtn, {backgroundColor: theme.colors.primaryGreen}]} onPress={handleConfirmImage}><Text style={[styles.healModalBtnText, {color: theme.colors.white}]}>Confirm</Text></TouchableOpacity>
+                    </View>
+                  </>
+                )}
+                {healStep === 'diagnosis' && (
+                  <View style={{alignItems: 'center', padding: 24}}>
+                    <ActivityIndicator size="large" color={theme.colors.primaryGreen} />
+                    <Text style={styles.healModalText}>Analysing your crop...</Text>
+                  </View>
+                )}
+                {healStep === 'diagnosisResult' && (
+                  <View style={{alignItems: 'center', padding: 12}}>
+                    <Text style={styles.healModalResultTitle}>Diagnosis Result</Text>
+                    <Text style={styles.healModalResultText}>Early Blight detected. Your crop shows signs of fungal infection. Immediate action is recommended.</Text>
+                    <TouchableOpacity style={[styles.healModalBtn, {backgroundColor: theme.colors.primaryGreen, marginTop: 18}]} onPress={handleProceedMedicine}><Text style={[styles.healModalBtnText, {color: theme.colors.white}]}>Get Medicine</Text></TouchableOpacity>
+                  </View>
+                )}
+                {healStep === 'medicine' && (
+                  <View style={{alignItems: 'center', padding: 24}}>
+                    <ActivityIndicator size="large" color={theme.colors.primaryGreen} />
+                    <Text style={styles.healModalText}>Fetching best medicine...</Text>
+                  </View>
+                )}
+                {healStep === 'medicineResult' && (
+                  <View style={{alignItems: 'center', padding: 12}}>
+                    <Text style={styles.healModalResultTitle}>Recommended Medicine</Text>
+                    <Text style={styles.healModalResultText}>Use <Text style={{fontWeight:'bold', color:theme.colors.primaryGreen}}>Fungicure 500</Text> as per instructions. Apply in the evening for best results.</Text>
+                    <TouchableOpacity style={[styles.healModalBtn, {backgroundColor: theme.colors.primaryGreen, marginTop: 18}]} onPress={handleCloseHealModal}><Text style={[styles.healModalBtnText, {color: theme.colors.white}]}>Done</Text></TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+          </RNModal>
         </View>
 
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Common Diseases</Text><TouchableOpacity><Text style={styles.seeAllText}>All →</Text></TouchableOpacity></View>
@@ -516,6 +610,68 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
     letterSpacing: 0.5,
+  },
+  healModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healModalCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.large,
+    width: '90%',
+    maxWidth: 400,
+    minHeight: 280,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    justifyContent: 'center',
+  },
+  healModalImage: {
+    width: 180,
+    height: 180,
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: 18,
+    resizeMode: 'cover',
+  },
+  healModalText: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  healModalBtn: {
+    borderRadius: theme.borderRadius.medium,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    marginHorizontal: 8,
+    marginTop: 18,
+    alignItems: 'center',
+    minWidth: 120,
+    alignSelf: 'center',
+  },
+  healModalBtnText: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  healModalResultTitle: {
+    ...theme.typography.headingSmall,
+    color: theme.colors.primaryGreen,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  healModalResultText: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    marginTop: 4,
+    marginBottom: 18,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 
