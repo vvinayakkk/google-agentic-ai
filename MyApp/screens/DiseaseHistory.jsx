@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Svg, { G, Circle } from 'react-native-svg';
-import { Animated as RNAnimated } from 'react-native';
-const AnimatedCircle = RNAnimated.createAnimatedComponent(Circle);
 
 // --- Theme & Design System (as requested, in one file) ---
 const theme = {
@@ -123,7 +121,7 @@ const ListView = ({ data }) => (
   </View>
 );
 
-// --- [FIXED] Bar Chart View ---
+// --- Bar Chart View ---
 const ProgressBar = ({ value, maxValue, color }) => {
     const widthAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
@@ -221,7 +219,7 @@ const BarChartView = ({ data }) => {
 };
 
 
-// --- Pie Chart View ---
+// --- [FIXED] Pie Chart View ---
 const PieChartView = ({ data }) => {
     const total = data.reduce((sum, item) => sum + item.savedCount, 0);
     const mostCommon = data.reduce((prev, current) => (prev.savedCount > current.savedCount) ? prev : current);
@@ -229,25 +227,19 @@ const PieChartView = ({ data }) => {
     const activeItem = data.find(item => item.id === activeId) || mostCommon;
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const donutAnim = useRef(new Animated.Value(0)).current;
     
     useEffect(() => {
+        // Animate the center text when active item changes
         fadeAnim.setValue(0);
         Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-
-        const percentage = activeItem.savedCount / total;
-        Animated.timing(donutAnim, { toValue: percentage, duration: 500, useNativeDriver: false }).start();
-    }, [activeId, activeItem.savedCount, total]);
+    }, [activeId]);
     
     const size = 220;
     const strokeWidth = 28;
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
-
-    const animatedStrokeDashoffset = donutAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [circumference, 0],
-    });
+    const gapAngle = 2; // The gap between slices in degrees
+    let startAngle = 0;
 
     return (
         <View>
@@ -255,25 +247,40 @@ const PieChartView = ({ data }) => {
             <Text style={styles.sectionSubtitle}>Percentage breakdown of diseases in your farm</Text>
 
             <View style={styles.pieChartDisplayCard}>
-                <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                    <G transform={`rotate(-90 ${size/2} ${size/2})`}>
-                        <Circle
-                            cx={size / 2} cy={size / 2} r={radius}
-                            stroke={theme.colors.lightGray}
-                            strokeWidth={strokeWidth}
-                            fill="none"
-                        />
-                        <AnimatedCircle
-                            cx={size / 2} cy={size / 2} r={radius}
-                            stroke={activeItem.color}
-                            strokeWidth={strokeWidth}
-                            fill="none"
-                            strokeDasharray={`${circumference} ${circumference}`}
-                            strokeDashoffset={animatedStrokeDashoffset}
-                            strokeLinecap="round"
-                        />
-                    </G>
-                </Svg>
+                <Animated.View style={{ opacity: fadeAnim }}>
+                    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                        <G transform={`rotate(-90 ${size/2} ${size/2})`}>
+                            {/* Render a slice for each data point */}
+                            {data.map(item => {
+                                const percent = item.savedCount / total;
+                                if (percent <= 0) return null;
+                                
+                                const sweepAngle = percent * 360;
+                                const arcSweepAngle = sweepAngle - gapAngle;
+                                if (arcSweepAngle <= 0) return null;
+
+                                const arcLength = (arcSweepAngle / 360) * circumference;
+                                const rotation = startAngle + (gapAngle / 2);
+                                
+                                startAngle += sweepAngle;
+
+                                return (
+                                    <Circle
+                                        key={item.id}
+                                        cx={size / 2}
+                                        cy={size / 2}
+                                        r={radius}
+                                        stroke={item.color}
+                                        strokeWidth={strokeWidth}
+                                        fill="none"
+                                        strokeDasharray={`${arcLength} ${circumference}`}
+                                        transform={`rotate(${rotation}, ${size/2}, ${size/2})`}
+                                    />
+                                );
+                            })}
+                        </G>
+                    </Svg>
+                </Animated.View>
                 <View style={[StyleSheet.absoluteFill, styles.pieChartCenter]}>
                     <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
                         <Text style={styles.pieChartCenterPercent}>
@@ -313,7 +320,7 @@ const PieChartView = ({ data }) => {
 
 // --- Main Screen Component ---
 const DiseaseHistoryScreen = () => {
-  const [activeView, setActiveView] = useState('Bar Chart');
+  const [activeView, setActiveView] = useState('Pie Chart');
 
   const renderContent = () => {
     switch (activeView) {
@@ -367,7 +374,7 @@ const styles = StyleSheet.create({
   diseaseDescription: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginVertical: 4 },
   diseaseSavedCount: { ...theme.typography.bodySmall, color: theme.colors.primaryGreen, fontWeight: 'bold', marginTop: 4 },
   
-  // --- [NEW] Bar Chart Styles ---
+  // --- Bar Chart Styles ---
   instructionCard: {
     flexDirection: 'row',
     alignItems: 'center',
