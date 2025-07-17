@@ -224,6 +224,30 @@ const HomeScreen = () => {
           </View>
         </View>
         
+        {/* Heal your crop card */}
+        <View style={styles.healCardTheme}>
+          <Text style={styles.healTitleTheme}>Heal your crop</Text>
+          <View style={styles.healStepsRowTheme}>
+            <View style={styles.healStepTheme}>
+              <Text style={styles.healStepIconTheme}>📷</Text>
+              <Text style={styles.healStepLabelTheme}>Take a picture</Text>
+            </View>
+            <Text style={styles.healStepArrowTheme}>›</Text>
+            <View style={styles.healStepTheme}>
+              <Text style={styles.healStepIconTheme}>📄</Text>
+              <Text style={styles.healStepLabelTheme}>See diagnosis</Text>
+            </View>
+            <Text style={styles.healStepArrowTheme}>›</Text>
+            <View style={styles.healStepTheme}>
+              <Text style={styles.healStepIconTheme}>💊</Text>
+              <Text style={styles.healStepLabelTheme}>Get medicine</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.healButtonTheme}>
+            <Text style={styles.healButtonTextTheme}>Take a picture</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Common Diseases</Text><TouchableOpacity><Text style={styles.seeAllText}>All →</Text></TouchableOpacity></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
           <View style={styles.diseaseCard}><Image source={diseaseImg1} style={styles.diseaseImg} /><View style={styles.diseaseTag}><Text style={styles.diseaseTagText}>Common</Text></View><Text style={styles.diseaseTitle}>Early Blight</Text><Text style={styles.diseaseDesc}>Early blight causes dark, concentric spots on potato leav...</Text><TouchableOpacity style={styles.learnBtn}><Text style={styles.learnBtnText}>ⓘ Learn More</Text></TouchableOpacity></View>
@@ -381,6 +405,117 @@ const styles = StyleSheet.create({
     minWidth: 320,
     minHeight: 70,
     flex: 1,
+  },
+  healCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    padding: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+  healTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
+    marginBottom: 18,
+  },
+  healStepsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  healStep: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  healStepIcon: {
+    fontSize: 38,
+    marginBottom: 6,
+  },
+  healStepLabel: {
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  healStepArrow: {
+    fontSize: 32,
+    color: '#B0BEC5',
+    marginHorizontal: 2,
+  },
+  healButton: {
+    backgroundColor: '#0066E6',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  healButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 20,
+    letterSpacing: 0.5,
+  },
+  healCardTheme: {
+    backgroundColor: theme.colors.lightGreen,
+    borderRadius: theme.borderRadius.large,
+    marginHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.large,
+    padding: theme.spacing.large,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 2.5,
+    borderColor: theme.colors.darkGreen, // dark green border
+  },
+  healTitleTheme: {
+    ...theme.typography.headingSmall,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.medium,
+  },
+  healStepsRowTheme: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.large,
+  },
+  healStepTheme: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  healStepIconTheme: {
+    fontSize: 36,
+    marginBottom: 6,
+  },
+  healStepLabelTheme: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  healStepArrowTheme: {
+    fontSize: 32,
+    color: theme.colors.gray,
+    marginHorizontal: 2,
+  },
+  healButtonTheme: {
+    backgroundColor: theme.colors.primaryGreen,
+    borderRadius: theme.borderRadius.medium,
+    paddingVertical: theme.spacing.medium,
+    alignItems: 'center',
+    marginTop: theme.spacing.small,
+  },
+  healButtonTextTheme: {
+    color: theme.colors.white,
+    fontWeight: 'bold',
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
 });
 
