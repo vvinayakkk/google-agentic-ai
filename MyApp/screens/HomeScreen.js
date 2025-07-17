@@ -188,47 +188,42 @@ const HomeScreen = () => {
       />
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.newHeaderContainer}>
-            <View style={styles.titleRow}>
-                <Text style={styles.appName}>Mazraaty</Text>
-                <TouchableOpacity><MoreIcon /></TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cropScroll}>
-                {userCrops.map(crop => (
-                    <TouchableOpacity key={crop.name} style={styles.cropCircle}>
-                        <Image source={{uri: crop.image}} style={styles.cropImage} />
-                    </TouchableOpacity>
-                ))}
-                <TouchableOpacity style={[styles.cropCircle, styles.addCropCircle]} onPress={() => setCropModalVisible(true)}>
-                    <Text style={styles.addCropIcon}>+</Text>
+        {/* Crop selector row */}
+        <View style={{paddingTop: 15, paddingBottom: 8, paddingHorizontal: 24}}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
+            {userCrops.map((crop, idx) => {
+              // Cycle through a palette of border colors
+              const borderColors = ['#FFD600', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800', '#00BCD4'];
+              const borderColor = borderColors[idx % borderColors.length];
+              return (
+                <TouchableOpacity key={crop.name} style={[styles.cropCircleLarge, {borderColor, marginRight: 16}]}> 
+                  <Image source={{uri: crop.image}} style={styles.cropImageLarge} />
                 </TouchableOpacity>
-            </ScrollView>
+              );
+            })}
+            <TouchableOpacity style={[styles.cropCircleLarge, styles.addCropCircleLarge, {borderColor: '#BDBDBD', borderStyle: 'dashed', marginRight: 0}]} onPress={() => setCropModalVisible(true)}>
+              <Text style={styles.addCropIconLarge}>+</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.infoCardScroll}>
-            <View style={styles.weatherCard}><View><Text style={styles.weatherLocation}>Mumbai, 17 Jul</Text><Text style={styles.weatherDetails}>Foggy • 27°C / 31°C</Text></View><View style={styles.weatherTempContainer}><Text style={styles.weatherIcon}>🌥️</Text><Text style={styles.weatherTemp}>30°C</Text></View></View>
-            <View style={[styles.sprayingCard, {backgroundColor: theme.colors.lightRed}]}><Text style={styles.sprayingTitle}>Spraying conditions</Text><Text style={[styles.sprayingStatus, {color: theme.colors.red}]}>Unfavourable</Text></View>
-        </ScrollView>
-        
-        <View style={styles.scanCard}>
-          <View style={styles.scanRow}>
-            <View style={styles.scanIconWrap}>
-              <Text style={styles.scanIcon}>📸</Text>
-            </View>
+        {/* Weather and spraying cards row */}
+        <View style={{flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16}}>
+          <View style={styles.weatherCardRowLarge}>
             <View>
-              <Text style={styles.scanCount}><Text style={{ color: theme.colors.darkGreen }}>98</Text> Scans Available</Text>
-              <Text style={styles.scanPoints}>980 Points (10 points per scan)</Text>
+              <Text style={styles.weatherLocation}>Mumbai, 17 Jul</Text>
+              <Text style={styles.weatherDetails}>Foggy • 27°C / 31°C</Text>
             </View>
-             <TouchableOpacity><Text style={styles.infoIcon}>ⓘ</Text></TouchableOpacity>
+            <View style={styles.weatherTempContainer}>
+              <Text style={styles.weatherIcon}>🌤️</Text>
+              <Text style={styles.weatherTemp}>30°C</Text>
+            </View>
           </View>
-          <View style={styles.scanInfoBox}>
-            <Text style={styles.scanInfoText}>
-              <Text style={{ color: theme.colors.blue }}>ⓘ </Text>
-              Use your scans to identify plant diseases by taking photos of affected plants. Subscribe to Premium for unlimited scans.
-            </Text>
+          <View style={styles.sprayingCardRow}>
+            <Text style={styles.sprayingTitle}>Spraying conditions</Text>
+            <Text style={styles.sprayingStatus}>Unfavourable</Text>
           </View>
         </View>
-
+        
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Common Diseases</Text><TouchableOpacity><Text style={styles.seeAllText}>All →</Text></TouchableOpacity></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
           <View style={styles.diseaseCard}><Image source={diseaseImg1} style={styles.diseaseImg} /><View style={styles.diseaseTag}><Text style={styles.diseaseTagText}>Common</Text></View><Text style={styles.diseaseTitle}>Early Blight</Text><Text style={styles.diseaseDesc}>Early blight causes dark, concentric spots on potato leav...</Text><TouchableOpacity style={styles.learnBtn}><Text style={styles.learnBtnText}>ⓘ Learn More</Text></TouchableOpacity></View>
@@ -342,6 +337,51 @@ const styles = StyleSheet.create({
   modalFooter: { padding: theme.spacing.medium, borderTopWidth: 1, borderTopColor: theme.colors.lightGray },
   saveButton: { backgroundColor: theme.colors.blue, padding: theme.spacing.medium, borderRadius: theme.borderRadius.medium, alignItems: 'center' },
   saveButtonText: { color: theme.colors.white, ...theme.typography.bodyLarge, fontWeight: 'bold' },
+  weatherCardRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.full, paddingVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium, marginRight: theme.spacing.medium, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+  sprayingCardRow: { justifyContent: 'center', borderRadius: theme.borderRadius.full, paddingHorizontal: theme.spacing.medium, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+  cropCircleLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+  },
+  cropImageLarge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    resizeMode: 'contain',
+  },
+  addCropCircleLarge: {
+    backgroundColor: theme.colors.white,
+    borderWidth: 2.5,
+    borderStyle: 'dashed',
+  },
+  addCropIconLarge: {
+    fontSize: 36,
+    color: '#BDBDBD',
+    fontWeight: 'bold',
+  },
+  weatherCardRowLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD', // lighter blue background
+    borderRadius: 32,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    marginRight: 18,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    borderWidth: 3,
+    borderColor: '#90CAF9', // Light blue border
+    minWidth: 320,
+    minHeight: 70,
+    flex: 1,
+  },
 });
 
 export default HomeScreen;
