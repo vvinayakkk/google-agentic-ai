@@ -14,7 +14,6 @@ import PlantAssistantScreen from './screens/PlantAssistantScreen';
 
 // Import your custom header component
 import CustomHeader from './components/CustomHeader';
-
 // Initialize the stack navigator
 const Stack = createStackNavigator();
 

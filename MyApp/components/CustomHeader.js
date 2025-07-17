@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const CustomHeader = ({ title = 'Plantix' }) => (
-  <View style={styles.headerContainer}>
-    <Text style={styles.headerTitle}>{title}</Text>
+const CustomHeader = ({ title = 'Plantix', small = false }) => (
+  <View style={[styles.headerContainer, small && styles.headerContainerSmall]}>
+    <Text style={[styles.headerTitle, small && styles.headerTitleSmall]}>{title}</Text>
     <TouchableOpacity style={styles.menuButton}>
-      <Text style={styles.menuIcon}>⋮</Text>
+      <Text style={[styles.menuIcon, small && styles.menuIconSmall]}>⋮</Text>
     </TouchableOpacity>
   </View>
 );
@@ -25,10 +25,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 2,
   },
+  headerContainerSmall: {
+    paddingTop: 32,
+    paddingBottom: 2,
+  },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#222',
+  },
+  headerTitleSmall: {
+    fontSize: 18,
   },
   menuButton: {
     padding: 8,
@@ -37,6 +44,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#555',
     fontWeight: 'bold',
+  },
+  menuIconSmall: {
+    fontSize: 20,
   },
 });
 

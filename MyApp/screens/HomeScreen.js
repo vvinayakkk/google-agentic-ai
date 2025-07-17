@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Svg, Path } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 
 // --- Theme & Design System ---
 const theme = {
@@ -148,6 +149,7 @@ const SelectCropsScreen = ({ isVisible, onClose, onSave, initialSelectedCrops })
 
 // --- Bottom Navigation Component ---
 const BottomNavBar = ({ activeTab, onTabPress }) => {
+    const navigation = useNavigation();
     const navItems = [
         { name: 'Your crops', icon: CropsIcon },
         { name: 'Community', icon: CommunityIcon },
@@ -161,7 +163,13 @@ const BottomNavBar = ({ activeTab, onTabPress }) => {
                 const isActive = activeTab === item.name;
                 const Icon = item.icon;
                 return (
-                    <TouchableOpacity key={item.name} style={styles.navItem} onPress={() => onTabPress(item.name)}>
+                    <TouchableOpacity key={item.name} style={styles.navItem} onPress={() => {
+                        if (item.name === 'You') {
+                          navigation.navigate('Profile');
+                        } else {
+                          onTabPress(item.name);
+                        }
+                    }}>
                         <View style={[styles.navIconContainer, isActive && styles.navIconContainerActive]}>
                             <Icon active={isActive} />
                         </View>
