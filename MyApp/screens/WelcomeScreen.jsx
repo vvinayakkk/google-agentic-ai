@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   FlatList,
-  I18nManager, // For RTL support
+  I18nManager,
   Modal,
 } from 'react-native';
 import { Svg, Circle, G, Path } from 'react-native-svg';
@@ -15,7 +15,6 @@ import * as Speech from 'expo-speech';
 import * as Localization from 'expo-localization';
 import { I18n } from 'i18n-js';
 
-// --- Theme & Design System ---
 const theme = {
   colors: {
     primaryGreen: '#4CAF50',
@@ -50,9 +49,6 @@ const theme = {
   },
 };
 
-// --- i18n Setup ---
-// NOTE: To fix dependency issues with i18n-js v4+, install lodash.get
-// npm install i18n-js expo-localization lodash.get
 const translations = {
   en: {
     languageName: 'English',
@@ -106,10 +102,8 @@ const i18n = new I18n(translations);
 i18n.enableFallback = true;
 i18n.locale = Localization.getLocales()[0].languageCode || 'en';
 
-// --- Dimensions ---
 const { width, height } = Dimensions.get('window');
 
-// --- Reusable Components ---
 const Pagination = ({ activeIndex, total }) => (
   <View style={styles.paginationContainer}>
     {Array.from({ length: total }).map((_, index) => (
@@ -186,7 +180,6 @@ const LanguageModal = ({ isVisible, onClose, onSelectLanguage, currentLocale }) 
     </Modal>
 );
 
-// --- Slide Component for FlatList ---
 const OnboardingSlide = ({ item }) => (
   <View style={styles.slide}>
     <View style={styles.imageContainer}>
@@ -211,7 +204,6 @@ const OnboardingSlide = ({ item }) => (
   </View>
 );
 
-// --- Main Screen Component ---
 const WelcomeScreen = () => {
   const [locale, setLocale] = useState(i18n.locale);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -229,13 +221,10 @@ const WelcomeScreen = () => {
     }));
   }, [locale]);
 
-  // --- Handlers ---
   const handleLanguageChange = (newLocale) => {
     i18n.locale = newLocale;
     setLocale(newLocale);
     setModalVisible(false);
-    // NOTE: For full RTL support, a manual app reload might be necessary.
-    // This implementation handles layout direction on this screen dynamically.
   };
 
   const handleNext = () => {
@@ -314,7 +303,6 @@ const WelcomeScreen = () => {
   );
 };
 
-// --- Styles ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -408,7 +396,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: 'bold',
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

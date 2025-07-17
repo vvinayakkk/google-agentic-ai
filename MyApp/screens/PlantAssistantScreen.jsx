@@ -1,27 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform } from 'react-native';
 
-// --- Main Component ---
-// We now accept the `route` prop to get navigation parameters
 export default function PlantAssistantScreen({ navigation, route }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef();
 
-  // --- Effect to handle initial query ---
   useEffect(() => {
-    // Check if an initial query was passed from the landing screen
     const initialQuery = route.params?.initialQuery;
 
     if (initialQuery) {
-      // If a query exists, start the chat with it
       setMessages([
         { id: 1, sender: 'user', text: initialQuery },
-        { id: 2, sender: 'bot', text: 'Thinking...' } // Placeholder for API response
+        { id: 2, sender: 'bot', text: 'Thinking...' }
       ]);
       // TODO: Immediately trigger the API call for this query
     } else {
-      // If no query, start with a generic greeting
       setMessages([
         { id: 1, sender: 'bot', text: 'Hello! How can I help you with your plants today?' }
       ]);
@@ -29,7 +23,6 @@ export default function PlantAssistantScreen({ navigation, route }) {
   }, [route.params?.initialQuery]);
 
 
-  // --- Function to handle sending a message ---
   const handleSend = async () => {
     if (inputText.trim().length === 0) {
       return;
@@ -43,10 +36,7 @@ export default function PlantAssistantScreen({ navigation, route }) {
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setInputText('');
 
-    // --- PROVISION FOR GEMINI API ---
-    // For now, we'll just add a hardcoded reply for demonstration
     setTimeout(() => {
-      // This is the hardcoded response from your original screenshot
       const botMessage = {
         id: messages.length + 2,
         sender: 'bot',
@@ -74,7 +64,6 @@ export default function PlantAssistantScreen({ navigation, route }) {
     }, 1000);
   };
 
-  // --- UI Rendering ---
   return (
     <KeyboardAvoidingView 
         style={styles.container}
@@ -144,7 +133,6 @@ export default function PlantAssistantScreen({ navigation, route }) {
   );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,

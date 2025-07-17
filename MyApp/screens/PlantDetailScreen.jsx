@@ -13,7 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { plantData } from '../data/data'; // Make sure this path is correct
+import { plantData } from '../data/data';
 
 const { width } = Dimensions.get('window');
 const HEADER_IMAGE_HEIGHT = Dimensions.get('window').height * 0.4;

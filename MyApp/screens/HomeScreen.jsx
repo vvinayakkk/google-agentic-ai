@@ -17,7 +17,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Svg, Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 
-// --- Theme & Design System ---
 const theme = {
   colors: {
     primaryGreen: '#4CAF50',
@@ -53,10 +52,8 @@ const theme = {
   },
 };
 
-// --- Dimensions ---
 const { width } = Dimensions.get('window');
 
-// --- Mock Data & Assets ---
 const allCrops = [
     { name: 'Sugarcane', image: 'https://img.icons8.com/plasticine/100/sugar-cane.png' },
     { name: 'Mango', image: 'https://img.icons8.com/plasticine/100/mango.png' },
@@ -78,7 +75,6 @@ const initialUserCrops = allCrops.slice(0, 4);
 const diseaseImg1 = require('../assets/image.png');
 const diseaseImg2 = require('../assets/image.png');
 
-// --- Icon Components ---
 const MoreIcon = () => ( <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill={theme.colors.textPrimary}/></Svg>);
 const CropsIcon = ({ active }) => ( <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M21.4,7.5A8.46,8.46,0,0,0,13,2.6a8.46,8.46,0,0,0-8.4,4.9C2.7,8.2,2,10.6,2,12.1a3.9,3.9,0,0,0,3.9,3.9H6V13.2H5.9A1.1,1.1,0,0,1,4.8,12c0-1.2.6-3.3,2.4-4.2A5.66,5.66,0,0,1,13,5.4a5.66,5.66,0,0,1,5.8,2.4,5.38,5.38,0,0,1,1.2,3.3,4.6,4.6,0,0,1-4.6,4.6h-.9V18h.9a6.6,6.6,0,0,0,6-6.6C22,10.1,21.8,8.7,21.4,7.5Z" fill={active ? theme.colors.darkGreen : theme.colors.textSecondary} /><Path d="M12,8.4a.9.9,0,0,0-.9.9V21.1a.9.9,0,1,0,1.8,0V9.3A.9.9,0,0,0,12,8.4Z" fill={active ? theme.colors.darkGreen : theme.colors.textSecondary} /></Svg>);
 const CommunityIcon = ({ active }) => ( <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M16.5,12A4.5,4.5,0,1,0,12,7.5,4.5,4.5,0,0,0,16.5,12ZM12,5.5A6.5,6.5,0,1,1,5.5,12,6.5,6.5,0,0,1,12,5.5Z" fill={active ? theme.colors.darkGreen : theme.colors.textSecondary} /><Path d="M21.5,16.5a.9.9,0,0,0-.9.9,4.7,4.7,0,0,1-4.7,4.7H8.1a4.7,4.7,0,0,1-4.7-4.7.9.9,0,0,0-1.8,0,6.5,6.5,0,0,0,6.5,6.5h7.8a6.5,6.5,0,0,0,6.5-6.5A.9.9,0,0,0,21.5,16.5Z" fill={active ? theme.colors.darkGreen : theme.colors.textSecondary} /></Svg>);
@@ -87,7 +83,6 @@ const UserIcon = ({ active }) => ( <Svg width="24" height="24" viewBox="0 0 24 2
 const BackIcon = () => (<Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill={theme.colors.textPrimary}/></Svg>);
 const CloseIcon = () => (<Svg width="16" height="16" viewBox="0 0 24 24" fill="none"><Path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill={theme.colors.white}/></Svg>);
 
-// --- Select Crops Modal ---
 const SelectCropsScreen = ({ isVisible, onClose, onSave, initialSelectedCrops }) => {
     const [selected, setSelected] = useState(new Set(initialSelectedCrops.map(c => c.name)));
 
@@ -147,7 +142,6 @@ const SelectCropsScreen = ({ isVisible, onClose, onSave, initialSelectedCrops })
 };
 
 
-// --- Bottom Navigation Component ---
 const BottomNavBar = ({ activeTab, onTabPress }) => {
     const navigation = useNavigation();
     const navItems = [
@@ -182,17 +176,14 @@ const BottomNavBar = ({ activeTab, onTabPress }) => {
 };
 
 
-// --- Main HomeScreen Component ---
 const HomeScreen = () => {
     const [activeTab, setActiveTab] = useState('Community');
     const [userCrops, setUserCrops] = useState(initialUserCrops);
     const [isCropModalVisible, setCropModalVisible] = useState(false);
-    // Heal flow state
-    const [healStep, setHealStep] = useState('take'); // 'take', 'confirm', 'diagnosis', 'diagnosisResult', 'medicine', 'medicineResult'
+    const [healStep, setHealStep] = useState('take');
     const [healImage, setHealImage] = useState(null);
     const [showHealModal, setShowHealModal] = useState(false);
 
-    // Camera handler
     const handleTakePicture = async () => {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -211,23 +202,19 @@ const HomeScreen = () => {
       }
     };
 
-    // Confirm image and proceed to diagnosis
     const handleConfirmImage = () => {
       setHealStep('diagnosis');
       setTimeout(() => setHealStep('diagnosisResult'), 2000);
     };
-    // Proceed to get medicine
     const handleProceedMedicine = () => {
       setHealStep('medicine');
       setTimeout(() => setHealStep('medicineResult'), 2000);
     };
-    // Retake image
     const handleRetake = () => {
       setHealImage(null);
       setHealStep('take');
       setShowHealModal(false);
     };
-    // Close modal and reset
     const handleCloseHealModal = () => {
       setHealImage(null);
       setHealStep('take');
@@ -245,11 +232,9 @@ const HomeScreen = () => {
       />
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Crop selector row */}
         <View style={{paddingTop: 15, paddingBottom: 8, paddingHorizontal: 24}}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
             {userCrops.map((crop, idx) => {
-              // Cycle through a palette of border colors
               const borderColors = ['#FFD600', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800', '#00BCD4'];
               const borderColor = borderColors[idx % borderColors.length];
               return (
@@ -263,7 +248,6 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </ScrollView>
         </View>
-        {/* Weather and spraying cards row */}
         <View style={{flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16}}>
           <View style={styles.weatherCardRowLarge}>
             <View>
@@ -281,7 +265,6 @@ const HomeScreen = () => {
           </View>
         </View>
         
-        {/* Heal your crop card */}
         <View style={styles.healCardTheme}>
           <Text style={styles.healTitleTheme}>Heal your crop</Text>
           <View style={styles.healStepsRowTheme}>
@@ -305,7 +288,6 @@ const HomeScreen = () => {
               <Text style={styles.healButtonTextTheme}>Take a picture</Text>
             </TouchableOpacity>
           )}
-          {/* Modal for confirm/diagnosis/medicine steps */}
           <RNModal visible={showHealModal} transparent animationType="fade" onRequestClose={handleCloseHealModal}>
             <View style={styles.healModalOverlay}>
               <View style={styles.healModalCard}>
@@ -493,7 +475,7 @@ const styles = StyleSheet.create({
   weatherCardRowLarge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD', // lighter blue background
+    backgroundColor: '#E3F2FD',
     borderRadius: 32,
     paddingVertical: 18,
     paddingHorizontal: 32,
@@ -503,7 +485,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 8,
     borderWidth: 3,
-    borderColor: '#90CAF9', // Light blue border
+    borderColor: '#90CAF9',
     minWidth: 320,
     minHeight: 70,
     flex: 1,
@@ -575,7 +557,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     borderWidth: 2.5,
-    borderColor: theme.colors.darkGreen, // dark green border
+    borderColor: theme.colors.darkGreen,
   },
   healTitleTheme: {
     ...theme.typography.headingSmall,

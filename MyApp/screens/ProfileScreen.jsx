@@ -8,12 +8,11 @@ import {
     TouchableOpacity,
     Switch,
     SafeAreaView,
-    Alert, // Import Alert for better user feedback
+    Alert,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons, AntDesign, FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-// --- Theme Colors from theme.md ---
 const theme = {
     primaryGreen: '#4CAF50',
     secondaryGreen: '#66BB6A',
@@ -26,8 +25,6 @@ const theme = {
     lightGray: '#F5F5F5',
     white: '#FFFFFF',
 };
-
-// --- Reusable Components ---
 
 const ProfileCard = ({ children }) => (
     <View style={styles.card}>{children}</View>
@@ -62,9 +59,6 @@ const ProfileRow = ({ icon, text, isToggle, isDestructive, onValueChange, value,
     </TouchableOpacity>
 );
 
-
-// --- Main Profile Screen Component ---
-
 const ProfileScreen = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [profileImage, setProfileImage] = useState('https://placehold.co/100x100/EFEFEF/333?text=J');
@@ -89,7 +83,6 @@ const ProfileScreen = () => {
         }
     };
     
-    // Dummy onPress handlers for demonstration
     const handleChangePassword = () => Alert.alert("Navigation", "Navigate to Change Password screen.");
     const handleLanguage = () => Alert.alert("Navigation", "Navigate to Language settings.");
     const handlePolicies = () => Alert.alert("Navigation", "Navigate to Our Policies screen.");
@@ -155,8 +148,6 @@ const ProfileScreen = () => {
         </SafeAreaView>
     );
 };
-
-// --- Styles ---
 
 const styles = StyleSheet.create({
     safeArea: {

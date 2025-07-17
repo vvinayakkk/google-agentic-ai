@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated, Image
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 
-// --- Theme (Colors & Fonts) ---
 const theme = {
     colors: {
         green: '#3E7D40',
@@ -23,14 +22,12 @@ const theme = {
     },
 };
 
-// --- Mock Data for Scan Result ---
 const mockScanResult = {
     name: 'Late Blight',
     confidence: '98.4%',
     description: 'Late blight is one of the most devastating diseases of potatoes, caused by the oomycete pathogen Phytophthora infestans. It affects both the foliage and tubers of potato plants, leading to significant yield loss and poor tuber quality.',
 };
 
-// --- Reusable Components ---
 const AppHeader = ({ onReset }) => (
     <View style={styles.header}>
         <View style={styles.headerPoints}>
@@ -62,12 +59,10 @@ const ResultCard = ({ result, onReadMore }) => {
 };
 
 
-// --- Main Screen Component ---
 export default function ScanPlantScreen() {
     const [imageUri, setImageUri] = useState(null);
     const [scanResult, setScanResult] = useState(null);
 
-    // Request permissions on component mount
     useEffect(() => {
         ImagePicker.requestMediaLibraryPermissionsAsync();
         ImagePicker.requestCameraPermissionsAsync();
@@ -153,7 +148,6 @@ export default function ScanPlantScreen() {
     );
 }
 
-// --- Stylesheet ---
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.white },
     container: { flex: 1, backgroundColor: theme.colors.lightGreen },
