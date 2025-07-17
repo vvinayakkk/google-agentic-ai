@@ -16,6 +16,7 @@ import PlantAssistantScreen from './screens/PlantAssistantScreen';
 import CustomHeader from './components/CustomHeader';
 import DiseaseHistory from './screens/DiseaseHistory';
 import ScanPlantScreen from './screens/ScanPlantScreen'; 
+import ScanPlantDetails from './screens/ScanPlantDetails';
 // Initialize the stack navigator
 const Stack = createStackNavigator();
 
@@ -29,7 +30,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="DiseaseHistory" component={ScanPlantScreen} />
+        <Stack.Screen name="DiseaseHistory" component={ScanPlantDetails} />
       </Stack.Navigator>
     </NavigationContainer>
   );

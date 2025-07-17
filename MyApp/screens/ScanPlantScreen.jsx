@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated } from 'react-native';
-import { Camera } from 'expo-camera';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 
 // --- Theme (Colors & Fonts) ---
@@ -14,7 +14,7 @@ const theme = {
         gray: '#8A8A8A',
     },
     typography: {
-        fontFamily: 'System', // Replace with your custom font if you have one
+        fontFamily: 'System',
     },
     spacing: {
         small: 8,
@@ -44,45 +44,11 @@ const AppHeader = ({ onReset }) => (
     </View>
 );
 
-const CustomBottomNavBar = () => (
-    <View style={styles.navContainer}>
-        <View style={styles.navBar}>
-            <TouchableOpacity style={styles.navButton}>
-                <Feather name="home" size={24} color={theme.colors.gray} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navButton}>
-                <Feather name="file-text" size={24} color={theme.colors.gray} />
-            </TouchableOpacity>
-            {/* Placeholder for the large central button */}
-            <View style={{ width: 60 }} />
-            <TouchableOpacity style={styles.navButton}>
-                <Feather name="help-circle" size={24} color={theme.colors.gray} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navButton}>
-                <Feather name="user" size={24} color={theme.colors.green} />
-            </TouchableOpacity>
-        </View>
-        {/* Large central button with cradle effect */}
-        <View style={styles.navCenter}>
-            <View style={styles.navCenterCradle} />
-            <TouchableOpacity style={styles.navCenterButton}>
-                <Feather name="grid" size={28} color={theme.colors.white} />
-            </TouchableOpacity>
-        </View>
-    </View>
-);
-
 const ResultCard = ({ result, onReadMore }) => {
     const slideAnim = useRef(new Animated.Value(300)).current;
-
     useEffect(() => {
-        Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-        }).start();
+        Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start();
     }, []);
-
     return (
         <Animated.View style={[styles.resultCard, { transform: [{ translateY: slideAnim }] }]}>
             <Text style={styles.resultTitle}>{result.name}</Text>
@@ -98,69 +64,81 @@ const ResultCard = ({ result, onReadMore }) => {
 
 // --- Main Screen Component ---
 export default function ScanPlantScreen() {
-    const [hasPermission, setHasPermission] = useState(null);
+    const [imageUri, setImageUri] = useState(null);
     const [scanResult, setScanResult] = useState(null);
 
+    // Request permissions on component mount
     useEffect(() => {
-        (async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setHasPermission(status === 'granted');
-        })();
+        ImagePicker.requestMediaLibraryPermissionsAsync();
+        ImagePicker.requestCameraPermissionsAsync();
     }, []);
+    
+    const handleImageResult = (result) => {
+        if (!result.canceled) {
+            setImageUri(result.assets[0].uri);
+            setScanResult(mockScanResult);
+        }
+    };
 
-    const handleScan = () => {
-        // This simulates a successful scan.
-        // In a real app, you would process the camera frame and get results here.
-        setScanResult(mockScanResult);
+    const pickFromGallery = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+        handleImageResult(result);
+    };
+
+    const takePhoto = async () => {
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+        handleImageResult(result);
     };
 
     const handleReset = () => {
+        setImageUri(null);
         setScanResult(null);
     };
-
-    if (hasPermission === null) {
-        return <View style={styles.loadingContainer}><Text>Requesting permission...</Text></View>;
-    }
-    if (hasPermission === false) {
-        return <View style={styles.loadingContainer}><Text>No access to camera</Text></View>;
-    }
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <AppHeader onReset={handleReset} />
-                <View style={styles.cameraContainer}>
-                    <Camera style={styles.camera} type="back">
-                        <View style={styles.cameraOverlay}>
-                            {/* Bounding Box */}
-                            <View style={styles.boundingBox} />
-                            
-                            {/* Overlayed result marker */}
-                            {scanResult && (
-                                <View style={styles.resultMarker}>
-                                    <Feather name="check" size={16} color={theme.colors.white} />
-                                </View>
-                            )}
 
-                            {/* Instruction Text */}
-                            {!scanResult && (
+                {/* Main content area now acts as a button to open camera */}
+                <TouchableOpacity style={styles.contentContainer} activeOpacity={0.8} onPress={takePhoto}>
+                    <View style={styles.imagePreviewContainer}>
+                        {imageUri ? (
+                            <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                        ) : (
+                            <View style={styles.imagePlaceholder}>
+                                 <View style={styles.boundingBox} />
                                 <View style={styles.instructionContainer}>
                                     <Text style={styles.instructionText}>Position plant in frame</Text>
                                 </View>
-                            )}
-                        </View>
-                    </Camera>
-                </View>
+                            </View>
+                        )}
+                         {scanResult && imageUri && (
+                            <View style={styles.resultMarker}>
+                                <Feather name="check" size={16} color={theme.colors.white} />
+                            </View>
+                        )}
+                    </View>
+                </TouchableOpacity>
 
                 {/* Show controls or result card based on state */}
                 {!scanResult ? (
                     <View style={styles.controlsContainer}>
-                        <TouchableOpacity style={styles.controlButton}>
+                        <TouchableOpacity style={styles.controlButton} onPress={pickFromGallery}>
                             <Feather name="image" size={24} color={theme.colors.black} />
                             <Text style={styles.controlButtonText}>Gallery</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.shutterButton} onPress={handleScan}>
-                            <View style={styles.shutterButtonInner} />
+                        <TouchableOpacity style={styles.shutterButton} onPress={takePhoto}>
+                             <Feather name="camera" size={32} color={theme.colors.white} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.controlButton}>
                             <Feather name="help-circle" size={24} color={theme.colors.black} />
@@ -170,8 +148,6 @@ export default function ScanPlantScreen() {
                 ) : (
                     <ResultCard result={scanResult} onReadMore={handleReset} />
                 )}
-
-                <CustomBottomNavBar />
             </View>
         </SafeAreaView>
     );
@@ -181,11 +157,6 @@ export default function ScanPlantScreen() {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.white },
     container: { flex: 1, backgroundColor: theme.colors.lightGreen },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -202,29 +173,28 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 20,
     },
-    headerPointsText: {
-        fontWeight: 'bold',
-        marginLeft: 4,
-        color: theme.colors.green,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: theme.colors.black,
-    },
-    cameraContainer: {
+    headerPointsText: { fontWeight: 'bold', marginLeft: 4, color: theme.colors.green },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: theme.colors.black },
+    contentContainer: {
         flex: 1,
-        marginHorizontal: theme.spacing.medium,
+        padding: theme.spacing.medium,
+        paddingTop: 0,
+    },
+    imagePreviewContainer: {
+        flex: 1,
         borderRadius: 20,
         overflow: 'hidden',
         backgroundColor: theme.colors.black,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    camera: {
-        flex: 1,
+    imagePreview: {
+        width: '100%',
+        height: '100%',
     },
-    cameraOverlay: {
-        flex: 1,
-        backgroundColor: 'transparent',
+    imagePlaceholder: {
+        width: '100%',
+        height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -249,37 +219,35 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     controlsContainer: {
-        height: 100,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-around',
         backgroundColor: theme.colors.white,
         paddingVertical: theme.spacing.medium,
+        paddingBottom: theme.spacing.large,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        marginTop: -20, // To overlap with camera view
+        position: 'absolute',
+        bottom: 0,
+        left: 0, 
+        right: 0
     },
-    controlButton: { alignItems: 'center' },
-    controlButtonText: {
-        fontSize: 12,
-        color: theme.colors.black,
-        marginTop: 4,
-    },
+    controlButton: { alignItems: 'center', width: 80 },
+    controlButtonText: { fontSize: 12, color: theme.colors.black, marginTop: 4 },
     shutterButton: {
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.green,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 4,
-        borderColor: theme.colors.green,
-    },
-    shutterButtonInner: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: theme.colors.green,
+        // Shadow for iOS
+        shadowColor: theme.colors.green,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        // Elevation for Android
+        elevation: 8,
     },
     resultCard: {
         backgroundColor: theme.colors.white,
@@ -288,7 +256,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         position: 'absolute',
-        bottom: 60, // Height of the nav bar
+        bottom: 0,
         left: 0,
         right: 0,
         elevation: 10,
@@ -297,100 +265,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 10,
     },
-    resultTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: theme.colors.black,
-        marginBottom: theme.spacing.small,
-    },
-    resultConfidence: {
-        fontSize: 16,
-        color: theme.colors.gray,
-        marginBottom: theme.spacing.medium,
-    },
-    resultDescription: {
-        fontSize: 14,
-        color: theme.colors.black,
-        lineHeight: 20,
-        marginBottom: theme.spacing.large,
-    },
-    readMoreButton: {
-        backgroundColor: theme.colors.green,
-        padding: theme.spacing.medium,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    readMoreButtonText: {
-        color: theme.colors.white,
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    resultTitle: { fontSize: 24, fontWeight: 'bold', color: theme.colors.black, marginBottom: theme.spacing.small },
+    resultConfidence: { fontSize: 16, color: theme.colors.gray, marginBottom: theme.spacing.medium },
+    resultDescription: { fontSize: 14, color: theme.colors.black, lineHeight: 20, marginBottom: theme.spacing.large },
+    readMoreButton: { backgroundColor: theme.colors.green, padding: theme.spacing.medium, borderRadius: 12, alignItems: 'center' },
+    readMoreButtonText: { color: theme.colors.white, fontSize: 16, fontWeight: 'bold' },
     resultMarker: {
         position: 'absolute',
         top: '50%',
         left: '50%',
-        transform: [{ translateX: -75 }, { translateY: -50 }], // Example position
+        transform: [{ translateX: -75 }, { translateY: -50 }],
         width: 30,
         height: 30,
         borderRadius: 5,
         backgroundColor: theme.colors.green,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    // --- Custom Nav Bar Styles ---
-    navContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 90, // Increased height to avoid overlap
-        alignItems: 'center',
-    },
-    navBar: {
-        flexDirection: 'row',
-        backgroundColor: theme.colors.white,
-        height: 60,
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        justifyContent: 'space-around',
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-    },
-    navButton: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    navCenter: {
-        position: 'absolute',
-        top: 0,
-        alignItems: 'center',
-        width: 80,
-        height: 80,
-    },
-    navCenterCradle: {
-        width: 80,
-        height: 40,
-        backgroundColor: theme.colors.white,
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
-        position: 'absolute',
-        top: -1,
-    },
-    navCenterButton: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: theme.colors.green,
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        marginTop: 5,
     },
 });
