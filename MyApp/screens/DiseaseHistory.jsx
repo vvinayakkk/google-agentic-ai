@@ -13,6 +13,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import Svg, { Path, G, Circle } from 'react-native-svg';
 import { Animated as RNAnimated } from 'react-native';
+const AnimatedCircle = RNAnimated.createAnimatedComponent(Circle);
 
 // --- Theme & Design System (as requested, in one file) ---
 const theme = {
@@ -279,7 +280,7 @@ const PieChartView = ({ data }) => {
               fill="none"
             />
             {/* Animated green ring */}
-            <RNAnimated.AnimatedCircle
+            <AnimatedCircle
               cx={size / 2}
               cy={size / 2}
               r={radius}
