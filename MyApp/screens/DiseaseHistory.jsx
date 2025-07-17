@@ -11,7 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import Svg, { Path, G, Circle } from 'react-native-svg';
+import Svg, { G, Circle } from 'react-native-svg';
 import { Animated as RNAnimated } from 'react-native';
 const AnimatedCircle = RNAnimated.createAnimatedComponent(Circle);
 
@@ -57,10 +57,10 @@ const theme = {
 
 // --- MOCK DATA (Using Green Theme) ---
 const diseaseData = [
-  { id: '1', name: 'Cedar Apple Rust', description: 'Cedar apple rust is a fungal disease that alternates bet...', savedCount: 2, image: 'https://placehold.co/80x80/A5D6A7/2E7D32?text=Plant', color: theme.colors.lightGreen },
-  { id: '2', name: 'Early Blight', description: 'Early blight is a widespread fungal disease affecting po...', savedCount: 6, image: 'https://placehold.co/80x80/4CAF50/FFFFFF?text=Plant', color: theme.colors.primaryGreen },
-  { id: '3', name: 'Late Blight', description: 'Late blight is one of the most devastating diseases ...', savedCount: 4, image: 'https://placehold.co/80x80/66BB6A/FFFFFF?text=Plant', color: theme.colors.secondaryGreen },
-  { id: '4', name: 'Target Spot', description: 'Target spot is a destructive fungal disease that...', savedCount: 2, image: 'https://placehold.co/80x80/2E7D32/FFFFFF?text=Plant', color: theme.colors.darkGreen },
+    { id: '2', name: 'Early Blight', description: 'Early blight is a widespread fungal disease affecting po...', savedCount: 6, image: 'https://placehold.co/80x80/4CAF50/FFFFFF?text=Plant', color: theme.colors.primaryGreen },
+    { id: '3', name: 'Late Blight', description: 'Late blight is one of the most devastating diseases ...', savedCount: 4, image: 'https://placehold.co/80x80/66BB6A/FFFFFF?text=Plant', color: theme.colors.secondaryGreen },
+    { id: '1', name: 'Cedar Apple Rust', description: 'Cedar apple rust is a fungal disease that alternates bet...', savedCount: 2, image: 'https://placehold.co/80x80/A5D6A7/2E7D32?text=Plant', color: theme.colors.lightGreen },
+    { id: '4', name: 'Target Spot', description: 'Target spot is a destructive fungal disease that...', savedCount: 2, image: 'https://placehold.co/80x80/2E7D32/FFFFFF?text=Plant', color: theme.colors.darkGreen },
 ];
 
 
@@ -107,7 +107,7 @@ const ListView = ({ data }) => (
       keyExtractor={(item) => item.id}
       renderItem={({ item, index }) => (
         <AnimatedListItem index={index}>
-          <View style={[styles.diseaseCard, { borderLeftColor: item.color, borderLeftWidth: 5 }]}> 
+          <View style={[styles.diseaseCard, { borderLeftColor: item.color, borderLeftWidth: 5 }]}>
             <Image source={{ uri: item.image }} style={styles.diseaseImage} />
             <View style={styles.diseaseInfo}>
               <Text style={styles.diseaseName}>{item.name}</Text>
@@ -158,7 +158,6 @@ const BarChartView = ({ data }) => {
     const average = totalOccurrences / data.length;
     const maxValue = Math.max(...data.map(item => item.savedCount));
 
-    // Fade-in animation for the card
     const fadeAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
       Animated.timing(fadeAnim, {
@@ -172,8 +171,7 @@ const BarChartView = ({ data }) => {
         <View>
             <SectionHeader icon="bar-chart" title="Disease Frequency" />
             <Text style={styles.sectionSubtitle}>Visualize the most common diseases in your farm</Text>
-            <Text style={styles.instructionText}>Tap on a bar to see more details</Text>
-            <Animated.View style={[styles.summaryCardGreen, { opacity: fadeAnim }]}> {/* Green card */}
+            <Animated.View style={[styles.summaryCardGreen, { opacity: fadeAnim }]}>
                 <View style={styles.summaryItemLeftGreen}>
                     <Text style={styles.summaryLabelWhite}>TOTAL OCCURRENCES</Text>
                     <Text style={styles.summaryValueLgWhite}>{totalOccurrences}</Text>
@@ -210,132 +208,99 @@ const BarChartView = ({ data }) => {
     );
 };
 
-// --- Pie Chart as Card Pills ---
+// --- [FIXED] Pie Chart View ---
 const PieChartView = ({ data }) => {
-  const total = data.reduce((sum, item) => sum + item.savedCount, 0);
-  const mostCommon = data.reduce((prev, current) => (prev.savedCount > current.savedCount) ? prev : current);
-  const [activeId, setActiveId] = useState(mostCommon.id);
-  const activeItem = data.find(item => item.id === activeId) || mostCommon;
+    const total = data.reduce((sum, item) => sum + item.savedCount, 0);
+    const mostCommon = data.reduce((prev, current) => (prev.savedCount > current.savedCount) ? prev : current);
+    const [activeId, setActiveId] = useState(mostCommon.id);
+    const activeItem = data.find(item => item.id === activeId) || mostCommon;
 
-  // Fade-in animation for the center circle
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [activeId]);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const donutAnim = useRef(new Animated.Value(0)).current;
+    
+    useEffect(() => {
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
 
-  // Donut animation
-  const donutAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(donutAnim, {
-      toValue: (activeItem.savedCount / total),
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, [activeId, activeItem.savedCount, total]);
+        const percentage = activeItem.savedCount / total;
+        Animated.timing(donutAnim, { toValue: percentage, duration: 500, useNativeDriver: false }).start();
+    }, [activeId, activeItem.savedCount, total]);
+    
+    const size = 220;
+    const strokeWidth = 28;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
 
-  // Donut chart dimensions
-  const size = 200;
-  const strokeWidth = 22;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+    const animatedStrokeDashoffset = donutAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [circumference, 0],
+    });
 
-  const animatedStrokeDashoffset = donutAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [circumference, 0],
-  });
+    return (
+        <View>
+            <SectionHeader icon="pie-chart" title="Disease Distribution" />
+            <Text style={styles.sectionSubtitle}>Percentage breakdown of diseases in your farm</Text>
 
-  // Scale animation for pills
-  const scaleAnim = useRef({}).current;
-  data.forEach(item => {
-    if (!scaleAnim[item.id]) {
-      scaleAnim[item.id] = new Animated.Value(1);
-    }
-  });
-  const handlePillPress = (id) => {
-    Animated.sequence([
-      Animated.timing(scaleAnim[id], { toValue: 1.08, duration: 120, useNativeDriver: true }),
-      Animated.timing(scaleAnim[id], { toValue: 1, duration: 120, useNativeDriver: true }),
-    ]).start();
-    setActiveId(id);
-  };
+            <View style={styles.pieChartDisplayCard}>
+                <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                    <G transform={`rotate(-90 ${size/2} ${size/2})`}>
+                        <Circle
+                            cx={size / 2} cy={size / 2} r={radius}
+                            stroke={theme.colors.lightGray}
+                            strokeWidth={strokeWidth}
+                            fill="none"
+                        />
+                        <AnimatedCircle
+                            cx={size / 2} cy={size / 2} r={radius}
+                            stroke={activeItem.color}
+                            strokeWidth={strokeWidth}
+                            fill="none"
+                            strokeDasharray={`${circumference} ${circumference}`}
+                            strokeDashoffset={animatedStrokeDashoffset}
+                            strokeLinecap="round"
+                        />
+                    </G>
+                </Svg>
+                <View style={[StyleSheet.absoluteFill, styles.pieChartCenter]}>
+                    <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
+                        <Text style={styles.pieChartCenterPercent}>
+                            {`${((activeItem.savedCount / total) * 100).toFixed(1)}%`}
+                        </Text>
+                        <Text style={styles.pieChartCenterLabel}>{activeItem.name}</Text>
+                    </Animated.View>
+                </View>
+            </View>
 
-  return (
-    <View>
-      <SectionHeader icon="pie-chart" title="Disease Distribution" />
-      <Text style={styles.sectionSubtitle}>Percentage breakdown of diseases in your farm</Text>
-      <View style={styles.pieChartCardContainer}>
-        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          <Svg width={size} height={size}>
-            {/* Background ring */}
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke={theme.colors.lightGray}
-              strokeWidth={strokeWidth}
-              fill="none"
-            />
-            {/* Animated green ring */}
-            <AnimatedCircle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke={activeItem.color}
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeDasharray={`${circumference}, ${circumference}`}
-              strokeDashoffset={animatedStrokeDashoffset}
-              strokeLinecap="round"
-            />
-          </Svg>
-          {/* Center white circle with percentage and label */}
-          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}> 
-            <Animated.View style={{ opacity: fadeAnim }}>
-              <Text style={styles.pieChartCardPercent}>{`${((activeItem.savedCount / total) * 100).toFixed(1)}%`}</Text>
-              <Text style={styles.pieChartCardLabel}>{activeItem.name}</Text>
-            </Animated.View>
-          </View>
+            <View style={styles.legendGridContainer}>
+                {data.map(item => {
+                    const isActive = item.id === activeId;
+                    const percentage = ((item.savedCount / total) * 100).toFixed(1);
+                    return (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={[
+                                styles.legendPill,
+                                isActive ? styles.legendPillActive : styles.legendPillInactive
+                            ]}
+                            onPress={() => setActiveId(item.id)}
+                            activeOpacity={0.8}
+                        >
+                            <View style={[styles.legendPillDot, { backgroundColor: item.color }]} />
+                            <View style={styles.legendPillTextContainer}>
+                                <Text style={styles.legendPillName} numberOfLines={1}>{item.name}</Text>
+                                <Text style={styles.legendPillPercentage}>{percentage}%</Text>
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
         </View>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.piePillScroll}>
-        {data.map(item => {
-          const isActive = item.id === activeId;
-          return (
-            <Animated.View key={item.id} style={{ transform: [{ scale: scaleAnim[item.id] }] }}>
-              <TouchableOpacity
-                style={[
-                  styles.piePill,
-                  isActive ? styles.piePillActive : styles.piePillInactive,
-                  isActive && { borderWidth: 2, borderColor: theme.colors.primaryGreen },
-                ]}
-                onPress={() => handlePillPress(item.id)}
-                activeOpacity={0.85}
-              >
-                <View style={[
-                  styles.piePillDot,
-                  { backgroundColor: item.color },
-                  isActive ? { borderColor: '#fff', borderWidth: 2 } : { borderColor: item.color, borderWidth: 1 },
-                ]} />
-                <Text style={[
-                  styles.piePillText,
-                  isActive && styles.piePillTextActive,
-                ]}>{`${((item.savedCount / total) * 100).toFixed(1)}%`}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
+    );
 };
 
 // --- Main Screen Component ---
 const DiseaseHistoryScreen = () => {
-  const [activeView, setActiveView] = useState('List');
+  const [activeView, setActiveView] = useState('Pie Chart');
 
   const renderContent = () => {
     switch (activeView) {
@@ -367,7 +332,7 @@ const DiseaseHistoryScreen = () => {
 // --- Styles using Theme ---
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.lightGray },
-  container: { flex: 1, paddingHorizontal: theme.layout.horizontalPadding },
+  container: { flex: 1, paddingHorizontal: theme.layout.horizontalPadding, paddingBottom: 30 },
   header: { alignItems: 'center', marginVertical: theme.spacing.medium },
   headerTitle: { ...theme.typography.headingMedium, color: theme.colors.darkGreen, fontFamily: 'serif', fontWeight: '700', letterSpacing: 0.2 },
   headerSubtitle: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginTop: 4 },
@@ -379,7 +344,6 @@ const styles = StyleSheet.create({
   sectionHeaderContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.small, },
   sectionTitle: { ...theme.typography.headingSmall, color: theme.colors.darkGreen, marginLeft: theme.spacing.small, fontFamily: 'serif', fontWeight: '700', letterSpacing: 0.2 },
   sectionSubtitle: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginBottom: theme.spacing.small, marginLeft: 32 },
-  instructionText: { ...theme.typography.bodySmall, color: theme.colors.gray, marginBottom: theme.spacing.medium, marginLeft: 32 },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.medium },
   recordCount: { backgroundColor: theme.colors.secondaryGreen, paddingHorizontal: theme.spacing.medium, paddingVertical: 4, borderRadius: 15 },
   recordCountText: { ...theme.typography.bodySmall, color: theme.colors.white, fontWeight: 'bold' },
@@ -390,61 +354,7 @@ const styles = StyleSheet.create({
   diseaseDescription: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginVertical: 4 },
   diseaseSavedCount: { ...theme.typography.bodySmall, color: theme.colors.primaryGreen, fontWeight: 'bold', marginTop: 4 },
   
-  // Bar Chart Specific Styles (Updated)
-  summaryCard: { 
-      flexDirection: 'row', 
-      backgroundColor: theme.colors.white, 
-      borderRadius: theme.components.card.borderRadius, 
-      padding: theme.spacing.medium, 
-      marginBottom: theme.spacing.large, 
-      alignItems: 'stretch',
-      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2,
-  },
-  summaryItemLeft: { 
-      flex: 1,
-      alignItems: 'center', 
-      justifyContent: 'center',
-      paddingRight: theme.spacing.medium,
-  },
-  summaryItemRight: {
-      flex: 1.5,
-      justifyContent: 'space-around',
-      paddingLeft: theme.spacing.medium,
-  },
-  summaryLabel: { ...theme.typography.caption, color: theme.colors.gray, textTransform: 'uppercase', marginBottom: 2 },
-  summaryValue: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.darkGreen },
-  summaryValueLg: { ...theme.typography.headingLarge, color: theme.colors.darkGreen, lineHeight: 32 },
-  summarySubValue: { ...theme.typography.bodySmall, color: theme.colors.gray },
-  summaryDivider: { width: 1, backgroundColor: theme.colors.lightGray },
-  summaryDetailRow: { 
-      // This style is for vertical stacking within the right item
-  },
-  barChartContainer: { 
-      backgroundColor: theme.colors.white, 
-      borderRadius: theme.components.card.borderRadius, 
-      padding: theme.spacing.medium,
-      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2,
-  },
-  barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.large + 4, minHeight: 32 },
-  barIndex: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginRight: theme.spacing.medium, width: 20, textAlign: 'right' },
-  barLabel: { ...theme.typography.bodyLarge, color: theme.colors.darkGreen, flex: 1, fontWeight: '500' },
-  barWrapper: { height: 14, backgroundColor: theme.colors.lightGray, borderRadius: 7, flex: 2, marginHorizontal: theme.spacing.medium, borderWidth: 1, borderColor: '#E0E0E0', overflow: 'hidden', justifyContent: 'center' },
-  bar: { height: 14, borderRadius: 7, shadowColor: theme.colors.primaryGreen, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 },
-  barValue: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.darkGreen, width: 32, textAlign: 'right' },
-
-  // Pie Chart Styles
-  pieChartContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: theme.spacing.medium, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
-  pieChartSvg: { },
-  pieChartCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  pieChartCenterText: { ...theme.typography.headingLarge, color: theme.colors.darkGreen, fontFamily: 'serif', fontWeight: '700', fontSize: 28, letterSpacing: 0.2 },
-  pieChartCenterLabel: { ...theme.typography.bodyMedium, color: theme.colors.gray, fontSize: 16, marginTop: 2 },
-  legendContainer: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: theme.colors.white, borderRadius: theme.components.card.borderRadius, paddingVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium, marginTop: theme.spacing.large },
-  legendItem: { flexDirection: 'row', alignItems: 'center', width: '50%', paddingVertical: theme.spacing.small },
-  legendColor: { width: 14, height: 14, borderRadius: 7, marginRight: theme.spacing.small, borderWidth: 1, borderColor: '#E0E0E0' },
-  legendText: { flex: 1, ...theme.typography.bodyMedium, color: theme.colors.darkGreen, fontWeight: '500' },
-  legendValue: { ...theme.typography.bodyMedium, fontWeight: 'bold', color: theme.colors.darkGreen, marginLeft: theme.spacing.small },
-
-  // New styles for green summary card and legend pills
+  // Bar Chart Styles
   summaryCardGreen: {
       flexDirection: 'row',
       backgroundColor: theme.colors.primaryGreen,
@@ -452,131 +362,95 @@ const styles = StyleSheet.create({
       padding: theme.spacing.medium,
       marginBottom: theme.spacing.large,
       alignItems: 'stretch',
-      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2,
+      shadowColor: theme.colors.primaryGreen, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
   },
-  summaryItemLeftGreen: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingRight: theme.spacing.medium,
-  },
-  summaryItemRightGreen: {
-      flex: 1.5,
-      justifyContent: 'space-around',
-      paddingLeft: theme.spacing.medium,
-  },
-  summaryLabelWhite: { ...theme.typography.caption, color: theme.colors.white, textTransform: 'uppercase', marginBottom: 2 },
+  summaryItemLeftGreen: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingRight: theme.spacing.medium, },
+  summaryItemRightGreen: { flex: 1.5, justifyContent: 'space-around', paddingLeft: theme.spacing.medium, },
+  summaryLabelWhite: { ...theme.typography.caption, color: theme.colors.white, textTransform: 'uppercase', marginBottom: 2, opacity: 0.9 },
   summaryValueLgWhite: { ...theme.typography.headingLarge, color: theme.colors.white, lineHeight: 32 },
-  summarySubValueWhite: { ...theme.typography.bodySmall, color: theme.colors.white },
-  summaryDividerGreen: { width: 1, backgroundColor: theme.colors.lightGray },
-  summaryDetailRow: {
-      // This style is for vertical stacking within the right item
-  },
+  summarySubValueWhite: { ...theme.typography.bodySmall, color: theme.colors.white, opacity: 0.9 },
+  summaryDividerGreen: { width: 1, backgroundColor: theme.colors.lightGreen, opacity: 0.5 },
+  summaryDetailRow: {},
   summaryValueWhite: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.white },
+  barChartContainer: { backgroundColor: theme.colors.white, borderRadius: theme.components.card.borderRadius, padding: theme.spacing.medium, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2, },
+  barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.large, minHeight: 32 },
+  barIndex: { ...theme.typography.bodyMedium, color: theme.colors.gray, marginRight: theme.spacing.medium, width: 20, textAlign: 'right' },
+  barLabel: { ...theme.typography.bodyLarge, color: theme.colors.darkGreen, flex: 1, fontWeight: '500' },
+  barWrapper: { height: 14, backgroundColor: theme.colors.lightGray, borderRadius: 7, flex: 2, marginHorizontal: theme.spacing.medium, borderWidth: 1, borderColor: '#E0E0E0', overflow: 'hidden', justifyContent: 'center' },
+  barValue: { ...theme.typography.bodyLarge, fontWeight: 'bold', color: theme.colors.darkGreen, width: 32, textAlign: 'right' },
+
+  // --- [NEW] Pie Chart Styles ---
+  pieChartDisplayCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.components.card.borderRadius,
+    padding: theme.spacing.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: theme.spacing.medium,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  pieChartCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pieChartCenterPercent: {
+    ...theme.typography.headingLarge,
+    color: theme.colors.darkGreen,
+    fontWeight: 'bold',
+    fontSize: 36,
+  },
+  pieChartCenterLabel: {
+    ...theme.typography.bodyMedium,
+    color: theme.colors.gray,
+    marginTop: 4,
+  },
+  legendGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.small,
+  },
   legendPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.lightGray,
-      borderRadius: 15,
-      paddingVertical: theme.spacing.small,
-      paddingHorizontal: theme.spacing.medium,
-      marginVertical: theme.spacing.small,
-      marginHorizontal: theme.spacing.small,
-      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
+    width: '48.5%', // Two items per row with a small gap
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: theme.components.card.borderRadius,
+    padding: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
   },
   legendPillActive: {
-      backgroundColor: theme.colors.primaryGreen,
-      shadowColor: theme.colors.primaryGreen,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 5,
+    backgroundColor: theme.colors.lightGreen,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primaryGreen,
   },
-  // New styles for pieChartCard and pill scroll
-  pieChartCardContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginVertical: theme.spacing.medium,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-  },
-  pieChartCard: {
-      width: 200,
-      height: 200,
-      borderRadius: 100,
-      backgroundColor: theme.colors.white,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 2,
-  },
-  pieChartCardPercent: {
-      ...theme.typography.headingLarge,
-      color: theme.colors.darkGreen,
-      fontFamily: 'serif',
-      fontWeight: '700',
-      fontSize: 28,
-      letterSpacing: 0.2,
-  },
-  pieChartCardLabel: {
-      ...theme.typography.bodyMedium,
-      color: theme.colors.gray,
-      fontSize: 16,
-      marginTop: 2,
-  },
-  piePillScroll: {
-      paddingHorizontal: theme.spacing.medium,
-      paddingBottom: theme.spacing.small,
-  },
-  piePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.lightGray,
-      borderRadius: 15,
-      paddingVertical: theme.spacing.small,
-      paddingHorizontal: theme.spacing.medium,
-      marginVertical: theme.spacing.small,
-      marginHorizontal: theme.spacing.small,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 3,
-      elevation: 1,
-  },
-  piePillActive: {
-      backgroundColor: theme.colors.primaryGreen,
-      shadowColor: theme.colors.primaryGreen,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 5,
-  },
-  piePillInactive: {
+  legendPillInactive: {
     backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  piePillDot: {
-      width: 14,
-      height: 14,
-      borderRadius: 7,
-      marginRight: theme.spacing.small,
-      borderWidth: 1,
-      borderColor: '#E0E0E0',
+  legendPillDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: theme.spacing.medium,
   },
-  piePillText: {
-      ...theme.typography.bodyMedium,
-      fontWeight: 'bold',
-      color: theme.colors.darkGreen,
+  legendPillTextContainer: {
+    flex: 1,
   },
-  piePillTextActive: {
-      color: theme.colors.white,
+  legendPillName: {
+    ...theme.typography.bodyMedium,
+    color: theme.colors.darkGreen,
+    fontWeight: '600',
+  },
+  legendPillPercentage: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.gray,
+    marginTop: 2,
   },
 });
 
