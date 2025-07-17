@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Path, G, Circle } from 'react-native-svg';
+import { Animated as RNAnimated } from 'react-native';
 
 // --- Theme & Design System (as requested, in one file) ---
 const theme = {
@@ -225,6 +226,27 @@ const PieChartView = ({ data }) => {
     }).start();
   }, [activeId]);
 
+  // Donut animation
+  const donutAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(donutAnim, {
+      toValue: (activeItem.savedCount / total),
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, [activeId, activeItem.savedCount, total]);
+
+  // Donut chart dimensions
+  const size = 200;
+  const strokeWidth = 22;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const animatedStrokeDashoffset = donutAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+
   // Scale animation for pills
   const scaleAnim = useRef({}).current;
   data.forEach(item => {
@@ -245,10 +267,38 @@ const PieChartView = ({ data }) => {
       <SectionHeader icon="pie-chart" title="Disease Distribution" />
       <Text style={styles.sectionSubtitle}>Percentage breakdown of diseases in your farm</Text>
       <View style={styles.pieChartCardContainer}>
-        <Animated.View style={[styles.pieChartCard, { opacity: fadeAnim }]}> 
-          <Text style={styles.pieChartCardPercent}>{`${((activeItem.savedCount / total) * 100).toFixed(1)}%`}</Text>
-          <Text style={styles.pieChartCardLabel}>{activeItem.name}</Text>
-        </Animated.View>
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={size} height={size}>
+            {/* Background ring */}
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={theme.colors.lightGray}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            {/* Animated green ring */}
+            <RNAnimated.AnimatedCircle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={activeItem.color}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${circumference}, ${circumference}`}
+              strokeDashoffset={animatedStrokeDashoffset}
+              strokeLinecap="round"
+            />
+          </Svg>
+          {/* Center white circle with percentage and label */}
+          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}> 
+            <Animated.View style={{ opacity: fadeAnim }}>
+              <Text style={styles.pieChartCardPercent}>{`${((activeItem.savedCount / total) * 100).toFixed(1)}%`}</Text>
+              <Text style={styles.pieChartCardLabel}>{activeItem.name}</Text>
+            </Animated.View>
+          </View>
+        </View>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.piePillScroll}>
         {data.map(item => {
