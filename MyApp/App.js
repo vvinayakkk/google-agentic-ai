@@ -14,8 +14,11 @@ import PlantAssistantScreen from './screens/PlantAssistantScreen';
 
 // Import your custom header component
 import CustomHeader from './components/CustomHeader';
+import DiseaseHistory from './screens/DiseaseHistory';
 // Initialize the stack navigator
 const Stack = createStackNavigator();
+
+
 
 /**
  * The main application component that sets up the navigation stack.
@@ -41,7 +44,7 @@ export default function App() {
         
         <Stack.Screen
           name="Home"
-          component={ProfileScreen}
+          component={DiseaseHistory}
           // This will use the default CustomHeader
         />
         {/* <Stack.Screen
