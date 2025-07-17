@@ -41,7 +41,7 @@ export default function App() {
         
         <Stack.Screen
           name="Home"
-          component={HomeScreen}
+          component={ProfileScreen}
           // This will use the default CustomHeader
         />
         {/* <Stack.Screen
