@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 // Import your screens
 // import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import PlantLibraryScreen from './screens/PlantLibraryScreen';
 
 const Stack = createStackNavigator();
 
@@ -12,10 +13,10 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="PlantLibrary"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#f4511e',
+            backgroundColor: '#68D391', // Green color to match the plant library theme
           },
           headerTintColor: '#fff',
           headerTitleStyle: {
@@ -28,6 +29,15 @@ export default function App() {
           // component={HomeScreen} 
           component={ProfileScreen} 
           options={{ title: 'Home Page' }}
+        />
+        
+        <Stack.Screen 
+          name="PlantLibrary" 
+          component={PlantLibraryScreen} 
+          options={{ 
+            title: 'Plant Library',
+            headerShown: false // Hide header since the screen has its own header design
+          }}
         />
         
         {/* Commented out Profile screen */}
