@@ -32,49 +32,49 @@ export default function App() {
           header: (props) => <CustomHeader {...props} />,
         }}
       >
-        {/* --- Standard App Screens --- */}
-        {/* <Stack.Screen
+       
+        {/* { <Stack.Screen
           name="Welcome"
           component={WelcomeScreen}
           // The Welcome screen might not need a header. We can hide it.
           options={{ headerShown: false }}
-        />
+        /> */}
         
         <Stack.Screen
           name="Home"
           component={HomeScreen}
           // This will use the default CustomHeader
         />
-        <Stack.Screen
+        {/* <Stack.Screen
           name="PlantLibrary"
           component={PlantLibraryScreen}
           // This will use the default CustomHeader
-        />
-        <Stack.Screen
+        /> */}
+        {/* <Stack.Screen
           name="PlantDetail"
           component={PlantDetailScreen}
           // This will use the default CustomHeader
-        />
-        <Stack.Screen
+        /> */}
+        {/* <Stack.Screen
           name="Profile"
           component={ProfileScreen}
           // This will use the default CustomHeader
-        /> */}
+        />} */}
 
         {/* --- AI Assistant Flow --- */}
         {/* The landing screen has its own UI and doesn't need the global header. */}
-        <Stack.Screen
+        {/* <Stack.Screen
           name="PlantAILanding"
           component={PlantAILandingScreen}
           options={{ headerShown: false }}
-        />
+        /> */}
         
         {/* The chat screen also has a custom internal header. */}
-        <Stack.Screen
+        {/* <Stack.Screen
           name="PlantAssistant"
           component={PlantAssistantScreen}
           options={{ headerShown: false }}
-        />
+        /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );
