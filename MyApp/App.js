@@ -6,6 +6,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 // import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import PlantLibraryScreen from './screens/PlantLibraryScreen';
+import WelcomeScreen from './screens/WelcomeScreen';
+import HomeScreen from './screens/HomeScreen';
 
 const Stack = createStackNavigator();
 
@@ -25,20 +27,27 @@ export default function App() {
         }}
       >
         <Stack.Screen 
-          name="Home" 
-          // component={HomeScreen} 
-          component={ProfileScreen} 
-          options={{ title: 'Home Page' }}
+          name=" " 
+          component={HomeScreen} 
+          options={{ headerShown: false }}
+       
+          // options={{ title: 'Home Page' }}
         />
         
-        <Stack.Screen 
+        {/* <Stack.Screen 
+          name="Home" 
+          // component={HomeScreen} 
+          component={WelcomeScreen} 
+          options={{ title: 'Home Page' }}
+        /> */}
+        {/* <Stack.Screen 
           name="PlantLibrary" 
           component={PlantLibraryScreen} 
           options={{ 
             title: 'Plant Library',
             headerShown: false // Hide header since the screen has its own header design
           }}
-        />
+        /> */}
         
         {/* Commented out Profile screen */}
         {/* <Stack.Screen 
