@@ -1,257 +1,235 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
-import { Search } from 'lucide-react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { plantData } from '../data/data'; // Adjust path if your data.js is elsewhere
 
-const PlantLibraryScreen = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+// Get screen width for responsive card sizing
+const { width } = Dimensions.get('window');
+const cardWidth = (width - 48) / 2; // 24px padding on each side, 24px in between
 
-  const categories = ['All', 'Fruit', 'Vegetable', 'Leafy'];
+const categories = ['All', 'Fruit', 'Vegetable', 'Legumes', 'Herbs', 'Flowers'];
 
-  const plants = [
-    {
-      id: 1,
-      name: 'Mentha-Mint',
-      description: 'Mint is an aromatic plant that is almost entirely perennial. They have wide...',
-      image: 'https://images.unsplash.com/photo-1628556270303-137b8acfb7de?w=400&h=300&fit=crop',
-      category: 'Leafy'
-    },
-    {
-      id: 2,
-      name: 'Tomato',
-      description: 'The tomato is a red, juicy fruit commonly used as a vegetable in cooking. It gr...',
-      image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&h=300&fit=crop',
-      category: 'Fruit'
-    },
-    {
-      id: 3,
-      name: 'Cucumber',
-      description: 'Cucumbers are long, green vegetables that belong to the gourd family. They are...',
-      image: 'https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?w=400&h=300&fit=crop',
-      category: 'Vegetable'
-    },
-    {
-      id: 4,
-      name: 'Carrot',
-      description: 'Carrots are root vegetables that are typically orange in color. They are rich...',
-      image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&h=300&fit=crop',
-      category: 'Vegetable'
-    },
-    {
-      id: 5,
-      name: 'Spinach',
-      description: 'Spinach is a leafy green flowering plant native to Persia. It is an annual...',
-      image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400&h=300&fit=crop',
-      category: 'Leafy'
-    },
-    {
-      id: 6,
-      name: 'Apple',
-      description: 'Apples are sweet, edible fruits produced by apple trees. They are one of the...',
-      image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop',
-      category: 'Fruit'
-    }
-  ];
+export function PlantLibraryScreen({ navigation }) {
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchText, setSearchText] = useState('');
 
-  const filteredPlants = plants.filter(plant => {
-    const matchesCategory = selectedCategory === 'All' || plant.category === selectedCategory;
-    const matchesSearch = plant.name.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter plants based on active category and search text
+  const filteredPlants = plantData.filter(plant => {
+    const matchesCategory = activeCategory === 'All' || plant.category === activeCategory;
+    const matchesSearch = plant.name.toLowerCase().includes(searchText.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
+      {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.title}>Plant Library</Text>
-        <Text style={styles.subtitle}>Discover and explore our collection</Text>
+        <Text style={styles.headerTitle}>Plant Library</Text>
+        <Text style={styles.headerSubtitle}>Discover and explore our collection</Text>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color="#4A5568" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search plants..."
-            placeholderTextColor="#A0AEC0"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search plants..."
+          value={searchText}
+          onChangeText={setSearchText}
+        />
       </View>
 
-      {/* Categories */}
-      <View style={styles.categoriesContainer}>
-        <Text style={styles.categoriesTitle}>Categories</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
+      {/* Categories Section */}
+      <Text style={styles.categoriesTitle}>Categories</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesScrollView}
+      >
+        {categories.map((category) => (
+          <TouchableOpacity
+            key={category}
+            style={[
+              styles.categoryButton,
+              activeCategory === category && styles.activeCategoryButton,
+            ]}
+            onPress={() => setActiveCategory(category)}
+          >
+            <Text
               style={[
-                styles.categoryButton,
-                selectedCategory === category ? styles.categoryButtonActive : styles.categoryButtonInactive
+                styles.categoryButtonText,
+                activeCategory === category && styles.activeCategoryButtonText,
               ]}
-              onPress={() => setSelectedCategory(category)}
             >
-              <Text style={[
-                styles.categoryText,
-                selectedCategory === category ? styles.categoryTextActive : styles.categoryTextInactive
-              ]}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-      {/* Plants Grid */}
-      <View style={styles.plantsGrid}>
-        {filteredPlants.map((plant, index) => (
-          <View key={plant.id} style={styles.plantCard}>
+      {/* Plant Cards Grid */}
+      <ScrollView contentContainerStyle={styles.plantsGrid}>
+        {filteredPlants.map((plant) => (
+          <TouchableOpacity
+            key={plant.id}
+            style={styles.plantCard}
+            onPress={() => navigation.navigate('PlantDetail', { plantId: plant.id })}
+          >
             <Image source={{ uri: plant.image }} style={styles.plantImage} />
             <View style={styles.plantInfo}>
               <Text style={styles.plantName}>{plant.name}</Text>
-              <Text style={styles.plantDescription}>{plant.description}</Text>
+              <Text style={styles.plantDescription}>{plant.shortDescription}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7FAFC',
-    paddingTop: 50,
+    backgroundColor: '#f8f8f8',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // Handle status bar for Android
   },
   header: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
     alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+    marginBottom: 10,
   },
-  title: {
-    fontSize: 32,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#68D391',
-    marginBottom: 8,
+    color: '#388E3C', // Darker green for the title
   },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 16,
-    color: '#718096',
-    textAlign: 'center',
+    color: '#555',
+    marginTop: 5,
   },
   searchContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginHorizontal: 24,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 1,
     elevation: 2,
+    marginBottom: 20,
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#2D3748',
-  },
-  categoriesContainer: {
-    marginBottom: 24,
-    paddingLeft: 24,
+    color: '#333',
   },
   categoriesTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#68D391',
-    marginBottom: 16,
+    color: '#333',
+    marginLeft: 24,
+    marginBottom: 15,
   },
-  categoriesScroll: {
-    paddingRight: 24,
+  categoriesScrollView: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
   },
   categoryButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    paddingVertical: 10,
     borderRadius: 25,
     marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 2,
+    height: 44, // Fixed height for all buttons
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  categoryButtonActive: {
-    backgroundColor: '#68D391',
-    borderColor: '#68D391',
+  activeCategoryButton: {
+    backgroundColor: '#388E3C', // Green background for active
+    borderColor: '#388E3C',
   },
-  categoryButtonInactive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-  },
-  categoryText: {
+  categoryButtonText: {
+    color: '#333',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  categoryTextActive: {
-    color: '#FFFFFF',
-  },
-  categoryTextInactive: {
-    color: '#4A5568',
+  activeCategoryButtonText: {
+    color: '#fff', // White text for active
   },
   plantsGrid: {
-    paddingHorizontal: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingBottom: 100,
+    paddingHorizontal: 12, // Half of 24px padding to make cards align
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   plantCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 16,
+    width: cardWidth,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 4,
     overflow: 'hidden',
   },
   plantImage: {
     width: '100%',
-    height: 120,
-    resizeMode: 'cover',
+    height: cardWidth, // Make image square
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   plantInfo: {
     padding: 12,
-    backgroundColor: '#C6F6D5',
-    minHeight: 80,
   },
   plantName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 6,
+    color: '#333',
+    marginBottom: 5,
   },
   plantDescription: {
-    fontSize: 12,
-    color: '#4A5568',
-    lineHeight: 16,
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
   },
 });
-
-export default PlantLibraryScreen;
