@@ -3,22 +3,22 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Import all your screens
-import WelcomeScreen from './screens/WelcomeScreen';
-import HomeScreen from './screens/HomeScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import { PlantLibraryScreen } from './screens/PlantLibraryScreen';
-import { PlantDetailScreen } from './screens/PlantDetailScreen';
+import WelcomeScreen from './archives/WelcomeScreen';
+import HomeScreen from './archives/HomeScreen';
+import ProfileScreen from './archives/ProfileScreen';
+import { PlantLibraryScreen } from './archives/PlantLibraryScreen';
+import { PlantDetailScreen } from './archives/PlantDetailScreen';
 // Import the new AI Assistant screens
-import PlantAILandingScreen from './screens/PlantAILandingScreen';
-import PlantAssistantScreen from './screens/PlantAssistantScreen';
+import PlantAILandingScreen from './archives/PlantAILandingScreen';
+import PlantAssistantScreen from './archives/PlantAssistantScreen';
 // Import the new Chat Interface Screen
-import ChatInterfaceScreen from './screens/ChatInterfaceScreen';
+import ChatInterfaceScreen from './archives/ChatInterfaceScreen';
 
 // Import your custom header component
 import CustomHeader from './components/CustomHeader';
-import DiseaseHistory from './screens/DiseaseHistory';
-import ScanPlantScreen from './screens/ScanPlantScreen'; 
-import ScanPlantDetails from './screens/ScanPlantDetails';
+import DiseaseHistory from './archives/DiseaseHistory';
+import ScanPlantScreen from './archives/ScanPlantScreen'; 
+import ScanPlantDetails from './archives/ScanPlantDetails';
 
 // Initialize the stack navigator
 const Stack = createStackNavigator();
@@ -31,20 +31,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {/* <Stack.Screen name="DiseaseHistory" component={ScanPlantDetails} /> */}
-        <Stack.Screen 
-          name="ChatInterface" 
-          component={ChatInterfaceScreen}
-          options={{
-            title: 'AI Chat Assistant',
-            headerStyle: {
-              backgroundColor: '#f8f9fa',
-            },
-            headerTitleStyle: {
-              fontWeight: '600',
-            },
-          }}
-        />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );
