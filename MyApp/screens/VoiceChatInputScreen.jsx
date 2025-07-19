@@ -282,7 +282,7 @@ export default function VoiceChatInputScreen({ navigation }) {
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
                         <Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+                    <TouchableOpacity onPress={() => navigation.navigate('ChoiceScreen')}>
                         <Ionicons name="home-outline" size={28} color="white" />
                     </TouchableOpacity>
                 </View>
