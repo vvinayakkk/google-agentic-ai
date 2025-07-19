@@ -15,12 +15,17 @@ export default function App() {
       
         <Stack.Screen 
           name="VoiceChatInputScreen" 
-          component={FeaturedScreen} 
+          component={VoiceChatInputScreen} 
           options={{ headerShown: false }} 
         />
         <Stack.Screen 
           name="LiveVoiceScreen" 
           component={LiveVoiceScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="FeaturedScreen" 
+          component={FeaturedScreen} 
           options={{ headerShown: false }} 
         />
         
