@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,6 +48,12 @@ const ChatMessage = ({ message }) => {
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
 
+    const handleCopy = () => {
+        // Note: Clipboard might not work in all Expo Go environments, but will work in a standalone build.
+        Clipboard.setString(message.content);
+        Alert.alert("Copied", "Response copied to clipboard.");
+    };
+
     return (
         <View style={styles.chatMessageWrapper}>
             {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>}
@@ -62,6 +68,22 @@ const ChatMessage = ({ message }) => {
                      </View>
                 ) : (
                     <Text style={styles.chatMessageText}>{message.content}</Text>
+                )}
+                 {!isUser && !isDocument && (
+                    <View style={styles.actionIconContainer}>
+                        <TouchableOpacity onPress={() => Alert.alert('Liked', 'You liked this response!')}>
+                            <MaterialCommunityIcons name="thumb-up-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => Alert.alert('Disliked', 'Feedback submitted.')}>
+                            <MaterialCommunityIcons name="thumb-down-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                         <TouchableOpacity onPress={() => Alert.alert('Share', 'Sharing functionality coming soon.')}>
+                            <MaterialCommunityIcons name="share-variant-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleCopy}>
+                            <MaterialCommunityIcons name="content-copy" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
         </View>
@@ -121,8 +143,6 @@ export default function App() {
         }
     };
 
-    // The KeyboardAvoidingView has been moved into the MainScreen component
-    // to provide more granular control and fix the keyboard overlap issue.
     return (
         <View style={styles.container}>
             {renderView()}
@@ -272,6 +292,8 @@ const PlaceholderScreen = ({ insets, screenName, onClose }) => {
                 <TouchableOpacity onPress={onClose}>
                     <Ionicons name="arrow-back" size={28} color="white" />
                 </TouchableOpacity>
+                 <Text style={styles.topBarTitle} numberOfLines={1}>{screenName}</Text>
+                 <View style={{width: 28}} />
             </View>
             <View style={styles.placeholderSection}>
                 <Text style={styles.liveVoiceTitle}>{screenName} Screen</Text>
@@ -372,6 +394,14 @@ const styles = StyleSheet.create({
     chatMessageText: {
         color: 'white',
         fontSize: 16,
+    },
+    actionIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    actionIcon: {
+        marginRight: 20,
     },
     thinkingContainer: {
         flexDirection: 'row',
