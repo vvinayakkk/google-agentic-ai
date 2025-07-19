@@ -140,13 +140,13 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 25,
     fontWeight: '700',
     marginLeft: 8,
   },
   headerSubtitle: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
+    fontSize: 18,
     marginTop: 2,
   },
   listContainer: {
@@ -180,13 +180,13 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     color: 'white',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
     marginBottom: 2,
   },
   historyDate: {
     color: '#10b981',
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '500',
   },
 });

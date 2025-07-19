@@ -42,7 +42,7 @@ const gemItems = [
   { 
     key: 'calendar', 
     icon: '📅', 
-    label: 'Smart Calendar', 
+    label: 'Calendar', 
     description: 'Weather-synced farming optimization',
     gradient: ['#8b5cf6', '#ec4899'],
     accentColor: '#a78bfa',
@@ -52,7 +52,7 @@ const gemItems = [
   { 
     key: 'cycle', 
     icon: '🌱', 
-    label: 'Crop Lifecycle', 
+    label: 'Crop Cycle', 
     description: 'Complete growth monitoring with IoT',
     gradient: ['#22c55e', '#65a30d'],
     accentColor: '#4ade80',

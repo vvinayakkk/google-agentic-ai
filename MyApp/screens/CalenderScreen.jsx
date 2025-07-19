@@ -301,7 +301,9 @@ const SmartCalendar = ({ navigation }) => {
               </View>
             )}
             {hasEvents(date) && (
-              <Animated.View style={[styles.eventIndicator, { transform: [{ scale: pulseAnim }] }]}> <View style={styles.pulseDot} /> </Animated.View>
+              <Animated.View style={[styles.eventIndicator, { transform: [{ scale: pulseAnim }] }]}>
+                <View style={styles.pulseDot} />
+              </Animated.View>
             )}
           </LinearGradient>
         </TouchableOpacity>
@@ -329,10 +331,10 @@ const SmartCalendar = ({ navigation }) => {
   const selectedDateEvents = events[formatDateKey(selectedDate)] || [];
 
   // Update renderEventItem to support expand/collapse
-  const renderEventItem = ({ item, index, key }) => {
+  const renderEventItem = ({ item, index }) => {
     const isExpanded = expandedEventIndex === index;
     return (
-      <View key={key}>
+      <View key={index}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setExpandedEventIndex(isExpanded ? null : index)}
@@ -548,7 +550,7 @@ const SmartCalendar = ({ navigation }) => {
             {selectedDateEvents.length > 0 ? (
               <View style={styles.eventsList}>
                 {selectedDateEvents.map((item, index) =>
-                  renderEventItem({ item, index, key: index })
+                  renderEventItem({ item, index })
                 )}
               </View>
             ) : (
