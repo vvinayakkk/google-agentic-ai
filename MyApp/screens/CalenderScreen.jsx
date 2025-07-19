@@ -661,12 +661,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 25,
     fontWeight: '700',
   },
   headerSubtitle: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
+    fontSize: 15,
     marginTop: 2,
   },
   syncIndicator: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     color: '#10b981',
-    fontSize: 14,
+    fontSize: 19,
     fontWeight: '600',
     flex: 1,
   },
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
+    fontSize: 17,
     lineHeight: 18,
   },
   cursor: {
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   },
   weekDayText: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
     width: (width - 64) / 7,
@@ -807,12 +807,12 @@ const styles = StyleSheet.create({
   selectedCell: {},
   dayNumber: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   todayNumber: {
     color: '#10b981',
-    fontWeight: '700',
+    fontWeight: '900',
   },
   selectedNumber: {
     color: '#10b981',
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   weatherTitle: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 19,
     fontWeight: '600',
   },
   weatherStats: {
@@ -978,13 +978,13 @@ const styles = StyleSheet.create({
   },
   weatherLabel: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 10,
+    fontSize: 14,
     marginTop: 4,
     marginBottom: 2,
   },
   weatherValue: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   eventDetailsContainer: {
