@@ -18,7 +18,7 @@ import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
-const SmartCalendar = () => {
+const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -332,51 +332,52 @@ const SmartCalendar = () => {
   const renderEventItem = ({ item, index, key }) => {
     const isExpanded = expandedEventIndex === index;
     return (
-      <TouchableOpacity
-        key={key}
-        activeOpacity={0.8}
-        onPress={() => setExpandedEventIndex(isExpanded ? null : index)}
-        style={{ marginBottom: 12 }}
-      >
-        <Animated.View
-          style={[
-            styles.eventItem,
-            { 
-              opacity: fadeAnim,
-              transform: [{ translateX: slideAnim }] 
-            }
-          ]}
+      <View key={key}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setExpandedEventIndex(isExpanded ? null : index)}
+          style={{ marginBottom: 12 }}
         >
-          <LinearGradient
-            colors={['rgba(24, 24, 27, 0.8)', 'rgba(39, 39, 42, 0.8)']}
-            style={styles.eventItemGradient}
+          <Animated.View
+            style={[
+              styles.eventItem,
+              { 
+                opacity: fadeAnim,
+                transform: [{ translateX: slideAnim }] 
+              }
+            ]}
           >
-            <View style={styles.eventItemHeader}>
-              <LinearGradient
-                colors={getPriorityColor(item.priority)}
-                style={styles.eventIconContainer}
-              >
-                <Ionicons name={getEventIcon(item.type)} size={16} color="white" />
-              </LinearGradient>
-              <View style={styles.eventItemContent}>
-                <Text style={styles.eventTitle} numberOfLines={2}>{item.task}</Text>
-                <Text style={styles.eventTime}>{item.time}</Text>
+            <LinearGradient
+              colors={['rgba(24, 24, 27, 0.8)', 'rgba(39, 39, 42, 0.8)']}
+              style={styles.eventItemGradient}
+            >
+              <View style={styles.eventItemHeader}>
+                <LinearGradient
+                  colors={getPriorityColor(item.priority)}
+                  style={styles.eventIconContainer}
+                >
+                  <Ionicons name={getEventIcon(item.type)} size={16} color="white" />
+                </LinearGradient>
+                <View style={styles.eventItemContent}>
+                  <Text style={styles.eventTitle} numberOfLines={2}>{item.task}</Text>
+                  <Text style={styles.eventTime}>{item.time}</Text>
+                </View>
+                <LinearGradient
+                  colors={getPriorityColor(item.priority)}
+                  style={styles.priorityBadge}
+                >
+                  <Text style={styles.priorityText}>{item.priority.toUpperCase()}</Text>
+                </LinearGradient>
               </View>
-              <LinearGradient
-                colors={getPriorityColor(item.priority)}
-                style={styles.priorityBadge}
-              >
-                <Text style={styles.priorityText}>{item.priority.toUpperCase()}</Text>
-              </LinearGradient>
-            </View>
-            {isExpanded && (
-              <View style={styles.eventDetailsContainer}>
-                <Text style={styles.eventDetailsText}>{item.details}</Text>
-              </View>
-            )}
-          </LinearGradient>
-        </Animated.View>
-      </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.eventDetailsContainer}>
+                  <Text style={styles.eventDetailsText}>{item.details}</Text>
+                </View>
+              )}
+            </LinearGradient>
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -411,7 +412,7 @@ const SmartCalendar = () => {
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
             <View style={styles.headerContent}>
-              <TouchableOpacity style={styles.backButton}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <LinearGradient
                   colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
                   style={styles.backButtonGradient}
@@ -546,11 +547,9 @@ const SmartCalendar = () => {
 
             {selectedDateEvents.length > 0 ? (
               <View style={styles.eventsList}>
-                {selectedDateEvents.map((item, index) => (
-                  <React.Fragment key={index}>
-                    {renderEventItem({ item, index, key: index })}
-                  </React.Fragment>
-                ))}
+                {selectedDateEvents.map((item, index) =>
+                  renderEventItem({ item, index, key: index })
+                )}
               </View>
             ) : (
               <Animated.View style={[styles.noEventsContainer, { opacity: fadeAnim }]}>

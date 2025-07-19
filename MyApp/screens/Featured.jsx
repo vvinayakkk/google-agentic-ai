@@ -260,7 +260,7 @@ const FeatureCard = ({ item, index, onPress }) => {
   );
 };
 
-export default function FeaturedScreen() {
+export default function FeaturedScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(false);
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -302,7 +302,7 @@ export default function FeaturedScreen() {
         <Animated.View style={[styles.header, { opacity: headerOpacity, paddingTop: insets.top }]}>
           <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
             <View style={styles.headerContent}>
-              <TouchableOpacity style={styles.headerButton}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('VoiceChatInputScreen')}>
                 <LinearGradient
                   colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
                   style={styles.headerButtonGradient}
@@ -357,14 +357,22 @@ export default function FeaturedScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.featuresGrid}>
-            {gemItems.map((item, index) => (
-              <FeatureCard
-                key={item.key}
-                item={item}
-                index={index}
-                onPress={() => console.log(`Pressed ${item.label}`)}
-              />
-            ))}
+            {gemItems.map((item, index) => {
+              let onPress = () => console.log(`Pressed ${item.label}`);
+              if (item.key === 'calendar') {
+                onPress = () => navigation.navigate('CalenderScreen');
+              } else if (item.key === 'cycle') {
+                onPress = () => navigation.navigate('CropCycle');
+              }
+              return (
+                <FeatureCard
+                  key={item.key}
+                  item={item}
+                  index={index}
+                  onPress={onPress}
+                />
+              );
+            })}
           </View>
 
           {/* CTA Section */}

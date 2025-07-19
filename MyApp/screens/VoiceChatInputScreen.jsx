@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // --- EXPO LIBRARY IMPORT (No Native Build Needed) ---
 // expo install expo-document-picker
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 // --- Simulated API Configuration ---
@@ -122,21 +123,21 @@ const FeaturesView = ({ navigation }) => {
         <View style={styles.featuresContainer}>
             <View style={styles.featuresRow}>
                 <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleSchedule')}>
-                    <MaterialCommunityIcons name="cow" size={40} color="white" />
+                    <MaterialCommunityIcons name="cow" size={40} color="#10b981" />
                     <Text style={styles.featureText}>Cattle Schedule</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('Calendar')}>
-                    <MaterialCommunityIcons name="calendar-month-outline" size={40} color="white" />
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CalenderScreen')}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={40} color="#3b82f6" />
                     <Text style={styles.featureText}>Calendar</Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.featuresRow}>
                 <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropCycle')}>
-                    <MaterialCommunityIcons name="recycle-variant" size={40} color="white" />
+                    <MaterialCommunityIcons name="recycle-variant" size={40} color="#f59e0b" />
                     <Text style={styles.featureText}>Crop Cycle</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropDoctor')}>
-                    <MaterialCommunityIcons name="stethoscope" size={40} color="white" />
+                    <MaterialCommunityIcons name="stethoscope" size={40} color="#a259f7" />
                     <Text style={styles.featureText}>Crop Doctor</Text>
                 </TouchableOpacity>
             </View>
@@ -153,6 +154,39 @@ export default function VoiceChatInputScreen({ navigation }) {
     const [chatTitle, setChatTitle] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const flatListRef = useRef();
+
+    // --- New: Load and save chat history to AsyncStorage ---
+    const saveChatToHistory = async (title, messages) => {
+        try {
+            const newChat = {
+                id: Date.now().toString(),
+                title: title || 'Untitled Chat',
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                messages,
+            };
+            let history = await AsyncStorage.getItem('chatHistory');
+            history = history ? JSON.parse(history) : [];
+            if (history.length > 0) {
+                // Replace the last (oldest) chat
+                history[history.length - 1] = newChat;
+            } else {
+                history.push(newChat);
+            }
+            await AsyncStorage.setItem('chatHistory', JSON.stringify(history));
+        } catch (e) {
+            console.log('Failed to save chat to history', e);
+        }
+    };
+
+    // --- New: Start new chat handler ---
+    const handleStartNewChat = async () => {
+        if (chatHistory.length > 0) {
+            await saveChatToHistory(chatTitle, chatHistory);
+        }
+        setChatHistory([]);
+        setChatTitle('');
+        setInputValue('');
+    };
 
     useEffect(() => {
         if (chatHistory.length > 0) {
@@ -233,7 +267,6 @@ export default function VoiceChatInputScreen({ navigation }) {
                         />
                     )}
                 </View>
-                
                 {/* Input Bar */}
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
@@ -257,6 +290,10 @@ export default function VoiceChatInputScreen({ navigation }) {
                             <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
                         </TouchableOpacity>
                     )}
+                    {/* New Chat + Button */}
+                    <TouchableOpacity style={styles.newChatButton} onPress={handleStartNewChat}>
+                        <Ionicons name="add-circle" size={32} color="#10b981" />
+                    </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -278,6 +315,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#222',
+        height:120
     },
     topBarTitle: {
         color: 'white',
@@ -302,9 +340,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#1e1e1e',
         borderRadius: 35, // Increased for a rounder look
         paddingHorizontal: 20,
+        // paddingBottom:20, // Remove to avoid extra space when keyboard is hidden
         marginHorizontal: '5%',
         marginVertical: 10,
-        minHeight: 60, // Increased height
+        minHeight: 60, // Make input bar thicker
+        paddingVertical: 12, // Add vertical padding for more thickness
     },
     plusButton: {
         marginRight: 10,
@@ -312,9 +352,9 @@ const styles = StyleSheet.create({
     textInput: {
         flex: 1,
         color: 'white',
-        fontSize: 16,
+        fontSize: 18, // Slightly larger text
         marginRight: 10,
-        paddingVertical: 10, // Increased padding for more height
+        paddingVertical: 16, // More vertical padding for thickness
         maxHeight: 120, // Prevent it from getting excessively tall
     },
     voiceButton: {
@@ -399,5 +439,9 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 14,
         fontWeight: '600',
+    },
+    newChatButton: {
+        marginLeft: 10,
+        padding: 4,
     },
 });

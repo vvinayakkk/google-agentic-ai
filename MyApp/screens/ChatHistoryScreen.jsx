@@ -1,14 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const DUMMY_HISTORY = [
-  { id: '1', title: 'Weather forecast for this week', date: 'July 20, 2025' },
-  { id: '2', 'title': 'Best fertilizer for wheat crops', date: 'July 19, 2025' },
-  { id: '3', 'title': 'How to control pests organically', date: 'July 18, 2025' },
-  { id: '4', 'title': 'Market price for tomatoes', date: 'July 17, 2025' },
-];
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const HistoryItem = ({ title, date, onPress }) => (
   <TouchableOpacity style={styles.historyItem} onPress={onPress}>
@@ -19,68 +16,177 @@ const HistoryItem = ({ title, date, onPress }) => (
 
 export default function ChatHistoryScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const [history, setHistory] = React.useState([]);
+
+  // Load chat history from AsyncStorage
+  const loadHistory = async () => {
+    try {
+      let stored = await AsyncStorage.getItem('chatHistory');
+      stored = stored ? JSON.parse(stored) : [];
+      setHistory(stored);
+    } catch (e) {
+      setHistory([]);
+    }
+  };
+
+  React.useEffect(() => {
+    loadHistory();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadHistory();
+    }, [])
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Chat History</Text>
-        <View style={{ width: 28 }} />
-      </View>
-      <FlatList
-        data={DUMMY_HISTORY}
-        renderItem={({ item }) => (
-          <HistoryItem 
-            title={item.title} 
-            date={item.date}
-            onPress={() => navigation.navigate('VoiceChatInputScreen')} 
-          />
-        )}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
+    <View style={{ flex: 1, backgroundColor: 'black' }}>
+      {/* Background Gradients */}
+      <LinearGradient
+        colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
+        style={StyleSheet.absoluteFillObject}
       />
-    </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        {/* Top Bar with Blur and Gradient */}
+        <View style={{ paddingTop: insets.top }}>
+          <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
+            <View style={styles.topBarContent}>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                  style={styles.backButtonGradient}
+                >
+                  <Ionicons name="chevron-back" size={24} color="#10b981" />
+                </LinearGradient>
+              </TouchableOpacity>
+              <View style={styles.headerCenter}>
+                <View style={styles.headerTitleContainer}>
+                  <Ionicons name="chatbubble-ellipses" size={20} color="#3b82f6" />
+                  <Text style={styles.topBarTitle}>Chat History</Text>
+                </View>
+                <Text style={styles.headerSubtitle}>Your recent conversations</Text>
+              </View>
+              <View style={{ width: 28 }} />
+            </View>
+          </BlurView>
+        </View>
+        {/* Chat History List */}
+        <FlatList
+          data={history}
+          renderItem={({ item, index }) => (
+            <LinearGradient
+              colors={index % 2 === 0 ? ['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)'] : ['rgba(39, 39, 42, 0.9)', 'rgba(24, 24, 27, 0.9)']}
+              style={styles.historyItemGradient}
+            >
+              <TouchableOpacity
+                style={styles.historyItemTouchable}
+                onPress={() => navigation.navigate('VoiceChatInputScreen', { chatId: item.id })}
+                activeOpacity={0.8}
+              >
+                <View style={styles.historyItemHeader}>
+                  <LinearGradient
+                    colors={['#3b82f6', '#10b981']}
+                    style={styles.historyIconContainer}
+                  >
+                    <Ionicons name="chatbubble-outline" size={18} color="white" />
+                  </LinearGradient>
+                  <View style={styles.historyItemContent}>
+                    <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.historyDate}>{item.date}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </LinearGradient>
+          )}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: 'transparent',
   },
-  topBar: {
-    width: '100%',
+  headerBlur: {
+    borderRadius: 20,
+    margin: 16,
+    overflow: 'hidden',
+  },
+  topBarContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  backButtonGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   topBarTitle: {
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 2,
   },
   listContainer: {
     padding: 20,
+    paddingTop: 0,
   },
-  historyItem: {
-    backgroundColor: '#1e1e1e',
-    padding: 15,
+  historyItemGradient: {
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  historyItemTouchable: {
+    padding: 16,
+  },
+  historyItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyIconContainer: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  historyItemContent: {
+    flex: 1,
   },
   historyTitle: {
     color: 'white',
-    fontSize: 16,
-    marginBottom: 5,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   historyDate: {
-    color: 'gray',
+    color: '#10b981',
     fontSize: 12,
+    fontWeight: '500',
   },
 });

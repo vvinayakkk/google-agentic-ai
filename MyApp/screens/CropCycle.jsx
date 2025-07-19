@@ -140,11 +140,21 @@ const CropWallboard = ({ onSelectCrop }) => {
 const CropDetailView = ({ crop, onBack }) => {
     const [activeView, setActiveView] = useState('menu'); // menu, timeline, subsidies, analysis, suggestions
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         fadeAnim.setValue(0);
         Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     }, [activeView, crop]);
+
+    // --- Add back handler for subviews ---
+    const handleBack = () => {
+        if (activeView !== 'menu') {
+            setActiveView('menu');
+        } else {
+            onBack();
+        }
+    };
 
     const renderContent = () => {
         switch (activeView) {
@@ -164,7 +174,15 @@ const CropDetailView = ({ crop, onBack }) => {
 
     return (
         <View style={{ flex: 1 }}>
-            <Animated.View style={{ flex: 1, opacity: fadeAnim, paddingTop: 20 }}>
+            {/* Top bar for crop detail views */}
+            <View style={[styles.topBar, { paddingTop: insets.top }]}> {/* Add safe area top padding */}
+                <TouchableOpacity onPress={handleBack}>
+                    <Ionicons name="arrow-back" size={28} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.topBarTitle}>{crop.name}</Text>
+                <View style={{ width: 28 }} />
+            </View>
+            <Animated.View style={{ flex: 1, opacity: fadeAnim, paddingTop: 0 }}>
                 {renderContent()}
             </Animated.View>
         </View>
@@ -409,16 +427,18 @@ export default function CropCycleScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={handleBackPress}>
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>
-            {selectedCropKey ? CROP_DATA[selectedCropKey].name : 'Crop Cycle Dashboard'}
-        </Text>
-        <View style={{ width: 28 }} />
-      </View>
-      
+      {/* Only show top bar if not in crop detail view (handled inside CropDetailView) */}
+      {!selectedCropKey && (
+        <View style={[styles.topBar, { paddingTop: insets.top }]}> 
+          <TouchableOpacity onPress={handleBackPress}>
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.topBarTitle}>
+              Crop Cycle Dashboard
+          </Text>
+          <View style={{ width: 28 }} />
+        </View>
+      )}
       {selectedCropKey ? (
           <CropDetailView crop={CROP_DATA[selectedCropKey]} onBack={() => setSelectedCropKey(null)} />
       ) : (

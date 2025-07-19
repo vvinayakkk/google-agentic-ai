@@ -15,12 +15,8 @@ const Stack = createStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="SmartCalendar">
-      <Stack.Screen 
-          name="SmartCalendar" 
-          component={SmartCalendar} 
-          options={{ headerShown: false }} 
-        />
+      <Stack.Navigator initialRouteName="ChoiceScreen">
+      
         <Stack.Screen 
           name="ChoiceScreen" 
           component={ChoiceScreen} 
@@ -49,6 +45,11 @@ export default function App() {
         <Stack.Screen 
           name="CropCycle" 
           component={CropCycleScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="CalenderScreen" 
+          component={SmartCalendar} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
