@@ -120,7 +120,7 @@ const ThinkingIndicator = () => {
 const WelcomeView = () => {
     return (
         <View style={styles.welcomeContainer}>
-            <MaterialCommunityIcons name="tractor" size={100} color="#4CAF50" />
+            <MaterialCommunityIcons name="tractor" size={100} color="white" />
             <Text style={styles.welcomeTitle}>Kissan AI</Text>
             <Text style={styles.welcomeSubtitle}>Your Digital Farming Assistant</Text>
         </View>
@@ -224,16 +224,12 @@ export default function VoiceChatInputScreen({ navigation }) {
                         value={inputValue}
                         onChangeText={setInputValue}
                         onSubmitEditing={() => handleSendMessage()}
+                        multiline
                     />
                     {inputValue.length === 0 ? (
-                        <>
-                            <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
-                                <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleAttachDocument}>
-                                <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
-                            </TouchableOpacity>
-                        </>
+                        <TouchableOpacity style={styles.voiceButton} onPress={() => navigation.navigate('LiveVoiceScreen')}>
+                            <MaterialCommunityIcons name="waveform" size={26} color="white" />
+                        </TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={() => handleSendMessage()}>
                             <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
@@ -278,9 +274,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#1e1e1e',
         borderRadius: 30,
         paddingHorizontal: 15,
-        paddingVertical: Platform.OS === 'ios' ? 10 : 5,
         marginHorizontal: '5%',
         marginVertical: 10,
+        minHeight: 50, // Ensure a minimum height
     },
     plusButton: {
         marginRight: 10,
@@ -290,10 +286,13 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         marginRight: 10,
-        paddingVertical: Platform.OS === 'ios' ? 5 : 0,
+        paddingVertical: 10, // Increased padding for more height
+        maxHeight: 120, // Prevent it from getting excessively tall
     },
-    inputIcon: {
-        marginHorizontal: 8,
+    voiceButton: {
+        backgroundColor: '#333',
+        borderRadius: 20,
+        padding: 8,
     },
     chatMessageWrapper: {
         flexDirection: 'row',
