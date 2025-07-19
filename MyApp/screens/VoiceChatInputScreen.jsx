@@ -300,11 +300,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#1e1e1e',
-        borderRadius: 30,
-        paddingHorizontal: 15,
+        borderRadius: 35, // Increased for a rounder look
+        paddingHorizontal: 20,
         marginHorizontal: '5%',
         marginVertical: 10,
-        minHeight: 50, // Ensure a minimum height
+        minHeight: 60, // Increased height
     },
     plusButton: {
         marginRight: 10,
