@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,13 +42,43 @@ const getKissanAIResponse = async (message) => {
 
 
 // --- Chat Message Component ---
-const ChatMessage = ({ message }) => {
+const ChatMessage = ({ message, chatHistory }) => {
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
+    const [liked, setLiked] = useState(false);
+    const [disliked, setDisliked] = useState(false);
 
     const handleCopy = () => {
         Clipboard.setString(message.content);
-        Alert.alert("Copied", "Response copied to clipboard.");
+    };
+
+    const handleLike = () => {
+        setLiked(!liked);
+        if (disliked) setDisliked(false);
+    };
+
+    const handleDislike = () => {
+        setDisliked(!disliked);
+        if (liked) setLiked(false);
+    };
+
+    const handleShare = async () => {
+        try {
+            let shareText = 'Kissan AI Chat:\n\n';
+            
+            chatHistory.forEach((msg, index) => {
+                const sender = msg.sender === 'user' ? 'You' : 'Kissan AI';
+                const content = msg.type === 'document' ? `[Document: ${msg.content.name}]` : msg.content;
+                shareText += `${sender}: ${content}\n\n`;
+            });
+            
+            await Share.share({
+                message: shareText,
+                title: 'Kissan AI Chat'
+            });
+        } catch (error) {
+            console.log('Error sharing:', error);
+        }
     };
 
     return (
@@ -68,13 +98,23 @@ const ChatMessage = ({ message }) => {
                 )}
                  {!isUser && !isDocument && (
                     <View style={styles.actionIconContainer}>
-                        <TouchableOpacity onPress={() => Alert.alert('Liked', 'You liked this response!')}>
-                            <MaterialCommunityIcons name="thumb-up-outline" size={20} color="gray" style={styles.actionIcon} />
+                        <TouchableOpacity onPress={handleLike}>
+                            <MaterialCommunityIcons 
+                                name={liked ? "thumb-up" : "thumb-up-outline"} 
+                                size={20} 
+                                color={liked ? "#4CAF50" : "gray"} 
+                                style={styles.actionIcon} 
+                            />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => Alert.alert('Disliked', 'Feedback submitted.')}>
-                            <MaterialCommunityIcons name="thumb-down-outline" size={20} color="gray" style={styles.actionIcon} />
+                        <TouchableOpacity onPress={handleDislike}>
+                            <MaterialCommunityIcons 
+                                name={disliked ? "thumb-down" : "thumb-down-outline"} 
+                                size={20} 
+                                color={disliked ? "#4CAF50" : "gray"} 
+                                style={styles.actionIcon} 
+                            />
                         </TouchableOpacity>
-                         <TouchableOpacity onPress={() => Alert.alert('Share', 'Sharing functionality coming soon.')}>
+                         <TouchableOpacity onPress={handleShare}>
                             <MaterialCommunityIcons name="share-variant-outline" size={20} color="gray" style={styles.actionIcon} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleCopy}>
@@ -259,7 +299,7 @@ export default function VoiceChatInputScreen({ navigation }) {
                         <FlatList
                             ref={flatListRef}
                             data={chatHistory}
-                            renderItem={({ item }) => <ChatMessage message={item} />}
+                            renderItem={({ item }) => <ChatMessage message={item} chatHistory={chatHistory} />}
                             keyExtractor={(_, index) => index.toString()}
                             style={styles.chatList}
                             contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
