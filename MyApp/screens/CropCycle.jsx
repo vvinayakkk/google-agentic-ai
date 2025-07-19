@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
-// --- CROP DATA ---
+// --- CROP DATA (ENHANCED) ---
 const CROP_DATA = {
   sugarcane: {
     name: 'Sugarcane',
     icon: 'barley',
-    plantingDate: '2024-10-15', // Year-Month-Day
+    plantingDate: '2024-10-15',
     totalDuration: '12-18 Months',
     stages: [
       { id: 1, title: 'Land Preparation', durationWeeks: 4, icon: 'shovel', color: '#a1662f', tasks: ['Deep ploughing', 'Apply FYM', 'Create furrows'], needs: 'Well-drained, loamy soil.', threats: 'Soil-borne pathogens.' },
@@ -26,12 +26,14 @@ const CROP_DATA = {
       { id: 'sub2', title: 'National Food Security Mission (NFSM)', description: 'Offers assistance for purchasing new farm machinery and high-yielding seed varieties.' }
     ],
     analysis: {
-        metrics: [
-            { label: 'Height', value: 85, expected: 80, unit: '%' },
-            { label: 'Soil Moisture', value: 60, expected: 75, unit: '%' },
-            { label: 'Nutrient Level', value: 90, expected: 85, unit: '%' },
-        ],
-        summary: 'Crop height and nutrient levels are optimal. Soil moisture is slightly below the expected range for the Grand Growth phase. Consider light irrigation.'
+        trends: {
+            labels: ['4w ago', '3w ago', '2w ago', 'Last week'],
+            datasets: [
+                { name: 'Soil Moisture', color: '#3498db', data: [70, 65, 75, 60] },
+                { name: 'Rainfall (mm)', color: '#9b59b6', data: [10, 5, 25, 2] },
+            ]
+        },
+        aiInsights: 'The graph shows a significant drop in both rainfall and soil moisture last week. While the recent irrigation event 2 weeks ago helped, the current moisture level (60%) is approaching the stress threshold for the Grand Growth phase. Recommend immediate supplementary irrigation to prevent yield loss.'
     },
     suggestions: [
         { id: 'sug1', type: 'alert', title: 'Pest Alert: Top Borer', description: 'Minor infestation detected in the north-west corner of the field. Recommend spraying with a targeted pesticide.', icon: 'alert-octagon' },
@@ -54,12 +56,14 @@ const CROP_DATA = {
       { id: 'sub1', title: 'Mission for Integrated Development of Horticulture (MIDH)', description: 'Provides support for high-quality seeds, integrated pest management, and post-harvest infrastructure.' },
     ],
     analysis: {
-        metrics: [
-            { label: 'Fruit Set', value: 90, expected: 85, unit: '%' },
-            { label: 'Soil Moisture', value: 80, expected: 80, unit: '%' },
-            { label: 'Pest Activity', value: 15, expected: 10, unit: '%' },
-        ],
-        summary: 'Excellent fruit set and optimal soil moisture. Pest activity is slightly elevated; monitor for fruit borers.'
+        trends: {
+            labels: ['4w ago', '3w ago', '2w ago', 'Last week'],
+            datasets: [
+                { name: 'Fruit Set Rate', color: '#2ecc71', data: [40, 60, 85, 90] },
+                { name: 'Pest Activity', color: '#e74c3c', data: [5, 8, 12, 15] },
+            ]
+        },
+        aiInsights: 'The fruit set rate is excellent and trending upwards. However, pest activity has been steadily increasing over the past month. While still at a manageable level, proactive pest control measures are advised to protect the developing fruit.'
     },
     suggestions: [
         { id: 'sug1', type: 'recommendation', title: 'Increase Potassium', description: 'Apply a foliar spray of potassium nitrate to improve fruit size and quality.', icon: 'flask-outline' },
@@ -68,19 +72,23 @@ const CROP_DATA = {
 };
 
 // --- Helper to calculate current stage ---
-const getCurrentStageIndex = (crop) => {
+const getCurrentStageInfo = (crop) => {
     const plantingDate = new Date(crop.plantingDate);
-    const today = new Date('2025-07-20'); // Using fixed date for consistent demo
+    const today = new Date('2025-07-20');
     const weeksSincePlanting = Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24 * 7));
     
     let cumulativeWeeks = 0;
+    let stageStartWeek = 0;
     for (let i = 0; i < crop.stages.length; i++) {
         cumulativeWeeks += crop.stages[i].durationWeeks;
         if (weeksSincePlanting < cumulativeWeeks) {
-            return i;
+            const weeksIntoStage = weeksSincePlanting - stageStartWeek;
+            const progress = Math.min(100, Math.floor((weeksIntoStage / crop.stages[i].durationWeeks) * 100));
+            return { index: i, progress };
         }
+        stageStartWeek = cumulativeWeeks;
     }
-    return crop.stages.length - 1;
+    return { index: crop.stages.length - 1, progress: 100 };
 };
 
 // --- Components ---
@@ -101,7 +109,7 @@ const CropWallboard = ({ onSelectCrop }) => {
         <ScrollView contentContainerStyle={styles.wallboardContainer}>
             {Object.keys(CROP_DATA).map((key, index) => {
                 const crop = CROP_DATA[key];
-                const currentStageIndex = getCurrentStageIndex(crop);
+                const currentStageIndex = getCurrentStageInfo(crop).index;
                 const currentStage = crop.stages[currentStageIndex];
                 const translateY = animValues[index].interpolate({
                     inputRange: [0, 1],
@@ -217,11 +225,17 @@ const MenuView = ({ onSelect }) => {
 };
 
 const TimelineView = ({ crop }) => {
-    const currentStageIndex = getCurrentStageIndex(crop);
+    const { index: currentStageIndex, progress: currentStageProgress } = getCurrentStageInfo(crop);
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
             {crop.stages.map((stage, index) => (
-                <TimelineStage key={stage.id} stage={stage} isLast={index === crop.stages.length - 1} isCurrent={index === currentStageIndex} />
+                <TimelineStage 
+                    key={stage.id} 
+                    stage={stage} 
+                    isLast={index === crop.stages.length - 1} 
+                    isCurrent={index === currentStageIndex}
+                    progress={index === currentStageIndex ? currentStageProgress : (index < currentStageIndex ? 100 : 0)}
+                />
             ))}
         </ScrollView>
     );
@@ -230,54 +244,124 @@ const TimelineView = ({ crop }) => {
 const AnalysisView = ({ crop }) => (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.analysisContainer}>
-            <Text style={styles.sectionTitle}>Growth Analysis</Text>
+            <Text style={styles.sectionTitle}>4-Week Growth Trends</Text>
             <View style={styles.graphContainer}>
-                {crop.analysis.metrics.map(metric => (
-                    <View key={metric.label} style={styles.barRow}>
-                        <Text style={styles.barLabel}>{metric.label}</Text>
-                        <View style={styles.barTrack}>
-                            <Animated.View style={[styles.bar, { width: `${metric.value}%`, backgroundColor: metric.value < metric.expected ? '#e74c3c' : '#2ecc71' }]} />
-                            <View style={[styles.barExpected, { left: `${metric.expected}%` }]} />
-                        </View>
-                        <Text style={styles.barValue}>{metric.value}{metric.unit}</Text>
+                {/* Graph */}
+                <View style={styles.graph}>
+                    {/* Y-Axis Labels */}
+                    <View style={styles.yAxis}>
+                        <Text style={styles.yAxisLabel}>100%</Text>
+                        <Text style={styles.yAxisLabel}>50%</Text>
+                        <Text style={styles.yAxisLabel}>0%</Text>
                     </View>
-                ))}
+                    {/* Lines and Points */}
+                    <View style={styles.plotArea}>
+                        {crop.analysis.trends.datasets.map(dataset => (
+                            <View key={dataset.name} style={StyleSheet.absoluteFill}>
+                                {dataset.data.map((point, index) => {
+                                    if (index === 0) return null;
+                                    const prevPoint = dataset.data[index - 1];
+                                    const x1 = (width * 0.7 / 3) * (index - 1);
+                                    const y1 = 150 - (prevPoint / 100 * 150);
+                                    const x2 = (width * 0.7 / 3) * index;
+                                    const y2 = 150 - (point / 100 * 150);
+                                    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                                    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                                    return (
+                                        <View key={index} style={[styles.line, {
+                                            backgroundColor: dataset.color,
+                                            width: length,
+                                            left: x1,
+                                            top: y1,
+                                            transform: [{ rotate: `${angle}deg` }, {translateX: length / 2 - length/2}, {translateY: -1}]
+                                        }]} />
+                                    );
+                                })}
+                                {dataset.data.map((point, index) => (
+                                    <View key={index} style={[styles.point, {
+                                        backgroundColor: dataset.color,
+                                        left: (width * 0.7 / 3) * index - 4,
+                                        top: 150 - (point / 100 * 150) - 4,
+                                    }]} />
+                                ))}
+                            </View>
+                        ))}
+                    </View>
+                </View>
+                 {/* X-Axis Labels */}
+                <View style={styles.xAxis}>
+                    {crop.analysis.trends.labels.map(label => <Text key={label} style={styles.xAxisLabel}>{label}</Text>)}
+                </View>
+                {/* Legend */}
+                <View style={styles.legend}>
+                    {crop.analysis.trends.datasets.map(dataset => (
+                        <View key={dataset.name} style={styles.legendItem}>
+                            <View style={[styles.legendColor, { backgroundColor: dataset.color }]} />
+                            <Text style={styles.legendText}>{dataset.name}</Text>
+                        </View>
+                    ))}
+                </View>
             </View>
-            <Text style={styles.summaryTitle}>Summary</Text>
-            <Text style={styles.summaryText}>{crop.analysis.summary}</Text>
+            <View style={styles.aiInsightsCard}>
+                <MaterialCommunityIcons name="brain" size={24} color="#2ecc71" />
+                <View style={styles.aiInsightsContent}>
+                    <Text style={styles.summaryTitle}>AI Insights</Text>
+                    <Text style={styles.summaryText}>{crop.analysis.aiInsights}</Text>
+                </View>
+            </View>
         </View>
     </ScrollView>
 );
 
-const SuggestionsView = ({ crop }) => (
+const SuggestionsView = ({ crop }) => {
+    const animValues = useRef(crop.suggestions.map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const animations = animValues.map(val => Animated.timing(val, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }));
+        Animated.stagger(150, animations).start();
+    }, [crop]);
+
+    return (
      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.suggestionContainer}>
              <Text style={styles.sectionTitle}>AI Suggestions & Alerts</Text>
-             {crop.suggestions.map(sug => {
+             {crop.suggestions.map((sug, index) => {
                  const isAlert = sug.type === 'alert';
+                 const translateY = animValues[index].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                });
                  return (
-                    <View key={sug.id} style={[styles.suggestionCard, {borderColor: isAlert ? '#e74c3c' : '#f1c40f'}]}>
-                        <MaterialCommunityIcons name={sug.icon} size={30} color={isAlert ? '#e74c3c' : '#f1c40f'} />
-                        <View style={styles.suggestionContent}>
-                            <Text style={styles.suggestionTitle}>{sug.title}</Text>
-                            <Text style={styles.suggestionDesc}>{sug.description}</Text>
+                    <Animated.View key={sug.id} style={{opacity: animValues[index], transform: [{translateY}]}}>
+                        <View style={[styles.suggestionCard, {borderColor: isAlert ? '#e74c3c' : '#f1c40f'}]}>
+                            {isAlert && <View style={styles.alertGlow} />}
+                            <MaterialCommunityIcons name={sug.icon} size={30} color={isAlert ? '#e74c3c' : '#f1c40f'} />
+                            <View style={styles.suggestionContent}>
+                                <Text style={styles.suggestionTitle}>{sug.title}</Text>
+                                <Text style={styles.suggestionDesc}>{sug.description}</Text>
+                            </View>
                         </View>
-                    </View>
+                    </Animated.View>
                  )
              })}
         </View>
     </ScrollView>
-);
+    );
+};
 
-const TimelineStage = ({ stage, isLast, isCurrent }) => {
-  const scaleAnim = useRef(new Animated.Value(isCurrent ? 1.2 : 1)).current;
+const TimelineStage = ({ stage, isLast, isCurrent, progress }) => {
+  const scaleAnim = useRef(new Animated.Value(isCurrent ? 1.1 : 1)).current;
 
   useEffect(() => {
       if(isCurrent) {
         Animated.loop(
             Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.1, duration: 600, useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 1.2, duration: 800, useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 1.1, duration: 800, useNativeDriver: true }),
             ])
         ).start();
       } else {
@@ -295,11 +379,14 @@ const TimelineStage = ({ stage, isLast, isCurrent }) => {
         <View style={styles.stageHeader}>
           <MaterialCommunityIcons name={stage.icon} size={24} color={stage.color} />
           <Text style={[styles.stageTitle, { color: stage.color }]}>{stage.title}</Text>
-          <Text style={styles.stageDuration}>{stage.durationWeeks} Weeks</Text>
+          {isCurrent && <Text style={styles.youAreHere}>You are here</Text>}
         </View>
         <View style={styles.stageDetails}>
           <Text style={styles.detailTitle}>Tasks:</Text>
           <Text style={styles.detailText}>{stage.tasks.join(', ')}.</Text>
+        </View>
+        <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: stage.color }]} />
         </View>
       </View>
     </View>
@@ -418,7 +505,8 @@ const styles = StyleSheet.create({
   detailBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   detailBackText: {
     color: 'gray',
@@ -467,42 +555,81 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
   },
-  barRow: {
+  graph: {
+    height: 150,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
   },
-  barLabel: {
-    color: 'white',
-    width: '30%',
+  yAxis: {
+      height: '100%',
+      justifyContent: 'space-between',
+      paddingRight: 10,
   },
-  barTrack: {
-    flex: 1,
-    height: 10,
-    backgroundColor: '#333',
-    borderRadius: 5,
+  yAxisLabel: {
+      color: 'gray',
+      fontSize: 12,
   },
-  bar: {
-    height: '100%',
-    borderRadius: 5,
+  plotArea: {
+      flex: 1,
+      height: '100%',
   },
-  barExpected: {
+  line: {
+      height: 2,
       position: 'absolute',
-      height: '150%',
-      width: 2,
-      backgroundColor: 'white',
-      top: '-25%',
+      transformOrigin: '0 0',
   },
-  barValue: {
+  point: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      position: 'absolute',
+      borderWidth: 1,
+      borderColor: '#1e1e1e',
+  },
+  xAxis: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingLeft: 40, // align with plot area
+      marginTop: 5,
+  },
+  xAxisLabel: {
+      color: 'gray',
+      fontSize: 12,
+  },
+  legend: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 20,
+  },
+  legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 15,
+  },
+  legendColor: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: 5,
+  },
+  legendText: {
       color: 'white',
-      width: '15%',
-      textAlign: 'right',
+      fontSize: 12,
+  },
+  aiInsightsCard: {
+      backgroundColor: '#1e1e1e',
+      borderRadius: 15,
+      padding: 20,
+      flexDirection: 'row',
+  },
+  aiInsightsContent: {
+      flex: 1,
+      marginLeft: 15,
   },
   summaryTitle: {
-      color: 'gray',
+      color: '#2ecc71',
       fontWeight: 'bold',
       fontSize: 16,
-      marginTop: 10,
+      marginBottom: 5,
   },
   summaryText: {
       color: 'white',
@@ -517,6 +644,12 @@ const styles = StyleSheet.create({
       padding: 20,
       marginBottom: 15,
       borderLeftWidth: 4,
+      overflow: 'hidden',
+  },
+  alertGlow: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: '#e74c3c',
+      opacity: 0.1,
   },
   suggestionContent: {
       flex: 1,
@@ -571,10 +704,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  stageDuration: {
-    color: 'gray',
-    fontSize: 12,
-    marginLeft: 'auto',
+  youAreHere: {
+      backgroundColor: '#fff',
+      color: '#000',
+      fontSize: 10,
+      fontWeight: 'bold',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 5,
+      marginLeft: 'auto',
+      overflow: 'hidden',
   },
   stageDetails: {
     paddingLeft: 34,
@@ -586,6 +725,17 @@ const styles = StyleSheet.create({
   },
   detailText: {
     color: 'white',
+  },
+  progressTrack: {
+      height: 6,
+      backgroundColor: '#333',
+      borderRadius: 3,
+      marginTop: 10,
+      overflow: 'hidden',
+  },
+  progressBar: {
+      height: '100%',
+      borderRadius: 3,
   },
   subsidyItem: {
     backgroundColor: '#1e1e1e',
