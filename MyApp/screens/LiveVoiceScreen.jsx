@@ -1,66 +1,138 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons'; // Assuming you have these font icons
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function LiveVoiceScreen() {
-  const insets = useSafeAreaInsets();
+const { width } = Dimensions.get('window');
+
+function VoiceWaveform({ isActive }) {
+  const barCount = 20;
+  const animatedValues = useRef(
+    Array.from({ length: barCount }, () => new Animated.Value(0.5))
+  ).current;
+
+  React.useEffect(() => {
+    let animations = [];
+    if (isActive) {
+      animations = animatedValues.map((val, i) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(val, {
+              toValue: Math.random() * 1.5 + 0.5,
+              duration: 120 + Math.random() * 80,
+              useNativeDriver: true,
+            }),
+            Animated.timing(val, {
+              toValue: 0.5,
+              duration: 120 + Math.random() * 80,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      );
+      Animated.stagger(30, animations).start();
+    } else {
+      animatedValues.forEach((val) => val.setValue(0.5));
+    }
+    return () => {
+      animatedValues.forEach((val) => val.stopAnimation());
+    };
+  }, [isActive]);
 
   return (
-    <View style={styles.container}>
-      {/* Top Bar */}
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <Text style={styles.timeText}>8:38</Text>
-        <MaterialCommunityIcons name="wifi" size={20} color="white" style={styles.iconMargin} />
-        <MaterialCommunityIcons name="battery" size={20} color="white" />
-        <Text style={styles.batteryText}>93%</Text>
-        <View style={{ flex: 1 }} /> {/* Spacer */}
-        <View style={styles.liveIndicator}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>Live</Text>
-        </View>
-        <Ionicons name="square-outline" size={24} color="white" style={styles.iconMargin} />
-        <MaterialCommunityIcons name="dots-vertical" size={24} color="white" />
-      </View>
-
-      {/* Instructions */}
-      <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsText}>
-          To interrupt Gemini,{"\n"}tap or start talking.
-        </Text>
-      </View>
-
-      {/* Transcript Area */}
-      <View style={styles.transcriptContainer}>
-        <Text style={styles.transcriptText}>twenty-eight degrees.</Text>
-        <Text style={styles.transcriptText}>
-          In Mumbai, there'll be light rain, with a high of twenty.
-        </Text>
-        {/* You can add more transcript lines here */}
-
-        {/* Gradient Blur at the bottom */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,1)']} // Adjust colors for your background
-          style={styles.gradientOverlay}
-          locations={[0, 0.8, 1]}
+    <View style={styles.waveformContainer}>
+      {animatedValues.map((val, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.waveBar,
+            {
+              transform: [
+                { scaleY: val },
+                { translateY: val.interpolate({ inputRange: [0, 2], outputRange: [0, -10] }) },
+              ],
+              backgroundColor: i % 2 === 0 ? '#90caf9' : '#b3e5fc',
+            },
+          ]}
         />
-      </View>
+      ))}
+    </View>
+  );
+}
 
-      {/* Bottom Controls */}
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity style={styles.controlButton}>
-          <MaterialCommunityIcons name="square" size={28} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.controlButton}>
-          <MaterialCommunityIcons name="pause" size={28} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.micButton}>
+export default function LiveVoiceScreen({ navigation }) {
+  const [isListening, setIsListening] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [sessionActive, setSessionActive] = useState(true);
+
+  // Button handlers
+  const handleEndSession = () => {
+    setSessionActive(false);
+  };
+  const handlePause = () => setIsPaused((p) => !p);
+  const handleMic = () => {
+    setIsListening((l) => !l);
+  };
+  const handleExit = () => {
+    if (navigation && navigation.navigate) {
+      navigation.navigate('VoiceChatInputScreen');
+    }
+  };
+
+  if (!sessionActive) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
+        <Text style={{ color: 'white', fontSize: 22, marginBottom: 20 }}>Session Ended</Text>
+        <TouchableOpacity style={styles.micButton} onPress={() => setSessionActive(true)}>
           <Ionicons name="mic" size={40} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.redXButton}>
-          <MaterialCommunityIcons name="close" size={28} color="white" />
-        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.outerGlowContainer}>
+      <View style={styles.container}>
+        {/* Voice Waveform Animation */}
+        <View style={{ marginTop: 60, marginBottom: 20 }}>
+          <VoiceWaveform isActive={isListening && !isPaused} />
+        </View>
+
+        {/* Transcript Area (removed) */}
+        <View style={styles.transcriptContainer}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+            {/* No transcript or error shown */}
+          </View>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,1)']}
+            style={styles.gradientOverlay}
+            locations={[0, 0.8, 1]}
+          />
+        </View>
+
+        {/* Blue Themed Bottom Controls with Glow */}
+        <View style={styles.bottomHalfContainer}>
+          <LinearGradient
+            colors={["#2c3e50", "#2980b9", "#6dd5fa"]}
+            style={styles.blueGradient}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          />
+          <View style={styles.controlsContainer}>
+            <TouchableOpacity style={styles.controlButton} onPress={handleEndSession}>
+              <MaterialCommunityIcons name="square" size={28} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.controlButton} onPress={handlePause}>
+              <MaterialCommunityIcons name={isPaused ? "play" : "pause"} size={28} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.micButton, isListening && { backgroundColor: '#90caf9' }]} onPress={handleMic}>
+              <Ionicons name={isListening ? "mic-off" : "mic"} size={40} color="black" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.redXButton} onPress={handleExit}>
+              <MaterialCommunityIcons name="close" size={28} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -69,95 +141,80 @@ export default function LiveVoiceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black', // Dark background
+    backgroundColor: 'black',
   },
-  topBar: {
+  waveformContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingBottom: 10,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    width: width,
+    height: 60,
+    marginBottom: 10,
   },
-  timeText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginRight: 5,
-  },
-  batteryText: {
-    color: 'white',
-    fontSize: 12,
-    marginLeft: 3,
-  },
-  iconMargin: {
-    marginRight: 10,
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#333',
-    borderRadius: 15,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 10,
-  },
-  liveDot: {
+  waveBar: {
     width: 8,
-    height: 8,
+    height: 40,
     borderRadius: 4,
-    backgroundColor: 'red',
-    marginRight: 5,
-  },
-  liveText: {
-    color: 'white',
-    fontSize: 12,
-  },
-  instructionsContainer: {
-    position: 'absolute',
-    top: '30%', // Adjust as needed
-    alignSelf: 'center',
-    zIndex: 1, // Ensure it's above transcript if needed
-  },
-  instructionsText: {
-    color: 'gray',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
+    marginHorizontal: 2,
+    backgroundColor: '#90caf9',
   },
   transcriptContainer: {
     flex: 1,
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
-    paddingBottom: 120, // Make space for controls
-    position: 'relative', // For gradient positioning
+    paddingBottom: 120,
+    position: 'relative',
   },
   transcriptText: {
-    color: 'white',
     fontSize: 22,
     textAlign: 'center',
     marginBottom: 10,
     lineHeight: 30,
+  },
+  userText: {
+    color: '#90caf9',
+    fontWeight: 'bold',
+  },
+  geminiText: {
+    color: '#b3e5fc', // blueish instead of yellow
+    fontStyle: 'italic',
   },
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 150, // Height of the fade effect
+    height: 150,
+  },
+  bottomHalfContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 200,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    overflow: 'hidden',
+    zIndex: 2,
+  },
+  blueGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    height:250,
+    paddingTop:60
   },
   controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 80, // more bottom padding
     paddingHorizontal: 10,
-    backgroundColor: '#1c1c1c', // Slightly lighter than background
+    backgroundColor: 'transparent',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    minHeight: 100, // Ensure enough height for buttons
+    minHeight: 100,
+    zIndex: 3,
   },
   controlButton: {
     backgroundColor: '#333',
@@ -166,6 +223,7 @@ const styles = StyleSheet.create({
     height: 55,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 0, // no border
   },
   micButton: {
     backgroundColor: 'white',
@@ -174,14 +232,31 @@ const styles = StyleSheet.create({
     height: 70,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15, // Space out
+    marginHorizontal: 15,
+    borderWidth: 0, // no border
   },
   redXButton: {
-    backgroundColor: '#e63946', // Red color
+    backgroundColor: '#e63946',
     borderRadius: 50,
     width: 55,
     height: 55,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 0, // no border
+  },
+  outerGlowContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 32,
+    margin: 8,
+    shadowColor: '#0a1a3c',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 32,
+    borderWidth: 4,
+    borderColor: '#0a1a3c',
+    // For Android
+    elevation: 30,
+    overflow: 'hidden',
   },
 });
