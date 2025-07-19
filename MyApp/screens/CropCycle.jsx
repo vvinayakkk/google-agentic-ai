@@ -146,14 +146,6 @@ const CropDetailView = ({ crop, onBack }) => {
         Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     }, [activeView, crop]);
 
-    const handleBack = () => {
-        if (activeView === 'menu') {
-            onBack();
-        } else {
-            setActiveView('menu');
-        }
-    };
-
     const renderContent = () => {
         switch (activeView) {
             case 'timeline':
@@ -172,13 +164,7 @@ const CropDetailView = ({ crop, onBack }) => {
 
     return (
         <View style={{ flex: 1 }}>
-             <TouchableOpacity style={styles.detailBack} onPress={handleBack}>
-                <Ionicons name="arrow-back-circle-outline" size={32} color="gray" />
-                <Text style={styles.detailBackText}>
-                    {activeView === 'menu' ? 'Back to All Crops' : 'Back to Menu'}
-                </Text>
-            </TouchableOpacity>
-            <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+            <Animated.View style={{ flex: 1, opacity: fadeAnim, paddingTop: 20 }}>
                 {renderContent()}
             </Animated.View>
         </View>
@@ -501,16 +487,6 @@ const styles = StyleSheet.create({
       color: 'white',
       fontSize: 16,
       fontWeight: 'bold',
-  },
-  detailBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  detailBackText: {
-    color: 'gray',
-    marginLeft: 10,
   },
   menuContainer: {
     flex: 1,
