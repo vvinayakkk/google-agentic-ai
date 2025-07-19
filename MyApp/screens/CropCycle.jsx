@@ -24,6 +24,18 @@ const CROP_DATA = {
     subsidies: [
       { id: 'sub1', title: 'Pradhan Mantri Krishi Sinchayee Yojana (PMKSY)', description: 'Provides subsidies on micro-irrigation systems like drip and sprinklers, crucial for sugarcane.' },
       { id: 'sub2', title: 'National Food Security Mission (NFSM)', description: 'Offers assistance for purchasing new farm machinery and high-yielding seed varieties.' }
+    ],
+    analysis: {
+        metrics: [
+            { label: 'Height', value: 85, expected: 80, unit: '%' },
+            { label: 'Soil Moisture', value: 60, expected: 75, unit: '%' },
+            { label: 'Nutrient Level', value: 90, expected: 85, unit: '%' },
+        ],
+        summary: 'Crop height and nutrient levels are optimal. Soil moisture is slightly below the expected range for the Grand Growth phase. Consider light irrigation.'
+    },
+    suggestions: [
+        { id: 'sug1', type: 'alert', title: 'Pest Alert: Top Borer', description: 'Minor infestation detected in the north-west corner of the field. Recommend spraying with a targeted pesticide.', icon: 'alert-octagon' },
+        { id: 'sug2', type: 'recommendation', title: 'Nutrient Boost Recommended', description: 'Apply a potassium-rich fertilizer within the next 7 days to enhance sugar accumulation during the upcoming maturity phase.', icon: 'flask-outline' },
     ]
   },
   tomato: {
@@ -40,22 +52,17 @@ const CROP_DATA = {
     ],
     subsidies: [
       { id: 'sub1', title: 'Mission for Integrated Development of Horticulture (MIDH)', description: 'Provides support for high-quality seeds, integrated pest management, and post-harvest infrastructure.' },
-    ]
-  },
-  onion: {
-    name: 'Onion',
-    icon: 'string-lights',
-    plantingDate: '2025-02-15',
-    totalDuration: '4-5 Months',
-    stages: [
-        { id: 1, title: 'Seed Sowing', durationWeeks: 6, icon: 'seed-outline', color: '#8f9a62', tasks: ['Prepare nursery beds', 'Sow seeds thinly', 'Mulching'], needs: 'Fine tilth soil.', threats: 'Fungal diseases.' },
-        { id: 2, title: 'Transplanting', durationWeeks: 2, icon: 'plant-outline', color: '#99bb6d', tasks: ['Uproot seedlings', 'Transplant to main field', 'Immediate irrigation'], needs: 'Proper spacing.', threats: 'High seedling mortality.' },
-        { id: 3, title: 'Vegetative Growth', durationWeeks: 8, icon: 'arrow-up-bold-box-outline', color: '#6a994e', tasks: ['Weed control', 'Apply nitrogen fertilizer', 'Regular watering'], needs: 'Moisture, nutrients.', threats: 'Thrips, purple blotch.' },
-        { id: 4, title: 'Bulb Development', durationWeeks: 6, icon: 'beehive-outline', color: '#fca311', tasks: ['Reduce irrigation', 'Stop fertilizer application', 'Monitor for neck fall'], needs: 'Drier conditions.', threats: 'Basal rot.' },
-        { id: 5, title: 'Harvesting & Curing', durationWeeks: 4, icon: 'content-cut', color: '#a1662f', tasks: ['Harvest after 75% neck fall', 'Cure bulbs in shade', 'Grading and storage'], needs: 'Proper drying.', threats: 'Storage rot.' },
     ],
-     subsidies: [
-      { id: 'sub1', title: 'Rashtriya Krishi Vikas Yojana (RKVY)', description: 'Provides funds for a wide range of agricultural activities, including support for onion storage structures to reduce post-harvest losses.' },
+    analysis: {
+        metrics: [
+            { label: 'Fruit Set', value: 90, expected: 85, unit: '%' },
+            { label: 'Soil Moisture', value: 80, expected: 80, unit: '%' },
+            { label: 'Pest Activity', value: 15, expected: 10, unit: '%' },
+        ],
+        summary: 'Excellent fruit set and optimal soil moisture. Pest activity is slightly elevated; monitor for fruit borers.'
+    },
+    suggestions: [
+        { id: 'sug1', type: 'recommendation', title: 'Increase Potassium', description: 'Apply a foliar spray of potassium nitrate to improve fruit size and quality.', icon: 'flask-outline' },
     ]
   },
 };
@@ -123,37 +130,144 @@ const CropWallboard = ({ onSelectCrop }) => {
 };
 
 const CropDetailView = ({ crop, onBack }) => {
-    const [activeTab, setActiveTab] = useState('timeline');
-    const currentStageIndex = getCurrentStageIndex(crop);
+    const [activeView, setActiveView] = useState('menu'); // menu, timeline, subsidies, analysis, suggestions
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, [crop]);
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    }, [activeView, crop]);
+
+    const handleBack = () => {
+        if (activeView === 'menu') {
+            onBack();
+        } else {
+            setActiveView('menu');
+        }
+    };
+
+    const renderContent = () => {
+        switch (activeView) {
+            case 'timeline':
+                return <TimelineView crop={crop} />;
+            case 'subsidies':
+                return <SubsidyInfo crop={crop} />;
+            case 'analysis':
+                return <AnalysisView crop={crop} />;
+            case 'suggestions':
+                return <SuggestionsView crop={crop} />;
+            case 'menu':
+            default:
+                return <MenuView onSelect={setActiveView} />;
+        }
+    };
 
     return (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-            <View style={styles.tabContainer}>
-                <TouchableOpacity style={[styles.tab, activeTab === 'timeline' && styles.tabActive]} onPress={() => setActiveTab('timeline')}>
-                    <Text style={styles.tabText}>Timeline</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.tab, activeTab === 'subsidies' && styles.tabActive]} onPress={() => setActiveTab('subsidies')}>
-                    <Text style={styles.tabText}>Subsidies & Info</Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                {activeTab === 'timeline' ? (
-                    crop.stages.map((stage, index) => (
-                        <TimelineStage key={stage.id} stage={stage} isLast={index === crop.stages.length - 1} isCurrent={index === currentStageIndex} />
-                    ))
-                ) : (
-                    <SubsidyInfo crop={crop} />
-                )}
-            </ScrollView>
-        </Animated.View>
+        <View style={{ flex: 1 }}>
+             <TouchableOpacity style={styles.detailBack} onPress={handleBack}>
+                <Ionicons name="arrow-back-circle-outline" size={32} color="gray" />
+                <Text style={styles.detailBackText}>
+                    {activeView === 'menu' ? 'Back to All Crops' : 'Back to Menu'}
+                </Text>
+            </TouchableOpacity>
+            <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+                {renderContent()}
+            </Animated.View>
+        </View>
     );
 };
+
+const MenuView = ({ onSelect }) => {
+    const menuItems = [
+        { key: 'timeline', title: 'Crop Timeline', icon: 'chart-timeline-variant', color: '#3498db' },
+        { key: 'analysis', title: 'Growth Analysis', icon: 'chart-bar', color: '#2ecc71' },
+        { key: 'suggestions', title: 'AI Suggestions', icon: 'lightbulb-on-outline', color: '#f1c40f' },
+        { key: 'subsidies', title: 'Subsidies & Schemes', icon: 'bank-outline', color: '#9b59b6' },
+    ];
+    const animValues = useRef(menuItems.map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const animations = animValues.map(val => Animated.timing(val, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }));
+        Animated.stagger(100, animations).start();
+    }, []);
+
+    return (
+        <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle}>What do you want to see?</Text>
+            {menuItems.map((item, index) => {
+                 const translateY = animValues[index].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                });
+                return(
+                <Animated.View key={item.key} style={{ opacity: animValues[index], transform: [{ translateY }] }}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => onSelect(item.key)}>
+                        <MaterialCommunityIcons name={item.icon} size={30} color={item.color} />
+                        <Text style={styles.menuItemText}>{item.title}</Text>
+                        <Ionicons name="chevron-forward" size={24} color="gray" />
+                    </TouchableOpacity>
+                </Animated.View>
+            )})}
+        </View>
+    );
+};
+
+const TimelineView = ({ crop }) => {
+    const currentStageIndex = getCurrentStageIndex(crop);
+    return (
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+            {crop.stages.map((stage, index) => (
+                <TimelineStage key={stage.id} stage={stage} isLast={index === crop.stages.length - 1} isCurrent={index === currentStageIndex} />
+            ))}
+        </ScrollView>
+    );
+};
+
+const AnalysisView = ({ crop }) => (
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.analysisContainer}>
+            <Text style={styles.sectionTitle}>Growth Analysis</Text>
+            <View style={styles.graphContainer}>
+                {crop.analysis.metrics.map(metric => (
+                    <View key={metric.label} style={styles.barRow}>
+                        <Text style={styles.barLabel}>{metric.label}</Text>
+                        <View style={styles.barTrack}>
+                            <Animated.View style={[styles.bar, { width: `${metric.value}%`, backgroundColor: metric.value < metric.expected ? '#e74c3c' : '#2ecc71' }]} />
+                            <View style={[styles.barExpected, { left: `${metric.expected}%` }]} />
+                        </View>
+                        <Text style={styles.barValue}>{metric.value}{metric.unit}</Text>
+                    </View>
+                ))}
+            </View>
+            <Text style={styles.summaryTitle}>Summary</Text>
+            <Text style={styles.summaryText}>{crop.analysis.summary}</Text>
+        </View>
+    </ScrollView>
+);
+
+const SuggestionsView = ({ crop }) => (
+     <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.suggestionContainer}>
+             <Text style={styles.sectionTitle}>AI Suggestions & Alerts</Text>
+             {crop.suggestions.map(sug => {
+                 const isAlert = sug.type === 'alert';
+                 return (
+                    <View key={sug.id} style={[styles.suggestionCard, {borderColor: isAlert ? '#e74c3c' : '#f1c40f'}]}>
+                        <MaterialCommunityIcons name={sug.icon} size={30} color={isAlert ? '#e74c3c' : '#f1c40f'} />
+                        <View style={styles.suggestionContent}>
+                            <Text style={styles.suggestionTitle}>{sug.title}</Text>
+                            <Text style={styles.suggestionDesc}>{sug.description}</Text>
+                        </View>
+                    </View>
+                 )
+             })}
+        </View>
+    </ScrollView>
+);
 
 const TimelineStage = ({ stage, isLast, isCurrent }) => {
   const scaleAnim = useRef(new Animated.Value(isCurrent ? 1.2 : 1)).current;
@@ -167,7 +281,7 @@ const TimelineStage = ({ stage, isLast, isCurrent }) => {
             ])
         ).start();
       } else {
-          scaleAnim.setValue(1); // Reset animation if not current
+          scaleAnim.setValue(1);
       }
   }, [isCurrent, scaleAnim]);
 
@@ -193,7 +307,8 @@ const TimelineStage = ({ stage, isLast, isCurrent }) => {
 };
 
 const SubsidyInfo = ({ crop }) => (
-    <View style={styles.subsidyContainer}>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.sectionTitle}>Subsidies & Schemes</Text>
         {crop.subsidies.map(sub => (
             <View key={sub.id} style={styles.subsidyItem}>
                 <View style={styles.subsidyHeader}>
@@ -203,7 +318,7 @@ const SubsidyInfo = ({ crop }) => (
                 <Text style={styles.subsidyItemDesc}>{sub.description}</Text>
             </View>
         ))}
-    </View>
+    </ScrollView>
 );
 
 
@@ -300,29 +415,121 @@ const styles = StyleSheet.create({
       fontSize: 16,
       fontWeight: 'bold',
   },
-  tabContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      backgroundColor: '#1e1e1e',
-      marginHorizontal: 15,
-      borderRadius: 15,
-      marginTop: 10,
+  detailBack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
   },
-  tab: {
-      paddingVertical: 15,
-      width: '50%',
-      alignItems: 'center',
+  detailBackText: {
+    color: 'gray',
+    marginLeft: 10,
   },
-  tabActive: {
-      backgroundColor: '#333',
-      borderRadius: 15,
+  menuContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
   },
-  tabText: {
-      color: 'white',
-      fontWeight: 'bold',
+  menuTitle: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+  },
+  menuItemText: {
+    color: 'white',
+    fontSize: 18,
+    marginLeft: 15,
+    flex: 1,
   },
   scrollContainer: {
     padding: 20,
+    paddingTop: 0,
+  },
+  sectionTitle: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  analysisContainer: {},
+  graphContainer: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  barLabel: {
+    color: 'white',
+    width: '30%',
+  },
+  barTrack: {
+    flex: 1,
+    height: 10,
+    backgroundColor: '#333',
+    borderRadius: 5,
+  },
+  bar: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  barExpected: {
+      position: 'absolute',
+      height: '150%',
+      width: 2,
+      backgroundColor: 'white',
+      top: '-25%',
+  },
+  barValue: {
+      color: 'white',
+      width: '15%',
+      textAlign: 'right',
+  },
+  summaryTitle: {
+      color: 'gray',
+      fontWeight: 'bold',
+      fontSize: 16,
+      marginTop: 10,
+  },
+  summaryText: {
+      color: 'white',
+      fontSize: 14,
+      lineHeight: 20,
+  },
+  suggestionContainer: {},
+  suggestionCard: {
+      flexDirection: 'row',
+      backgroundColor: '#1e1e1e',
+      borderRadius: 15,
+      padding: 20,
+      marginBottom: 15,
+      borderLeftWidth: 4,
+  },
+  suggestionContent: {
+      flex: 1,
+      marginLeft: 15,
+  },
+  suggestionTitle: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
+  suggestionDesc: {
+      color: '#ccc',
+      marginTop: 5,
   },
   stageContainer: {
     flexDirection: 'row',
@@ -379,9 +586,6 @@ const styles = StyleSheet.create({
   },
   detailText: {
     color: 'white',
-  },
-  subsidyContainer: {
-    padding: 5,
   },
   subsidyItem: {
     backgroundColor: '#1e1e1e',
