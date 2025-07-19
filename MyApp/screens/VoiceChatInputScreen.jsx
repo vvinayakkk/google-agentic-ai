@@ -4,9 +4,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // --- EXPO LIBRARY IMPORT (No Native Build Needed) ---
-// IMPORTANT: To enable document/image attachments, you MUST install this library.
-// It works with Expo Go and does not require a native rebuild.
-// Run the following command:
 // expo install expo-document-picker
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -49,7 +46,6 @@ const ChatMessage = ({ message }) => {
     const isDocument = message.type === 'document';
 
     const handleCopy = () => {
-        // Note: Clipboard might not work in all Expo Go environments, but will work in a standalone build.
         Clipboard.setString(message.content);
         Alert.alert("Copied", "Response copied to clipboard.");
     };
@@ -120,47 +116,28 @@ const ThinkingIndicator = () => {
     );
 };
 
-
-// --- Main App Component ---
-export default function App() {
-    const insets = useSafeAreaInsets ? useSafeAreaInsets() : { top: 40, bottom: 20 };
-    const [currentView, setCurrentView] = useState('main'); // 'main', 'liveVoice', 'home', 'featured'
-    
-    const renderView = () => {
-        switch (currentView) {
-            case 'liveVoice':
-                return <LiveVoiceScreen insets={insets} onClose={() => setCurrentView('main')} />;
-            case 'home':
-                return <PlaceholderScreen insets={insets} screenName="Home" onClose={() => setCurrentView('main')} />;
-            case 'featured':
-                 return <PlaceholderScreen insets={insets} screenName="Featured" onClose={() => setCurrentView('main')} />;
-            case 'main':
-            default:
-                return <MainScreen 
-                            insets={insets} 
-                            onNavigate={setCurrentView}
-                        />;
-        }
-    };
-
+// --- Welcome View Component ---
+const WelcomeView = () => {
     return (
-        <View style={styles.container}>
-            {renderView()}
+        <View style={styles.welcomeContainer}>
+            <MaterialCommunityIcons name="tractor" size={100} color="#4CAF50" />
+            <Text style={styles.welcomeTitle}>Kissan AI</Text>
+            <Text style={styles.welcomeSubtitle}>Your Digital Farming Assistant</Text>
         </View>
     );
-}
+};
 
 
-// --- Screen Components ---
-
-const MainScreen = ({ insets, onNavigate }) => {
+// --- Main Chat Screen Component ---
+export default function VoiceChatInputScreen({ navigation }) {
+    const insets = useSafeAreaInsets ? useSafeAreaInsets() : { top: 40, bottom: 20 };
     const [inputValue, setInputValue] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [chatTitle, setChatTitle] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const flatListRef = useRef();
 
-     useEffect(() => {
+    useEffect(() => {
         if (chatHistory.length > 0) {
             flatListRef.current?.scrollToEnd({ animated: true });
         }
@@ -196,15 +173,9 @@ const MainScreen = ({ insets, onNavigate }) => {
                 const doc = result.assets[0];
                 const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
                 handleSendMessage(message);
-            } else {
-                console.log('User cancelled the document picker or no asset was selected.');
             }
         } catch (err) {
-            Alert.alert(
-                'Error', 
-                'Could not open the document picker. Please ensure you have granted necessary permissions.'
-            );
-            console.error('Document Picker Error:', err);
+            Alert.alert('Error', 'Could not open the document picker.');
         }
     };
 
@@ -212,11 +183,11 @@ const MainScreen = ({ insets, onNavigate }) => {
         <SafeAreaView style={styles.container}>
             {/* Top Bar */}
             <View style={[styles.topBar, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={() => onNavigate('featured')}>
+                <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
                     <Ionicons name="chatbubble-outline" size={28} color="white" />
                 </TouchableOpacity>
                 <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Kissan AI'}</Text>
-                <TouchableOpacity onPress={() => onNavigate('home')}>
+                <TouchableOpacity onPress={() => navigation.navigate('Home')}>
                     <Ionicons name="home-outline" size={28} color="white" />
                 </TouchableOpacity>
             </View>
@@ -225,16 +196,9 @@ const MainScreen = ({ insets, onNavigate }) => {
                 style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-                {/* This view ensures the FlatList and Input are grouped for the KeyboardAvoidingView */}
                 <View style={{ flex: 1 }}>
-                    {/* Conditional Voice Section or Chat List */}
                     {chatHistory.length === 0 ? (
-                        <View style={styles.liveVoiceSection}>
-                            <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
-                            <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
-                                <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
-                            </TouchableOpacity>
-                        </View>
+                        <WelcomeView />
                     ) : (
                         <FlatList
                             ref={flatListRef}
@@ -281,29 +245,6 @@ const MainScreen = ({ insets, onNavigate }) => {
     );
 };
 
-const LiveVoiceScreen = ({ insets, onClose }) => (
-    <PlaceholderScreen insets={insets} screenName="Live Voice (Placeholder)" onClose={onClose} />
-);
-
-const PlaceholderScreen = ({ insets, screenName, onClose }) => {
-    return (
-        <SafeAreaView style={styles.container}>
-             <View style={[styles.topBar, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={onClose}>
-                    <Ionicons name="arrow-back" size={28} color="white" />
-                </TouchableOpacity>
-                 <Text style={styles.topBarTitle} numberOfLines={1}>{screenName}</Text>
-                 <View style={{width: 28}} />
-            </View>
-            <View style={styles.placeholderSection}>
-                <Text style={styles.liveVoiceTitle}>{screenName} Screen</Text>
-                <Text style={styles.liveVoiceSubtitle}>This is a placeholder for navigation.</Text>
-            </View>
-        </SafeAreaView>
-    );
-};
-
-
 // --- Styles ---
 const styles = StyleSheet.create({
     container: {
@@ -328,17 +269,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginHorizontal: 10,
     },
-    liveVoiceSection: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-    },
-    liveVoiceText: {
-        color: 'white',
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 30,
-    },
     chatList: {
         flex: 1,
     },
@@ -350,7 +280,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingVertical: Platform.OS === 'ios' ? 10 : 5,
         marginHorizontal: '5%',
-        marginVertical: 10, // Added margin for spacing
+        marginVertical: 10,
     },
     plusButton: {
         marginRight: 10,
@@ -384,7 +314,7 @@ const styles = StyleSheet.create({
     userMessageContainer: {
         backgroundColor: '#333333',
         alignSelf: 'flex-end',
-        marginLeft: 'auto', // Push to the right
+        marginLeft: 'auto',
         borderBottomRightRadius: 5,
     },
     aiMessageContainer: {
@@ -414,26 +344,21 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginLeft: 10,
     },
-    // Placeholder Screen Styles
-    placeholderSection: {
+    welcomeContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingBottom: 50, // Offset to center it nicely
     },
-    liveVoiceTitle: {
-        color: 'white',
-        fontSize: 32,
+    welcomeTitle: {
+        fontSize: 40,
         fontWeight: 'bold',
-        marginBottom: 40,
-        paddingHorizontal: 20,
-        textAlign: 'center',
+        color: 'white',
+        marginTop: 20,
     },
-    liveVoiceSubtitle: {
+    welcomeSubtitle: {
+        fontSize: 18,
         color: 'gray',
-        fontSize: 16,
-        marginTop: 40,
-        textAlign: 'center',
-        paddingHorizontal: 20,
-        minHeight: 50,
+        marginTop: 5,
     },
 });
