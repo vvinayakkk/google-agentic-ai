@@ -3,7 +3,13 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Flat
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// --- Library imports have been removed to avoid build errors ---
+// --- EXPO LIBRARY IMPORT (No Native Build Needed) ---
+// IMPORTANT: To enable document/image attachments, you MUST install this library.
+// It works with Expo Go and does not require a native rebuild.
+// Run the following command:
+// expo install expo-document-picker
+import * as DocumentPicker from 'expo-document-picker';
+
 
 // --- Simulated API Configuration ---
 const getKissanAIResponse = async (message) => {
@@ -11,7 +17,7 @@ const getKissanAIResponse = async (message) => {
     return new Promise(resolve => {
         setTimeout(() => {
             if (message.type === 'document') {
-                resolve(`Thank you for uploading '${message.content.name}'. I will analyze it and provide a summary. What specific information are you looking for?`);
+                resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`);
                 return;
             }
 
@@ -62,12 +68,52 @@ const ChatMessage = ({ message }) => {
 // --- Main App Component ---
 export default function App() {
     const insets = useSafeAreaInsets ? useSafeAreaInsets() : { top: 40, bottom: 20 };
-    const [currentView, setCurrentView] = useState('main'); // 'main', 'chat', 'liveVoice'
+    const [currentView, setCurrentView] = useState('main'); // 'main', 'liveVoice', 'home', 'featured'
+    
+    const renderView = () => {
+        switch (currentView) {
+            case 'liveVoice':
+                return <LiveVoiceScreen insets={insets} onClose={() => setCurrentView('main')} />;
+            case 'home':
+                return <PlaceholderScreen insets={insets} screenName="Home" onClose={() => setCurrentView('main')} />;
+            case 'featured':
+                 return <PlaceholderScreen insets={insets} screenName="Featured" onClose={() => setCurrentView('main')} />;
+            case 'main':
+            default:
+                return <MainScreen 
+                            insets={insets} 
+                            onNavigate={setCurrentView}
+                        />;
+        }
+    };
+
+    return (
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"} 
+            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -150} // Adjust if needed
+        >
+            {renderView()}
+        </KeyboardAvoidingView>
+    );
+}
+
+
+// --- Screen Components ---
+
+const MainScreen = ({ insets, onNavigate }) => {
     const [inputValue, setInputValue] = useState('');
     const [chatHistory, setChatHistory] = useState([
-        { sender: 'ai', type: 'text', content: 'Hello! I am Kissan AI. How can I assist you with your farming needs today?' }
+        { sender: 'ai', type: 'text', content: 'Hello! Ask me a question or attach a file to begin.' }
     ]);
     const [isThinking, setIsThinking] = useState(false);
+    const flatListRef = useRef();
+
+     useEffect(() => {
+        if (chatHistory.length > 1) {
+            flatListRef.current?.scrollToEnd({ animated: true });
+        }
+    }, [chatHistory]);
 
     const handleSendMessage = async (message) => {
         if (!message) {
@@ -79,7 +125,6 @@ export default function App() {
         setChatHistory(prev => [...prev, userMessage]);
         setInputValue('');
         setIsThinking(true);
-        setCurrentView('chat');
 
         const aiResponseText = await getKissanAIResponse(message);
         const aiMessage = { sender: 'ai', type: 'text', content: aiResponseText };
@@ -89,78 +134,62 @@ export default function App() {
     };
 
     const handleAttachDocument = async () => {
-        Alert.alert("Attaching Document", "Simulating document selection...");
-        // Simulate picking a document after a short delay
-        setTimeout(() => {
-            const doc = { name: 'simulated_soil_report.pdf', uri: 'file:///simulated/path/report.pdf' };
-            const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
-            handleSendMessage(message);
-        }, 1000);
-    };
-    
-    const renderView = () => {
-        switch (currentView) {
-            case 'chat':
-                return <ChatScreen 
-                            insets={insets} 
-                            chatHistory={chatHistory} 
-                            isThinking={isThinking} 
-                            onClose={() => setCurrentView('main')} 
-                        />;
-            case 'liveVoice':
-                return <LiveVoiceScreen 
-                            insets={insets} 
-                            onClose={() => setCurrentView('main')} 
-                            onVoiceResult={(text) => handleSendMessage({type: 'text', content: text})}
-                        />;
-            case 'main':
-            default:
-                return <MainScreen 
-                            insets={insets} 
-                            inputValue={inputValue}
-                            setInputValue={setInputValue}
-                            onSendMessage={handleSendMessage}
-                            onShowChat={() => setCurrentView('chat')}
-                            onShowLiveVoice={() => setCurrentView('liveVoice')}
-                            onAttachDocument={handleAttachDocument}
-                        />;
+        try {
+            const result = await DocumentPicker.getDocumentAsync();
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const doc = result.assets[0];
+                const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
+                handleSendMessage(message);
+            } else {
+                console.log('User cancelled the document picker or no asset was selected.');
+            }
+        } catch (err) {
+            // This error is less likely with expo-document-picker but good to have.
+            Alert.alert(
+                'Error', 
+                'Could not open the document picker. Please ensure you have granted necessary permissions.'
+            );
+            console.error('Document Picker Error:', err);
         }
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-            {renderView()}
-        </KeyboardAvoidingView>
-    );
-}
-
-
-// --- Screen Components ---
-
-const MainScreen = ({ insets, inputValue, setInputValue, onSendMessage, onShowChat, onShowLiveVoice, onAttachDocument }) => {
-    return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
+            {/* Top Bar */}
             <View style={[styles.topBar, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={onShowChat}>
+                <TouchableOpacity onPress={() => onNavigate('featured')}>
                     <Ionicons name="chatbubble-outline" size={28} color="white" />
                 </TouchableOpacity>
-                <View style={{ flex: 1 }} />
-                <TouchableOpacity onPress={() => Alert.alert('Home', 'Navigating to Home Screen!')}>
+                <Text style={styles.topBarTitle}>Kissan AI</Text>
+                <TouchableOpacity onPress={() => onNavigate('home')}>
                     <Ionicons name="home-outline" size={28} color="white" />
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.liveVoiceSection}>
-                <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
-                <TouchableOpacity onPress={onShowLiveVoice}>
-                    <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
-                </TouchableOpacity>
-            </View>
+            {/* Conditional Voice Section or Chat List */}
+            {chatHistory.length <= 1 ? (
+                <View style={styles.liveVoiceSection}>
+                    <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
+                    <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
+                        <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <FlatList
+                    ref={flatListRef}
+                    data={chatHistory}
+                    renderItem={({ item }) => <ChatMessage message={item} />}
+                    keyExtractor={(_, index) => index.toString()}
+                    style={styles.chatList}
+                    contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
+                />
+            )}
+            
+            {isThinking && <Text style={styles.thinkingText}>Kissan AI is thinking...</Text>}
 
-            <Text style={styles.orText}>OR</Text>
-
-            <View style={[styles.inputContainer, { marginBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
-                <TouchableOpacity style={styles.plusButton} onPress={onAttachDocument}>
+            {/* Input Bar */}
+            <View style={[styles.inputContainer, { marginBottom: Platform.OS === "ios" ? (insets.bottom > 0 ? 0 : 20) : 10 }]}>
+                <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
                     <Ionicons name="add" size={28} color="gray" />
                 </TouchableOpacity>
                 <TextInput
@@ -169,99 +198,32 @@ const MainScreen = ({ insets, inputValue, setInputValue, onSendMessage, onShowCh
                     placeholderTextColor="gray"
                     value={inputValue}
                     onChangeText={setInputValue}
+                    onSubmitEditing={() => handleSendMessage()}
                 />
                 {inputValue.length === 0 ? (
                     <>
                         <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
                             <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={onAttachDocument}>
+                        <TouchableOpacity onPress={handleAttachDocument}>
                             <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
                         </TouchableOpacity>
                     </>
                 ) : (
-                    <TouchableOpacity onPress={() => onSendMessage()}>
+                    <TouchableOpacity onPress={() => handleSendMessage()}>
                         <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
                     </TouchableOpacity>
                 )}
             </View>
-        </View>
-    );
-};
-
-const ChatScreen = ({ insets, chatHistory, isThinking, onClose }) => {
-    const flatListRef = useRef();
-
-    useEffect(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-    }, [chatHistory]);
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={[styles.topBar, { paddingTop: insets.top, paddingBottom: 15 }]}>
-                <Text style={styles.topBarTitle}>Kissan AI Chat</Text>
-                <TouchableOpacity onPress={onClose}>
-                    <Ionicons name="close-circle" size={30} color="white" />
-                </TouchableOpacity>
-            </View>
-            <FlatList
-                ref={flatListRef}
-                data={chatHistory}
-                renderItem={({ item }) => <ChatMessage message={item} />}
-                keyExtractor={(_, index) => index.toString()}
-                style={styles.chatList}
-                contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
-            />
-            {isThinking && <Text style={styles.thinkingText}>Kissan AI is thinking...</Text>}
         </SafeAreaView>
     );
 };
 
-const LiveVoiceScreen = ({ insets, onClose, onVoiceResult }) => {
-    const [isListening, setIsListening] = useState(false);
-    const [recognizedText, setRecognizedText] = useState('');
-    const scaleAnim = useRef(new Animated.Value(1)).current;
+const LiveVoiceScreen = ({ insets, onClose }) => (
+    <PlaceholderScreen insets={insets} screenName="Live Voice (Placeholder)" onClose={onClose} />
+);
 
-    const handleToggleListen = () => {
-        if (isListening) {
-            // This part is for stopping, but our simulation stops automatically.
-            return;
-        }
-        
-        setIsListening(true);
-        setRecognizedText('...'); // Show listening indicator
-        
-        // Simulate voice recognition after a delay
-        setTimeout(() => {
-            const simulatedVoiceInput = "What is the weather forecast for this week?";
-            setRecognizedText(simulatedVoiceInput);
-            setIsListening(false);
-            
-            // Automatically send the result after another short delay
-            setTimeout(() => {
-                onVoiceResult(simulatedVoiceInput);
-            }, 1000);
-        }, 2500); // Simulate listening for 2.5 seconds
-    };
-
-    // --- Animation Logic ---
-    useEffect(() => {
-        const pulseAnimation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.2, duration: 500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-                Animated.timing(scaleAnim, { toValue: 1, duration: 500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
-            ])
-        );
-        if (isListening) {
-            pulseAnimation.start();
-        } else {
-            pulseAnimation.stop();
-            scaleAnim.setValue(1);
-        }
-        
-        return () => pulseAnimation.stop();
-    }, [isListening, scaleAnim]);
-
+const PlaceholderScreen = ({ insets, screenName, onClose }) => {
     return (
         <SafeAreaView style={styles.container}>
              <View style={[styles.topBar, { paddingTop: insets.top }]}>
@@ -269,14 +231,9 @@ const LiveVoiceScreen = ({ insets, onClose, onVoiceResult }) => {
                     <Ionicons name="arrow-back" size={28} color="white" />
                 </TouchableOpacity>
             </View>
-            <View style={styles.liveVoiceSection}>
-                <Text style={styles.liveVoiceTitle}>{isListening ? "Listening..." : "Tap to Speak"}</Text>
-                <TouchableOpacity onPress={handleToggleListen}>
-                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                        <MaterialCommunityIcons name="waveform" size={120} color={isListening ? '#4CAF50' : 'white'} />
-                    </Animated.View>
-                </TouchableOpacity>
-                <Text style={styles.liveVoiceSubtitle}>{recognizedText || "Ask me about crops, weather, or market prices."}</Text>
+            <View style={styles.placeholderSection}>
+                <Text style={styles.liveVoiceTitle}>{screenName} Screen</Text>
+                <Text style={styles.liveVoiceSubtitle}>This is a placeholder for navigation.</Text>
             </View>
         </SafeAreaView>
     );
@@ -296,6 +253,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#222',
     },
     topBarTitle: {
         color: 'white',
@@ -313,27 +272,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 30,
     },
-    liveVoiceTitle: {
-        color: 'white',
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginBottom: 40,
-        paddingHorizontal: 20,
-        textAlign: 'center',
-    },
-    liveVoiceSubtitle: {
-        color: 'gray',
-        fontSize: 16,
-        marginTop: 40,
-        textAlign: 'center',
-        paddingHorizontal: 20,
-        minHeight: 50,
-    },
-    orText: {
-        color: 'gray',
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 20,
+    chatList: {
+        flex: 1,
     },
     inputContainer: {
         flexDirection: 'row',
@@ -341,8 +281,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#1e1e1e',
         borderRadius: 30,
         paddingHorizontal: 15,
-        paddingVertical: 10,
+        paddingVertical: Platform.OS === 'ios' ? 10 : 5,
         marginHorizontal: '5%',
+        borderTopWidth: 1,
+        borderColor: '#222',
+        paddingBottom: Platform.OS === 'ios' ? 10 : 5
     },
     plusButton: {
         marginRight: 10,
@@ -352,12 +295,10 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         marginRight: 10,
+        paddingVertical: Platform.OS === 'ios' ? 5 : 0,
     },
     inputIcon: {
         marginHorizontal: 8,
-    },
-    chatList: {
-        flex: 1,
     },
     chatMessageContainer: {
         paddingVertical: 10,
@@ -385,5 +326,27 @@ const styles = StyleSheet.create({
         color: 'gray',
         padding: 10,
         fontStyle: 'italic',
+    },
+    // Placeholder Screen Styles
+    placeholderSection: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    liveVoiceTitle: {
+        color: 'white',
+        fontSize: 32,
+        fontWeight: 'bold',
+        marginBottom: 40,
+        paddingHorizontal: 20,
+        textAlign: 'center',
+    },
+    liveVoiceSubtitle: {
+        color: 'gray',
+        fontSize: 16,
+        marginTop: 40,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+        minHeight: 50,
     },
 });
