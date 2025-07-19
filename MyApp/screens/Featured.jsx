@@ -1,151 +1,201 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const featuredItems = [
-  {
-    id: '1',
-    title: 'Write For Me ✨',
-    description: 'Supercharged writing assistant',
-    provider: 'By projecttoday',
-    iconName: 'pencil-outline',
-    iconBgColor: '#6a0dad', // Purple
-  },
-  {
-    id: '2',
-    title: 'Scholar GPT',
-    description: 'Enhance research with 200M+ resources and built-in critical reading skills. Access Google...',
-    provider: 'By awesomeretail',
-    iconName: 'school-outline', // Or 'book-open-variant'
-    iconBgColor: '#007bff', // Blue
-  },
-  {
-    id: '3',
-    title: 'Consensus',
-    description: 'Ask the research, chat directly with the world\'s scientific literature. Search relevanc...',
-    provider: 'By consensus.app',
-    iconName: 'chart-bubble', // Or 'chart-bar'
-    iconBgColor: '#28a745', // Green
-  },
-  {
-    id: '4',
-    title: 'AI PDF Drive: Chat, Create, Organize',
-    description: 'Advanced AI agents for legal and professional work. Upload briefs, contracts...',
-    provider: 'By mindwiser.com',
-    iconName: 'file-pdf-box',
-    iconBgColor: '#dc3545', // Red
-  },
-  // Add more items as needed based on the image or your requirements
+const chatItems = [
+  { id: '1', title: 'Initial Greeting and Assistance Offered' },
+  { id: '2', title: 'Hey, what is the temperature now?' },
+  { id: '3', title: 'React Native Profile Screen Redesign' },
+  { id: '4', title: 'Refactored UI for KisanAI App' },
+];
+
+const gemItems = [
+  { key: 'crop', icon: '🩺', label: 'Crop Doctor', description: 'Diagnose crop issues instantly.' },
+  { key: 'weather', icon: '🌦', label: 'Weather & Work', description: 'Get weather updates and plan your work.' },
+  { key: 'sell', icon: '📈', label: 'Sell or Hold?', description: 'Market insights for your produce.' },
+  { key: 'subsidy', icon: '💰', label: 'My Subsidy', description: 'Track and manage your subsidies.' },
 ];
 
 export default function FeaturedScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
-      {/* Top Bar - Simplified for consistency, assuming similar to Screen 1 and 2 */}
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <View style={{ flex: 1 }} /> {/* Spacer */}
-        <TouchableOpacity>
-          <Ionicons name="home-outline" size={28} color="white" />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>  
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="close" size={28} color="white" />
         </TouchableOpacity>
+        <Text style={styles.topBarTitle}>Chats & Gems</Text>
+        <View style={styles.profileCircle}>
+          <MaterialCommunityIcons name="account-circle" size={40} color="#90caf9" />
+        </View>
       </View>
-
-      {/* Header Section */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Featured</Text>
-        <Text style={styles.subtitle}>Curated top picks from this week</Text>
-      </View>
-
-      {/* Featured Items List */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {featuredItems.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.itemCard}>
-            <View style={[styles.itemIconContainer, { backgroundColor: item.iconBgColor }]}>
-              <MaterialCommunityIcons name={item.iconName} size={28} color="white" />
-            </View>
-            <View style={styles.itemTextContent}>
-              <Text style={styles.itemTitle}>{item.title}</Text>
-              <Text style={styles.itemDescription}>{item.description}</Text>
-              <Text style={styles.itemProvider}>{item.provider}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
+        {/* Chats Section */}
+        <Text style={styles.sectionHeader}>Chats</Text>
+        <View style={styles.sectionList}>
+          {chatItems.map((item) => (
+            <TouchableOpacity key={item.id} style={styles.chatItem}>
+              <View style={styles.chatIconSquare}>
+                <Ionicons name="chatbubble-outline" size={20} color="white" />
+              </View>
+              <Text style={styles.chatTitle}>{item.title}</Text>
+              <Ionicons name="chevron-forward" size={22} color="#888" />
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.viewAllButton}>
+          <Text style={styles.viewAllText}>View all</Text>
+        </TouchableOpacity>
+        {/* Gems Section */}
+        <Text style={[styles.sectionHeader, { marginTop: 30 }]}>Featured Items</Text>
+        <View style={styles.featuredGrid}>
+          {gemItems.map((item, idx) => (
+            <TouchableOpacity key={item.key} style={[styles.featuredCard, { borderColor: idx % 2 === 0 ? '#1565c0' : '#1b5e20' }]}> 
+              <View style={styles.gemIconCircle}> 
+                <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+              </View>
+              <Text style={styles.gemTitle}>{item.label}</Text>
+              <Text style={styles.gemDescription} numberOfLines={2}>{item.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: 'black',
   },
   topBar: {
-    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'flex-end', // Pushes icon to the right
-    paddingHorizontal: 20,
-    paddingBottom: 20, // Space below top bar
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+    backgroundColor: 'black',
   },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  iconButton: {
+    padding: 4,
+    marginRight: 10,
   },
-  title: {
+  topBarTitle: {
+    flex: 1,
     color: 'white',
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.2,
   },
-  subtitle: {
-    color: 'gray',
-    fontSize: 16,
+  profileCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#222',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
   },
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 30, // Space at the bottom of the scroll view
+    paddingHorizontal: 0,
+    paddingBottom: 30,
   },
-  itemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1c1c1c', // Lighter background for cards
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-  },
-  itemIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  itemTextContent: {
-    flex: 1,
-  },
-  itemTitle: {
+  sectionHeader: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '700',
+    paddingHorizontal: 22,
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  sectionList: {
+    paddingHorizontal: 10,
+  },
+  chatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#181818',
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+  },
+  chatIconSquare: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    backgroundColor: '#232323',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  chatTitle: {
+    color: 'white',
+    fontSize: 15,
+    flex: 1,
+  },
+  gemItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#181818',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  gemIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  gemTextContent: {
+    flex: 1,
+  },
+  gemTitle: {
+    color: 'white',
+    fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginTop: 10,
+    marginBottom: 2,
   },
-  itemDescription: {
-    color: 'lightgray',
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  itemProvider: {
+  gemDescription: {
     color: 'gray',
-    fontSize: 12,
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  featuredGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  featuredCard: {
+    backgroundColor: '#181818',
+    borderRadius: 12,
+    width: '48%',
+    marginBottom: 16,
+    padding: 16,
+    alignItems: 'flex-start',
+    borderWidth: 1.5,
+    // borderColor will be set inline for each card
+  },
+  viewAllButton: {
+    alignSelf: 'flex-end',
+    marginRight: 18,
+    marginBottom: 6,
+  },
+  viewAllText: {
+    color: '#90caf9',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
