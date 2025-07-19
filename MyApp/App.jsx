@@ -8,13 +8,18 @@ import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
 import FeaturedScreen from './screens/Featured';
 import ChatHistoryScreen from './screens/ChatHistoryScreen';
-
+import SmartCalendar from './screens/CalenderScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="ChoiceScreen">
+      <Stack.Navigator initialRouteName="SmartCalendar">
+      <Stack.Screen 
+          name="SmartCalendar" 
+          component={SmartCalendar} 
+          options={{ headerShown: false }} 
+        />
         <Stack.Screen 
           name="ChoiceScreen" 
           component={ChoiceScreen} 
