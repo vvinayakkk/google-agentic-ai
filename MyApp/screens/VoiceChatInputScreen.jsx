@@ -183,13 +183,18 @@ export default function VoiceChatInputScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             {/* Top Bar */}
             <View style={[styles.topBar, { paddingTop: insets.top }]}>
-                <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
-                    <Ionicons name="chatbubble-outline" size={28} color="white" />
+                <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}>
+                    <Ionicons name="time-outline" size={28} color="white" />
                 </TouchableOpacity>
                 <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Kissan AI'}</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-                    <Ionicons name="home-outline" size={28} color="white" />
-                </TouchableOpacity>
+                <View style={styles.topRightIcons}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
+                        <Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+                        <Ionicons name="home-outline" size={28} color="white" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <KeyboardAvoidingView 
@@ -264,6 +269,12 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
         marginHorizontal: 10,
+    },
+    topRightIcons: {
+        flexDirection: 'row',
+    },
+    topRightIcon: {
+        marginRight: 15,
     },
     chatList: {
         flex: 1,

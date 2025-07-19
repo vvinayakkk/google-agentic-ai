@@ -7,6 +7,7 @@ import ChoiceScreen from './screens/ChoiceScreen';
 import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
 import FeaturedScreen from './screens/Featured';
+import ChatHistoryScreen from './screens/ChatHistoryScreen';
 
 const Stack = createStackNavigator();
 
@@ -32,6 +33,11 @@ export default function App() {
         <Stack.Screen 
           name="Featured" 
           component={FeaturedScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="ChatHistory" 
+          component={ChatHistoryScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
