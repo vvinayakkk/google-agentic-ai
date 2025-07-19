@@ -1,33 +1,51 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// --- ASYNC STORAGE IMPORT ---
+// You need to install this library to store the user's mode choice
+// expo install @react-native-async-storage/async-storage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ChoiceScreen({ navigation }) {
+
+  const handleModeSelection = async (mode, screen) => {
+    try {
+      await AsyncStorage.setItem('userMode', mode);
+      navigation.navigate(screen);
+    } catch (e) {
+      Alert.alert("Error", "Could not save your mode selection.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <Text style={styles.title}>Kissan AI</Text>
-      <Text style={styles.subtitle}>How would you like to interact?</Text>
+      <Text style={styles.subtitle}>Select Your Interaction Mode</Text>
       
       <View style={styles.optionsContainer}>
         <TouchableOpacity 
           style={styles.optionButton} 
-          onPress={() => navigation.navigate('LiveVoiceScreen')}
+          onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
         >
-          <MaterialCommunityIcons name="waveform" size={60} color="#fff" />
-          <Text style={styles.optionText}>Voice</Text>
+          <MaterialCommunityIcons name="microphone-outline" size={60} color="#fff" />
+          <Text style={styles.optionText}>Voice Pilot</Text>
         </TouchableOpacity>
         
         <Text style={styles.orText}>OR</Text>
         
         <TouchableOpacity 
           style={styles.optionButton} 
-          onPress={() => navigation.navigate('VoiceChatInputScreen')}
+          onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
         >
-          <Ionicons name="chatbubbles-outline" size={60} color="#fff" />
-          <Text style={styles.optionText}>Chat</Text>
+          <Ionicons name="hand-right-outline" size={60} color="#fff" />
+          <Text style={styles.optionText}>Manual Mode</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.helpButton} onPress={() => Alert.alert('Help', 'Select "Voice Pilot" to control the app with your voice, or "Manual Mode" for traditional touch interaction.')}>
+        <MaterialCommunityIcons name="help-circle-outline" size={30} color="gray" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -59,8 +77,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 200,
-    height: 150,
+    width: 220,
+    height: 160,
     marginVertical: 20,
     borderWidth: 1,
     borderColor: '#333'
@@ -76,4 +94,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  helpButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 30,
+  }
 });

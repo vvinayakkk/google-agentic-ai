@@ -8,6 +8,7 @@ import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
 import FeaturedScreen from './screens/Featured';
 import ChatHistoryScreen from './screens/ChatHistoryScreen';
+import CropCycleScreen from './screens/CropCycle';
 import SmartCalendar from './screens/CalenderScreen';
 const Stack = createStackNavigator();
 
@@ -43,6 +44,11 @@ export default function App() {
         <Stack.Screen 
           name="ChatHistory" 
           component={ChatHistoryScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="CropCycle" 
+          component={CropCycleScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
