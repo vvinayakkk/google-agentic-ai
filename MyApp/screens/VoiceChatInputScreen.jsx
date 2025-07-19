@@ -121,14 +121,12 @@ export default function App() {
         }
     };
 
+    // The KeyboardAvoidingView has been moved into the MainScreen component
+    // to provide more granular control and fix the keyboard overlap issue.
     return (
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "height"} 
-            style={styles.container}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -150}
-        >
+        <View style={styles.container}>
             {renderView()}
-        </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -203,54 +201,62 @@ const MainScreen = ({ insets, onNavigate }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* Conditional Voice Section or Chat List */}
-            {chatHistory.length === 0 ? (
-                <View style={styles.liveVoiceSection}>
-                    <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
-                    <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
-                        <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
-                    </TouchableOpacity>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                {/* This view ensures the FlatList and Input are grouped for the KeyboardAvoidingView */}
+                <View style={{ flex: 1 }}>
+                    {/* Conditional Voice Section or Chat List */}
+                    {chatHistory.length === 0 ? (
+                        <View style={styles.liveVoiceSection}>
+                            <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
+                            <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
+                                <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={chatHistory}
+                            renderItem={({ item }) => <ChatMessage message={item} />}
+                            keyExtractor={(_, index) => index.toString()}
+                            style={styles.chatList}
+                            contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
+                            ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}
+                        />
+                    )}
                 </View>
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={chatHistory}
-                    renderItem={({ item }) => <ChatMessage message={item} />}
-                    keyExtractor={(_, index) => index.toString()}
-                    style={styles.chatList}
-                    contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
-                    ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}
-                />
-            )}
-            
-            {/* Input Bar */}
-            <View style={[styles.inputContainer, { marginBottom: Platform.OS === "ios" ? (insets.bottom > 0 ? 0 : 20) : 10 }]}>
-                <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
-                    <Ionicons name="add" size={28} color="gray" />
-                </TouchableOpacity>
-                <TextInput
-                    style={styles.textInput}
-                    placeholder="Ask Kissan AI"
-                    placeholderTextColor="gray"
-                    value={inputValue}
-                    onChangeText={setInputValue}
-                    onSubmitEditing={() => handleSendMessage()}
-                />
-                {inputValue.length === 0 ? (
-                    <>
-                        <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
-                            <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleAttachDocument}>
-                            <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <TouchableOpacity onPress={() => handleSendMessage()}>
-                        <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
+                
+                {/* Input Bar */}
+                <View style={styles.inputContainer}>
+                    <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
+                        <Ionicons name="add" size={28} color="gray" />
                     </TouchableOpacity>
-                )}
-            </View>
+                    <TextInput
+                        style={styles.textInput}
+                        placeholder="Ask Kissan AI"
+                        placeholderTextColor="gray"
+                        value={inputValue}
+                        onChangeText={setInputValue}
+                        onSubmitEditing={() => handleSendMessage()}
+                    />
+                    {inputValue.length === 0 ? (
+                        <>
+                            <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
+                                <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleAttachDocument}>
+                                <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <TouchableOpacity onPress={() => handleSendMessage()}>
+                            <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
@@ -322,9 +328,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingVertical: Platform.OS === 'ios' ? 10 : 5,
         marginHorizontal: '5%',
-        borderTopWidth: 1,
-        borderColor: '#222',
-        paddingBottom: Platform.OS === 'ios' ? 10 : 5
+        marginVertical: 10, // Added margin for spacing
     },
     plusButton: {
         marginRight: 10,
