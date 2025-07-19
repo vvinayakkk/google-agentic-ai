@@ -14,6 +14,10 @@ import { Svg, Circle, G, Path } from 'react-native-svg';
 import * as Speech from 'expo-speech';
 import * as Localization from 'expo-localization';
 import { I18n } from 'i18n-js';
+import logo from '../assets/logo.png';
+import { BlurView } from 'expo-blur';
+import Toast from 'react-native-toast-message';
+import { Animated, Easing } from 'react-native';
 
 const theme = {
   colors: {
@@ -154,31 +158,43 @@ const LanguageSelector = ({ onPress, currentLang }) => (
     </TouchableOpacity>
 );
 
-const LanguageModal = ({ isVisible, onClose, onSelectLanguage, currentLocale }) => (
-    <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isVisible}
-        onRequestClose={onClose}
-    >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={onClose}>
-            <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Select Language</Text>
-                {Object.keys(translations).map((langCode) => (
-                    <TouchableOpacity
-                        key={langCode}
-                        style={styles.languageOption}
-                        onPress={() => onSelectLanguage(langCode)}
-                    >
-                        <Text style={[styles.languageOptionText, langCode === currentLocale && styles.languageOptionTextSelected]}>
-                            {translations[langCode].languageName}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+const LanguageModal = ({ isVisible, onClose, onSelectLanguage, currentLocale }) => {
+    const [modalAnim] = useState(new Animated.Value(height));
+
+    Animated.spring(modalAnim, {
+        toValue: 0,
+        friction: 5,
+        useNativeDriver: true,
+    }).start();
+
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+            accessibilityViewIsModal={true}
+            accessibilityLabel="language-selection-modal"
+        >
+            <View style={styles.modalContainer}>
+                <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalAnim }] }]}>
+                    <Text style={styles.modalTitle}>Select Language</Text>
+                    {Object.keys(translations).map((langCode) => (
+                        <TouchableOpacity
+                            key={langCode}
+                            style={styles.languageOption}
+                            onPress={() => onSelectLanguage(langCode)}
+                        >
+                            <Text style={[styles.languageOptionText, langCode === currentLocale && styles.languageOptionTextSelected]}>
+                                {translations[langCode].languageName}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </Animated.View>
             </View>
-        </TouchableOpacity>
-    </Modal>
-);
+        </Modal>
+    );
+};
 
 const OnboardingSlide = ({ item }) => (
   <View style={styles.slide}>
@@ -396,23 +412,55 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: 'bold',
   },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   modalContent: {
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.card,
-    padding: theme.spacing.large,
-    width: '80%',
+    width: width * 0.95,
+    minHeight: height * 0.6,
+    maxHeight: height * 0.85,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   modalTitle: {
-    ...theme.typography.headingLarge,
-    fontSize: 20,
-    marginBottom: theme.spacing.medium,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#14532D',
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: 15,
+    color: '#374151',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalButton: {
+    width: '100%',
+    backgroundColor: '#1976D2',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginVertical: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 17,
+    letterSpacing: 0.2,
   },
   languageOption: {
     paddingVertical: theme.spacing.medium,

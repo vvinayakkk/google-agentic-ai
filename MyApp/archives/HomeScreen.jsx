@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,16 @@ import {
   Modal,
   ActivityIndicator,
   Modal as RNModal,
+  Animated,
+  Easing,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Svg, Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+import logo from '../assets/logo.png';
+import { BlurView } from 'expo-blur';
+import Toast from 'react-native-toast-message';
+const { height, width } = Dimensions.get('window');
 
 const theme = {
   colors: {
@@ -51,8 +57,6 @@ const theme = {
     full: 999,
   },
 };
-
-const { width } = Dimensions.get('window');
 
 const allCrops = [
     { name: 'Sugarcane', image: 'https://img.icons8.com/plasticine/100/sugar-cane.png' },
@@ -103,7 +107,7 @@ const SelectCropsScreen = ({ isVisible, onClose, onSave, initialSelectedCrops })
     };
 
     return (
-        <Modal animationType="slide" transparent={false} visible={isVisible} onRequestClose={onClose}>
+        <Modal animationType="slide" transparent={false} visible={isVisible} onRequestClose={onClose} accessibilityViewIsModal={true} accessibilityLabel="Select crops modal">
             <SafeAreaView style={styles.modalSafeArea}>
                 <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={onClose}><BackIcon /></TouchableOpacity>
@@ -184,6 +188,20 @@ const HomeScreen = () => {
     const [healStep, setHealStep] = useState('take');
     const [healImage, setHealImage] = useState(null);
     const [showHealModal, setShowHealModal] = useState(false);
+    const [validation, setValidation] = useState({});
+    const [success, setSuccess] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+
+    const shimmerAnim = useRef(new Animated.Value(-120)).current;
+    React.useEffect(() => {
+      Animated.loop(
+        Animated.timing(shimmerAnim, {
+          toValue: 220,
+          duration: 1200,
+          useNativeDriver: true,
+        })
+      ).start();
+    }, []);
 
     const handleTakePicture = async () => {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -289,7 +307,8 @@ const HomeScreen = () => {
               <Text style={styles.healButtonTextTheme}>Take a picture</Text>
             </TouchableOpacity>
           )}
-          <RNModal visible={showHealModal} transparent animationType="fade" onRequestClose={handleCloseHealModal}>
+          <RNModal visible={showHealModal} transparent animationType="fade" onRequestClose={handleCloseHealModal} accessibilityViewIsModal={true} accessibilityLabel="Heal your crop modal">
+            <BlurView intensity={60} style={StyleSheet.absoluteFill} tint="light" />
             <View style={styles.healModalOverlay}>
               <View style={styles.healModalCard}>
                 {healStep === 'confirm' && healImage && (
@@ -363,6 +382,7 @@ const HomeScreen = () => {
       </ScrollView>
       
       <BottomNavBar activeTab={activeTab} onTabPress={setActiveTab} />
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -679,6 +699,49 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#14532D',
     fontWeight: 'bold',
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  validationText: {
+    color: theme.colors.red,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  successCheck: {
+    fontSize: 40,
+    color: theme.colors.primaryGreen,
+    marginBottom: 15,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalContent: {
+    width: width * 0.95,
+    minHeight: height * 0.6,
+    maxHeight: height * 0.85,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalAnim: {
+    transform: [{ translateY: 0 }],
   },
 });
 
