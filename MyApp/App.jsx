@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 import ChoiceScreen from './screens/ChoiceScreen';
 import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
+import FeaturedScreen from './screens/Featured';
 
 const Stack = createStackNavigator();
 
@@ -26,6 +27,11 @@ export default function App() {
         <Stack.Screen 
           name="LiveVoiceScreen" 
           component={LiveVoiceScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="Featured" 
+          component={FeaturedScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
