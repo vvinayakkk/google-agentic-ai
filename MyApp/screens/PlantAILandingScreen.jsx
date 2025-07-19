@@ -8,6 +8,10 @@ export default function PlantAILandingScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Top-right Home button */}
+      <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home')}>
+        <Text style={styles.homeButtonText}>🏠</Text>
+      </TouchableOpacity>
       <Image
         source={{ uri: 'https://i.imgur.com/25sL5i2.png' }}
         style={styles.plantImage}
@@ -51,6 +55,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FCFDFE',
     paddingTop: 80,
+  },
+  homeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 24,
+    zIndex: 10,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 20,
+    padding: 8,
+    elevation: 2,
+  },
+  homeButtonText: {
+    fontSize: 22,
+    color: '#14532D',
+    fontWeight: 'bold',
   },
   plantImage: {
     width: 150,

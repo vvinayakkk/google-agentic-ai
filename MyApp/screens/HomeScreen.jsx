@@ -177,6 +177,7 @@ const BottomNavBar = ({ activeTab, onTabPress }) => {
 
 
 const HomeScreen = () => {
+    const navigation = useNavigation();
     const [activeTab, setActiveTab] = useState('Community');
     const [userCrops, setUserCrops] = useState(initialUserCrops);
     const [isCropModalVisible, setCropModalVisible] = useState(false);
@@ -662,6 +663,22 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 24,
+    zIndex: 20,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    elevation: 2,
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#14532D',
+    fontWeight: 'bold',
   },
 });
 
