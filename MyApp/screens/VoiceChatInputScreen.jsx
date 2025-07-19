@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +27,7 @@ const getKissanAIResponse = async (message) => {
                 "fertilizer for wheat": "For wheat crops in this region, a balanced NPK fertilizer (e.g., 12-32-16) is recommended during the sowing stage. It's best to confirm with a recent soil test.",
                 "market price for tomatoes": "The current average market price for tomatoes in the Pune market is approximately ₹30 per kg for good quality produce.",
                 "pest control": "For common pests on vegetable plants, a neem oil solution is a good organic first step. Can you specify the crop and the pest you are seeing?",
-                "hello": "Hello! I am Kissan AI, your agricultural assistant. How can I help you today?",
+                "hello": "Hello there! How can I help you today?",
                 "default": "I am Kissan AI, ready to assist with your farming questions. You can ask me about crop management, weather, market prices, and more."
             };
 
@@ -38,7 +38,7 @@ const getKissanAIResponse = async (message) => {
                 }
             }
             resolve(responses.default);
-        }, 1500); // Simulate network delay
+        }, 2000); // Simulate network delay
     });
 };
 
@@ -48,22 +48,78 @@ const ChatMessage = ({ message }) => {
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
 
+    const handleCopy = () => {
+        // Note: Clipboard might not work in all Expo Go environments, but will work in a standalone build.
+        Clipboard.setString(message.content);
+        Alert.alert("Copied", "Response copied to clipboard.");
+    };
+
     return (
-        <View style={[
-            styles.chatMessageContainer,
-            isUser ? styles.userMessageContainer : styles.aiMessageContainer
-        ]}>
-            {isDocument ? (
-                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
-                    <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
-                 </View>
-            ) : (
-                <Text style={styles.chatMessageText}>{message.content}</Text>
-            )}
+        <View style={styles.chatMessageWrapper}>
+            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>}
+            <View style={[
+                styles.chatMessageContainer,
+                isUser ? styles.userMessageContainer : styles.aiMessageContainer
+            ]}>
+                {isDocument ? (
+                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
+                        <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
+                     </View>
+                ) : (
+                    <Text style={styles.chatMessageText}>{message.content}</Text>
+                )}
+                 {!isUser && !isDocument && (
+                    <View style={styles.actionIconContainer}>
+                        <TouchableOpacity onPress={() => Alert.alert('Liked', 'You liked this response!')}>
+                            <MaterialCommunityIcons name="thumb-up-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => Alert.alert('Disliked', 'Feedback submitted.')}>
+                            <MaterialCommunityIcons name="thumb-down-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                         <TouchableOpacity onPress={() => Alert.alert('Share', 'Sharing functionality coming soon.')}>
+                            <MaterialCommunityIcons name="share-variant-outline" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleCopy}>
+                            <MaterialCommunityIcons name="content-copy" size={20} color="gray" style={styles.actionIcon} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
         </View>
     );
 };
+
+// --- Thinking Indicator Component ---
+const ThinkingIndicator = () => {
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(rotateAnim, {
+                toValue: 1,
+                duration: 1000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, [rotateAnim]);
+
+    const rotation = rotateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
+
+    return (
+        <View style={styles.thinkingContainer}>
+            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" />
+            </Animated.View>
+            <Text style={styles.thinkingText}>Just a sec...</Text>
+        </View>
+    );
+};
+
 
 // --- Main App Component ---
 export default function App() {
@@ -88,13 +144,9 @@ export default function App() {
     };
 
     return (
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "height"} 
-            style={styles.container}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -150} // Adjust if needed
-        >
+        <View style={styles.container}>
             {renderView()}
-        </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -103,14 +155,13 @@ export default function App() {
 
 const MainScreen = ({ insets, onNavigate }) => {
     const [inputValue, setInputValue] = useState('');
-    const [chatHistory, setChatHistory] = useState([
-        { sender: 'ai', type: 'text', content: 'Hello! Ask me a question or attach a file to begin.' }
-    ]);
+    const [chatHistory, setChatHistory] = useState([]);
+    const [chatTitle, setChatTitle] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const flatListRef = useRef();
 
      useEffect(() => {
-        if (chatHistory.length > 1) {
+        if (chatHistory.length > 0) {
             flatListRef.current?.scrollToEnd({ animated: true });
         }
     }, [chatHistory]);
@@ -119,6 +170,11 @@ const MainScreen = ({ insets, onNavigate }) => {
         if (!message) {
             if (!inputValue.trim()) return;
             message = { type: 'text', content: inputValue };
+        }
+        
+        if (chatHistory.length === 0) { // First user message sets the title
+            const title = message.content.length > 25 ? `${message.content.substring(0, 22)}...` : message.content;
+            setChatTitle(title);
         }
 
         const userMessage = { sender: 'user', ...message };
@@ -129,8 +185,8 @@ const MainScreen = ({ insets, onNavigate }) => {
         const aiResponseText = await getKissanAIResponse(message);
         const aiMessage = { sender: 'ai', type: 'text', content: aiResponseText };
 
-        setIsThinking(false);
         setChatHistory(prev => [...prev, aiMessage]);
+        setIsThinking(false);
     };
 
     const handleAttachDocument = async () => {
@@ -144,7 +200,6 @@ const MainScreen = ({ insets, onNavigate }) => {
                 console.log('User cancelled the document picker or no asset was selected.');
             }
         } catch (err) {
-            // This error is less likely with expo-document-picker but good to have.
             Alert.alert(
                 'Error', 
                 'Could not open the document picker. Please ensure you have granted necessary permissions.'
@@ -160,61 +215,68 @@ const MainScreen = ({ insets, onNavigate }) => {
                 <TouchableOpacity onPress={() => onNavigate('featured')}>
                     <Ionicons name="chatbubble-outline" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.topBarTitle}>Kissan AI</Text>
+                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Kissan AI'}</Text>
                 <TouchableOpacity onPress={() => onNavigate('home')}>
                     <Ionicons name="home-outline" size={28} color="white" />
                 </TouchableOpacity>
             </View>
 
-            {/* Conditional Voice Section or Chat List */}
-            {chatHistory.length <= 1 ? (
-                <View style={styles.liveVoiceSection}>
-                    <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
-                    <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
-                        <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
-                    </TouchableOpacity>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                {/* This view ensures the FlatList and Input are grouped for the KeyboardAvoidingView */}
+                <View style={{ flex: 1 }}>
+                    {/* Conditional Voice Section or Chat List */}
+                    {chatHistory.length === 0 ? (
+                        <View style={styles.liveVoiceSection}>
+                            <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
+                            <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
+                                <MaterialCommunityIcons name="waveform" size={80} color={'white'} />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={chatHistory}
+                            renderItem={({ item }) => <ChatMessage message={item} />}
+                            keyExtractor={(_, index) => index.toString()}
+                            style={styles.chatList}
+                            contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
+                            ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}
+                        />
+                    )}
                 </View>
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={chatHistory}
-                    renderItem={({ item }) => <ChatMessage message={item} />}
-                    keyExtractor={(_, index) => index.toString()}
-                    style={styles.chatList}
-                    contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
-                />
-            )}
-            
-            {isThinking && <Text style={styles.thinkingText}>Kissan AI is thinking...</Text>}
-
-            {/* Input Bar */}
-            <View style={[styles.inputContainer, { marginBottom: Platform.OS === "ios" ? (insets.bottom > 0 ? 0 : 20) : 10 }]}>
-                <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
-                    <Ionicons name="add" size={28} color="gray" />
-                </TouchableOpacity>
-                <TextInput
-                    style={styles.textInput}
-                    placeholder="Ask Kissan AI"
-                    placeholderTextColor="gray"
-                    value={inputValue}
-                    onChangeText={setInputValue}
-                    onSubmitEditing={() => handleSendMessage()}
-                />
-                {inputValue.length === 0 ? (
-                    <>
-                        <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
-                            <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleAttachDocument}>
-                            <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <TouchableOpacity onPress={() => handleSendMessage()}>
-                        <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
+                
+                {/* Input Bar */}
+                <View style={styles.inputContainer}>
+                    <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
+                        <Ionicons name="add" size={28} color="gray" />
                     </TouchableOpacity>
-                )}
-            </View>
+                    <TextInput
+                        style={styles.textInput}
+                        placeholder="Ask Kissan AI"
+                        placeholderTextColor="gray"
+                        value={inputValue}
+                        onChangeText={setInputValue}
+                        onSubmitEditing={() => handleSendMessage()}
+                    />
+                    {inputValue.length === 0 ? (
+                        <>
+                            <TouchableOpacity onPress={() => Alert.alert('Video Call', 'This feature is coming soon!')}>
+                                <Ionicons name="videocam-outline" size={24} color="gray" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleAttachDocument}>
+                                <MaterialCommunityIcons name="file-document-outline" size={24} color="gray" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <TouchableOpacity onPress={() => handleSendMessage()}>
+                            <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
@@ -230,6 +292,8 @@ const PlaceholderScreen = ({ insets, screenName, onClose }) => {
                 <TouchableOpacity onPress={onClose}>
                     <Ionicons name="arrow-back" size={28} color="white" />
                 </TouchableOpacity>
+                 <Text style={styles.topBarTitle} numberOfLines={1}>{screenName}</Text>
+                 <View style={{width: 28}} />
             </View>
             <View style={styles.placeholderSection}>
                 <Text style={styles.liveVoiceTitle}>{screenName} Screen</Text>
@@ -258,8 +322,11 @@ const styles = StyleSheet.create({
     },
     topBarTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: 'bold',
+        flex: 1,
+        textAlign: 'center',
+        marginHorizontal: 10,
     },
     liveVoiceSection: {
         alignItems: 'center',
@@ -283,9 +350,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingVertical: Platform.OS === 'ios' ? 10 : 5,
         marginHorizontal: '5%',
-        borderTopWidth: 1,
-        borderColor: '#222',
-        paddingBottom: Platform.OS === 'ios' ? 10 : 5
+        marginVertical: 10, // Added margin for spacing
     },
     plusButton: {
         marginRight: 10,
@@ -300,32 +365,54 @@ const styles = StyleSheet.create({
     inputIcon: {
         marginHorizontal: 8,
     },
+    chatMessageWrapper: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginVertical: 5,
+        paddingLeft: 10,
+    },
+    aiIcon: {
+        marginRight: 8,
+        marginTop: 10,
+    },
     chatMessageContainer: {
         paddingVertical: 10,
         paddingHorizontal: 15,
         borderRadius: 20,
-        marginVertical: 5,
-        maxWidth: '80%',
+        maxWidth: '85%',
     },
     userMessageContainer: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#333333',
         alignSelf: 'flex-end',
+        marginLeft: 'auto', // Push to the right
         borderBottomRightRadius: 5,
     },
     aiMessageContainer: {
-        backgroundColor: '#333333',
+        backgroundColor: 'transparent',
         alignSelf: 'flex-start',
-        borderBottomLeftRadius: 5,
     },
     chatMessageText: {
         color: 'white',
         fontSize: 16,
     },
-    thinkingText: {
-        textAlign: 'center',
-        color: 'gray',
+    actionIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    actionIcon: {
+        marginRight: 20,
+    },
+    thinkingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 10,
+        paddingLeft: 15,
+    },
+    thinkingText: {
+        color: 'gray',
         fontStyle: 'italic',
+        marginLeft: 10,
     },
     // Placeholder Screen Styles
     placeholderSection: {
