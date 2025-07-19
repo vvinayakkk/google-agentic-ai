@@ -27,7 +27,7 @@ const getKissanAIResponse = async (message) => {
                 "fertilizer for wheat": "For wheat crops in this region, a balanced NPK fertilizer (e.g., 12-32-16) is recommended during the sowing stage. It's best to confirm with a recent soil test.",
                 "market price for tomatoes": "The current average market price for tomatoes in the Pune market is approximately ₹30 per kg for good quality produce.",
                 "pest control": "For common pests on vegetable plants, a neem oil solution is a good organic first step. Can you specify the crop and the pest you are seeing?",
-                "hello": "Hello! I am Kissan AI, your agricultural assistant. How can I help you today?",
+                "hello": "Hello there! How can I help you today?",
                 "default": "I am Kissan AI, ready to assist with your farming questions. You can ask me about crop management, weather, market prices, and more."
             };
 
@@ -38,7 +38,7 @@ const getKissanAIResponse = async (message) => {
                 }
             }
             resolve(responses.default);
-        }, 1500); // Simulate network delay
+        }, 2000); // Simulate network delay
     });
 };
 
@@ -49,21 +49,55 @@ const ChatMessage = ({ message }) => {
     const isDocument = message.type === 'document';
 
     return (
-        <View style={[
-            styles.chatMessageContainer,
-            isUser ? styles.userMessageContainer : styles.aiMessageContainer
-        ]}>
-            {isDocument ? (
-                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
-                    <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
-                 </View>
-            ) : (
-                <Text style={styles.chatMessageText}>{message.content}</Text>
-            )}
+        <View style={styles.chatMessageWrapper}>
+            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>}
+            <View style={[
+                styles.chatMessageContainer,
+                isUser ? styles.userMessageContainer : styles.aiMessageContainer
+            ]}>
+                {isDocument ? (
+                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
+                        <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
+                     </View>
+                ) : (
+                    <Text style={styles.chatMessageText}>{message.content}</Text>
+                )}
+            </View>
         </View>
     );
 };
+
+// --- Thinking Indicator Component ---
+const ThinkingIndicator = () => {
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(rotateAnim, {
+                toValue: 1,
+                duration: 1000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, [rotateAnim]);
+
+    const rotation = rotateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
+
+    return (
+        <View style={styles.thinkingContainer}>
+            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" />
+            </Animated.View>
+            <Text style={styles.thinkingText}>Just a sec...</Text>
+        </View>
+    );
+};
+
 
 // --- Main App Component ---
 export default function App() {
@@ -91,7 +125,7 @@ export default function App() {
         <KeyboardAvoidingView 
             behavior={Platform.OS === "ios" ? "padding" : "height"} 
             style={styles.container}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -150} // Adjust if needed
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -150}
         >
             {renderView()}
         </KeyboardAvoidingView>
@@ -103,14 +137,13 @@ export default function App() {
 
 const MainScreen = ({ insets, onNavigate }) => {
     const [inputValue, setInputValue] = useState('');
-    const [chatHistory, setChatHistory] = useState([
-        { sender: 'ai', type: 'text', content: 'Hello! Ask me a question or attach a file to begin.' }
-    ]);
+    const [chatHistory, setChatHistory] = useState([]);
+    const [chatTitle, setChatTitle] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const flatListRef = useRef();
 
      useEffect(() => {
-        if (chatHistory.length > 1) {
+        if (chatHistory.length > 0) {
             flatListRef.current?.scrollToEnd({ animated: true });
         }
     }, [chatHistory]);
@@ -119,6 +152,11 @@ const MainScreen = ({ insets, onNavigate }) => {
         if (!message) {
             if (!inputValue.trim()) return;
             message = { type: 'text', content: inputValue };
+        }
+        
+        if (chatHistory.length === 0) { // First user message sets the title
+            const title = message.content.length > 25 ? `${message.content.substring(0, 22)}...` : message.content;
+            setChatTitle(title);
         }
 
         const userMessage = { sender: 'user', ...message };
@@ -129,8 +167,8 @@ const MainScreen = ({ insets, onNavigate }) => {
         const aiResponseText = await getKissanAIResponse(message);
         const aiMessage = { sender: 'ai', type: 'text', content: aiResponseText };
 
-        setIsThinking(false);
         setChatHistory(prev => [...prev, aiMessage]);
+        setIsThinking(false);
     };
 
     const handleAttachDocument = async () => {
@@ -144,7 +182,6 @@ const MainScreen = ({ insets, onNavigate }) => {
                 console.log('User cancelled the document picker or no asset was selected.');
             }
         } catch (err) {
-            // This error is less likely with expo-document-picker but good to have.
             Alert.alert(
                 'Error', 
                 'Could not open the document picker. Please ensure you have granted necessary permissions.'
@@ -160,14 +197,14 @@ const MainScreen = ({ insets, onNavigate }) => {
                 <TouchableOpacity onPress={() => onNavigate('featured')}>
                     <Ionicons name="chatbubble-outline" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.topBarTitle}>Kissan AI</Text>
+                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Kissan AI'}</Text>
                 <TouchableOpacity onPress={() => onNavigate('home')}>
                     <Ionicons name="home-outline" size={28} color="white" />
                 </TouchableOpacity>
             </View>
 
             {/* Conditional Voice Section or Chat List */}
-            {chatHistory.length <= 1 ? (
+            {chatHistory.length === 0 ? (
                 <View style={styles.liveVoiceSection}>
                     <Text style={styles.liveVoiceText}>Live Voice Chat</Text>
                     <TouchableOpacity onPress={() => onNavigate('liveVoice')}>
@@ -182,11 +219,10 @@ const MainScreen = ({ insets, onNavigate }) => {
                     keyExtractor={(_, index) => index.toString()}
                     style={styles.chatList}
                     contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
+                    ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}
                 />
             )}
             
-            {isThinking && <Text style={styles.thinkingText}>Kissan AI is thinking...</Text>}
-
             {/* Input Bar */}
             <View style={[styles.inputContainer, { marginBottom: Platform.OS === "ios" ? (insets.bottom > 0 ? 0 : 20) : 10 }]}>
                 <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
@@ -258,8 +294,11 @@ const styles = StyleSheet.create({
     },
     topBarTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: 'bold',
+        flex: 1,
+        textAlign: 'center',
+        marginHorizontal: 10,
     },
     liveVoiceSection: {
         alignItems: 'center',
@@ -300,32 +339,46 @@ const styles = StyleSheet.create({
     inputIcon: {
         marginHorizontal: 8,
     },
+    chatMessageWrapper: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginVertical: 5,
+        paddingLeft: 10,
+    },
+    aiIcon: {
+        marginRight: 8,
+        marginTop: 10,
+    },
     chatMessageContainer: {
         paddingVertical: 10,
         paddingHorizontal: 15,
         borderRadius: 20,
-        marginVertical: 5,
-        maxWidth: '80%',
+        maxWidth: '85%',
     },
     userMessageContainer: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#333333',
         alignSelf: 'flex-end',
+        marginLeft: 'auto', // Push to the right
         borderBottomRightRadius: 5,
     },
     aiMessageContainer: {
-        backgroundColor: '#333333',
+        backgroundColor: 'transparent',
         alignSelf: 'flex-start',
-        borderBottomLeftRadius: 5,
     },
     chatMessageText: {
         color: 'white',
         fontSize: 16,
     },
-    thinkingText: {
-        textAlign: 'center',
-        color: 'gray',
+    thinkingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 10,
+        paddingLeft: 15,
+    },
+    thinkingText: {
+        color: 'gray',
         fontStyle: 'italic',
+        marginLeft: 10,
     },
     // Placeholder Screen Styles
     placeholderSection: {

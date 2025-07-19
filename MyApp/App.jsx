@@ -12,11 +12,11 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-      <Stack.Screen 
+      {/* <Stack.Screen 
           name="LiveVoiceScreen" 
           component={LiveVoiceScreen} 
           options={{ headerShown: false }} 
-        />
+        /> */}
         <Stack.Screen 
           name="VoiceChatInputScreen" 
           component={VoiceChatInputScreen} 
