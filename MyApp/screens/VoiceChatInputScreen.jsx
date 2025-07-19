@@ -116,13 +116,30 @@ const ThinkingIndicator = () => {
     );
 };
 
-// --- Welcome View Component ---
-const WelcomeView = () => {
+// --- Features View Component ---
+const FeaturesView = ({ navigation }) => {
     return (
-        <View style={styles.welcomeContainer}>
-            <MaterialCommunityIcons name="tractor" size={100} color="white" />
-            <Text style={styles.welcomeTitle}>Kissan AI</Text>
-            <Text style={styles.welcomeSubtitle}>Your Digital Farming Assistant</Text>
+        <View style={styles.featuresContainer}>
+            <View style={styles.featuresRow}>
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleSchedule')}>
+                    <MaterialCommunityIcons name="cow" size={40} color="white" />
+                    <Text style={styles.featureText}>Cattle Schedule</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('Calendar')}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={40} color="white" />
+                    <Text style={styles.featureText}>Calendar</Text>
+                </TouchableOpacity>
+            </View>
+            <View style={styles.featuresRow}>
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropCycle')}>
+                    <MaterialCommunityIcons name="recycle-variant" size={40} color="white" />
+                    <Text style={styles.featureText}>Crop Cycle</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropDoctor')}>
+                    <MaterialCommunityIcons name="stethoscope" size={40} color="white" />
+                    <Text style={styles.featureText}>Crop Doctor</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -203,7 +220,7 @@ export default function VoiceChatInputScreen({ navigation }) {
             >
                 <View style={{ flex: 1 }}>
                     {chatHistory.length === 0 ? (
-                        <WelcomeView />
+                        <FeaturesView navigation={navigation} />
                     ) : (
                         <FlatList
                             ref={flatListRef}
@@ -354,21 +371,33 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginLeft: 10,
     },
-    welcomeContainer: {
+    featuresContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingBottom: 50, // Offset to center it nicely
+        paddingHorizontal: 20,
     },
-    welcomeTitle: {
-        fontSize: 40,
-        fontWeight: 'bold',
+    featuresRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        marginBottom: 20,
+    },
+    featureBox: {
+        backgroundColor: '#1e1e1e',
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '45%',
+        height: 120,
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    featureText: {
         color: 'white',
-        marginTop: 20,
-    },
-    welcomeSubtitle: {
-        fontSize: 18,
-        color: 'gray',
-        marginTop: 5,
+        marginTop: 10,
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
