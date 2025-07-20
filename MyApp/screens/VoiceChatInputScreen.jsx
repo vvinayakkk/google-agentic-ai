@@ -287,8 +287,8 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#121212' },
-    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222' },
-    topBarTitle: { color: 'white', fontSize: 20, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop:20,paddingBottom: 30, borderBottomWidth: 1, borderBottomColor: '#222' },
+    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 10 },
     topRightIcons: { flexDirection: 'row' },
     topRightIcon: { marginRight: 15 },
     chatList: { flex: 1 },
