@@ -19,7 +19,7 @@ import PayAnyoneScreen from './UPI/PayAnyoneScreen';
 import ContactUPIDetailScreen from './UPI/ContactUPIDetailScreen';
 import PaymentAmountScreen from './UPI/PaymentAmountScreen';
 import BankSelectScreen from './UPI/BankSelectScreen';
-import EnterPinScreen from './screens/EnterPinScreen';
+import EnterPinScreen from './UPI/EnterPinScreen';
 import PaymentSuccessScreen from './UPI/PaymentSuccessScreen';
 import PaymentProcessingScreen from './UPI/PaymentProcessingScreen';
 import BankTransferScreen from './UPI/BankTransferScreen';
