@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,169 +15,150 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-// --- DATA: Added an "overview" for the back of the card ---
+// --- DATA: Same data, but we'll present it differently ---
 const featureItems = [
   {
     key: 'crop',
     icon: 'leaf-outline',
     label: 'Crop Doctor',
-    description: 'Diagnose crop diseases',
-    gradient: ['#22c55e', '#16a34a'],
-    overview: 'Use your phone camera to instantly identify crop diseases and pests. Get AI-powered solutions and treatment recommendations with 98% accuracy.',
+    description: 'Diagnose crop diseases instantly.',
+    color: '#22c55e',
     onPress: (navigation) => navigation.navigate('CropDoctor'),
   },
   {
     key: 'market',
     icon: 'trending-up-outline',
     label: 'Market Prices',
-    description: 'Check local mandi rates',
-    gradient: ['#3b82f6', '#2563eb'],
-    overview: 'Access real-time prices for your crops from thousands of markets (mandis) across India. Make informed decisions on when and where to sell.',
+    description: 'Check local mandi rates.',
+    color: '#3b82f6',
     onPress: (navigation) => navigation.navigate('MarketplaceScreen'),
   },
   {
     key: 'calendar',
     icon: 'calendar-outline',
     label: 'Farming Calendar',
-    description: 'Plan your activities',
-    gradient: ['#ec4899', '#db2777'],
-    overview: 'Get a personalized calendar for your crops, synced with local weather forecasts. Receive timely alerts for sowing, irrigation, and harvesting.',
+    description: 'Plan your farm activities.',
+    color: '#ec4899',
     onPress: (navigation) => navigation.navigate('CalenderScreen'),
   },
   {
     key: 'cycle',
     icon: 'reload-circle-outline',
     label: 'Crop Cycle',
-    description: 'Track growth stages',
-    gradient: ['#8b5cf6', '#7c3aed'],
-    overview: 'Monitor your entire crop lifecycle from seed to harvest. Log activities, add photos, and track the progress of your farm effortlessly.',
+    description: 'Track growth from seed to harvest.',
+    color: '#8b5cf6',
     onPress: (navigation) => navigation.navigate('CropCycle'),
   },
   {
     key: 'cattle',
     icon: 'paw-outline',
     label: 'Cattle Care',
-    description: 'Manage animal health',
-    gradient: ['#f97316', '#ea580c'],
-    overview: 'Keep detailed health records for your livestock. Track vaccinations, breeding cycles, and milk production to improve overall herd management.',
+    description: 'Manage animal health records.',
+    color: '#f97316',
     onPress: (navigation) => navigation.navigate('CattleScreen'),
   },
   {
     key: 'finance',
     icon: 'wallet-outline',
     label: 'AgriFinance',
-    description: 'Loans and subsidies',
-    gradient: ['#6366f1', '#4f46e5'],
-    overview: 'Explore government schemes, apply for agricultural loans, and manage your farm finances. Connect with financial experts for guidance.',
+    description: 'Explore loans and subsidies.',
+    color: '#6366f1',
     onPress: (navigation) => navigation.navigate('UPI'),
   },
   {
     key: 'rental',
     icon: 'car-sport-outline',
     label: 'Rental System',
-    description: 'Rent farm equipment',
-    gradient: ['#ca8a04', '#a16207'],
-    overview: 'Need a tractor or a thresher? Rent equipment from nearby farmers or service providers. You can also list your own equipment for others to rent.',
+    description: 'Rent farm equipment nearby.',
+    color: '#ca8a04',
     onPress: (navigation) => console.log('Rental System Pressed'),
   },
   {
     key: 'documents',
     icon: 'document-text-outline',
     label: 'Document Builder',
-    description: 'Create legal papers',
-    gradient: ['#0891b2', '#0e7490'],
-    overview: 'Easily create important documents like subsidy applications, land lease agreements, or sales receipts using pre-built templates.',
+    description: 'Create legal & sales papers.',
+    color: '#0891b2',
     onPress: (navigation) => console.log('Document Builder Pressed'),
   },
 ];
 
-// --- Card Component with Flip Animation ---
-const FeatureCard = ({ item, navigation }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const flipAnim = useRef(new Animated.Value(0)).current;
 
-  const frontInterpolate = flipAnim.interpolate({
-    inputRange: [0, 180],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  const backInterpolate = flipAnim.interpolate({
-    inputRange: [0, 180],
-    outputRange: ['180deg', '360deg'],
-  });
-
-  const handleFlip = () => {
-    const toValue = isFlipped ? 0 : 180;
-    Animated.spring(flipAnim, {
-      toValue,
-      friction: 8,
-      tension: 10,
-      useNativeDriver: true,
-    }).start();
-    setIsFlipped(!isFlipped);
-  };
-
-  const frontAnimatedStyle = { transform: [{ rotateY: frontInterpolate }] };
-  const backAnimatedStyle = { transform: [{ rotateY: backInterpolate }] };
-
-  return (
-    <View style={styles.featureCard}>
-      <TouchableOpacity onPress={handleFlip}>
-        {/* Front of the Card */}
-        <Animated.View style={[styles.cardSide, frontAnimatedStyle]}>
-          <LinearGradient colors={item.gradient} style={styles.cardGradient}>
-            <Ionicons name={item.icon} size={48} color="white" />
-            <Text style={styles.cardTitle}>{item.label}</Text>
-            <Text style={styles.cardDescription}>{item.description}</Text>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Back of the Card */}
-        <Animated.View style={[styles.cardSide, styles.cardBack, backAnimatedStyle]}>
-          <LinearGradient colors={item.gradient} style={styles.cardGradient}>
-            <Text style={styles.overviewText}>{item.overview}</Text>
-            <TouchableOpacity 
-              style={styles.exploreButton} 
-              onPress={() => item.onPress(navigation)}
-            >
-              <Text style={styles.exploreButtonText}>Explore Feature</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
-      </TouchableOpacity>
+// --- Reusable List Item Component ---
+const FeatureListItem = ({ item, navigation }) => (
+  <TouchableOpacity style={styles.listItem} onPress={() => item.onPress(navigation)}>
+    <View style={[styles.listItemIconContainer, { backgroundColor: item.color + '30' }]}>
+      <Ionicons name={item.icon} size={26} color={item.color} />
     </View>
-  );
-};
-
+    <View style={styles.listItemTextContainer}>
+      <Text style={styles.listItemTitle}>{item.label}</Text>
+      <Text style={styles.listItemDescription}>{item.description}</Text>
+    </View>
+    <Ionicons name="chevron-forward-outline" size={22} color="#4A5568" />
+  </TouchableOpacity>
+);
 
 export default function FeaturedScreen({ navigation }) {
   const insets = useSafeAreaInsets();
 
+  // Separate features for different sections of the UI
+  const heroFeature = featureItems[0]; // Crop Doctor
+  const quickActions = featureItems.slice(1, 3); // Market Prices, Calendar
+  const allTools = featureItems.slice(3); // The rest of the features
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F4F5" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* --- New, Centered Header with Back Button --- */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back-outline" size={26} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Agri-Suite Features</Text>
-        <View style={styles.headerButton} /> {/* Empty view for alignment */}
+        <Text style={styles.headerTitle}>Agri-Suite Features</Text>
+        <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.featuresGrid}>
-          {featureItems.map((item) => (
-            <FeatureCard
-              key={item.key}
-              item={item}
-              navigation={navigation}
-            />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* --- Hero Feature --- */}
+        <Text style={styles.sectionTitle}>Get Help Instantly</Text>
+        <TouchableOpacity onPress={() => heroFeature.onPress(navigation)}>
+          <LinearGradient
+            colors={['#27272a', '#18181b']}
+            style={styles.heroCard}
+          >
+            <View style={[styles.heroIconContainer, { backgroundColor: heroFeature.color }]}>
+              <Ionicons name={heroFeature.icon} size={32} color="white" />
+            </View>
+            <View style={styles.heroTextContainer}>
+              <Text style={styles.heroTitle}>{heroFeature.label}</Text>
+              <Text style={styles.heroDescription}>{heroFeature.description}</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={30} color="#4A5568" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* --- Quick Actions --- */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16 }}>
+          {quickActions.map(item => (
+            <TouchableOpacity key={item.key} onPress={() => item.onPress(navigation)}>
+              <LinearGradient
+                colors={['#27272a', '#18181b']}
+                style={styles.quickActionCard}
+              >
+                <Ionicons name={item.icon} size={28} color={item.color} />
+                <Text style={styles.quickActionTitle}>{item.label}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* --- All Tools List --- */}
+        <Text style={styles.sectionTitle}>All Farming Tools</Text>
+        <View style={styles.listContainer}>
+          {allTools.map(item => (
+            <FeatureListItem key={item.key} item={item} navigation={navigation} />
           ))}
         </View>
       </ScrollView>
@@ -189,7 +169,7 @@ export default function FeaturedScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000', // Changed from #F4F4F5 to black
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -197,9 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222', // Darker border for dark theme
-    backgroundColor: '#000', // Changed from #F4F4F5 to black
+    backgroundColor: '#000',
   },
   headerButton: {
     width: 44,
@@ -209,77 +187,95 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    color: '#fff', // Changed from #18181B to white
+    color: '#fff',
     fontWeight: '700',
   },
   scrollContent: {
     paddingBottom: 32,
   },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  // Card container to set dimensions and perspective for 3D effect
-  featureCard: {
-    width: (width - 48) / 2,
-    height: 190,
-    marginBottom: 16,
-  },
-  // Base style for both sides of the card
-  cardSide: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 20,
-    backfaceVisibility: 'hidden', // Crucial for the flip effect
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  // Positions the back of the card behind the front
-  cardBack: {
-    position: 'absolute',
-    top: 0,
-  },
-  cardGradient: {
-    flex: 1,
-    borderRadius: 20,
-    padding: 16,
-    justifyContent: 'space-around',
-  },
-  cardTitle: {
-    color: 'white',
+  sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    marginTop: 8,
+    fontWeight: '600',
+    color: '#A0AEC0',
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
-  cardDescription: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 13,
-  },
-  overviewText: {
-    color: 'white',
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '500',
-    flex: 1, // Takes up available space
-  },
-  exploreButton: {
+  // --- Hero Card Styles ---
+  heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 20,
-    paddingVertical: 8,
-    marginTop: 10,
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2D3748',
   },
-  exploreButtonText: {
+  heroIconContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  heroTextContainer: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#fff',
+  },
+  heroDescription: {
+    fontSize: 14,
+    color: '#A0AEC0',
+    marginTop: 2,
+  },
+  // --- Quick Action Styles ---
+  quickActionCard: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    padding: 12,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#2D3748',
+  },
+  quickActionTitle: {
+    fontSize: 15,
     fontWeight: '600',
-    marginRight: 6,
+    color: '#fff',
+  },
+  // --- List Styles ---
+  listContainer: {
+    marginHorizontal: 16,
+    backgroundColor: '#1A202C',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2D3748',
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2D3748',
+  },
+  listItemIconContainer: {
+    padding: 10,
+    borderRadius: 10,
+    marginRight: 16,
+  },
+  listItemTextContainer: {
+    flex: 1,
+  },
+  listItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  listItemDescription: {
+    fontSize: 13,
+    color: '#A0AEC0',
+    marginTop: 2,
   },
 });
