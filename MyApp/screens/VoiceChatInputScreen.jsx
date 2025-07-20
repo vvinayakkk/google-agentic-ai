@@ -62,6 +62,7 @@ const FormattedText = ({ text }) => {
 const ChatMessage = ({ message, chatHistory }) => {
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
+    const isContext = message.type === 'context'; // Check for context message
     const [liked, setLiked] = useState(false);
     const [disliked, setDisliked] = useState(false);
 
@@ -86,12 +87,18 @@ const ChatMessage = ({ message, chatHistory }) => {
     return (
         <View style={styles.chatMessageWrapper}>
             {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>}
-            <View style={[styles.chatMessageContainer, isUser ? styles.userMessageContainer : styles.aiMessageContainer]}>
+            <View style={[
+                styles.chatMessageContainer, 
+                isUser ? styles.userMessageContainer : styles.aiMessageContainer,
+                isContext && styles.contextMessageContainer // Apply special style for context
+            ]}>
                 {isDocument ? (
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                         <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
                         <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
                     </View>
+                ) : isContext ? (
+                    <Text style={styles.contextMessageText}>{message.content}</Text>
                 ) : (
                     <FormattedText text={message.content} />
                 )}
@@ -151,29 +158,39 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         const context = route.params?.context;
         if (context) {
             setCurrentContext(context);
-            const initialPrompt = `Hello! I'm ready to discuss the analysis for **${context.diseaseName}**. I've loaded the details regarding its symptoms and solutions. What would you like to know more about?`;
-            const aiMessage = { sender: 'ai', type: 'text', content: initialPrompt };
-            setChatHistory([aiMessage]);
             const title = `${context.diseaseName} Analysis`;
             setChatTitle(title);
+
+            // The new sequence: User Context -> Thinking -> AI Response
+            const userContextMessage = {
+                sender: 'user',
+                type: 'context',
+                content: `Continuing conversation about "${context.diseaseName}"`
+            };
+            setChatHistory([userContextMessage]);
+            setIsThinking(true);
+
+            setTimeout(() => {
+                const aiIntroMessage = {
+                    sender: 'ai',
+                    type: 'text',
+                    content: `Alright, I have the details for **${context.diseaseName}**. Ask me anything specific about its symptoms or solutions.`
+                };
+                setChatHistory(prev => [...prev, aiIntroMessage]);
+                setIsThinking(false);
+            }, 1500);
         }
     }, [route.params?.context]);
 
+
     const saveChatToHistory = async (title, messages) => {
         try {
-            const newChat = {
-                id: Date.now().toString(),
-                title: title || 'Untitled Chat',
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                messages,
-            };
+            const newChat = { id: Date.now().toString(), title: title || 'Untitled Chat', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), messages };
             let history = await AsyncStorage.getItem('chatHistory');
             history = history ? JSON.parse(history) : [];
-            history.unshift(newChat); // Add to the beginning
-            await AsyncStorage.setItem('chatHistory', JSON.stringify(history.slice(0, 20))); // Keep last 20 chats
-        } catch (e) {
-            console.log('Failed to save chat to history', e);
-        }
+            history.unshift(newChat);
+            await AsyncStorage.setItem('chatHistory', JSON.stringify(history.slice(0, 20)));
+        } catch (e) { console.log('Failed to save chat to history', e); }
     };
 
     const handleStartNewChat = async () => {
@@ -183,7 +200,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         setChatHistory([]);
         setChatTitle('');
         setInputValue('');
-        setCurrentContext(null); // Clear context
+        setCurrentContext(null);
     };
 
     useEffect(() => {
@@ -223,9 +240,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
                 handleSendMessage(message);
             }
-        } catch (err) {
-            Alert.alert('Error', 'Could not open the document picker.');
-        }
+        } catch (err) { Alert.alert('Error', 'Could not open the document picker.'); }
     };
 
     return (
@@ -256,15 +271,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 </View>
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}><Ionicons name="add" size={28} color="gray" /></TouchableOpacity>
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="Ask Kissan AI"
-                        placeholderTextColor="gray"
-                        value={inputValue}
-                        onChangeText={setInputValue}
-                        onSubmitEditing={() => handleSendMessage()}
-                        multiline
-                    />
+                    <TextInput style={styles.textInput} placeholder="Ask Kissan AI" placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
                     {inputValue.length === 0 ? (
                         <TouchableOpacity style={styles.voiceButton} onPress={() => navigation.navigate('LiveVoiceScreen')}><MaterialCommunityIcons name="waveform" size={26} color="white" /></TouchableOpacity>
                     ) : (
@@ -294,7 +301,9 @@ const styles = StyleSheet.create({
     chatMessageContainer: { paddingVertical: 10, paddingHorizontal: 15, borderRadius: 20, maxWidth: '85%' },
     userMessageContainer: { backgroundColor: '#333333', alignSelf: 'flex-end', marginLeft: 'auto', borderBottomRightRadius: 5 },
     aiMessageContainer: { backgroundColor: 'transparent', alignSelf: 'flex-start' },
+    contextMessageContainer: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#444', alignSelf: 'center', marginLeft: 0 },
     chatMessageText: { color: 'white', fontSize: 16, lineHeight: 22 },
+    contextMessageText: { color: '#888', fontSize: 14, fontStyle: 'italic' },
     actionIconContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
     actionIcon: { marginRight: 20 },
     thinkingContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, paddingLeft: 15 },
