@@ -10,6 +10,10 @@ import {
   StatusBar,
   SafeAreaView,
   Alert,
+  Modal,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
@@ -19,6 +23,66 @@ const UPIScreen = () => {
   const navigation = useNavigation();
   const [searchText, setSearchText] = useState('');
   const [currentScreen, setCurrentScreen] = useState('main'); // 'main' or 'payment'
+
+  // Mock UPI Scan QR state
+  const [scanQRModalVisible, setScanQRModalVisible] = useState(false);
+  const [scanStep, setScanStep] = useState('camera'); // camera, form, pin, success
+  const [mockAmount, setMockAmount] = useState('');
+  const [mockRemark, setMockRemark] = useState('');
+  const [mockPin, setMockPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [successAnim] = useState(new Animated.Value(0));
+
+  // Mock Pay Anyone state
+  const [payAnyoneInput, setPayAnyoneInput] = useState('');
+  const payAnyoneRecents = [
+    { name: 'Anilkumar Saroj', phone: '+91 99308 04309', color: '#a21caf', initial: 'A' },
+  ];
+  const payAnyoneAll = [
+    { type: 'self', name: 'Self transfer', desc: 'Transfer money between your accounts', color: '#2563eb', icon: 'person' },
+    { type: 'group', name: 'New group', desc: 'Start group chat or split an expense', color: '#2563eb', icon: 'group-add' },
+    { name: '5B30 viraj verma', phone: '+91 70214 51277', color: '#6366f1', initial: '5' },
+    { name: 'Aadi Tendulkar', phone: '+91 99205 13049', color: '#64748b', initial: 'A', avatar: true },
+  ];
+  const openPayAnyone = () => {
+    setPayAnyoneInput('');
+    navigation.navigate('PayAnyone');
+  };
+  const closePayAnyone = () => setPayAnyoneModalVisible(false);
+
+  const MOCK_RECIPIENT = { name: 'Demo Merchant', upi: 'merchant@upi' };
+  const MOCK_PIN = '1234';
+
+  const openScanQR = () => {
+    setScanStep('camera');
+    setScanQRModalVisible(true);
+    setMockAmount('');
+    setMockRemark('');
+    setMockPin('');
+    setPinError('');
+    successAnim.setValue(0);
+  };
+  const closeScanQR = () => setScanQRModalVisible(false);
+
+  const handleFakeScan = () => setScanStep('form');
+  const handlePay = () => setScanStep('pin');
+  const handlePinSubmit = () => {
+    if (mockPin === MOCK_PIN) {
+      setPinError('');
+      setScanStep('success');
+      Animated.timing(successAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    } else {
+      setPinError('Incorrect PIN. Try 1234.');
+    }
+  };
+  const handlePracticeAgain = () => {
+    setScanStep('camera');
+    setMockAmount('');
+    setMockRemark('');
+    setMockPin('');
+    setPinError('');
+    successAnim.setValue(0);
+  };
 
   // Sample data for contacts
   const contacts = [
@@ -36,7 +100,17 @@ const UPIScreen = () => {
   };
 
   const handlePaymentAction = (action) => {
-    Alert.alert('Payment Action', `${action} action initiated`);
+    if (action === 'Scan QR') {
+      openScanQR();
+    } else if (action === 'Pay Anyone') {
+      openPayAnyone();
+    } else if (action === 'Bank Transfer') {
+      navigation.navigate('BankTransferScreen');
+    } else if (action === 'Mobile Recharge') {
+      navigation.navigate('MobileRechargeScreen');
+    } else {
+      Alert.alert('Payment Action', `${action} action initiated`);
+    }
   };
 
   const renderMainScreenContent = () => (
@@ -299,7 +373,7 @@ const UPIScreen = () => {
             <TouchableOpacity
               key={index}
               style={styles.contactItem}
-              onPress={() => handlePaymentAction(`Pay ${contact.name}`)}
+              onPress={() => navigation.navigate('ContactUPIDetail', { contact })}
             >
               {typeof contact.avatar === 'number' ? (
                 <View style={[styles.contactAvatar, { overflow: 'hidden', backgroundColor: 'transparent' }]}> 
@@ -321,7 +395,7 @@ const UPIScreen = () => {
             <TouchableOpacity
               key={4 + index}
               style={styles.contactItem}
-              onPress={() => handlePaymentAction(`Pay ${contact.name}`)}
+              onPress={() => navigation.navigate('ContactUPIDetail', { contact })}
             >
               {typeof contact.avatar === 'number' ? (
                 <View style={[styles.contactAvatar, { overflow: 'hidden', backgroundColor: 'transparent' }]}> 
@@ -439,6 +513,208 @@ const UPIScreen = () => {
       >
         {renderPaymentScreenContent()}
         {renderMainScreenContent()}
+      </ScrollView>
+      {/* Mock Scan QR Modal */}
+      <Modal
+        visible={scanQRModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeScanQR}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalContainer}
+          >
+            {/* Camera Step */}
+            {scanStep === 'camera' && (
+              <View style={styles.mockCameraContainer}>
+                <Text style={styles.mockCameraTitle}>Scan QR Code</Text>
+                <View style={styles.mockCameraFrame}>
+                  <View style={styles.mockQR} />
+                </View>
+                <Text style={styles.mockCameraHint}>Align the QR code within the frame</Text>
+                <TouchableOpacity style={styles.mockScanButton} onPress={handleFakeScan}>
+                  <Text style={styles.mockScanButtonText}>Simulate Scan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mockCloseButton} onPress={closeScanQR}>
+                  <Text style={styles.mockCloseButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {/* Payment Form Step */}
+            {scanStep === 'form' && (
+              <View style={styles.mockFormContainer}>
+                <Text style={styles.mockFormTitle}>Pay to</Text>
+                <Text style={styles.mockFormRecipient}>{MOCK_RECIPIENT.name}</Text>
+                <Text style={styles.mockFormUpi}>{MOCK_RECIPIENT.upi}</Text>
+                <TextInput
+                  style={styles.mockInput}
+                  placeholder="Enter amount"
+                  placeholderTextColor="#888"
+                  keyboardType="numeric"
+                  value={mockAmount}
+                  onChangeText={setMockAmount}
+                />
+                <TextInput
+                  style={styles.mockInput}
+                  placeholder="Add a remark (optional)"
+                  placeholderTextColor="#888"
+                  value={mockRemark}
+                  onChangeText={setMockRemark}
+                />
+                <TouchableOpacity
+                  style={[styles.mockPayButton, { opacity: mockAmount ? 1 : 0.5 }]}
+                  onPress={handlePay}
+                  disabled={!mockAmount}
+                >
+                  <Text style={styles.mockPayButtonText}>Pay ₹{mockAmount || '0'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mockBackButton} onPress={() => setScanStep('camera')}>
+                  <Text style={styles.mockBackButtonText}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {/* PIN Step */}
+            {scanStep === 'pin' && (
+              <View style={styles.mockPinContainer}>
+                <Text style={styles.mockPinTitle}>Enter UPI PIN</Text>
+                <TextInput
+                  style={styles.mockInput}
+                  placeholder="Enter 4-digit PIN"
+                  placeholderTextColor="#888"
+                  keyboardType="numeric"
+                  secureTextEntry
+                  value={mockPin}
+                  onChangeText={setMockPin}
+                  maxLength={4}
+                />
+                {pinError ? <Text style={styles.mockPinError}>{pinError}</Text> : null}
+                <TouchableOpacity
+                  style={[styles.mockPayButton, { opacity: mockPin.length === 4 ? 1 : 0.5 }]}
+                  onPress={handlePinSubmit}
+                  disabled={mockPin.length !== 4}
+                >
+                  <Text style={styles.mockPayButtonText}>Submit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mockBackButton} onPress={() => setScanStep('form')}>
+                  <Text style={styles.mockBackButtonText}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {/* Success Step */}
+            {scanStep === 'success' && (
+              <View style={styles.mockSuccessContainer}>
+                <Animated.View
+                  style={[
+                    styles.mockSuccessTick,
+                    { transform: [{ scale: successAnim }] },
+                  ]}
+                >
+                  <IonIcon name="checkmark-circle" size={80} color="#10B981" />
+                </Animated.View>
+                <Text style={styles.mockSuccessText}>Payment Successful!</Text>
+                <Text style={styles.mockSuccessAmount}>₹{mockAmount} paid to {MOCK_RECIPIENT.name}</Text>
+                <TouchableOpacity style={styles.mockPayButton} onPress={handlePracticeAgain}>
+                  <Text style={styles.mockPayButtonText}>Practice Again</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mockCloseButton} onPress={closeScanQR}>
+                  <Text style={styles.mockCloseButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+      {/* Mock Pay Anyone Modal */}
+      {/* Removed Mock Pay Anyone Modal */}
+    </SafeAreaView>
+  );
+};
+
+// PayAnyoneScreen: full page for Pay Anyone flow
+const PayAnyoneScreen = ({ navigation }) => {
+  const [payAnyoneInput, setPayAnyoneInput] = useState('');
+  const payAnyoneRecents = [
+    { name: 'Anilkumar Saroj', phone: '+91 99308 04309', color: '#a21caf', initial: 'A' },
+  ];
+  const payAnyoneAll = [
+    { type: 'self', name: 'Self transfer', desc: 'Transfer money between your accounts', color: '#2563eb', icon: 'person' },
+    { type: 'group', name: 'New group', desc: 'Start group chat or split an expense', color: '#2563eb', icon: 'group-add' },
+    { name: '5B30 viraj verma', phone: '+91 70214 51277', color: '#6366f1', initial: '5' },
+    { name: 'Aadi Tendulkar', phone: '+91 99205 13049', color: '#64748b', initial: 'A', avatar: true },
+  ];
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.payAnyoneHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.payAnyoneBackBtn}>
+          <IonIcon name="arrow-back" size={26} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.payAnyoneTitle}>Pay anyone</Text>
+      </View>
+      <Text style={styles.payAnyoneSubtitle}>Pay any <Text style={{fontFamily:'monospace',fontWeight:'bold'}}>UPI</Text> app using name, number or UPI ID</Text>
+      <View style={styles.payAnyoneInputRow}>
+        <TextInput
+          style={styles.payAnyoneInput}
+          placeholder="Enter UPI ID or number"
+          placeholderTextColor="#aaa"
+          value={payAnyoneInput}
+          onChangeText={setPayAnyoneInput}
+        />
+        <TouchableOpacity style={styles.payAnyoneInputBtn}>
+          <Text style={styles.payAnyoneInputBtnText}>123</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.payAnyoneInputUserBtn}>
+          <Icon name="person" size={22} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={{flex:1}} contentContainerStyle={{paddingBottom:24}}>
+        <Text style={styles.payAnyoneSectionTitle}>Recents</Text>
+        {payAnyoneRecents.map((item, i) => (
+          <View key={i} style={styles.payAnyoneRecentRow}>
+            <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
+              <Text style={styles.payAnyoneAvatarText}>{item.initial}</Text>
+            </View>
+            <View>
+              <Text style={styles.payAnyoneRecentName}>{item.name}</Text>
+              <Text style={styles.payAnyoneRecentPhone}>{item.phone}</Text>
+            </View>
+          </View>
+        ))}
+        <Text style={styles.payAnyoneSectionTitle}>All people on UPI</Text>
+        {payAnyoneAll.map((item, i) => (
+          item.type === 'self' ? (
+            <View key={i} style={styles.payAnyoneAllRow}>
+              <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
+                <Icon name="person" size={22} color="#FFF" />
+              </View>
+              <View>
+                <Text style={styles.payAnyoneAllName}>{item.name}</Text>
+                <Text style={styles.payAnyoneAllDesc}>{item.desc}</Text>
+              </View>
+            </View>
+          ) : item.type === 'group' ? (
+            <View key={i} style={styles.payAnyoneAllRow}>
+              <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
+                <Icon name="group-add" size={22} color="#FFF" />
+              </View>
+              <View>
+                <Text style={styles.payAnyoneAllName}>{item.name}</Text>
+                <Text style={styles.payAnyoneAllDesc}>{item.desc}</Text>
+              </View>
+            </View>
+          ) : (
+            <View key={i} style={styles.payAnyoneAllRow}>
+              <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
+                <Text style={styles.payAnyoneAvatarText}>{item.initial}</Text>
+              </View>
+              <View>
+                <Text style={styles.payAnyoneAllName}>{item.name}</Text>
+                <Text style={styles.payAnyoneRecentPhone}>{item.phone}</Text>
+              </View>
+            </View>
+          )
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -933,6 +1209,275 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '90%',
+    backgroundColor: '#18181b',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  mockCameraContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  mockCameraTitle: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  mockCameraFrame: {
+    width: 200,
+    height: 200,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#222',
+  },
+  mockQR: {
+    width: 120,
+    height: 120,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#666',
+  },
+  mockCameraHint: {
+    color: '#AAA',
+    fontSize: 14,
+    marginBottom: 24,
+  },
+  mockScanButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  mockScanButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mockCloseButton: {
+    marginTop: 8,
+    padding: 8,
+  },
+  mockCloseButtonText: {
+    color: '#F87171',
+    fontSize: 16,
+  },
+  mockFormContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  mockFormTitle: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  mockFormRecipient: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  mockFormUpi: {
+    color: '#AAA',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  mockInput: {
+    width: '90%',
+    backgroundColor: '#222',
+    color: '#FFF',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  mockPayButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  mockPayButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mockBackButton: {
+    marginTop: 8,
+    padding: 8,
+  },
+  mockBackButtonText: {
+    color: '#3B82F6',
+    fontSize: 16,
+  },
+  mockPinContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  mockPinTitle: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  mockPinError: {
+    color: '#F87171',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  mockSuccessContainer: {
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 24,
+  },
+  mockSuccessTick: {
+    marginBottom: 16,
+  },
+  mockSuccessText: {
+    color: '#10B981',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  mockSuccessAmount: {
+    color: '#FFF',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  payAnyoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#18181b',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  payAnyoneBackBtn: {
+    marginRight: 12,
+    padding: 4,
+  },
+  payAnyoneTitle: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  payAnyoneSubtitle: {
+    color: '#aaa',
+    fontSize: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  payAnyoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#222',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#444',
+    paddingHorizontal: 8,
+    height: 48,
+  },
+  payAnyoneInput: {
+    flex: 1,
+    color: '#FFF',
+    fontSize: 16,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+  },
+  payAnyoneInputBtn: {
+    backgroundColor: '#2563eb',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginHorizontal: 6,
+  },
+  payAnyoneInputBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  payAnyoneInputUserBtn: {
+    backgroundColor: '#444',
+    borderRadius: 16,
+    padding: 6,
+    marginLeft: 2,
+  },
+  payAnyoneSectionTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 18,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  payAnyoneRecentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  payAnyoneAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  payAnyoneAvatarText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  payAnyoneRecentName: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  payAnyoneRecentPhone: {
+    color: '#aaa',
+    fontSize: 13,
+  },
+  payAnyoneAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  payAnyoneAllName: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  payAnyoneAllDesc: {
+    color: '#aaa',
+    fontSize: 13,
   },
 });
 

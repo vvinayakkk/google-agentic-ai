@@ -13,6 +13,15 @@ import SmartCalendar from './screens/CalenderScreen';
 import CattleScreen from './screens/CattleScreen';
 import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
+import PayAnyoneScreen from './screens/PayAnyoneScreen';
+import ContactUPIDetailScreen from './screens/ContactUPIDetailScreen';
+import PaymentAmountScreen from './screens/PaymentAmountScreen';
+import BankSelectScreen from './screens/BankSelectScreen';
+import EnterPinScreen from './screens/EnterPinScreen';
+import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
+import PaymentProcessingScreen from './screens/PaymentProcessingScreen';
+import BankTransferScreen from './screens/BankTransferScreen';
+import MobileRechargeScreen from './screens/MobileRechargeScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -68,6 +77,51 @@ export default function App() {
         <Stack.Screen 
           name="UPI" 
           component={UPIScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="PayAnyone" 
+          component={PayAnyoneScreen} 
+          options={{ headerShown: false }} 
+        />
+         <Stack.Screen 
+          name="ContactUPIDetail" 
+          component={ContactUPIDetailScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="PaymentAmountScreen" 
+          component={PaymentAmountScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="BankSelectScreen" 
+          component={BankSelectScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="EnterPinScreen" 
+          component={EnterPinScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="PaymentSuccessScreen" 
+          component={PaymentSuccessScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="PaymentProcessingScreen" 
+          component={PaymentProcessingScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="BankTransferScreen" 
+          component={BankTransferScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="MobileRechargeScreen" 
+          component={MobileRechargeScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
