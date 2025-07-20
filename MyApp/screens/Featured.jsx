@@ -151,7 +151,10 @@ export default function FarmerFriendlyScreen({ navigation }) {
   const featureGroups = [
     { id: 'farm-management', title: 'Farm Management', icon: 'leaf-outline', gradient: ['#22c55e', '#16a34a'], features: [{ id: 'crop-cycle', title: 'Crop Tracking', icon: 'reload-circle-outline', onPress: () => navigation.navigate('CropCycle') }, { id: 'calendar-full', title: 'Full Calendar', icon: 'calendar-outline', onPress: () => navigation.navigate('CalenderScreen') }] },
     { id: 'livestock', title: 'Livestock Care', icon: 'heart-outline', gradient: ['#f97316', '#ea580c'], features: [{ id: 'cattle-health', title: 'Health Records', icon: 'paw-outline', onPress: () => navigation.navigate('CattleScreen') }, { id: 'feeding', title: 'Vaccination Schedule', icon: 'medical-outline', onPress: () => navigation.navigate('CattleScreen') }] },
-    { id: 'business', title: 'Farm Business', icon: 'wallet-outline', gradient: ['#6366f1', '#4f46e5'], features: [{ id: 'finance', title: 'Loans & Subsidies', icon: 'wallet-outline', onPress: () => navigation.navigate('UPI') }, { id: 'documents', title: 'Paperwork Helper', icon: 'document-text-outline', onPress: () => console.log('Document Builder Pressed') }] },
+    { id: 'business', title: 'Farm Business', icon: 'wallet-outline', gradient: ['#6366f1', '#4f46e5'], features: [
+      { id: 'finance', title: 'Loans & Subsidies', icon: 'wallet-outline', onPress: () => navigation.navigate('UPI') },
+      { id: 'documents', title: 'Paperwork Helper', icon: 'document-text-outline', onPress: () => navigation.navigate('DocumentAgentScreen') }
+    ] },
     { id: 'equipment', title: 'Equipment & Tools', icon: 'car-sport-outline', gradient: ['#ca8a04', '#a16207'], features: [{ id: 'rental', title: 'Rent Equipment', icon: 'car-sport-outline', onPress: () => console.log('Rental System Pressed') }, { id: 'maintenance', title: 'Maintenance Log', icon: 'construct-outline', onPress: () => console.log('Maintenance Pressed') }] }
   ];
 

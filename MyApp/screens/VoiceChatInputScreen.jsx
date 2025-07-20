@@ -133,6 +133,12 @@ const ThinkingIndicator = () => {
 // --- Features View Component ---
 const FeaturesView = ({ navigation }) => (
     <View style={styles.featuresContainer}>
+        {/* Key Feature Box */}
+        <TouchableOpacity style={styles.keyFeatureBox} onPress={() => navigation.navigate('DocumentAgentScreen')} activeOpacity={0.85}>
+            <MaterialCommunityIcons name="file-document-multiple" size={44} color="#FFB07C" style={{marginBottom: 6}} />
+            <Text style={styles.keyFeatureTitle}>Document Agent</Text>
+            <Text style={styles.keyFeatureSubtitle}>Create & manage your documents</Text>
+        </TouchableOpacity>
         <View style={styles.featuresRow}>
             <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleScreen')}><MaterialCommunityIcons name="cow" size={40} color="#10b981" /><Text style={styles.featureText}>Cattle Schedule</Text></TouchableOpacity>
             <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CalenderScreen')}><MaterialCommunityIcons name="calendar-month-outline" size={40} color="#3b82f6" /><Text style={styles.featureText}>Calendar</Text></TouchableOpacity>
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
     topRightIcons: { flexDirection: 'row' },
     topRightIcon: { marginRight: 15 },
     chatList: { flex: 1 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 10, minHeight: 60, paddingVertical: 5 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 25, minHeight: 60, paddingVertical: 5 },
     plusButton: { marginRight: 10 },
     textInput: { flex: 1, color: 'white', fontSize: 18, marginRight: 10, maxHeight: 120 },
     voiceButton: { backgroundColor: '#333', borderRadius: 20, padding: 8 },
@@ -308,7 +314,33 @@ const styles = StyleSheet.create({
     actionIcon: { marginRight: 20 },
     thinkingContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, paddingLeft: 15 },
     thinkingText: { color: 'gray', fontStyle: 'italic', marginLeft: 10 },
-    featuresContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+    featuresContainer: { marginTop: 30, marginBottom: 10, alignItems: 'center', justifyContent: 'center' },
+    keyFeatureBox: {
+      width: '90%',
+      alignSelf: 'center',
+      backgroundColor: '#1e1e1e',
+      borderRadius: 18,
+      paddingVertical: 22,
+      paddingHorizontal: 18,
+      marginBottom: 22,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: '#888',
+      elevation: 8,
+    },
+    keyFeatureTitle: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 20,
+      marginBottom: 2,
+      letterSpacing: 0.2,
+    },
+    keyFeatureSubtitle: {
+      color: '#fff',
+      fontSize: 14,
+      marginTop: 2,
+      textAlign: 'center',
+    },
     featuresRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 20 },
     featureBox: { backgroundColor: '#1e1e1e', borderRadius: 15, padding: 20, alignItems: 'center', justifyContent: 'center', width: '45%', height: 120, borderWidth: 1, borderColor: '#333' },
     featureText: { color: 'white', marginTop: 10, fontSize: 14, fontWeight: '600' },

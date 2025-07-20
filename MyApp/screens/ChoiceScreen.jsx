@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- ASYNC STORAGE IMPORT ---
@@ -7,6 +7,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ChoiceScreen({ navigation }) {
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleModeSelection = async (mode, screen) => {
     try {
@@ -20,7 +21,7 @@ export default function ChoiceScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <Text style={styles.title}>Kissan AI</Text>
+      <Text style={styles.title}>Kisaan AI</Text>
       <Text style={styles.subtitle}>Select Your Interaction Mode</Text>
       
       <View style={styles.optionsContainer}>
@@ -43,9 +44,18 @@ export default function ChoiceScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.helpButton} onPress={() => Alert.alert('Help', 'Select "Voice Pilot" to control the app with your voice, or "Manual Mode" for traditional touch interaction.')}>
-        <MaterialCommunityIcons name="help-circle-outline" size={30} color="gray" />
-      </TouchableOpacity>
+      <View style={styles.helpCardContainer}>
+        {showHelp && (
+          <View style={styles.helpCard}>
+            <Text style={styles.helpCardText}>
+              Select "Voice Pilot" to control the app with your voice, or "Manual Mode" for traditional touch interaction.
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)}>
+          <MaterialCommunityIcons name="help-circle-outline" size={28} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -62,6 +72,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 10,
+    textShadowColor: 'rgba(255,255,255,0.25)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 32,
   },
   subtitle: {
     fontSize: 20,
@@ -72,7 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionButton: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#000',
     padding: 30,
     borderRadius: 20,
     alignItems: 'center',
@@ -81,7 +94,12 @@ const styles = StyleSheet.create({
     height: 160,
     marginVertical: 20,
     borderWidth: 1,
-    borderColor: '#333'
+    borderColor: '#fff',
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 16,
+    elevation: 16,
   },
   optionText: {
     color: 'white',
@@ -96,7 +114,35 @@ const styles = StyleSheet.create({
   },
   helpButton: {
     position: 'absolute',
-    bottom: 40,
-    right: 30,
-  }
+    bottom:-40,
+    right: 10,
+    zIndex: 2,
+    backgroundColor: '#000',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fff',
+    padding: 8,
+  },
+  helpCardContainer: {
+    position: 'absolute',
+    bottom: 60, // appears just above the help button
+    right: 20,
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  helpCard: {
+    backgroundColor: '#000',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#fff',
+    paddingVertical: 5,
+    paddingHorizontal: 18,
+    marginBottom: 20,
+    maxWidth: 260,
+  },
+  helpCardText: {
+    color: '#fff',
+    fontSize: 15,
+    textAlign: 'left',
+  },
 });

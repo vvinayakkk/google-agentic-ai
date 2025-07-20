@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { CardStyleInterpolators } from '@react-navigation/stack';
 
 import Toast from 'react-native-toast-message';
 import ChoiceScreen from './screens/ChoiceScreen';
@@ -24,17 +25,33 @@ import PaymentSuccessScreen from './UPI/PaymentSuccessScreen';
 import PaymentProcessingScreen from './UPI/PaymentProcessingScreen';
 import BankTransferScreen from './UPI/BankTransferScreen';
 import MobileRechargeScreen from './UPI/MobileRechargeScreen';
+import LanguageSelectScreen from './screens/LanguageSelectScreen';
+import DocumentAgentScreen from './screens/DocumentAgentScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="ChoiceScreen">
-      
+      <Stack.Navigator initialRouteName="LanguageSelectScreen"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen 
+          name="LanguageSelectScreen" 
+          component={LanguageSelectScreen} 
+          options={{
+            headerShown: false,
+          }} 
+        />
         <Stack.Screen 
           name="ChoiceScreen" 
           component={ChoiceScreen} 
-          options={{ headerShown: false }} 
+          options={{
+            headerShown: false,
+            animationEnabled: true,
+            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+          }} 
         />
         <Stack.Screen 
           name="VoiceChatInputScreen" 
@@ -139,6 +156,13 @@ export default function App() {
           name="MobileRechargeScreen" 
           component={MobileRechargeScreen} 
           options={{ headerShown: false }} 
+        />
+         <Stack.Screen 
+          name="DocumentAgentScreen" 
+          component={DocumentAgentScreen} 
+          options={{
+            headerShown: false,
+          }} 
         />
       </Stack.Navigator>
       <Toast />
