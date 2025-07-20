@@ -15,15 +15,15 @@ import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
 import CropDoctorScreen from './screens/CropDoctor';
 import FollowUpScreen from './screens/FollowUpScreen';
-import PayAnyoneScreen from './screens/PayAnyoneScreen';
-import ContactUPIDetailScreen from './screens/ContactUPIDetailScreen';
-import PaymentAmountScreen from './screens/PaymentAmountScreen';
-import BankSelectScreen from './screens/BankSelectScreen';
+import PayAnyoneScreen from './UPI/PayAnyoneScreen';
+import ContactUPIDetailScreen from './UPI/ContactUPIDetailScreen';
+import PaymentAmountScreen from './UPI/PaymentAmountScreen';
+import BankSelectScreen from './UPI/BankSelectScreen';
 import EnterPinScreen from './screens/EnterPinScreen';
-import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
-import PaymentProcessingScreen from './screens/PaymentProcessingScreen';
-import BankTransferScreen from './screens/BankTransferScreen';
-import MobileRechargeScreen from './screens/MobileRechargeScreen';
+import PaymentSuccessScreen from './UPI/PaymentSuccessScreen';
+import PaymentProcessingScreen from './UPI/PaymentProcessingScreen';
+import BankTransferScreen from './UPI/BankTransferScreen';
+import MobileRechargeScreen from './UPI/MobileRechargeScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
