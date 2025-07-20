@@ -367,6 +367,8 @@ export default function FeaturedScreen({ navigation }) {
                 onPress = () => navigation.navigate('MarketplaceScreen');
               } else if (item.key === 'cattle') {
                 onPress = () => navigation.navigate('CattleScreen');
+              } else if (item.key === 'finance') {
+                onPress = () => navigation.navigate('UPI');
               }
               return (
                 <FeatureCard
