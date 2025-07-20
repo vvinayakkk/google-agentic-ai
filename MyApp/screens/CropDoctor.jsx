@@ -18,7 +18,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- THEME (Updated to Black Background) ---
 const theme = {
     colors: {
-        background: '#000000', // Changed to black
+        background: '#000000',
         surface: '#1E293B',
         primary: '#34D399',
         text: '#E2E8F0',
@@ -34,17 +34,17 @@ const theme = {
     },
 };
 
-// --- Mock Data (No Changes) ---
+// --- Mock Data ---
 const mockAnalysis = {
     diseaseName: 'Septoria Leaf Spot',
     confidence: '95.8%',
     processedImageUrl: 'https://i.ibb.co/cyv71J5/diseased-leaf.jpg',
     boundingBox: { x: '25%', y: '30%', width: '50%', height: '40%' },
-    description: 'Septoria leaf spot is a common fungal disease...',
+    description: 'Septoria leaf spot is a common fungal disease that affects a wide range of plants, particularly tomatoes. It thrives in wet, humid conditions and can cause significant defoliation if left untreated, reducing the plant\'s ability to produce fruit.',
     symptoms: [
         'Small, water-soaked circular spots on the lower leaves.',
         'Spots enlarge and develop dark brown borders with tan or gray centers.',
-        'Tiny black dots (pycnidia) may appear in the center of the spots.',
+        'Tiny black dots (pycnidia), which are the fungal fruiting bodies, may appear in the center of the spots.',
         'Affected leaves turn yellow, wither, and eventually fall off.',
     ],
     solutions: [
@@ -63,38 +63,31 @@ const AnimatedView = ({ children, style, delay = 0 }) => {
     return <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }, style]}>{children}</Animated.View>;
 };
 
-// --- New Gemini-Style Loader ---
-const GeminiLoader = () => {
-    const usePulseAnimation = (delay) => {
-        const anim = useRef(new Animated.Value(0)).current;
-        useEffect(() => {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(anim, { toValue: 1, duration: 800, delay, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-                    Animated.timing(anim, { toValue: 0, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
-                ])
-            ).start();
-        }, [anim, delay]);
-        return anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
-    };
+// --- New Spinning Star Loader ---
+const LoadingAnimator = () => {
+    const spinAnim = useRef(new Animated.Value(0)).current;
 
-    const pulse1 = usePulseAnimation(0);
-    const pulse2 = usePulseAnimation(200);
-    const pulse3 = usePulseAnimation(400);
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 1500,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, [spinAnim]);
+
+    const rotation = spinAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
 
     return (
         <View style={styles.centered}>
-            <View style={styles.loaderContainer}>
-                <Animated.View style={{ opacity: pulse1, transform: [{ scale: pulse1 }] }}>
-                    <MaterialCommunityIcons name="star-four-points-outline" size={30} color={theme.colors.primary} />
-                </Animated.View>
-                <Animated.View style={{ opacity: pulse2, transform: [{ scale: pulse2 }] }}>
-                    <MaterialCommunityIcons name="star-four-points" size={50} color={theme.colors.primary} style={{ marginHorizontal: 10 }}/>
-                </Animated.View>
-                <Animated.View style={{ opacity: pulse3, transform: [{ scale: pulse3 }] }}>
-                    <MaterialCommunityIcons name="star-four-points-outline" size={30} color={theme.colors.primary} />
-                </Animated.View>
-            </View>
+            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                <MaterialCommunityIcons name="star-four-points" size={60} color={theme.colors.primary} />
+            </Animated.View>
             <Text style={styles.loadingText}>Analyzing your crop...</Text>
         </View>
     );
@@ -123,7 +116,7 @@ export default function CropDoctorScreen({ navigation }) {
                 setAnalysis(analysisWithUserImage);
                 setStatus('result');
                 speakAnalysis(analysisWithUserImage);
-            }, 2500); // Increased delay to enjoy the animation
+            }, 2500);
         }
     };
 
@@ -153,7 +146,7 @@ export default function CropDoctorScreen({ navigation }) {
     const renderContent = () => {
         switch (status) {
             case 'loading':
-                return <GeminiLoader />; // Using the new loader
+                return <LoadingAnimator />; // Using the new spinning loader
             case 'result':
                 return (
                     <AnimatedView style={{ flex: 1 }}>
@@ -197,13 +190,7 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing.medium, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
     headerTitle: { ...theme.typography.h2 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.large },
-    loaderContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: theme.spacing.medium,
-    },
-    loadingText: { ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.medium },
+    loadingText: { ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.large }, // Increased margin
     uploadTitle: { ...theme.typography.h2, marginTop: theme.spacing.medium, textAlign: 'center' },
     uploadSubtitle: { ...theme.typography.body, textAlign: 'center', marginVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium },
     button: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30, marginTop: theme.spacing.medium },
