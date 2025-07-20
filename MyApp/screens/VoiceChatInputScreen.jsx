@@ -287,12 +287,12 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#121212' },
-    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop:20,paddingBottom: 30, borderBottomWidth: 1, borderBottomColor: '#222' },
-    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, paddingTop:10,paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 10,marginTop:10 },
     topRightIcons: { flexDirection: 'row' },
     topRightIcon: { marginRight: 15 },
     chatList: { flex: 1 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 10, marginHorizontal: '5%', marginVertical: 10, minHeight: 60, paddingVertical: 5 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 10, minHeight: 60, paddingVertical: 5 },
     plusButton: { marginRight: 10 },
     textInput: { flex: 1, color: 'white', fontSize: 18, marginRight: 10, maxHeight: 120 },
     voiceButton: { backgroundColor: '#333', borderRadius: 20, padding: 8 },
