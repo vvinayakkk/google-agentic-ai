@@ -8,17 +8,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  ActivityIndicator,
+  Easing,
   ImageBackground,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// --- THEME (Updated to Dark Mode) ---
+// --- THEME (Updated to Black Background) ---
 const theme = {
     colors: {
-        background: '#0F172A',
+        background: '#000000', // Changed to black
         surface: '#1E293B',
         primary: '#34D399',
         text: '#E2E8F0',
@@ -34,33 +34,72 @@ const theme = {
     },
 };
 
-// --- Mock Data ---
+// --- Mock Data (No Changes) ---
 const mockAnalysis = {
     diseaseName: 'Septoria Leaf Spot',
     confidence: '95.8%',
     processedImageUrl: 'https://i.ibb.co/cyv71J5/diseased-leaf.jpg',
     boundingBox: { x: '25%', y: '30%', width: '50%', height: '40%' },
-    description: 'Septoria leaf spot is a common fungal disease that affects a wide range of plants, particularly tomatoes. It thrives in wet, humid conditions and can cause significant defoliation if left untreated, reducing the plant\'s ability to produce fruit.',
+    description: 'Septoria leaf spot is a common fungal disease...',
     symptoms: [
         'Small, water-soaked circular spots on the lower leaves.',
         'Spots enlarge and develop dark brown borders with tan or gray centers.',
-        'Tiny black dots (pycnidia), which are the fungal fruiting bodies, may appear in the center of the spots.',
+        'Tiny black dots (pycnidia) may appear in the center of the spots.',
         'Affected leaves turn yellow, wither, and eventually fall off.',
     ],
     solutions: [
-        { title: 'Cultural Practices', details: 'Improve air circulation by properly spacing plants. Water at the base of the plant to avoid wetting the foliage. Remove and destroy infected leaves immediately.' },
-        { title: 'Fungicides', details: 'For severe infections, apply fungicides containing chlorothalonil, mancozeb, or copper. Always follow the manufacturer\'s instructions for application rates and timing.' },
-        { title: 'Crop Rotation', details: 'Avoid planting susceptible crops in the same location for at least two to three years to reduce the fungal inoculum in the soil.' },
+        { title: 'Cultural Practices', details: 'Improve air circulation by properly spacing plants...' },
+        { title: 'Fungicides', details: 'For severe infections, apply fungicides containing chlorothalonil...' },
+        { title: 'Crop Rotation', details: 'Avoid planting susceptible crops in the same location...' },
     ],
 };
 
-const AnimatedView = ({ children, style }) => {
+// --- Reusable Animated Components ---
+const AnimatedView = ({ children, style, delay = 0 }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }).start();
     }, []);
-    return <Animated.View style={[{ opacity: fadeAnim }, style]}>{children}</Animated.View>;
+    return <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }, style]}>{children}</Animated.View>;
 };
+
+// --- New Gemini-Style Loader ---
+const GeminiLoader = () => {
+    const usePulseAnimation = (delay) => {
+        const anim = useRef(new Animated.Value(0)).current;
+        useEffect(() => {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(anim, { toValue: 1, duration: 800, delay, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+                    Animated.timing(anim, { toValue: 0, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+                ])
+            ).start();
+        }, [anim, delay]);
+        return anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
+    };
+
+    const pulse1 = usePulseAnimation(0);
+    const pulse2 = usePulseAnimation(200);
+    const pulse3 = usePulseAnimation(400);
+
+    return (
+        <View style={styles.centered}>
+            <View style={styles.loaderContainer}>
+                <Animated.View style={{ opacity: pulse1, transform: [{ scale: pulse1 }] }}>
+                    <MaterialCommunityIcons name="star-four-points-outline" size={30} color={theme.colors.primary} />
+                </Animated.View>
+                <Animated.View style={{ opacity: pulse2, transform: [{ scale: pulse2 }] }}>
+                    <MaterialCommunityIcons name="star-four-points" size={50} color={theme.colors.primary} style={{ marginHorizontal: 10 }}/>
+                </Animated.View>
+                <Animated.View style={{ opacity: pulse3, transform: [{ scale: pulse3 }] }}>
+                    <MaterialCommunityIcons name="star-four-points-outline" size={30} color={theme.colors.primary} />
+                </Animated.View>
+            </View>
+            <Text style={styles.loadingText}>Analyzing your crop...</Text>
+        </View>
+    );
+};
+
 
 // --- Main Screen Component ---
 export default function CropDoctorScreen({ navigation }) {
@@ -84,7 +123,7 @@ export default function CropDoctorScreen({ navigation }) {
                 setAnalysis(analysisWithUserImage);
                 setStatus('result');
                 speakAnalysis(analysisWithUserImage);
-            }, 2000);
+            }, 2500); // Increased delay to enjoy the animation
         }
     };
 
@@ -114,7 +153,7 @@ export default function CropDoctorScreen({ navigation }) {
     const renderContent = () => {
         switch (status) {
             case 'loading':
-                return (<View style={styles.centered}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={styles.loadingText}>Analyzing your crop...</Text></View>);
+                return <GeminiLoader />; // Using the new loader
             case 'result':
                 return (
                     <AnimatedView style={{ flex: 1 }}>
@@ -152,11 +191,18 @@ export default function CropDoctorScreen({ navigation }) {
     );
 }
 
+// --- Stylesheet ---
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.background },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing.medium, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
     headerTitle: { ...theme.typography.h2 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.large },
+    loaderContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: theme.spacing.medium,
+    },
     loadingText: { ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.medium },
     uploadTitle: { ...theme.typography.h2, marginTop: theme.spacing.medium, textAlign: 'center' },
     uploadSubtitle: { ...theme.typography.body, textAlign: 'center', marginVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium },
