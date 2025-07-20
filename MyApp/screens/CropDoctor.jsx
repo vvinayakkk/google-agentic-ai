@@ -14,6 +14,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // --- THEME (Updated to Black Background) ---
 const theme = {
@@ -96,6 +97,7 @@ const LoadingAnimator = () => {
 
 // --- Main Screen Component ---
 export default function CropDoctorScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const [status, setStatus] = useState('upload');
     const [analysis, setAnalysis] = useState(null);
 
@@ -178,7 +180,23 @@ export default function CropDoctorScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}><Text style={styles.headerTitle}>Crop Doctor</Text>{status === 'result' && (<TouchableOpacity onPress={handleReset}><Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View>
+            <View style={[styles.header, { paddingTop: insets.top }]}> 
+                <View style={{ width: 40, alignItems: 'flex-start' }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Feather name="arrow-left" size={34} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={styles.headerTitle}>Crop Doctor</Text>
+                </View>
+                <View style={{ width: 50, alignItems: 'flex-end' }}>
+                    {status === 'result' && (
+                        <TouchableOpacity onPress={handleReset}>
+                            <Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
             {renderContent()}
         </SafeAreaView>
     );
@@ -188,7 +206,7 @@ export default function CropDoctorScreen({ navigation }) {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.background },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing.medium, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
-    headerTitle: { ...theme.typography.h2 },
+    headerTitle: { ...theme.typography.h1 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.large },
     loadingText: { ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.large }, // Increased margin
     uploadTitle: { ...theme.typography.h2, marginTop: theme.spacing.medium, textAlign: 'center' },
