@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -7,118 +7,321 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  StatusBar,
+  Animated,
+  Dimensions,
+  Vibration,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
 
+const { width, height } = Dimensions.get('window');
+
 const PayAnyoneScreen = ({ navigation }) => {
   const [payAnyoneInput, setPayAnyoneInput] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  
+  // Animation refs
+  const slideAnim = useRef(new Animated.Value(-30)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const searchAnim = useRef(new Animated.Value(0)).current;
+
   const payAnyoneRecents = [
-    { name: 'Anilkumar Saroj', phone: '+91 99308 04309', color: '#a21caf', initial: 'A' },
+    { name: 'Anilkumar Saroj', phone: '+91 99308 04309', color: '#6366f1', initial: 'A', status: 'online' },
   ];
+
   const payAnyoneAll = [
-    { type: 'self', name: 'Self transfer', desc: 'Transfer money between your accounts', color: '#2563eb', icon: 'person' },
-    { type: 'group', name: 'New group', desc: 'Start group chat or split an expense', color: '#2563eb', icon: 'group-add' },
-    { name: '5B30 viraj verma', phone: '+91 70214 51277', color: '#6366f1', initial: '5' },
-    { name: 'Aadi Tendulkar', phone: '+91 99205 13049', color: '#64748b', initial: 'A', avatar: true },
+    { 
+      type: 'self', 
+      name: 'Self transfer', 
+      desc: 'Transfer money between your accounts', 
+      color: '#6366f1', 
+      icon: 'person',
+    },
+    { 
+      type: 'group', 
+      name: 'New group', 
+      desc: 'Start group chat or split an expense', 
+      color: '#10b981', 
+      icon: 'group-add',
+    },
+    { 
+      name: '5B30 viraj verma', 
+      phone: '+91 70214 51277', 
+      color: '#6b7280', 
+      initial: '5', 
+      status: 'away',
+    },
+    { 
+      name: 'Aadi Tendulkar', 
+      phone: '+91 99205 13049', 
+      color: '#8b5cf6', 
+      initial: 'A', 
+      status: 'online',
+    },
   ];
+
+  useEffect(() => {
+    // Simple entrance animations
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    Vibration.vibrate(10);
+    Animated.timing(searchAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleSearchBlur = () => {
+    setIsSearchFocused(false);
+    Animated.timing(searchAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleContactPress = (contact) => {
+    Vibration.vibrate(15);
+    navigation.navigate('ContactUPIDetail', { contact });
+  };
+
+  const renderContactItem = (item, index, isRecent = false) => {
+    const itemAnim = useRef(new Animated.Value(0)).current;
+    
+    useEffect(() => {
+      Animated.timing(itemAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 80,
+        useNativeDriver: true,
+      }).start();
+    }, []);
+
+    return (
+      <Animated.View
+        key={index}
+        style={[
+          {
+            opacity: itemAnim,
+            transform: [
+              {
+                translateY: itemAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.contactRowContainer}
+          onPress={() => handleContactPress(item)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.contactRow}>
+            <View style={styles.avatarContainer}>
+              {item.type ? (
+                <View style={[styles.avatar, { backgroundColor: item.color }]}>
+                  <Icon name={item.icon} size={20} color="#FFF" />
+                </View>
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: item.color }]}>
+                  <Text style={styles.avatarText}>{item.initial}</Text>
+                </View>
+              )}
+              
+              {/* Status indicator */}
+              {item.status && (
+                <View style={[
+                  styles.statusIndicator,
+                  { backgroundColor: item.status === 'online' ? '#10b981' : '#f59e0b' }
+                ]} />
+              )}
+            </View>
+            
+            <View style={styles.contactDetails}>
+              <Text style={styles.contactName}>{item.name}</Text>
+              <Text style={styles.contactSubtext}>
+                {item.desc || item.phone}
+              </Text>
+            </View>
+            
+            {/* Arrow icon */}
+            <View style={styles.arrowContainer}>
+              <Icon name="chevron-right" size={20} color="#6b7280" />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.payAnyoneHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.payAnyoneBackBtn}>
-          <IonIcon name="arrow-back" size={26} color="#FFF" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
+      
+      {/* Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            transform: [{ translateY: slideAnim }],
+            opacity: fadeAnim,
+          },
+        ]}
+      >
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <IonIcon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.payAnyoneTitle}>Pay anyone</Text>
-      </View>
-      <View style={styles.payAnyoneContent}>
-        <Text style={styles.payAnyoneSubtitle}>Pay any <Text style={{fontFamily:'monospace',fontWeight:'bold'}}>UPI</Text> app using name, number or UPI ID</Text>
-        <View style={styles.payAnyoneInputRow}>
-          <TextInput
-            style={styles.payAnyoneInput}
-            placeholder="Enter UPI ID or number"
-            placeholderTextColor="#aaa"
-            value={payAnyoneInput}
-            onChangeText={setPayAnyoneInput}
-          />
-          <TouchableOpacity style={styles.payAnyoneInputBtn}>
-            <Text style={styles.payAnyoneInputBtnText}>123</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.payAnyoneInputUserBtn}>
-            <Icon name="person" size={22} color="#FFF" />
-          </TouchableOpacity>
+        
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Pay Anyone</Text>
+          <View style={styles.headerSubtitleContainer}>
+            <View style={styles.liveDot} />
+            <Text style={styles.headerSubtitle}>UPI Enabled</Text>
+          </View>
         </View>
-        <ScrollView style={{flex:1}} contentContainerStyle={styles.payAnyoneScrollContent}>
-          {/* New quick actions */}
-          <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom:18}}>
-            <TouchableOpacity style={{flex:1, backgroundColor:'#dbeafe', borderRadius:18, marginRight:8, alignItems:'center', paddingVertical:12}} onPress={() => navigation.navigate('BankTransferScreen')}>
-              <Text style={{color:'#2563eb', fontWeight:'700', fontSize:16}}>Bank Transfer</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{flex:1, backgroundColor:'#dbeafe', borderRadius:18, marginLeft:8, alignItems:'center', paddingVertical:12}} onPress={() => navigation.navigate('MobileRechargeScreen')}>
-              <Text style={{color:'#2563eb', fontWeight:'700', fontSize:16}}>Mobile Recharge</Text>
+      </Animated.View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Subtitle */}
+        <Animated.View
+          style={[
+            styles.subtitleContainer,
+            { opacity: fadeAnim },
+          ]}
+        >
+          <Text style={styles.subtitle}>
+            Pay using UPI ID, mobile number or scan QR code
+          </Text>
+        </Animated.View>
+
+        {/* Search Input */}
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+              borderColor: searchAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['#e5e7eb', '#6366f1'],
+              }),
+              backgroundColor: isSearchFocused ? '#f8fafc' : '#ffffff',
+            },
+          ]}
+        >
+          <View style={styles.searchInputRow}>
+            <Icon 
+              name="search" 
+              size={20} 
+              color={isSearchFocused ? '#6366f1' : '#9ca3af'} 
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Enter UPI ID, mobile number or name"
+              placeholderTextColor="#9ca3af"
+              value={payAnyoneInput}
+              onChangeText={setPayAnyoneInput}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
+            />
+            
+            {/* QR Scanner button */}
+            <TouchableOpacity style={styles.qrButton} activeOpacity={0.7}>
+              <Icon name="qr-code-scanner" size={20} color="#6366f1" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.payAnyoneSectionTitle}>Recents</Text>
-          {payAnyoneRecents.map((item, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.payAnyoneRecentRow}
-              onPress={() => navigation.navigate('ContactUPIDetail', { contact: item })}
+        </Animated.View>
+
+        {/* Quick Actions */}
+        <Animated.View
+          style={[
+            styles.quickActionsContainer,
+            { opacity: fadeAnim },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('BankTransferScreen')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionContent}>
+              <Icon name="account-balance" size={20} color="#6366f1" />
+              <Text style={styles.quickActionText}>Bank Transfer</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('MobileRechargeScreen')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionContent}>
+              <Icon name="phone-android" size={20} color="#10b981" />
+              <Text style={styles.quickActionText}>Recharge</Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Contact Lists */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Recents Section */}
+          {payAnyoneRecents.length > 0 && (
+            <Animated.View
+              style={[
+                styles.sectionContainer,
+                { opacity: fadeAnim },
+              ]}
             >
-              <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
-                <Text style={styles.payAnyoneAvatarText}>{item.initial}</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent</Text>
+                <Text style={styles.sectionCount}>{payAnyoneRecents.length}</Text>
               </View>
-              <View>
-                <Text style={styles.payAnyoneRecentName}>{item.name}</Text>
-                <Text style={styles.payAnyoneRecentPhone}>{item.phone}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          <Text style={styles.payAnyoneSectionTitle}>All people on UPI</Text>
-          {payAnyoneAll.map((item, i) => (
-            item.type === 'self' ? (
-              <TouchableOpacity
-                key={i}
-                style={styles.payAnyoneAllRow}
-                onPress={() => navigation.navigate('ContactUPIDetail', { contact: item })}
-              >
-                <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
-                  <Icon name="person" size={22} color="#FFF" />
-                </View>
-                <View>
-                  <Text style={styles.payAnyoneAllName}>{item.name}</Text>
-                  <Text style={styles.payAnyoneAllDesc}>{item.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ) : item.type === 'group' ? (
-              <TouchableOpacity
-                key={i}
-                style={styles.payAnyoneAllRow}
-                onPress={() => navigation.navigate('ContactUPIDetail', { contact: item })}
-              >
-                <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
-                  <Icon name="group-add" size={22} color="#FFF" />
-                </View>
-                <View>
-                  <Text style={styles.payAnyoneAllName}>{item.name}</Text>
-                  <Text style={styles.payAnyoneAllDesc}>{item.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                key={i}
-                style={styles.payAnyoneAllRow}
-                onPress={() => navigation.navigate('ContactUPIDetail', { contact: item })}
-              >
-                <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
-                  <Text style={styles.payAnyoneAvatarText}>{item.initial}</Text>
-                </View>
-                <View>
-                  <Text style={styles.payAnyoneAllName}>{item.name}</Text>
-                  <Text style={styles.payAnyoneRecentPhone}>{item.phone}</Text>
-                </View>
-              </TouchableOpacity>
-            )
-          ))}
+              {payAnyoneRecents.map((item, index) => renderContactItem(item, index, true))}
+            </Animated.View>
+          )}
+
+          {/* All People Section */}
+          <Animated.View
+            style={[
+              styles.sectionContainer,
+              { opacity: fadeAnim },
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>All contacts</Text>
+              <Text style={styles.sectionCount}>{payAnyoneAll.length}</Text>
+            </View>
+            {payAnyoneAll.map((item, index) => renderContactItem(item, index))}
+          </Animated.View>
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -128,129 +331,204 @@ const PayAnyoneScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
+    paddingTop: 40,
   },
-  payAnyoneHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 54,
-    paddingBottom: 12,
+    paddingTop: 16,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#18181b',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#000000',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
   },
-  payAnyoneContent: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-  },
-  payAnyoneBackBtn: {
-    marginRight: 16,
-    padding: 8,
-  },
-  payAnyoneTitle: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  payAnyoneSubtitle: {
-    color: '#aaa',
-    fontSize: 14,
-    marginBottom: 18,
-    marginLeft: 2,
-  },
-  payAnyoneInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#222',
-    borderRadius: 8,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#444',
-    paddingHorizontal: 8,
-    height: 48,
-  },
-  payAnyoneInput: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 16,
-    paddingVertical: 0,
-    backgroundColor: 'transparent',
-  },
-  payAnyoneInputBtn: {
-    backgroundColor: '#2563eb',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginHorizontal: 6,
-  },
-  payAnyoneInputBtnText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  payAnyoneInputUserBtn: {
-    backgroundColor: '#444',
-    borderRadius: 16,
-    padding: 6,
-    marginLeft: 2,
-  },
-  payAnyoneScrollContent: {
-    paddingBottom: 32,
-    paddingTop: 8,
-  },
-  payAnyoneSectionTitle: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 26,
-    marginBottom: 12,
-    paddingHorizontal: 2,
-  },
-  payAnyoneRecentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-    paddingVertical: 14,
-  },
-  payAnyoneAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1f2937',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
-  payAnyoneAvatarText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 18,
+  headerTitleContainer: {
+    flex: 1,
   },
-  payAnyoneRecentName: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: 'bold',
+  headerTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '700',
   },
-  payAnyoneRecentPhone: {
-    color: '#aaa',
-    fontSize: 13,
-  },
-  payAnyoneAllRow: {
+  headerSubtitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    marginTop: 2,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+    marginRight: 6,
+  },
+  headerSubtitle: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    backgroundColor: '#000000',
+  },
+  subtitleContainer: {
+    marginBottom: 20,
+    paddingTop: 8,
+  },
+  subtitle: {
+    color: '#9ca3af',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  searchContainer: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 20,
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+  searchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  payAnyoneAllName: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: 'bold',
+  searchIcon: {
+    marginRight: 10,
   },
-  payAnyoneAllDesc: {
-    color: '#aaa',
+  searchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  qrButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#374151',
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickActionBtn: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  quickActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  quickActionText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sectionCount: {
+    color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  contactRowContainer: {
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  statusIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#1f2937',
+  },
+  contactDetails: {
+    flex: 1,
+  },
+  contactName: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  contactSubtext: {
+    color: '#6b7280',
     fontSize: 13,
+    fontWeight: '400',
+  },
+  arrowContainer: {
+    padding: 4,
   },
 });
 
-export default PayAnyoneScreen; 
+export default PayAnyoneScreen;
