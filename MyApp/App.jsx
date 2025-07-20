@@ -13,6 +13,7 @@ import SmartCalendar from './screens/CalenderScreen';
 import CattleScreen from './screens/CattleScreen';
 import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
+import CropDoctorScreen from './screens/CropDoctor';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -68,6 +69,11 @@ export default function App() {
         <Stack.Screen 
           name="UPI" 
           component={UPIScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="CropDoctor" 
+          component={CropDoctorScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
