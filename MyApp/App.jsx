@@ -10,6 +10,8 @@ import FeaturedScreen from './screens/Featured';
 import ChatHistoryScreen from './screens/ChatHistoryScreen';
 import CropCycleScreen from './screens/CropCycle';
 import SmartCalendar from './screens/CalenderScreen';
+import CattleScreen from './screens/CattleScreen';
+import MarketplaceScreen from './screens/MarketplaceScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -17,7 +19,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="ChoiceScreen">
       
-        <Stack.Screen 
+        {/* <Stack.Screen 
           name="ChoiceScreen" 
           component={ChoiceScreen} 
           options={{ headerShown: false }} 
@@ -50,6 +52,16 @@ export default function App() {
         <Stack.Screen 
           name="CalenderScreen" 
           component={SmartCalendar} 
+          options={{ headerShown: false }} 
+        /> */}
+        {/* <Stack.Screen 
+          name="CattleScreen" 
+          component={CattleScreen} 
+          options={{ headerShown: false }} 
+        /> */}
+         <Stack.Screen 
+          name="MarketplaceScreen" 
+          component={MarketplaceScreen} 
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
