@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,114 +13,47 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// Animated Item for staggered list effect
+const AnimatedListItem = ({ children, index }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            delay: index * 100,
+            useNativeDriver: true,
+        }).start();
+    }, [fadeAnim, index]);
+
+    return (
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: Animated.multiply(fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [20, 0]
+        }), 1)}] }}>
+            {children}
+        </Animated.View>
+    );
+};
+
+
 const MarketplaceScreen = ({ navigation }) => {
   const [selectedTab, setSelectedTab] = useState('market');
   const [editingItem, setEditingItem] = useState(null);
   const [newPrice, setNewPrice] = useState('');
 
   const marketData = [
-    {
-      id: 1,
-      name: 'Wheat',
-      price: 245.50,
-      change: +12.30,
-      changePercent: +5.27,
-      volume: '2.4K tons',
-      high: 248.00,
-      low: 232.10,
-      emoji: '🌾'
-    },
-    {
-      id: 2,
-      name: 'Rice',
-      price: 189.75,
-      change: -8.45,
-      changePercent: -4.26,
-      volume: '3.1K tons',
-      high: 198.20,
-      low: 185.30,
-      emoji: '🍚'
-    },
-    {
-      id: 3,
-      name: 'Corn',
-      price: 156.20,
-      change: +3.80,
-      changePercent: +2.49,
-      volume: '1.8K tons',
-      high: 159.40,
-      low: 152.60,
-      emoji: '🌽'
-    },
-    {
-      id: 4,
-      name: 'Tomatoes',
-      price: 78.90,
-      change: +15.60,
-      changePercent: +24.64,
-      volume: '890 tons',
-      high: 82.50,
-      low: 63.30,
-      emoji: '🍅'
-    },
-    {
-      id: 5,
-      name: 'Potatoes',
-      price: 34.50,
-      change: -2.10,
-      changePercent: -5.74,
-      volume: '1.2K tons',
-      high: 38.70,
-      low: 33.80,
-      emoji: '🥔'
-    },
-    {
-      id: 6,
-      name: 'Milk',
-      price: 28.75,
-      change: +1.25,
-      changePercent: +4.55,
-      volume: '5.6K liters',
-      high: 29.10,
-      low: 27.50,
-      emoji: '🥛'
-    }
+    { id: 1, name: 'Wheat', price: 245.50, change: +12.30, changePercent: +5.27, volume: '2.4K tons', high: 248.00, low: 232.10, emoji: '🌾' },
+    { id: 2, name: 'Rice', price: 189.75, change: -8.45, changePercent: -4.26, volume: '3.1K tons', high: 198.20, low: 185.30, emoji: '🍚' },
+    { id: 3, name: 'Corn', price: 156.20, change: +3.80, changePercent: +2.49, volume: '1.8K tons', high: 159.40, low: 152.60, emoji: '🌽' },
+    { id: 4, name: 'Tomatoes', price: 78.90, change: +15.60, changePercent: +24.64, volume: '890 tons', high: 82.50, low: 63.30, emoji: '🍅' },
+    { id: 5, name: 'Potatoes', price: 34.50, change: -2.10, changePercent: -5.74, volume: '1.2K tons', high: 38.70, low: 33.80, emoji: '🥔' },
+    { id: 6, name: 'Milk', price: 28.75, change: +1.25, changePercent: +4.55, volume: '5.6K liters', high: 29.10, low: 27.50, emoji: '🥛' },
   ];
 
   const myListings = [
-    {
-      id: 1,
-      name: 'Organic Wheat',
-      quantity: '50 tons',
-      myPrice: 260.00,
-      marketPrice: 245.50,
-      status: 'active',
-      views: 24,
-      inquiries: 3,
-      emoji: '🌾'
-    },
-    {
-      id: 2,
-      name: 'Fresh Milk',
-      quantity: '200 liters/day',
-      myPrice: 32.00,
-      marketPrice: 28.75,
-      status: 'active',
-      views: 18,
-      inquiries: 7,
-      emoji: '🥛'
-    },
-    {
-      id: 3,
-      name: 'Free Range Eggs',
-      quantity: '500 dozen',
-      myPrice: 12.50,
-      marketPrice: 11.80,
-      status: 'pending',
-      views: 12,
-      inquiries: 2,
-      emoji: '🥚'
-    }
+    { id: 1, name: 'Organic Wheat', quantity: '50 tons', myPrice: 260.00, marketPrice: 245.50, status: 'active', views: 24, inquiries: 3, emoji: '🌾' },
+    { id: 2, name: 'Fresh Milk', quantity: '200 liters/day', myPrice: 32.00, marketPrice: 28.75, status: 'active', views: 18, inquiries: 7, emoji: '🥛' },
+    { id: 3, name: 'Free Range Eggs', quantity: '500 dozen', myPrice: 12.50, marketPrice: 11.80, status: 'pending', views: 12, inquiries: 2, emoji: '🥚' },
   ];
 
   const handlePriceUpdate = (item) => {
@@ -139,166 +72,149 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   };
 
-  const renderMarketItem = (item) => {
+  const renderMarketItem = (item, index) => {
     const isPositive = item.change > 0;
     const changeColor = isPositive ? '#10B981' : '#EF4444';
-    // Glow animation (static for now, can be animated if needed)
-    const glowOpacity = 0.5;
+    const glowColor = isPositive ? '#10b981' : '#ef4444';
+
     return (
-      <TouchableOpacity key={item.id} style={styles.marketCard} activeOpacity={0.9}>
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFillObject,
-            styles.cardGlow,
-            { opacity: glowOpacity }
-          ]}
-        >
-          <LinearGradient
-            colors={['#10b981', 'transparent']}
-            style={styles.glowGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
-        <LinearGradient
-          colors={['rgba(24,24,27,0.95)', 'rgba(39,39,42,0.95)']}
-          style={styles.marketCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.marketHeader}>
-            <View style={styles.marketInfo}>
-              <Text style={styles.cropEmoji}>{item.emoji}</Text>
-              <View style={styles.cropDetails}>
-                <Text style={styles.cropName}>{item.name}</Text>
-                <Text style={styles.volume}>Vol: {item.volume}</Text>
-              </View>
-            </View>
-            <View style={styles.priceInfo}>
-              <Text style={styles.price}>₹{item.price}</Text>
-              <View style={[styles.changeContainer, { backgroundColor: changeColor + '20' }]}>
-                <Ionicons 
-                  name={isPositive ? "trending-up" : "trending-down"} 
-                  size={12} 
-                  color={changeColor} 
-                />
-                <Text style={[styles.change, { color: changeColor }]}>
-                  {isPositive ? '+' : ''}{item.changePercent.toFixed(1)}%
-                </Text>
-              </View>
-            </View>
-          </View>
-          
-          <View style={styles.marketStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Change</Text>
-              <Text style={[styles.statValue, { color: changeColor }]}>
-                ₹{Math.abs(item.change).toFixed(2)}
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>High</Text>
-              <Text style={styles.statValue}>₹{item.high}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Low</Text>
-              <Text style={styles.statValue}>₹{item.low}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
+        <AnimatedListItem index={index} key={item.id}>
+            <TouchableOpacity style={styles.marketCard} activeOpacity={0.9}>
+                 <View style={[StyleSheet.absoluteFillObject, styles.cardGlow]}>
+                    <LinearGradient
+                        colors={[glowColor, 'transparent']}
+                        style={styles.glowGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                </View>
+                <LinearGradient
+                colors={['#18181b', '#27272a']}
+                style={styles.marketCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                >
+                <View style={styles.marketHeader}>
+                    <View style={styles.marketInfo}>
+                        <Text style={styles.cropEmoji}>{item.emoji}</Text>
+                        <View>
+                            <Text style={styles.cropName}>{item.name}</Text>
+                            <Text style={styles.volume}>Vol: {item.volume}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.priceInfo}>
+                    <Text style={styles.price}>₹{item.price.toFixed(1)}</Text>
+                    <View style={[styles.changeContainer, { backgroundColor: changeColor + '20' }]}>
+                        <Ionicons
+                            name={isPositive ? "trending-up" : "trending-down"}
+                            size={12}
+                            color={changeColor}
+                        />
+                        <Text style={[styles.change, { color: changeColor }]}>
+                            {isPositive ? '+' : ''}{item.changePercent.toFixed(1)}%
+                        </Text>
+                    </View>
+                    </View>
+                </View>
+
+                <View style={styles.marketStats}>
+                    <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Change</Text>
+                    <Text style={[styles.statValue, { color: changeColor }]}>
+                        ₹{Math.abs(item.change).toFixed(2)}
+                    </Text>
+                    </View>
+                    <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>High</Text>
+                    <Text style={styles.statValue}>₹{item.high.toFixed(1)}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Low</Text>
+                    <Text style={styles.statValue}>₹{item.low.toFixed(1)}</Text>
+                    </View>
+                </View>
+                </LinearGradient>
+            </TouchableOpacity>
+        </AnimatedListItem>
     );
   };
 
-  const renderMyListing = (item) => {
+  const renderMyListing = (item, index) => {
     const priceDiff = item.myPrice - item.marketPrice;
     const isPriceAboveMarket = priceDiff > 0;
     const priceCompColor = isPriceAboveMarket ? '#F59E0B' : '#10B981';
-    const glowOpacity = 0.5;
+
     return (
-      <View key={item.id} style={styles.listingCard}>
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFillObject,
-            styles.cardGlow,
-            { opacity: glowOpacity }
-          ]}
-        >
-          <LinearGradient
-            colors={['#10b981', 'transparent']}
-            style={styles.glowGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
-        <LinearGradient
-          colors={['rgba(24,24,27,0.95)', 'rgba(39,39,42,0.95)']}
-          style={styles.marketCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.listingHeader}>
-            <View style={styles.listingInfo}>
-              <Text style={styles.cropEmoji}>{item.emoji}</Text>
-              <View style={styles.cropDetails}>
-                <Text style={styles.cropName}>{item.name}</Text>
-                <Text style={styles.quantity}>{item.quantity}</Text>
-              </View>
-            </View>
-            <View style={[
-              styles.statusBadge, 
-              { backgroundColor: item.status === 'active' ? '#10B981' : '#F59E0B' }
-            ]}>
-              <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-            </View>
-          </View>
+        <AnimatedListItem index={index} key={item.id}>
+            <View style={styles.listingCard}>
+                <LinearGradient
+                    colors={['#18181b', '#27272a']}
+                    style={styles.marketCardGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                <View style={styles.listingHeader}>
+                    <View style={styles.listingInfo}>
+                    <Text style={styles.cropEmoji}>{item.emoji}</Text>
+                    <View>
+                        <Text style={styles.cropName}>{item.name}</Text>
+                        <Text style={styles.quantity}>{item.quantity}</Text>
+                    </View>
+                    </View>
+                    <View style={[
+                        styles.statusBadge,
+                        { backgroundColor: item.status === 'active' ? '#10B981' : '#F59E0B' }
+                    ]}>
+                    <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+                    </View>
+                </View>
 
-          <View style={styles.priceComparison}>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Your Price:</Text>
-              <Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Market Price:</Text>
-              <Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Difference:</Text>
-              <Text style={[styles.priceDiff, { color: priceCompColor }]}>
-                {isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}
-              </Text>
-            </View>
-          </View>
+                <View style={styles.priceComparison}>
+                    <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>Your Price:</Text>
+                    <Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>Market Price:</Text>
+                    <Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>Difference:</Text>
+                    <Text style={[styles.priceDiff, { color: priceCompColor }]}>
+                        {isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}
+                    </Text>
+                    </View>
+                </View>
 
-          <View style={styles.listingStats}>
-            <View style={styles.statBox}>
-              <Ionicons name="eye-outline" size={16} color="#64748B" />
-              <Text style={styles.statNumber}>{item.views}</Text>
-              <Text style={styles.statText}>Views</Text>
+                <View style={styles.listingStats}>
+                    <View style={styles.statBox}>
+                        <Ionicons name="eye-outline" size={16} color="#64748B" />
+                        <Text style={styles.statNumber}>{item.views}</Text>
+                        <Text style={styles.statText}>Views</Text>
+                    </View>
+                     <View style={styles.statBox}>
+                        <Ionicons name="chatbubble-ellipses-outline" size={16} color="#64748B" />
+                        <Text style={styles.statNumber}>{item.inquiries}</Text>
+                        <Text style={styles.statText}>Inquiries</Text>
+                    </View>
+                    <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handlePriceUpdate(item)}
+                    >
+                    <Ionicons name="create-outline" size={16} color="#3B82F6" />
+                    <Text style={styles.editText}>Edit Price</Text>
+                    </TouchableOpacity>
+                </View>
+                </LinearGradient>
             </View>
-            <View style={styles.statBox}>
-              <Ionicons name="location-outline" size={16} color="#64748B" />
-              <Text style={styles.statNumber}>{item.inquiries}</Text>
-              <Text style={styles.statText}>Inquiries</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.editButton}
-              onPress={() => handlePriceUpdate(item)}
-            >
-              <Ionicons name="create-outline" size={16} color="#3B82F6" />
-              <Text style={styles.editText}>Edit Price</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </View>
+        </AnimatedListItem>
     );
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
-      
-      {/* Header */}
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
+
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
@@ -313,36 +229,35 @@ const MarketplaceScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'market' && styles.activeTab]}
           onPress={() => setSelectedTab('market')}
         >
-          <Ionicons 
-            name="bar-chart-outline" 
-            size={20} 
-            color={selectedTab === 'market' ? '#10B981' : '#64748B'} 
+          <Ionicons
+            name="stats-chart"
+            size={20}
+            color={selectedTab === 'market' ? '#10B981' : '#64748B'}
           />
           <Text style={[
-            styles.tabText, 
+            styles.tabText,
             selectedTab === 'market' && styles.activeTabText
           ]}>
             Market Prices
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'listings' && styles.activeTab]}
           onPress={() => setSelectedTab('listings')}
         >
-          <Ionicons 
-            name="cash-outline" 
-            size={20} 
-            color={selectedTab === 'listings' ? '#10B981' : '#64748B'} 
+          <Ionicons
+            name="list"
+            size={20}
+            color={selectedTab === 'listings' ? '#10B981' : '#64748B'}
           />
           <Text style={[
-            styles.tabText, 
+            styles.tabText,
             selectedTab === 'listings' && styles.activeTabText
           ]}>
             My Listings
@@ -357,7 +272,7 @@ const MarketplaceScreen = ({ navigation }) => {
               <Text style={styles.sectionTitle}>Today's Market Prices</Text>
               <Text style={styles.lastUpdated}>Updated 5 min ago</Text>
             </View>
-            {marketData.map(renderMarketItem)}
+            {marketData.map((item, index) => renderMarketItem(item, index))}
           </View>
         )}
 
@@ -369,48 +284,47 @@ const MarketplaceScreen = ({ navigation }) => {
                 <Ionicons name="add" size={20} color="#10B981" />
               </TouchableOpacity>
             </View>
-            {myListings.map(renderMyListing)}
+            {myListings.map((item, index) => renderMyListing(item, index))}
           </View>
         )}
       </ScrollView>
 
-      {/* Price Edit Modal */}
       {editingItem && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Update Price for {editingItem.name}</Text>
-            <Text style={styles.modalSubtitle}>Market Price: ₹{editingItem.marketPrice}</Text>
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Your Price (₹)</Text>
-              <TextInput
-                style={styles.priceInput}
-                value={newPrice}
-                onChangeText={setNewPrice}
-                keyboardType="numeric"
-                placeholder="Enter new price"
-                placeholderTextColor="#64748B"
-              />
-            </View>
+            <Animated.View style={styles.modal}>
+                <Text style={styles.modalTitle}>Update Price for {editingItem.name}</Text>
+                <Text style={styles.modalSubtitle}>Market Price: ₹{editingItem.marketPrice}</Text>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => {
-                  setEditingItem(null);
-                  setNewPrice('');
-                }}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={savePriceUpdate}
-              >
-                <Text style={styles.saveText}>Update Price</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Your Price (₹)</Text>
+                <TextInput
+                    style={styles.priceInput}
+                    value={newPrice}
+                    onChangeText={setNewPrice}
+                    keyboardType="numeric"
+                    placeholder="Enter new price"
+                    placeholderTextColor="#64748B"
+                />
+                </View>
+
+                <View style={styles.modalButtons}>
+                <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                        setEditingItem(null);
+                        setNewPrice('');
+                    }}
+                >
+                    <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={savePriceUpdate}
+                >
+                    <Text style={styles.saveText}>Update Price</Text>
+                </TouchableOpacity>
+                </View>
+            </Animated.View>
         </View>
       )}
     </View>
@@ -427,14 +341,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingTop: 60,
+    paddingTop: 60, // Adjust for status bar
     backgroundColor: '#000',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#18181b',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -443,18 +357,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#64748B',
     marginTop: 2,
   },
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#10B981' + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   liveDot: {
     width: 8,
@@ -472,23 +390,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginBottom: 16,
+    backgroundColor: '#18181b',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    padding: 4,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#10B981' + '20',
+    backgroundColor: '#27272a',
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#64748B',
     marginLeft: 8,
   },
@@ -521,26 +441,28 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#18181b',
     alignItems: 'center',
     justifyContent: 'center',
   },
   marketCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
     marginBottom: 12,
-    // Ensure no extra paddingRight is set here
+    overflow: 'hidden',
   },
   marketCardGradient: {
-    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    minHeight: 120,
   },
   cardGlow: {
-    borderRadius: 12,
+    position: 'absolute',
+    top: -1,
+    left: -1,
+    right: -1,
+    bottom: -1,
+    borderRadius: 17,
+    opacity: 0.3,
   },
   glowGradient: {
     flex: 1,
@@ -552,18 +474,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   marketInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 8,
   },
   cropEmoji: {
-    fontSize: 28,
+    fontSize: 32,
     marginRight: 12,
   },
-  cropDetails: {
-    flex: 1,
-  },
   cropName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -578,11 +499,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   priceInfo: {
-     alignItems: 'flex-end',
-    // marginRight: 200, // Add a small right margin to keep price from touching the edge
+    alignItems: 'flex-end',
   },
   price: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -604,10 +524,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#2D3748',
-    paddingRight:-100
+    borderTopColor: '#27272a',
   },
   statItem: {
+    flex: 1,
     alignItems: 'center',
   },
   statLabel: {
@@ -621,14 +541,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   listingCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
     marginBottom: 12,
-  },
-  listingCardGradient: {
-    borderRadius: 12,
-    padding: 16,
+    overflow: 'hidden',
   },
   listingHeader: {
     flexDirection: 'row',
@@ -637,9 +552,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   listingInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -652,7 +568,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   priceComparison: {
-    backgroundColor: '#2D3748',
+    backgroundColor: '#27272a',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -693,7 +609,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 4,
   },
   statText: {
     fontSize: 12,
@@ -726,11 +641,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modal: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#18181b',
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 320,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
     fontSize: 18,
@@ -752,7 +669,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   priceInput: {
-    backgroundColor: '#2D3748',
+    backgroundColor: '#27272a',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -770,7 +687,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginRight: 8,
-    backgroundColor: '#2D3748',
+    backgroundColor: '#27272a',
     borderRadius: 8,
   },
   saveButton: {
