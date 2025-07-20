@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { ChevronLeft, ChevronDown, ChevronRight, Droplets, Egg, Calendar, MapPin } from 'lucide-react-native';
 
-const CattleScreen = () => {
+const CattleScreen = ({ navigation }) => {
   const [expandedCard, setExpandedCard] = useState(null);
 
   const cattleData = [
@@ -182,7 +182,7 @@ const CattleScreen = () => {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ChevronLeft color="#FFFFFF" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
@@ -244,7 +244,8 @@ const CattleScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000',
+    paddingTop: 20,
   },
   header: {
     flexDirection: 'row',
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingTop: 50,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000',
   },
   backButton: {
     width: 40,
@@ -265,14 +266,15 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     marginLeft: 16,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#64748B',
     marginTop: 2,
   },

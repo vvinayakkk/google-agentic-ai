@@ -19,7 +19,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="ChoiceScreen">
       
-        {/* <Stack.Screen 
+        <Stack.Screen 
           name="ChoiceScreen" 
           component={ChoiceScreen} 
           options={{ headerShown: false }} 
@@ -53,12 +53,12 @@ export default function App() {
           name="CalenderScreen" 
           component={SmartCalendar} 
           options={{ headerShown: false }} 
-        /> */}
-        {/* <Stack.Screen 
+        />
+        <Stack.Screen 
           name="CattleScreen" 
           component={CattleScreen} 
           options={{ headerShown: false }} 
-        /> */}
+        />
          <Stack.Screen 
           name="MarketplaceScreen" 
           component={MarketplaceScreen} 

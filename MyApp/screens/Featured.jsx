@@ -62,7 +62,7 @@ const gemItems = [
   { 
     key: 'cattle', 
     icon: '🐄', 
-    label: 'Livestock Manager', 
+    label: 'Cattle Schedule', 
     description: 'Health tracking & breeding optimization',
     gradient: ['#f59e0b', '#ea580c'],
     accentColor: '#fbbf24',
@@ -363,6 +363,10 @@ export default function FeaturedScreen({ navigation }) {
                 onPress = () => navigation.navigate('CalenderScreen');
               } else if (item.key === 'cycle') {
                 onPress = () => navigation.navigate('CropCycle');
+              } else if (item.key === 'market') {
+                onPress = () => navigation.navigate('MarketplaceScreen');
+              } else if (item.key === 'cattle') {
+                onPress = () => navigation.navigate('CattleScreen');
               }
               return (
                 <FeatureCard

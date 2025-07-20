@@ -162,7 +162,7 @@ const FeaturesView = ({ navigation }) => {
     return (
         <View style={styles.featuresContainer}>
             <View style={styles.featuresRow}>
-                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleSchedule')}>
+                <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleScreen')}>
                     <MaterialCommunityIcons name="cow" size={40} color="#10b981" />
                     <Text style={styles.featureText}>Cattle Schedule</Text>
                 </TouchableOpacity>

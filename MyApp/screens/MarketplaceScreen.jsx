@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const MarketplaceScreen = () => {
+const MarketplaceScreen = ({ navigation }) => {
   const [selectedTab, setSelectedTab] = useState('market');
   const [editingItem, setEditingItem] = useState(null);
   const [newPrice, setNewPrice] = useState('');
@@ -255,7 +255,7 @@ const MarketplaceScreen = () => {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
@@ -375,15 +375,15 @@ const MarketplaceScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingTop: 50,
-    backgroundColor: '#0F172A',
+    paddingTop: 60,
+    backgroundColor: '#000',
   },
   backButton: {
     width: 40,
@@ -395,15 +395,15 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
-    marginLeft: 16,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#64748B',
     marginTop: 2,
   },
