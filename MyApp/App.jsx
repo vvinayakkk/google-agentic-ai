@@ -13,6 +13,8 @@ import SmartCalendar from './screens/CalenderScreen';
 import CattleScreen from './screens/CattleScreen';
 import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
+import CropDoctorScreen from './screens/CropDoctor';
+import FollowUpScreen from './screens/FollowUpScreen';
 import PayAnyoneScreen from './screens/PayAnyoneScreen';
 import ContactUPIDetailScreen from './screens/ContactUPIDetailScreen';
 import PaymentAmountScreen from './screens/PaymentAmountScreen';
@@ -78,6 +80,20 @@ export default function App() {
           name="UPI" 
           component={UPIScreen} 
           options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="CropDoctor" 
+          component={CropDoctorScreen} 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="FollowUpScreen" 
+          component={FollowUpScreen} 
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal', 
+            animationEnabled: true,
+          }}
         />
         <Stack.Screen 
           name="PayAnyone" 
