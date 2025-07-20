@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    // Ensure no extra paddingRight is set here
   },
   marketHeader: {
     flexDirection: 'row',
@@ -519,7 +520,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   priceInfo: {
-    alignItems: 'flex-end',
+     alignItems: 'flex-end',
+    // marginRight: 200, // Add a small right margin to keep price from touching the edge
   },
   price: {
     fontSize: 18,
@@ -545,6 +547,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#2D3748',
+    paddingRight:-100
   },
   statItem: {
     alignItems: 'center',

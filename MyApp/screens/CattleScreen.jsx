@@ -304,14 +304,13 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 19,
   },
   sectionTitle: {
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginLeft: 8,
-    marginBottom: 10, // Add space below heading
   },
   animalCard: {
     backgroundColor: '#1E293B',
@@ -319,7 +318,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    paddingRight: 30, // Add extra right padding for arrow
   },
   cardHeader: {
     flexDirection: 'row',
