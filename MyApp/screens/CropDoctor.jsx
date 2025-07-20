@@ -4,18 +4,18 @@ import {
   Text,
   View,
   SafeAreaView,
+  Image,
   TouchableOpacity,
   ScrollView,
   Animated,
   ActivityIndicator,
-  Alert,
   ImageBackground,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather } from '@expo/vector-icons';
 
-// --- Theme ---
+// --- THEME (Updated to Dark Mode) ---
 const theme = {
     colors: {
         background: '#0F172A',
@@ -34,7 +34,7 @@ const theme = {
     },
 };
 
-// --- Mock Data (Simulating Gemini Response) ---
+// --- Mock Data ---
 const mockAnalysis = {
     diseaseName: 'Septoria Leaf Spot',
     confidence: '95.8%',
@@ -64,154 +64,81 @@ const AnimatedView = ({ children, style }) => {
 
 // --- Main Screen Component ---
 export default function CropDoctorScreen({ navigation }) {
-    const [status, setStatus] = useState('upload'); // 'upload', 'loading', 'result'
-    const [imageUri, setImageUri] = useState(null);
+    const [status, setStatus] = useState('upload');
     const [analysis, setAnalysis] = useState(null);
 
-    // Stop speech when the component is unmounted
-    useEffect(() => {
-        return () => {
-            Speech.stop();
-        };
-    }, []);
+    useEffect(() => { return () => Speech.stop(); }, []);
 
     const speakAnalysis = (analysisData) => {
-        const summary = `Analysis complete. The detected disease is ${analysisData.diseaseName} with a confidence of ${analysisData.confidence}. Here is a brief description: ${analysisData.description}`;
+        const summary = `Analysis complete. The detected disease is ${analysisData.diseaseName} with a confidence of ${analysisData.confidence}.`;
         Speech.speak(summary, { language: 'en-US' });
     };
 
     const handleImageResult = (result) => {
         if (!result.canceled) {
-            setImageUri(result.assets[0].uri);
+            const userImageUri = result.assets[0].uri;
+            const analysisWithUserImage = { ...mockAnalysis, userImageUri };
+            
             setStatus('loading');
             setTimeout(() => {
-                setAnalysis(mockAnalysis);
+                setAnalysis(analysisWithUserImage);
                 setStatus('result');
-                speakAnalysis(mockAnalysis); // Trigger TTS
+                speakAnalysis(analysisWithUserImage);
             }, 2000);
         }
     };
 
     const pickFromGallery = async () => {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
+        let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 1 });
         handleImageResult(result);
     };
 
     const takePhoto = async () => {
         await ImagePicker.requestCameraPermissionsAsync();
-        let result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
+        let result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 1 });
         handleImageResult(result);
     };
 
     const handleReset = () => {
         Speech.stop();
         setStatus('upload');
-        setImageUri(null);
         setAnalysis(null);
     };
 
     const promptFollowUp = () => {
         Speech.stop();
-        Alert.alert(
-            "Choose Follow-up Method",
-            "How would you like to ask your question?",
-            [
-                {
-                    text: "Text Chat",
-                    onPress: () => navigation.navigate('VoiceChatInputScreen', { context: analysis })
-                },
-                {
-                    text: "Live Voice",
-                    onPress: () => navigation.navigate('LiveVoiceScreen')
-                },
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                }
-            ]
-        );
+        navigation.navigate('FollowUpScreen', { context: analysis });
     };
-    
-    // ... (The rest of your component's functions and JSX)
 
     const renderContent = () => {
         switch (status) {
             case 'loading':
-                return (
-                    <View style={styles.centered}>
-                        <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={styles.loadingText}>Analyzing your crop...</Text>
-                    </View>
-                );
+                return (<View style={styles.centered}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={styles.loadingText}>Analyzing your crop...</Text></View>);
             case 'result':
                 return (
                     <AnimatedView style={{ flex: 1 }}>
                         <ScrollView>
-                            <View style={styles.resultImageContainer}>
-                                <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
-                                    <View style={[styles.boundingBox, {
-                                        top: analysis.boundingBox.y,
-                                        left: analysis.boundingBox.x,
-                                        width: analysis.boundingBox.width,
-                                        height: analysis.boundingBox.height,
-                                    }]} />
-                                </ImageBackground>
-                            </View>
+                            <View style={styles.resultImageContainer}><ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}><View style={[styles.boundingBox, { top: analysis.boundingBox.y, left: analysis.boundingBox.x, width: analysis.boundingBox.width, height: analysis.boundingBox.height }]} /></ImageBackground></View>
                             <View style={styles.analysisContainer}>
                                 <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
                                 <Text style={styles.confidenceText}>Confidence: {analysis.confidence}</Text>
-                                
                                 <View style={styles.section}><Text style={styles.sectionTitle}>Description</Text><Text style={theme.typography.body}>{analysis.description}</Text></View>
-                                
-                                <View style={styles.section}><Text style={styles.sectionTitle}>Symptoms</Text>
-                                    {analysis.symptoms.map((symptom, index) => (
-                                        <View key={index} style={styles.listItem}><Text style={styles.bullet}>•</Text><Text style={styles.listItemText}>{symptom}</Text></View>
-                                    ))}
-                                </View>
-
-                                <View style={styles.section}><Text style={styles.sectionTitle}>Solutions</Text>
-                                    {analysis.solutions.map((solution, index) => (
-                                        <View key={index} style={styles.solutionCard}>
-                                            <Text style={styles.solutionTitle}>{solution.title}</Text>
-                                            <Text style={theme.typography.body}>{solution.details}</Text>
-                                        </View>
-                                    ))}
-                                </View>
+                                <View style={styles.section}><Text style={styles.sectionTitle}>Symptoms</Text>{analysis.symptoms.map((symptom, index) => (<View key={index} style={styles.listItem}><Text style={styles.bullet}>•</Text><Text style={styles.listItemText}>{symptom}</Text></View>))}</View>
+                                <View style={styles.section}><Text style={styles.sectionTitle}>Solutions</Text>{analysis.solutions.map((solution, index) => (<View key={index} style={styles.solutionCard}><Text style={styles.solutionTitle}>{solution.title}</Text><Text style={theme.typography.body}>{solution.details}</Text></View>))}</View>
                             </View>
                         </ScrollView>
-                        <View style={styles.chatInputContainer}>
-                            <TouchableOpacity style={styles.chatButton} onPress={promptFollowUp}>
-                                <Feather name="mic" size={24} color={theme.colors.white} />
-                                <Text style={styles.chatButtonText}>Ask a follow-up question</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <View style={styles.chatInputContainer}><TouchableOpacity style={styles.chatButton} onPress={promptFollowUp}><Feather name="mic" size={24} color={theme.colors.background} /><Text style={styles.chatButtonText}>Ask a follow-up question</Text></TouchableOpacity></View>
                     </AnimatedView>
                 );
-            case 'upload':
             default:
                 return (
                     <View style={styles.centered}>
                         <Feather name="upload-cloud" size={80} color={theme.colors.textSecondary} />
                         <Text style={styles.uploadTitle}>Upload a Crop Image</Text>
                         <Text style={styles.uploadSubtitle}>Get an instant diagnosis of any potential diseases.</Text>
-                        <TouchableOpacity style={styles.button} onPress={takePhoto}>
-                            <Feather name="camera" size={20} color={theme.colors.white} />
-                            <Text style={styles.buttonText}>Take Photo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.button} onPress={pickFromGallery}>
-                            <Feather name="image" size={20} color={theme.colors.white} />
-                            <Text style={styles.buttonText}>Choose from Gallery</Text>
-                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={takePhoto}><Feather name="camera" size={20} color={theme.colors.background} /><Text style={styles.buttonText}>Take Photo</Text></TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={pickFromGallery}><Feather name="image" size={20} color={theme.colors.background} /><Text style={styles.buttonText}>Choose from Gallery</Text></TouchableOpacity>
                     </View>
                 );
         }
@@ -219,21 +146,12 @@ export default function CropDoctorScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Crop Doctor</Text>
-                {status === 'result' && (
-                    <TouchableOpacity onPress={handleReset}>
-                        <Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                )}
-            </View>
+            <View style={styles.header}><Text style={styles.headerTitle}>Crop Doctor</Text>{status === 'result' && (<TouchableOpacity onPress={handleReset}><Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} /></TouchableOpacity>)}</View>
             {renderContent()}
         </SafeAreaView>
     );
 }
 
-
-// --- Stylesheet ---
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.background },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing.medium, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
@@ -243,7 +161,7 @@ const styles = StyleSheet.create({
     uploadTitle: { ...theme.typography.h2, marginTop: theme.spacing.medium, textAlign: 'center' },
     uploadSubtitle: { ...theme.typography.body, textAlign: 'center', marginVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium },
     button: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30, marginTop: theme.spacing.medium },
-    buttonText: { color: theme.colors.white, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
+    buttonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
     resultImageContainer: { height: 300 },
     resultImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     boundingBox: { position: 'absolute', borderWidth: 2, borderColor: theme.colors.error, backgroundColor: 'rgba(248, 113, 113, 0.2)', borderRadius: 4 },
@@ -259,5 +177,5 @@ const styles = StyleSheet.create({
     solutionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text, marginBottom: theme.spacing.small },
     chatInputContainer: { padding: theme.spacing.medium, backgroundColor: theme.colors.background, borderTopWidth: 1, borderColor: theme.colors.surface },
     chatButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primary, padding: theme.spacing.medium, borderRadius: 12 },
-    chatButtonText: { color: theme.colors.white, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
+    chatButtonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
 });

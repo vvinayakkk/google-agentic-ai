@@ -14,6 +14,7 @@ import CattleScreen from './screens/CattleScreen';
 import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
 import CropDoctorScreen from './screens/CropDoctor';
+import FollowUpScreen from './screens/FollowUpScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -75,6 +76,15 @@ export default function App() {
           name="CropDoctor" 
           component={CropDoctorScreen} 
           options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="FollowUpScreen" 
+          component={FollowUpScreen} 
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal', 
+            animationEnabled: true,
+          }}
         />
       </Stack.Navigator>
       <Toast />
