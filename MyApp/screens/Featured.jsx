@@ -48,7 +48,7 @@ const farmHubTabs = [
         id: 'business', title: 'Business', icon: 'wallet-outline',
         features: [
             { id: 'finance', title: 'Loans & Subsidies', icon: 'wallet-outline', onPress: (navigation) => navigation.navigate('UPI') },
-            { id: 'documents', title: 'Paperwork Helper', icon: 'document-text-outline', onPress: () => console.log('Docs') },
+            { id: 'documents', title: 'Paperwork Helper', icon: 'document-text-outline', onPress: (navigation) => navigation.navigate('DocumentAgentScreen') },
         ]
     },
 ];
