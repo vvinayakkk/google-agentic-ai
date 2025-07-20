@@ -1,530 +1,216 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TouchableOpacity, 
-  Animated, 
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
   Dimensions,
   StatusBar,
-  Platform
+  Animated,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-const gemItems = [
-  { 
-    key: 'crop', 
-    icon: '🩺', 
-    label: 'Crop Doctor', 
-    description: 'AI-powered disease detection with 98% accuracy',
-    gradient: ['#10b981', '#059669'],
-    accentColor: '#34d399',
-    stats: '10K+ diagnoses',
-    bgIcon: 'medical'
+// --- DATA: Added an "overview" for the back of the card ---
+const featureItems = [
+  {
+    key: 'crop',
+    icon: 'leaf-outline',
+    label: 'Crop Doctor',
+    description: 'Diagnose crop diseases',
+    gradient: ['#22c55e', '#16a34a'],
+    overview: 'Use your phone camera to instantly identify crop diseases and pests. Get AI-powered solutions and treatment recommendations with 98% accuracy.',
+    onPress: (navigation) => navigation.navigate('CropDoctor'),
   },
-  { 
-    key: 'market', 
-    icon: '🛒', 
-    label: 'Market Intelligence', 
-    description: 'Real-time market prices and trading insights',
-    gradient: ['#3b82f6', '#0ea5e9'],
-    accentColor: '#60a5fa',
-    stats: 'Live data',
-    bgIcon: 'trending-up'
+  {
+    key: 'market',
+    icon: 'trending-up-outline',
+    label: 'Market Prices',
+    description: 'Check local mandi rates',
+    gradient: ['#3b82f6', '#2563eb'],
+    overview: 'Access real-time prices for your crops from thousands of markets (mandis) across India. Make informed decisions on when and where to sell.',
+    onPress: (navigation) => navigation.navigate('MarketplaceScreen'),
   },
-  { 
-    key: 'calendar', 
-    icon: '📅', 
-    label: 'Calendar', 
-    description: 'Weather-synced farming optimization',
-    gradient: ['#8b5cf6', '#ec4899'],
-    accentColor: '#a78bfa',
-    stats: '365 day sync',
-    bgIcon: 'calendar'
+  {
+    key: 'calendar',
+    icon: 'calendar-outline',
+    label: 'Farming Calendar',
+    description: 'Plan your activities',
+    gradient: ['#ec4899', '#db2777'],
+    overview: 'Get a personalized calendar for your crops, synced with local weather forecasts. Receive timely alerts for sowing, irrigation, and harvesting.',
+    onPress: (navigation) => navigation.navigate('CalenderScreen'),
   },
-  { 
-    key: 'cycle', 
-    icon: '🌱', 
-    label: 'Crop Cycle', 
-    description: 'Complete growth monitoring with IoT',
-    gradient: ['#22c55e', '#65a30d'],
-    accentColor: '#4ade80',
-    stats: 'Real-time',
-    bgIcon: 'leaf'
+  {
+    key: 'cycle',
+    icon: 'reload-circle-outline',
+    label: 'Crop Cycle',
+    description: 'Track growth stages',
+    gradient: ['#8b5cf6', '#7c3aed'],
+    overview: 'Monitor your entire crop lifecycle from seed to harvest. Log activities, add photos, and track the progress of your farm effortlessly.',
+    onPress: (navigation) => navigation.navigate('CropCycle'),
   },
-  { 
-    key: 'cattle', 
-    icon: '🐄', 
-    label: 'Cattle Schedule', 
-    description: 'Health tracking & breeding optimization',
-    gradient: ['#f59e0b', '#ea580c'],
-    accentColor: '#fbbf24',
-    stats: '500+ animals',
-    bgIcon: 'paw'
+  {
+    key: 'cattle',
+    icon: 'paw-outline',
+    label: 'Cattle Care',
+    description: 'Manage animal health',
+    gradient: ['#f97316', '#ea580c'],
+    overview: 'Keep detailed health records for your livestock. Track vaccinations, breeding cycles, and milk production to improve overall herd management.',
+    onPress: (navigation) => navigation.navigate('CattleScreen'),
   },
-  { 
-    key: 'finance', 
-    icon: '💡', 
-    label: 'AgriFinance Pro', 
-    description: 'Loan assistance & financial planning',
-    gradient: ['#6366f1', '#8b5cf6'],
-    accentColor: '#818cf8',
-    stats: '$2M+ funded',
-    bgIcon: 'cash'
+  {
+    key: 'finance',
+    icon: 'wallet-outline',
+    label: 'AgriFinance',
+    description: 'Loans and subsidies',
+    gradient: ['#6366f1', '#4f46e5'],
+    overview: 'Explore government schemes, apply for agricultural loans, and manage your farm finances. Connect with financial experts for guidance.',
+    onPress: (navigation) => navigation.navigate('UPI'),
+  },
+  {
+    key: 'rental',
+    icon: 'car-sport-outline',
+    label: 'Rental System',
+    description: 'Rent farm equipment',
+    gradient: ['#ca8a04', '#a16207'],
+    overview: 'Need a tractor or a thresher? Rent equipment from nearby farmers or service providers. You can also list your own equipment for others to rent.',
+    onPress: (navigation) => console.log('Rental System Pressed'),
+  },
+  {
+    key: 'documents',
+    icon: 'document-text-outline',
+    label: 'Document Builder',
+    description: 'Create legal papers',
+    gradient: ['#0891b2', '#0e7490'],
+    overview: 'Easily create important documents like subsidy applications, land lease agreements, or sales receipts using pre-built templates.',
+    onPress: (navigation) => console.log('Document Builder Pressed'),
   },
 ];
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+// --- Card Component with Flip Animation ---
+const FeatureCard = ({ item, navigation }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const flipAnim = useRef(new Animated.Value(0)).current;
 
-const FloatingIcon = ({ icon, delay, duration }) => {
-  const floatAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animate = () => {
-      Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: 1,
-          duration: duration,
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 0,
-          duration: duration,
-          useNativeDriver: true,
-        })
-      ]).start(() => animate());
-    };
-
-    setTimeout(() => animate(), delay);
-  }, []);
-
-  const translateY = floatAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20]
+  const frontInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['0deg', '180deg'],
   });
 
-  const opacity = floatAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.3, 0.8, 0.3]
+  const backInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['180deg', '360deg'],
   });
 
-  return (
-    <Animated.View
-      style={[
-        styles.floatingIcon,
-        {
-          transform: [{ translateY }],
-          opacity,
-          left: Math.random() * (width - 50),
-          top: Math.random() * (height - 200) + 100,
-        }
-      ]}
-    >
-      <Ionicons name={icon} size={16} color="#4ade80" />
-    </Animated.View>
-  );
-};
-
-const FeatureCard = ({ item, index, onPress }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Entrance animation
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      delay: index * 150,
+  const handleFlip = () => {
+    const toValue = isFlipped ? 0 : 180;
+    Animated.spring(flipAnim, {
+      toValue,
+      friction: 8,
+      tension: 10,
       useNativeDriver: true,
     }).start();
-
-    // Continuous glow animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: false,
-        })
-      ])
-    ).start();
-  }, []);
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
+    setIsFlipped(!isFlipped);
   };
 
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.8]
-  });
+  const frontAnimatedStyle = { transform: [{ rotateY: frontInterpolate }] };
+  const backAnimatedStyle = { transform: [{ rotateY: backInterpolate }] };
 
   return (
-    <AnimatedTouchable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={onPress}
-      style={[
-        styles.featureCard,
-        { transform: [{ scale: scaleAnim }] }
-      ]}
-      activeOpacity={0.9}
-    >
-      {/* Glow Effect */}
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          styles.cardGlow,
-          { opacity: glowOpacity }
-        ]}
-      >
-        <LinearGradient
-          colors={[...item.gradient, 'transparent']}
-          style={styles.glowGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-      </Animated.View>
-
-      {/* Card Content */}
-      <LinearGradient
-        colors={['rgba(24,24,27,0.95)', 'rgba(39,39,42,0.95)']}
-        style={styles.cardContent}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        {/* Background Icon */}
-        <View style={styles.backgroundIcon}>
-          <Ionicons name={item.bgIcon} size={80} color="rgba(255,255,255,0.05)" />
-        </View>
-
-        {/* Header */}
-        <View style={styles.cardHeader}>
-          <LinearGradient
-            colors={item.gradient}
-            style={styles.iconContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.cardEmoji}>{item.icon}</Text>
+    <View style={styles.featureCard}>
+      <TouchableOpacity onPress={handleFlip}>
+        {/* Front of the Card */}
+        <Animated.View style={[styles.cardSide, frontAnimatedStyle]}>
+          <LinearGradient colors={item.gradient} style={styles.cardGradient}>
+            <Ionicons name={item.icon} size={48} color="white" />
+            <Text style={styles.cardTitle}>{item.label}</Text>
+            <Text style={styles.cardDescription}>{item.description}</Text>
           </LinearGradient>
-          
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: item.accentColor }]} />
-            <Text style={[styles.statusText, { color: item.accentColor }]}>Active</Text>
-          </View>
-        </View>
+        </Animated.View>
 
-        {/* Title */}
-        <Text style={styles.cardTitle}>{item.label}</Text>
-        
-        {/* Description */}
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-
-        {/* Footer */}
-        <View style={styles.cardFooter}>
-          <View style={styles.statsContainer}>
-            <Ionicons name="trending-up" size={12} color={item.accentColor} />
-            <Text style={[styles.statsText, { color: item.accentColor }]}>{item.stats}</Text>
-          </View>
-          
-          <View style={[styles.actionButton, { backgroundColor: `${item.accentColor}20` }]}>
-            <Ionicons name="chevron-forward" size={16} color={item.accentColor} />
-          </View>
-        </View>
-      </LinearGradient>
-    </AnimatedTouchable>
+        {/* Back of the Card */}
+        <Animated.View style={[styles.cardSide, styles.cardBack, backAnimatedStyle]}>
+          <LinearGradient colors={item.gradient} style={styles.cardGradient}>
+            <Text style={styles.overviewText}>{item.overview}</Text>
+            <TouchableOpacity 
+              style={styles.exploreButton} 
+              onPress={() => item.onPress(navigation)}
+            >
+              <Text style={styles.exploreButtonText}>Explore Feature</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+      </TouchableOpacity>
+    </View>
   );
 };
+
 
 export default function FeaturedScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [mounted, setMounted] = useState(false);
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    setMounted(true);
-    Animated.timing(headerOpacity, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F4F5" />
       
-      {/* Background Gradient */}
-      {/* <LinearGradient
-        colors={['#0f172a', '#1e1b4b', '#0f172a']}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      /> */}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]} />
+      {/* --- New, Centered Header with Back Button --- */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>Agri-Suite Features</Text>
+        <View style={styles.headerButton} /> {/* Empty view for alignment */}
+      </View>
 
-      {/* Floating Background Icons */}
-      {mounted && (
-        <>
-          <FloatingIcon icon="leaf-outline" delay={0} duration={3000} />
-          <FloatingIcon icon="analytics-outline" delay={1000} duration={2500} />
-          <FloatingIcon icon="calendar-outline" delay={2000} duration={3500} />
-          <FloatingIcon icon="trending-up-outline" delay={3000} duration={2800} />
-        </>
-      )}
-
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <Animated.View style={[styles.header, { opacity: headerOpacity, paddingTop: insets.top }]}>
-          <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('VoiceChatInputScreen')}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                  style={styles.headerButtonGradient}
-                >
-                  <Ionicons name="close" size={24} color="white" />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <View style={styles.headerCenter}>
-                <View style={styles.titleContainer}>
-                  <Ionicons name="sparkles" size={20} color="#fbbf24" />
-                  <Text style={styles.headerTitle}>AgriTech Suite</Text>
-                </View>
-                <Text style={styles.headerSubtitle}>Premium Features</Text>
-              </View>
-
-              <TouchableOpacity style={styles.profileContainer}>
-                <LinearGradient
-                  colors={['#10b981', '#3b82f6']}
-                  style={styles.profileGradient}
-                >
-                  <MaterialCommunityIcons name="account-circle-outline" size={28} color="white" />
-                  <View style={styles.onlineIndicator} />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </BlurView>
-        </Animated.View>
-
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          {/* <LinearGradient
-            colors={['rgba(16, 185, 129, 0.1)', 'rgba(59, 130, 246, 0.1)']}
-            style={styles.heroBadge}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Ionicons name="flash" size={16} color="#fbbf24" />
-            <Text style={styles.heroBadgeText}>AI-Powered Agriculture</Text>
-          </LinearGradient> */}
-          
-          <Text style={styles.heroTitle}>Transform Your Farm</Text>
-          <Text style={styles.heroDescription}>
-            Advanced tools to maximize yield and optimize every aspect of modern agriculture
-          </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.featuresGrid}>
+          {featureItems.map((item) => (
+            <FeatureCard
+              key={item.key}
+              item={item}
+              navigation={navigation}
+            />
+          ))}
         </View>
-
-        {/* Features Grid */}
-        <ScrollView 
-          style={styles.scrollView} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.featuresGrid}>
-            {gemItems.map((item, index) => {
-              let onPress = () => console.log(`Pressed ${item.label}`);
-              if (item.key === 'calendar') {
-                onPress = () => navigation.navigate('CalenderScreen');
-              } else if (item.key === 'cycle') {
-                onPress = () => navigation.navigate('CropCycle');
-              } else if (item.key === 'market') {
-                onPress = () => navigation.navigate('MarketplaceScreen');
-              } else if (item.key === 'cattle') {
-                onPress = () => navigation.navigate('CattleScreen');
-              } else if (item.key === 'finance') {
-                onPress = () => navigation.navigate('UPI');
-              } else if (item.key === 'crop') {
-                onPress = () => navigation.navigate('CropDoctor');
-              }
-              return (
-                <FeatureCard
-                  key={item.key}
-                  item={item}
-                  index={index}
-                  onPress={onPress}
-                />
-              );
-            })}
-          </View>
-
-          {/* CTA Section */}
-          {/* <View style={styles.ctaSection}>
-            <LinearGradient
-              colors={['#10b981', '#3b82f6']}
-              style={styles.ctaCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.ctaContent}>
-                <Text style={styles.ctaTitle}>Ready to Revolutionize?</Text>
-                <Text style={styles.ctaDescription}>
-                  Join 50,000+ farmers using AI-powered agriculture
-                </Text>
-                <TouchableOpacity style={styles.ctaButton}>
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,1)']}
-                    style={styles.ctaButtonGradient}
-                  >
-                    <Ionicons name="sparkles" size={18} color="#059669" />
-                    <Text style={styles.ctaButtonText}>Start Free Trial</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </View> */}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
+    backgroundColor: '#000', // Changed from #F4F4F5 to black
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  headerBlur: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222', // Darker border for dark theme
+    backgroundColor: '#000', // Changed from #F4F4F5 to black
   },
   headerButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  headerButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerCenter: {
     alignItems: 'center',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 18,
+    fontSize: 20,
+    color: '#fff', // Changed from #18181B to white
     fontWeight: '700',
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  profileContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  profileGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4ade80',
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.3)',
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    marginBottom: 16,
-  },
-  heroBadgeText: {
-    color: '#4ade80',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  heroTitle: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  heroDescription: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    maxWidth: '90%',
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
     paddingBottom: 32,
@@ -534,139 +220,66 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    gap: 12,
+    paddingTop: 20,
   },
+  // Card container to set dimensions and perspective for 3D effect
   featureCard: {
-    width: (width - 44) / 2,
+    width: (width - 48) / 2,
+    height: 190,
     marginBottom: 16,
+  },
+  // Base style for both sides of the card
+  cardSide: {
+    width: '100%',
+    height: '100%',
     borderRadius: 20,
-    overflow: 'hidden',
+    backfaceVisibility: 'hidden', // Crucial for the flip effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  cardGlow: {
-    borderRadius: 20,
-  },
-  glowGradient: {
-    flex: 1,
-  },
-  cardContent: {
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    minHeight: 180,
-  },
-  backgroundIcon: {
+  // Positions the back of the card behind the front
+  cardBack: {
     position: 'absolute',
-    top: -10,
-    right: -10,
+    top: 0,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardEmoji: {
-    fontSize: 24,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
+  cardGradient: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 16,
+    justifyContent: 'space-around',
   },
   cardTitle: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 8,
+    marginTop: 8,
   },
   cardDescription: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+  },
+  overviewText: {
+    color: 'white',
     fontSize: 13,
     lineHeight: 18,
-    flex: 1,
+    fontWeight: '500',
+    flex: 1, // Takes up available space
   },
-  cardFooter: {
+  exploreButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statsText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  actionButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  floatingIcon: {
-    position: 'absolute',
-    zIndex: 1,
-  },
-  ctaSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  ctaCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
+    paddingVertical: 8,
+    marginTop: 10,
   },
-  ctaContent: {
-    alignItems: 'center',
-  },
-  ctaTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  ctaDescription: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  ctaButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  ctaButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-  },
-  ctaButtonText: {
-    color: '#059669',
-    fontSize: 16,
-    fontWeight: '700',
+  exploreButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    marginRight: 6,
   },
 });
