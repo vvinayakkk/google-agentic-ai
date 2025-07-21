@@ -22,6 +22,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+const API_BASE = 'http://192.168.0.111:8000'; // Use device IP for backend
+const FARMER_ID = 'f001';
+
 // --- Initial Data ---
 const initialMarketData = [
     { id: 1, name: 'Wheat', price: 245.50, change: +12.30, changePercent: +5.27, volume: '2.4K tons', high: 248.00, low: 232.10, emoji: '🌾' },
@@ -49,8 +52,10 @@ const AnimatedListItem = ({ children, index }) => {
 // --- Main Screen ---
 const MarketplaceScreen = ({ navigation }) => {
   const [selectedTab, setSelectedTab] = useState('market');
-  const [marketData, setMarketData] = useState(initialMarketData);
-  const [myListings, setMyListings] = useState(initialMyListings);
+  const [marketData, setMarketData] = useState([]); // Will be fetched from backend
+  const [myListings, setMyListings] = useState([]); // Will be fetched from backend
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -174,15 +179,43 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   };
 
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(`${API_BASE}/farmer/${FARMER_ID}/market`)
+      .then(res => res.json())
+      .then(data => {
+        setMyListings(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load listings');
+        setLoading(false);
+      });
+    // Optionally, fetch market prices from another endpoint if needed
+    // For now, use listings as marketData for demo
+    setMarketData([
+      { id: 1, name: 'Wheat', price: 245.50, change: +12.30, changePercent: +5.27, volume: '2.4K tons', high: 248.00, low: 232.10, emoji: '🌾' },
+      { id: 2, name: 'Rice', price: 189.75, change: -8.45, changePercent: -4.26, volume: '3.1K tons', high: 198.20, low: 185.30, emoji: '🍚' },
+      { id: 3, name: 'Corn', price: 156.20, change: +3.80, changePercent: +2.49, volume: '1.8K tons', high: 159.40, low: 152.60, emoji: '🌽' },
+    ]);
+  }, []);
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>Marketplace</Text><Text style={styles.headerSubtitle}>Live market prices & listings</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View></View>
       <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>Market Prices</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>My Listings</Text></TouchableOpacity></View>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {selectedTab === 'market' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Today's Market Prices</Text><Text style={styles.lastUpdated}>Updated 5 min ago</Text></View>{marketData.map((item, index) => renderMarketItem(item, index))}</View>)}
-        {selectedTab === 'listings' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Your Listings ({myListings.length})</Text><TouchableOpacity style={styles.addButton} onPress={openAddModal}><Ionicons name="add" size={20} color="#10B981" /></TouchableOpacity></View>{myListings.map((item, index) => renderMyListing(item, index))}</View>)}
-      </ScrollView>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
+      ) : error ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>
+      ) : (
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {selectedTab === 'market' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Today's Market Prices</Text><Text style={styles.lastUpdated}>Updated 5 min ago</Text></View>{marketData.map((item, index) => renderMarketItem(item, index))}</View>)}
+          {selectedTab === 'listings' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Your Listings ({myListings.length})</Text><TouchableOpacity style={styles.addButton} onPress={openAddModal}><Ionicons name="add" size={20} color="#10B981" /></TouchableOpacity></View>{myListings.map((item, index) => renderMyListing(item, index))}</View>)}
+        </ScrollView>
+      )}
       {isModalVisible && (
         <View style={styles.modalOverlay}>
             <Animated.View style={styles.modal}>
