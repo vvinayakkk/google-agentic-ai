@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, UploadFile, File
 from services.firebase import db
+from services.gemini import analyze_image_with_context
+import base64
+import uuid
 from models.farmer import Farmer, FarmerProfile, Livestock, Crop, CalendarEvent, MarketListing, ChatHistory, Document, Vectors
 from typing import List, Dict, Any
 
@@ -181,6 +184,32 @@ def set_vectors(farmer_id: str, vectors: Vectors):
         raise HTTPException(status_code=404, detail="Farmer not found")
     doc_ref.update({'vectors': vectors.dict()})
     return {"message": "Vectors updated"}
+
+@router.post("/farmer/{farmer_id}/space-suggestions")
+def add_space_suggestions(farmer_id: str, body: Dict[str, Any] = Body(...)):
+    """
+    Accepts: { image: base64, animals: [...], calendar: [...] }
+    Stores the image as base64 in Firestore, calls Gemini with base64, and returns suggestions.
+    """
+    image_base64 = body.get('image')
+    animals = body.get('animals', [])
+    calendar = body.get('calendar', [])
+    if not image_base64:
+        raise HTTPException(status_code=400, detail="Image is required")
+    doc_ref = db.collection('farmers').document(farmer_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    # Prepare context string
+    context = f"Animals: {animals}\nCalendar: {calendar}"
+    # Call Gemini with the image
+    suggestions = analyze_image_with_context(image_base64, context)
+    # Update DB: store image and suggestions
+    doc_ref.update({
+        'spaceImage_latest': image_base64,
+        'spaceSuggestions': suggestions
+    })
+    return { 'suggestions': suggestions }
 
 # --- PUT endpoints (update by id) ---
 @router.put("/farmer/{farmer_id}/livestock/{item_id}", response_model=Dict[str, Any])

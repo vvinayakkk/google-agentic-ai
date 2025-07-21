@@ -1,6 +1,31 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
+class Subsidy(BaseModel):
+    id: str
+    title: str
+    description: str
+
+class TrendDataset(BaseModel):
+    name: str
+    color: str
+    data: List[float]
+
+class AnalysisTrends(BaseModel):
+    labels: List[str]
+    datasets: List[TrendDataset]
+
+class Analysis(BaseModel):
+    trends: AnalysisTrends
+    aiInsights: str
+
+class Suggestion(BaseModel):
+    id: str
+    type: str
+    title: str
+    description: str
+    icon: str
+
 class Livestock(BaseModel):
     id: str
     type: str
@@ -31,6 +56,9 @@ class Crop(BaseModel):
     plantingDate: str
     totalDuration: str
     stages: List[CropStage]
+    subsidies: Optional[List[Subsidy]] = None
+    analysis: Optional[Analysis] = None
+    suggestions: Optional[List[Suggestion]] = None
 
 class CalendarEvent(BaseModel):
     date: str
