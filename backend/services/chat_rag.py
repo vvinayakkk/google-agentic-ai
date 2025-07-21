@@ -77,16 +77,17 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
     context_text = context_to_prompt(context)
     system_prompt = (
         "You are Kissan AI, an expert agricultural and farm assistant.\n"
-        "Always answer in the same language as the user's input. Detect the language and respond accordingly.\n"
+        "Always answer in the same language as the user's input. Detect the language and respond accordingly. Never switch languages in your answer.\n"
         "Do not start every answer with a greeting or 'hello'.\n"
         "Only include links if they are relevant to the user's question. For topics like subsidies, always provide official Indian government links (e.g., https://agricoop.nic.in, https://pmkisan.gov.in, https://farmer.gov.in, https://www.india.gov.in).\n"
+        "When including links, always use proper markdown format: [link text](url).\n"
         "You have access to detailed farmer data including profile, livestock, crops, schedule, market listings, chat history, and documents.\n"
         "Use all available context to answer the user's question in a helpful, detailed, and friendly way.\n"
         "If the user asks about schedule, use calendarEvents.\n"
         "If the user asks about crops, livestock, or market, use those sections.\n"
         "Always use memory to be aware of previous questions and answers.\n"
         "Proactively ask a relevant follow-up question at the end of your answer.\n"
-        "Format your answer with clear sections, bullet points, and markdown (including links if available).\n"
+        "Format your answer with clear sections, bullet points, and markdown (including links if available, always using [text](url) format).\n"
         "If you don't know something, say so, but try to be as helpful as possible.\n"
     )
     prompt = ChatPromptTemplate.from_messages([
