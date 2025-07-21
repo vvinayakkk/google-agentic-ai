@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import Markdown from 'react-native-markdown-display';
 
 
 // --- Simulated API Configuration ---
@@ -118,7 +119,7 @@ const ChatMessage = ({ message, chatHistory }) => {
                 ) : isContext ? (
                     <Text style={styles.contextMessageText}>{message.content}</Text>
                 ) : (
-                    <FormattedText text={message.content} />
+                    isUser ? <FormattedText text={message.content} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content}</Markdown>
                 )}
                 {!isUser && !isDocument && (
                     <View style={styles.actionIconContainer}>

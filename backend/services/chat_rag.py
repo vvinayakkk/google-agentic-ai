@@ -7,36 +7,90 @@ from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from utils.firestore_vector_search import search_farmers_by_vector
 
-# Load Gemini 2.5 Flash
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyC-OmyX48OcwbNLR7GcplTKKiAEPSZXHzc")
 model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
-
-# Load embedding model
 embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+SECTIONS = [
+    'profile', 'livestock', 'crops', 'calendarEvents', 'marketListings', 'chatHistory', 'documents'
+]
 
 def embed_query(text):
     return embedding_model.encode(text).tolist()
 
-def build_context_bullets(results):
-    bullets = []
-    links = []
-    for sim, data, docid in results:
-        name = data.get('name', 'Farmer')
-        village = data.get('village', '')
-        crops = ', '.join([c['name'] for c in data.get('crops', [])])
-        bullet = f"• **{name}** from {village} grows: {crops}"
-        bullets.append(bullet)
-        # Example link: could be to a profile or resource
-        links.append(f"https://yourapp.com/farmer/{docid}")
-    return '\n'.join(bullets), links
+def build_rich_context(query, top_k=2):
+    query_embedding = embed_query(query)
+    context = {}
+    for section in SECTIONS:
+        results = search_farmers_by_vector(query_embedding, section=section, top_k=top_k)
+        context[section] = results
+    return context
 
-def generate_rag_response(user_query, chat_history=None, section='crops', top_k=3, memory=None):
-    query_embedding = embed_query(user_query)
-    results = search_farmers_by_vector(query_embedding, section=section, top_k=top_k)
-    bullets, links = build_context_bullets(results)
-    context_text = f"Relevant farmers and crops:\n{bullets}\n\nUseful links:\n" + '\n'.join(links)
+def context_to_prompt(context):
+    prompt_parts = []
+    for section, results in context.items():
+        if not results:
+            continue
+        if section == 'profile':
+            for sim, data, docid in results:
+                prompt_parts.append(f"Farmer profile: {data.get('name','')} from {data.get('village','')} speaks {data.get('language','')}.")
+        elif section == 'livestock':
+            for sim, data, docid in results:
+                livestock = data.get('livestock', [])
+                if livestock:
+                    animals = ', '.join([f"{a['type']} ({a['name']})" for a in livestock])
+                    prompt_parts.append(f"Livestock: {animals}.")
+        elif section == 'crops':
+            for sim, data, docid in results:
+                crops = data.get('crops', [])
+                if crops:
+                    crop_list = ', '.join([c['name'] for c in crops])
+                    prompt_parts.append(f"Crops grown: {crop_list}.")
+        elif section == 'calendarEvents':
+            for sim, data, docid in results:
+                events = data.get('calendarEvents', [])
+                if events:
+                    event_lines = '\n'.join([f"- {e['date']} {e['task']}: {e['details']}" for e in events])
+                    prompt_parts.append(f"Upcoming schedule/events:\n{event_lines}")
+        elif section == 'marketListings':
+            for sim, data, docid in results:
+                listings = data.get('marketListings', [])
+                if listings:
+                    lines = '\n'.join([f"- {l['name']} ({l['quantity']}): ₹{l['myPrice']} (market: ₹{l['marketPrice']})" for l in listings])
+                    prompt_parts.append(f"Market listings:\n{lines}")
+        elif section == 'chatHistory':
+            for sim, data, docid in results:
+                chats = data.get('chatHistory', [])
+                if chats:
+                    chat_lines = '\n'.join([f"- {c['title']} on {c['date']}" for c in chats])
+                    prompt_parts.append(f"Recent chats:\n{chat_lines}")
+        elif section == 'documents':
+            for sim, data, docid in results:
+                docs = data.get('documents', [])
+                if docs:
+                    doc_lines = '\n'.join([f"- {d['title']} ({d['type']}) on {d['time']}" for d in docs])
+                    prompt_parts.append(f"Documents:\n{doc_lines}")
+    return '\n\n'.join(prompt_parts)
+
+def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, memory=None):
+    context = build_rich_context(user_query, top_k=top_k)
+    context_text = context_to_prompt(context)
+    system_prompt = (
+        "You are Kissan AI, an expert agricultural and farm assistant.\n"
+        "Always answer in the same language as the user's input. Detect the language and respond accordingly.\n"
+        "Do not start every answer with a greeting or 'hello'.\n"
+        "Only include links if they are relevant to the user's question. For topics like subsidies, always provide official Indian government links (e.g., https://agricoop.nic.in, https://pmkisan.gov.in, https://farmer.gov.in, https://www.india.gov.in).\n"
+        "You have access to detailed farmer data including profile, livestock, crops, schedule, market listings, chat history, and documents.\n"
+        "Use all available context to answer the user's question in a helpful, detailed, and friendly way.\n"
+        "If the user asks about schedule, use calendarEvents.\n"
+        "If the user asks about crops, livestock, or market, use those sections.\n"
+        "Always use memory to be aware of previous questions and answers.\n"
+        "Proactively ask a relevant follow-up question at the end of your answer.\n"
+        "Format your answer with clear sections, bullet points, and markdown (including links if available).\n"
+        "If you don't know something, say so, but try to be as helpful as possible.\n"
+    )
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are Kissan AI, an expert agricultural assistant. Use the provided context to answer the user's question. Respond with clear bullet points, include links if relevant, and be concise but informative. If the user asks a follow-up, use previous context and memory."),
+        ("system", system_prompt),
         ("human", "User question: {user_query}\n\nContext:\n{context_text}\n\nChat history:\n{chat_history}\n"),
     ])
     memory = memory or ConversationBufferMemory(return_messages=True)
@@ -50,6 +104,5 @@ def generate_rag_response(user_query, chat_history=None, section='crops', top_k=
     return {
         "response": response,
         "memory": memory.buffer,
-        "links": links,
-        "context_bullets": bullets
+        "context": context
     } 
