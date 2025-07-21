@@ -121,7 +121,7 @@ export default function CropDoctorScreen({ navigation }) {
                 });
                 // Call backend
                 const response = await axios.post(
-                    'http://10.123.4.245:8000/crop-disease/detect',
+                    'http://192.168.0.111:8000/crop-disease/detect',
                     formData,
                     {
                         headers: {

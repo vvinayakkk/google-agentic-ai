@@ -49,7 +49,7 @@ const getKissanAIResponse = async (message, context) => {
     }
     // For text messages, call backend RAG endpoint
     try {
-        const response = await axios.post('http://10.123.4.245:8000/chat/rag', {
+        const response = await axios.post('http://192.168.0.111:8000/chat/rag', {
             user_query: message.content,
             chat_history: context ? JSON.stringify(context) : ""
         });

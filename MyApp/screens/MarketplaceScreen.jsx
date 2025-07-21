@@ -23,7 +23,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://10.123.4.245:8000'; // Use device IP for backend
+const API_BASE = 'http://192.168.0.111:8000'; // Use device IP for backend
 const FARMER_ID = 'f001';
 const STORAGE_KEY = 'market-listings-cache';
 
