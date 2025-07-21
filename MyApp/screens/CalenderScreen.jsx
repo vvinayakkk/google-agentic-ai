@@ -18,6 +18,9 @@ import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
+const API_BASE = 'http://192.168.0.111:8000';
+const FARMER_ID = 'f001';
+
 const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -37,6 +40,10 @@ const SmartCalendar = ({ navigation }) => {
   const [expandedEventIndex, setExpandedEventIndex] = useState(null);
   // --- Typing effect with blinking cursor ---
   const [showCursor, setShowCursor] = useState(true);
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [events, setEvents] = useState({});
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -44,25 +51,6 @@ const SmartCalendar = ({ navigation }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const fullSummary = "Weather-synced farming schedule shows optimal planting window for wheat in 3 days. Irrigation scheduled for Field-A tomorrow. Cattle health checkups due this week.";
-
-  // Sample farming events (add details field)
-  const events = {
-    '2025-07-22': [
-      { time: '06:00', task: 'Irrigation - Field A', type: 'irrigation', priority: 'high', details: 'Irrigate Field A for 2 hours. Use drip system. Check pump pressure.' },
-      { time: '09:00', task: 'Soil Testing - Plot 3', type: 'analysis', priority: 'medium', details: 'Collect soil samples from Plot 3. Send to lab for NPK analysis.' }
-    ],
-    '2025-07-23': [
-      { time: '05:30', task: 'Wheat Planting - Optimal Window', type: 'planting', priority: 'high', details: 'Begin wheat planting. Use certified seeds. Maintain row spacing.' },
-      { time: '14:00', task: 'Cattle Health Checkup', type: 'livestock', priority: 'medium', details: 'Vet visit for routine cattle health check. Prepare medical records.' }
-    ],
-    '2025-07-24': [
-      { time: '07:00', task: 'Fertilizer Application', type: 'treatment', priority: 'low', details: 'Apply urea fertilizer to Field B. Avoid over-application.' },
-      { time: '16:00', task: 'Market Price Analysis', type: 'market', priority: 'medium', details: 'Check current wheat and rice prices. Update sales strategy.' }
-    ],
-    '2025-07-25': [
-      { time: '06:30', task: 'Crop Disease Monitoring', type: 'monitoring', priority: 'high', details: 'Inspect crops for signs of blight or rust. Take photos for records.' }
-    ]
-  };
 
   // Floating particles component
   const FloatingParticle = ({ delay, duration }) => {
@@ -176,6 +164,28 @@ const SmartCalendar = ({ navigation }) => {
     }
     typeNextChar();
     return () => {};
+  }, []);
+
+  useEffect(() => {
+    setDataLoading(true);
+    setDataError(null);
+    fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`)
+      .then(res => res.json())
+      .then(data => {
+        setCalendarEvents(data);
+        // Transform array to date-keyed object
+        const eventsByDate = {};
+        data.forEach(ev => {
+          if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+          eventsByDate[ev.date].push(ev);
+        });
+        setEvents(eventsByDate);
+        setDataLoading(false);
+      })
+      .catch(err => {
+        setDataError('Failed to load calendar events');
+        setDataLoading(false);
+      });
   }, []);
 
   // Blinking cursor effect
@@ -472,136 +482,142 @@ const SmartCalendar = ({ navigation }) => {
           </LinearGradient>
         </Animated.View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Calendar Navigation */}
-          <View style={styles.calendarNav}>
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => changeMonth(-1)}
-              activeOpacity={0.7}
-            >
-              <LinearGradient
-                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                style={styles.navButtonGradient}
+        {dataLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
+        ) : dataError ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{dataError}</Text></View>
+        ) : (
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Calendar Navigation */}
+            <View style={styles.calendarNav}>
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => changeMonth(-1)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="chevron-back" size={20} color="#10b981" />
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                  style={styles.navButtonGradient}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#10b981" />
+                </LinearGradient>
+              </TouchableOpacity>
 
-            <Text style={styles.monthYear}>
-              {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => changeMonth(1)}
-              activeOpacity={0.7}
-            >
-              <LinearGradient
-                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                style={styles.navButtonGradient}
-              >
-                <Ionicons name="chevron-forward" size={20} color="#10b981" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          {/* Calendar */}
-          <Animated.View style={[styles.calendarContainer, { opacity: fadeAnim }]}>
-            <LinearGradient
-              colors={['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)']}
-              style={styles.calendarCard}
-            >
-              {/* Days of week */}
-              <View style={styles.weekDaysHeader}>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <Text key={day} style={styles.weekDayText}>{day}</Text>
-                ))}
-              </View>
-
-              {/* Calendar Grid */}
-              <View style={styles.calendarGrid}>
-                {renderCalendar()}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Selected Date Events */}
-          <View style={styles.eventsSection}>
-            <View style={styles.eventsSectionHeader}>
-              <LinearGradient
-                colors={['#3b82f6', '#10b981']}
-                style={styles.eventsIcon}
-              >
-                <Ionicons name="time-outline" size={18} color="white" />
-              </LinearGradient>
-              <Text style={styles.eventsSectionTitle}>
-                {selectedDate.toLocaleDateString('default', { 
-                  weekday: 'long',
-                  month: 'short', 
-                  day: 'numeric' 
-                })}
+              <Text style={styles.monthYear}>
+                {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
               </Text>
-              <Text style={styles.eventsCount}>
-                {selectedDateEvents.length} task{selectedDateEvents.length !== 1 ? 's' : ''}
-              </Text>
+
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => changeMonth(1)}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                  style={styles.navButtonGradient}
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#10b981" />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
 
-            {selectedDateEvents.length > 0 ? (
-              <View style={styles.eventsList}>
-                {selectedDateEvents.map((item, index) =>
-                  renderEventItem({ item, index })
-                )}
-              </View>
-            ) : (
-              <Animated.View style={[styles.noEventsContainer, { opacity: fadeAnim }]}>
-                <LinearGradient
-                  colors={['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']}
-                  style={styles.noEventsCard}
-                >
-                  <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.3)" />
-                  <Text style={styles.noEventsText}>No tasks scheduled</Text>
-                </LinearGradient>
-              </Animated.View>
-            )}
-          </View>
+            {/* Calendar */}
+            <Animated.View style={[styles.calendarContainer, { opacity: fadeAnim }]}>
+              <LinearGradient
+                colors={['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)']}
+                style={styles.calendarCard}
+              >
+                {/* Days of week */}
+                <View style={styles.weekDaysHeader}>
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <Text key={day} style={styles.weekDayText}>{day}</Text>
+                  ))}
+                </View>
 
-          {/* Weather Panel */}
-          <Animated.View style={[styles.weatherPanel, { opacity: fadeAnim }]}>
-            <LinearGradient
-              colors={['rgba(59, 130, 246, 0.1)', 'rgba(16, 185, 129, 0.1)']}
-              style={styles.weatherCard}
-            >
-              <View style={styles.weatherHeader}>
+                {/* Calendar Grid */}
+                <View style={styles.calendarGrid}>
+                  {renderCalendar()}
+                </View>
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Selected Date Events */}
+            <View style={styles.eventsSection}>
+              <View style={styles.eventsSectionHeader}>
                 <LinearGradient
                   colors={['#3b82f6', '#10b981']}
-                  style={styles.weatherIcon}
+                  style={styles.eventsIcon}
                 >
-                  <Ionicons name="sunny-outline" size={16} color="white" />
+                  <Ionicons name="time-outline" size={18} color="white" />
                 </LinearGradient>
-                <Text style={styles.weatherTitle}>Weather Sync</Text>
+                <Text style={styles.eventsSectionTitle}>
+                  {selectedDate.toLocaleDateString('default', { 
+                    weekday: 'long',
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </Text>
+                <Text style={styles.eventsCount}>
+                  {selectedDateEvents.length} task{selectedDateEvents.length !== 1 ? 's' : ''}
+                </Text>
               </View>
-              
-              <View style={styles.weatherStats}>
-                <View style={styles.weatherStat}>
-                  <Ionicons name="thermometer-outline" size={16} color="#10b981" />
-                  <Text style={styles.weatherLabel}>Temperature</Text>
-                  <Text style={styles.weatherValue}>28°C</Text>
+
+              {selectedDateEvents.length > 0 ? (
+                <View style={styles.eventsList}>
+                  {selectedDateEvents.map((item, index) =>
+                    renderEventItem({ item, index })
+                  )}
                 </View>
-                <View style={styles.weatherStat}>
-                  <Ionicons name="water-outline" size={16} color="#3b82f6" />
-                  <Text style={styles.weatherLabel}>Humidity</Text>
-                  <Text style={styles.weatherValue}>65%</Text>
+              ) : (
+                <Animated.View style={[styles.noEventsContainer, { opacity: fadeAnim }]}>
+                  <LinearGradient
+                    colors={['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']}
+                    style={styles.noEventsCard}
+                  >
+                    <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.3)" />
+                    <Text style={styles.noEventsText}>No tasks scheduled</Text>
+                  </LinearGradient>
+                </Animated.View>
+              )}
+            </View>
+
+            {/* Weather Panel */}
+            <Animated.View style={[styles.weatherPanel, { opacity: fadeAnim }]}>
+              <LinearGradient
+                colors={['rgba(59, 130, 246, 0.1)', 'rgba(16, 185, 129, 0.1)']}
+                style={styles.weatherCard}
+              >
+                <View style={styles.weatherHeader}>
+                  <LinearGradient
+                    colors={['#3b82f6', '#10b981']}
+                    style={styles.weatherIcon}
+                  >
+                    <Ionicons name="sunny-outline" size={16} color="white" />
+                  </LinearGradient>
+                  <Text style={styles.weatherTitle}>Weather Sync</Text>
                 </View>
-                <View style={styles.weatherStat}>
-                  <Ionicons name="rainy-outline" size={16} color="#f59e0b" />
-                  <Text style={styles.weatherLabel}>Rain</Text>
-                  <Text style={styles.weatherValue}>Tomorrow</Text>
+                
+                <View style={styles.weatherStats}>
+                  <View style={styles.weatherStat}>
+                    <Ionicons name="thermometer-outline" size={16} color="#10b981" />
+                    <Text style={styles.weatherLabel}>Temperature</Text>
+                    <Text style={styles.weatherValue}>28°C</Text>
+                  </View>
+                  <View style={styles.weatherStat}>
+                    <Ionicons name="water-outline" size={16} color="#3b82f6" />
+                    <Text style={styles.weatherLabel}>Humidity</Text>
+                    <Text style={styles.weatherValue}>65%</Text>
+                  </View>
+                  <View style={styles.weatherStat}>
+                    <Ionicons name="rainy-outline" size={16} color="#f59e0b" />
+                    <Text style={styles.weatherLabel}>Rain</Text>
+                    <Text style={styles.weatherValue}>Tomorrow</Text>
+                  </View>
                 </View>
-              </View>
-            </LinearGradient>
-          </Animated.View>
-        </ScrollView>
+              </LinearGradient>
+            </Animated.View>
+          </ScrollView>
+        )}
       </SafeAreaView>
     </View>
   );

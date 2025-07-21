@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,101 +9,40 @@ import {
 } from 'react-native';
 import { ChevronLeft, ChevronDown, ChevronRight, Droplets, Egg, Calendar, MapPin } from 'lucide-react-native';
 
+const API_BASE = 'http://192.168.0.111:8000';
+const FARMER_ID = 'f001';
+
 const CattleScreen = ({ navigation }) => {
   const [expandedCard, setExpandedCard] = useState(null);
-
-  const cattleData = [
-    {
-      id: 1,
-      type: 'cow',
-      name: 'Bella',
-      age: '3 years',
-      breed: 'Holstein',
-      milkCapacity: '25L/day',
-      health: 'Good',
-      lastCheckup: '2 days ago',
-      icon: '🐄',
-      color: '#4ADE80'
-    },
-    {
-      id: 2,
-      type: 'cow',
-      name: 'Daisy',
-      age: '4 years',
-      breed: 'Jersey',
-      milkCapacity: '18L/day',
-      health: 'Excellent',
-      lastCheckup: '1 week ago',
-      icon: '🐄',
-      color: '#60A5FA'
-    },
-    {
-      id: 3,
-      type: 'chicken',
-      name: 'Henrietta',
-      age: '1.5 years',
-      breed: 'Rhode Island Red',
-      eggCapacity: '6 eggs/week',
-      health: 'Good',
-      lastCheckup: '3 days ago',
-      icon: '🐔',
-      color: '#F59E0B'
-    },
-    {
-      id: 4,
-      type: 'chicken',
-      name: 'Clucky',
-      age: '2 years',
-      breed: 'Leghorn',
-      eggCapacity: '7 eggs/week',
-      health: 'Good',
-      lastCheckup: '5 days ago',
-      icon: '🐔',
-      color: '#EF4444'
-    },
-    {
-      id: 5,
-      type: 'goat',
-      name: 'Billy',
-      age: '2.5 years',
-      breed: 'Nubian',
-      milkCapacity: '3L/day',
-      health: 'Fair',
-      lastCheckup: '1 day ago',
-      icon: '🐐',
-      color: '#8B5CF6'
-    }
-  ];
-
-  const calendarUpdates = [
-    {
-      id: 1,
-      title: 'Bella - Vaccination Due',
-      date: 'Today',
-      priority: 'HIGH',
-      color: '#EF4444'
-    },
-    {
-      id: 2,
-      title: 'Henrietta - Egg Collection',
-      date: 'Tomorrow',
-      priority: 'MEDIUM',
-      color: '#F59E0B'
-    },
-    {
-      id: 3,
-      title: 'All Cattle - Health Checkup',
-      date: 'Jul 26',
-      priority: 'HIGH',
-      color: '#EF4444'
-    }
-  ];
+  const [cattleData, setCattleData] = useState([]);
+  const [calendarUpdates, setCalendarUpdates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const suggestions = [
     'Bella needs more pasture space - consider rotation',
     'Chicken coop humidity levels need monitoring',
     'Billy shows signs of nutritional needs - supplement recommended'
   ];
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetch(`${API_BASE}/farmer/${FARMER_ID}/livestock`).then(res => res.json()),
+      fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`).then(res => res.json())
+    ])
+      .then(([livestock, calendar]) => {
+        setCattleData(livestock);
+        // Filter calendar events for livestock-related ones (type === 'livestock')
+        setCalendarUpdates(calendar.filter(e => e.type === 'livestock'));
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load data');
+        setLoading(false);
+      });
+  }, []);
 
   const toggleCard = (id) => {
     setExpandedCard(expandedCard === id ? null : id);
@@ -195,48 +134,54 @@ const CattleScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Animals Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Animals ({cattleData.length})</Text>
-          {cattleData.map(renderAnimalCard)}
-        </View>
-
-        {/* Calendar Updates */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Calendar color="#10B981" size={20} />
-            <Text style={styles.sectionTitle}>Calendar Updates</Text>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
+      ) : error ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>
+      ) : (
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Animals Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Animals ({cattleData.length})</Text>
+            {cattleData.map(renderAnimalCard)}
           </View>
-          
-          {calendarUpdates.map((update) => (
-            <View key={update.id} style={styles.updateCard}>
-              <View style={styles.updateHeader}>
-                <Text style={styles.updateTitle}>{update.title}</Text>
-                <View style={[styles.priorityBadge, { backgroundColor: update.color }]}>
-                  <Text style={styles.priorityText}>{update.priority}</Text>
+
+          {/* Calendar Updates */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Calendar color="#10B981" size={20} />
+              <Text style={styles.sectionTitle}>Calendar Updates</Text>
+            </View>
+            
+            {calendarUpdates.map((update, idx) => (
+              <View key={idx} style={styles.updateCard}>
+                <View style={styles.updateHeader}>
+                  <Text style={styles.updateTitle}>{update.task}</Text>
+                  <View style={[styles.priorityBadge, { backgroundColor: update.priority === 'high' ? '#EF4444' : update.priority === 'medium' ? '#F59E0B' : '#10B981' }]}>
+                    <Text style={styles.priorityText}>{update.priority?.toUpperCase()}</Text>
+                  </View>
                 </View>
+                <Text style={styles.updateDate}>{update.date}</Text>
               </View>
-              <Text style={styles.updateDate}>{update.date}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Suggestions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MapPin color="#8B5CF6" size={20} />
-            <Text style={styles.sectionTitle}>Space Suggestions</Text>
+            ))}
           </View>
-          
-          {suggestions.map((suggestion, index) => (
-            <View key={index} style={styles.suggestionCard}>
-              <View style={styles.suggestionDot} />
-              <Text style={styles.suggestionText}>{suggestion}</Text>
+
+          {/* Suggestions */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MapPin color="#8B5CF6" size={20} />
+              <Text style={styles.sectionTitle}>Space Suggestions</Text>
             </View>
-          ))}
-        </View>
-      </ScrollView>
+            
+            {suggestions.map((suggestion, index) => (
+              <View key={index} style={styles.suggestionCard}>
+                <View style={styles.suggestionDot} />
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 };
