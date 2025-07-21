@@ -605,11 +605,10 @@ export default function CropCycleScreen({ navigation }) {
       {/* Top bar with Add Crop button */}
       {!selectedCropKey && (
         <View style={[styles.topBar, { paddingTop: insets.top }]}> 
-          <TouchableOpacity onPress={handleBackPress}>
+          <TouchableOpacity onPress={handleBackPress} style={{ position: 'absolute', left: 20, zIndex: 2,top:60 }}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
           <Text style={styles.topBarTitle}>Crop Cycle Dashboard</Text>
-          {/* Remove the Add Crop button here */}
         </View>
       )}
       {/* Add the floating + button at the bottom right, only when not in crop detail view */}
@@ -625,11 +624,11 @@ export default function CropCycleScreen({ navigation }) {
         <View style={{ flex: 1 }}>
           {/* Single header bar for crop detail view */}
           <View style={[styles.topBar, { paddingTop: insets.top }]}> 
-            <TouchableOpacity onPress={handleBackPress}>
+            <TouchableOpacity onPress={handleBackPress} style={{ position: 'absolute', left: 20, zIndex: 2 }}>
               <Ionicons name="arrow-back" size={28} color="white" />
             </TouchableOpacity>
             <Text style={styles.topBarTitle}>{CROP_DATA[selectedCropKey]?.name || ''}</Text>
-            <View style={{ flexDirection: 'row' }}>
+            <View style={{ position: 'absolute', right: 20, flexDirection: 'row', zIndex: 2 }}>
               <TouchableOpacity onPress={() => openEditModal(CROP_DATA[selectedCropKey])} style={{ backgroundColor: '#3B82F6', borderRadius: 20, padding: 8, marginRight: 8 }}>
                 <Ionicons name="create-outline" size={20} color="#fff" />
               </TouchableOpacity>
@@ -779,7 +778,7 @@ const styles = StyleSheet.create({
   topBar: {
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 10,
@@ -788,7 +787,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
   },
   wallboardContainer: {
