@@ -121,7 +121,7 @@ export default function CropDoctorScreen({ navigation }) {
                 });
                 // Call backend
                 const response = await axios.post(
-                    'http:// 192.168.0.111:8000/crop-disease/detect',
+                    'http://10.123.4.245:8000/crop-disease/detect',
                     formData,
                     {
                         headers: {
@@ -179,11 +179,6 @@ export default function CropDoctorScreen({ navigation }) {
                         <ScrollView>
                             <View style={styles.resultImageContainer}>
                                 <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
-                                    {__DEV__ && (
-                                      <Text style={{ color: 'yellow', position: 'absolute', top: 0, left: 0, zIndex: 10 }}>
-                                        {JSON.stringify(analysis.boundingBoxes)}
-                                      </Text>
-                                    )}
                                     {Array.isArray(analysis.boundingBoxes) && analysis.boundingBoxes.map((box, idx) => (
                                       <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
                                     ))}
