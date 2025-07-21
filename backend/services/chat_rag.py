@@ -6,6 +6,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from utils.firestore_vector_search import search_farmers_by_vector
+import langdetect
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyC-OmyX48OcwbNLR7GcplTKKiAEPSZXHzc")
 model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
@@ -75,9 +76,30 @@ def context_to_prompt(context):
 def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, memory=None):
     context = build_rich_context(user_query, top_k=top_k)
     context_text = context_to_prompt(context)
+    # Detect question language
+    try:
+        question_language = langdetect.detect(user_query)
+    except Exception:
+        question_language = "en"
+    # Format chat history as a numbered list for the model
+    formatted_history = ""
+    if chat_history:
+        try:
+            import json
+            history = json.loads(chat_history) if isinstance(chat_history, str) else chat_history
+            if isinstance(history, list):
+                formatted_history = "\n".join([
+                    f"{i+1}. {msg['sender'].capitalize()}: {msg['content']}" for i, msg in enumerate(history) if 'sender' in msg and 'content' in msg
+                ])
+            else:
+                formatted_history = str(chat_history)
+        except Exception:
+            formatted_history = str(chat_history)
     system_prompt = (
         "You are Kissan AI, an expert agricultural and farm assistant.\n"
-        "Always answer in the same language as the user's input. Detect the language and respond accordingly. Never switch languages in your answer.\n"
+        "ALWAYS answer in the SAME LANGUAGE as the user's question, regardless of the data or previous answers.\n"
+        "If the question is in English, answer in English. If in Hindi, answer in Hindi. If in Marathi, answer in Marathi. Never answer in any other language.\n"
+        "Example:\nUser: What is my schedule?\nAssistant: [Answer in English]\nUser: मेरा शेड्यूल क्या है?\nAssistant: [Answer in Hindi]\n"
         "Do not start every answer with a greeting or 'hello'.\n"
         "Only include links if they are relevant to the user's question. For topics like subsidies, always provide official Indian government links (e.g., https://agricoop.nic.in, https://pmkisan.gov.in, https://farmer.gov.in, https://www.india.gov.in).\n"
         "When including links, always use proper markdown format: [link text](url).\n"
@@ -86,20 +108,24 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
         "If the user asks about schedule, use calendarEvents.\n"
         "If the user asks about crops, livestock, or market, use those sections.\n"
         "Always use memory to be aware of previous questions and answers.\n"
+        "If the user asks about their previous questions, answers, or wants to elaborate on a previous point (e.g., 'what was my last question?' or 'elaborate more on 2nd point'), use the chat history to answer accurately and reference the relevant part of the conversation.\n"
+        "The chat history will be provided as a numbered list of exchanges. When the user refers to 'point 3' or 'previous question', use the numbered chat history to resolve the reference and answer accordingly.\n"
         "Proactively ask a relevant follow-up question at the end of your answer.\n"
         "Format your answer with clear sections, bullet points, and markdown (including links if available, always using [text](url) format).\n"
         "If you don't know something, say so, but try to be as helpful as possible.\n"
+        "The language of the answer must be: {question_language}.\n"
     )
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "User question: {user_query}\n\nContext:\n{context_text}\n\nChat history:\n{chat_history}\n"),
+        ("human", "User question: {user_query}\n\nContext:\n{context_text}\n\nChat history (numbered list):\n{chat_history}\n"),
     ])
     memory = memory or ConversationBufferMemory(return_messages=True)
     chain = prompt | model | StrOutputParser()
     response = chain.invoke({
         "user_query": user_query,
         "context_text": context_text,
-        "chat_history": chat_history or ""
+        "chat_history": formatted_history,
+        "question_language": question_language
     })
     memory.save_context({"input": user_query}, {"output": response})
     return {
