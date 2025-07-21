@@ -75,6 +75,23 @@ const LoadingAnimator = () => {
     );
 };
 
+const imageDisplayWidth = 300;
+const imageDisplayHeight = 300;
+const getBoxStyle = (box) => {
+  if (!box) return {};
+  // Ensure all values are numbers
+  const x = typeof box.x === 'string' ? parseFloat(box.x) : box.x;
+  const y = typeof box.y === 'string' ? parseFloat(box.y) : box.y;
+  const width = typeof box.width === 'string' ? parseFloat(box.width) : box.width;
+  const height = typeof box.height === 'string' ? parseFloat(box.height) : box.height;
+  return {
+    top: (y / 100) * imageDisplayHeight,
+    left: (x / 100) * imageDisplayWidth,
+    width: (width / 100) * imageDisplayWidth,
+    height: (height / 100) * imageDisplayHeight,
+  };
+};
+
 
 // --- Main Screen Component ---
 export default function CropDoctorScreen({ navigation }) {
@@ -160,7 +177,18 @@ export default function CropDoctorScreen({ navigation }) {
                 return (
                     <AnimatedView style={{ flex: 1 }}>
                         <ScrollView>
-                            <View style={styles.resultImageContainer}><ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}><View style={[styles.boundingBox, { top: analysis.boundingBox.y, left: analysis.boundingBox.x, width: analysis.boundingBox.width, height: analysis.boundingBox.height }]} /></ImageBackground></View>
+                            <View style={styles.resultImageContainer}>
+                                <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
+                                    {__DEV__ && (
+                                      <Text style={{ color: 'yellow', position: 'absolute', top: 0, left: 0, zIndex: 10 }}>
+                                        {JSON.stringify(analysis.boundingBoxes)}
+                                      </Text>
+                                    )}
+                                    {Array.isArray(analysis.boundingBoxes) && analysis.boundingBoxes.map((box, idx) => (
+                                      <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
+                                    ))}
+                                </ImageBackground>
+                            </View>
                             <View style={styles.analysisContainer}>
                                 <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
                                 <Text style={styles.confidenceText}>Confidence: {analysis.confidence}</Text>
