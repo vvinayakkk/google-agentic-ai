@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import axios from 'axios';
 
 // --- THEME (Updated to Black Background) ---
 const theme = {
@@ -33,26 +34,6 @@ const theme = {
         h2: { fontSize: 22, fontWeight: 'bold', color: '#E2E8F0' },
         body: { fontSize: 16, lineHeight: 24, color: '#94A3B8' },
     },
-};
-
-// --- Mock Data ---
-const mockAnalysis = {
-    diseaseName: 'Septoria Leaf Spot',
-    confidence: '95.8%',
-    processedImageUrl: 'https://i.ibb.co/cyv71J5/diseased-leaf.jpg',
-    boundingBox: { x: '25%', y: '30%', width: '50%', height: '40%' },
-    description: 'Septoria leaf spot is a common fungal disease that affects a wide range of plants, particularly tomatoes. It thrives in wet, humid conditions and can cause significant defoliation if left untreated, reducing the plant\'s ability to produce fruit.',
-    symptoms: [
-        'Small, water-soaked circular spots on the lower leaves.',
-        'Spots enlarge and develop dark brown borders with tan or gray centers.',
-        'Tiny black dots (pycnidia), which are the fungal fruiting bodies, may appear in the center of the spots.',
-        'Affected leaves turn yellow, wither, and eventually fall off.',
-    ],
-    solutions: [
-        { title: 'Cultural Practices', details: 'Improve air circulation by properly spacing plants...' },
-        { title: 'Fungicides', details: 'For severe infections, apply fungicides containing chlorothalonil...' },
-        { title: 'Crop Rotation', details: 'Avoid planting susceptible crops in the same location...' },
-    ],
 };
 
 // --- Reusable Animated Components ---
@@ -108,17 +89,43 @@ export default function CropDoctorScreen({ navigation }) {
         Speech.speak(summary, { language: 'en-US' });
     };
 
-    const handleImageResult = (result) => {
+    // --- Replace handleImageResult ---
+    const handleImageResult = async (result) => {
         if (!result.canceled) {
             const userImageUri = result.assets[0].uri;
-            const analysisWithUserImage = { ...mockAnalysis, userImageUri };
-            
             setStatus('loading');
-            setTimeout(() => {
+            try {
+                // Prepare image for upload
+                const formData = new FormData();
+                formData.append('image', {
+                    uri: userImageUri,
+                    name: 'crop.jpg',
+                    type: 'image/jpeg',
+                });
+                // Call backend
+                const response = await axios.post(
+                    'http://10.123.4.245:8000/crop-disease/detect',
+                    formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    }
+                );
+                const backendAnalysis = response.data;
+                // Compose analysis object for UI
+                const analysisWithUserImage = {
+                    ...backendAnalysis,
+                    userImageUri,
+                    processedImageUrl: userImageUri, // Optionally update if backend returns processed image
+                };
                 setAnalysis(analysisWithUserImage);
                 setStatus('result');
                 speakAnalysis(analysisWithUserImage);
-            }, 2500);
+            } catch (error) {
+                setStatus('upload');
+                alert('Failed to analyze image: ' + (error?.response?.data?.detail || error.message));
+            }
         }
     };
 

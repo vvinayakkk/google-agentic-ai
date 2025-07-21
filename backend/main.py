@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from dotenv import load_dotenv
 
 # --- Modular Routers ---
 from routers import farmer
 from routers import weather
+from routers import crop_disease
 
 app = FastAPI()
 
@@ -17,8 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+load_dotenv()
+
 app.include_router(farmer.router)
 app.include_router(weather.router)
+app.include_router(crop_disease.router)
 
 @app.get("/")
 def root():

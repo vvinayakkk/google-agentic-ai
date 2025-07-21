@@ -305,8 +305,8 @@ app.get('/api/files', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Dummy Chat Server running on port ${PORT}`);
   console.log(`📱 Update your app to use: http://YOUR_IP_ADDRESS:${PORT}/api/chat`);
-  console.log(`🔍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📁 Files endpoint: http://localhost:${PORT}/api/files`);
+  console.log(`🔍 Health check: http://10.123.4.245:${PORT}/health`);
+  console.log(`📁 Files endpoint: http://10.123.4.245:${PORT}/api/files`);
   console.log(`\n📝 This server will log all incoming chat messages and save uploaded files.`);
   console.log(`💾 Files are saved in the './uploads' directory`);
   console.log(`\nWaiting for chat messages...\n`);
