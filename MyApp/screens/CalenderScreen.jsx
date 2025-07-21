@@ -34,54 +34,30 @@ const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  // --- 4-line typewriter effect state ---
-  const fullSummaryLines = [
-    "Weather-synced farming schedule shows optimal planting window for wheat in 3 days.",
-    "Irrigation scheduled for Field-A tomorrow.",
-    "Cattle health checkups due this week.",
-    "Monitor rainfall for optimal fertilizer application."
-  ];
-  const [summaryLines, setSummaryLines] = useState(["", "", "", ""]);
-  const [currentLine, setCurrentLine] = useState(0);
-  const [loading, setLoading] = useState(true);
+
+  // REMOVED: fullSummaryLines, summaryLines, currentLine, loading, showCursor states
+  // as these were tied to the hardcoded typewriter effect.
+
   const [mounted, setMounted] = useState(false);
   // Add expandedEventIndex state
   const [expandedEventIndex, setExpandedEventIndex] = useState(null);
-  // --- Typing effect with blinking cursor ---
-  const [showCursor, setShowCursor] = useState(true);
+
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [events, setEvents] = useState({});
-  const [dataLoading, setDataLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true); // For calendar events
   const [dataError, setDataError] = useState(null);
-  const [calendarAnalysis, setCalendarAnalysis] = useState('');
-  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [calendarAnalysis, setCalendarAnalysis] = useState(''); // This is the AI analysis from backend
+  const [analysisLoading, setAnalysisLoading] = useState(false); // For AI analysis loading
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
-  const [analysisBoxPosition, setAnalysisBoxPosition] = useState({ x: 0, y: 0 });
-  const pan = useRef(new Animated.ValueXY()).current;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: Animated.event([
-        null,
-        { dx: pan.x, dy: pan.y },
-      ], { useNativeDriver: false }),
-      onPanResponderRelease: (e, gesture) => {
-        setAnalysisBoxPosition({
-          x: analysisBoxPosition.x + gesture.dx,
-          y: analysisBoxPosition.y + gesture.dy,
-        });
-        pan.setValue({ x: 0, y: 0 });
-      },
-    })
-  ).current;
+  // Remove pan, panResponder, analysisBoxPosition, and related useRef/useState
+  // Remove Animated.View with absolute positioning for AI Calendar Analysis
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const fullSummary = "Weather-synced farming schedule shows optimal planting window for wheat in 3 days. Irrigation scheduled for Field-A tomorrow. Cattle health checkups due this week.";
+  // REMOVED: const fullSummary - no longer needed.
 
   // Floating particles component
   const FloatingParticle = ({ delay, duration }) => {
@@ -133,10 +109,9 @@ const SmartCalendar = ({ navigation }) => {
     );
   };
 
-  // Typewriter effect
   useEffect(() => {
     setMounted(true);
-    
+
     // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -168,34 +143,14 @@ const SmartCalendar = ({ navigation }) => {
     };
     pulsing();
 
-    // Typing effect
-    let line = 0;
-    let char = 0;
-    let tempLines = ["", "", "", ""];
-    setSummaryLines(["", "", "", ""]);
-    setCurrentLine(0);
-    setLoading(true);
+    fetchCalendarEvents();
+    loadCalendarAnalysis(); // Load analysis for the movable section
 
-    function typeNextChar() {
-      if (line < fullSummaryLines.length) {
-        if (char < fullSummaryLines[line].length) {
-          tempLines[line] = fullSummaryLines[line].substring(0, char + 1);
-          setSummaryLines([...tempLines]);
-          char++;
-          setTimeout(typeNextChar, 1); // super fast speed
-        } else {
-          char = 0;
-          line++;
-          setCurrentLine(line);
-          setTimeout(typeNextChar, 10); // super fast between lines
-        }
-      } else {
-        setLoading(false);
-      }
-    }
-    typeNextChar();
-    return () => {};
-  }, []);
+    // REMOVED: The entire typewriter effect logic from this useEffect
+    // as it was tied to the hardcoded summary.
+  }, []); // Dependencies remain for initial loads and animations.
+
+  // REMOVED: Blinking cursor effect useEffect as it's no longer needed for the hardcoded summary.
 
   // Load calendar events from cache, then fetch from backend
   const fetchCalendarEvents = async () => {
@@ -216,7 +171,7 @@ const SmartCalendar = ({ navigation }) => {
         setEvents(eventsByDate);
         setDataLoading(false); // Show cached data immediately
       }
-    } catch (e) {}
+    } catch (e) { }
     // Always fetch from backend in background
     fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`)
       .then(res => res.json())
@@ -273,20 +228,6 @@ const SmartCalendar = ({ navigation }) => {
       setAnalysisLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchCalendarEvents();
-    loadCalendarAnalysis();
-  }, []);
-
-  // Blinking cursor effect
-  useEffect(() => {
-    if (!loading) return;
-    const cursorInterval = setInterval(() => {
-      setShowCursor((prev) => !prev);
-    }, 400);
-    return () => clearInterval(cursorInterval);
-  }, [loading]);
 
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -373,8 +314,8 @@ const SmartCalendar = ({ navigation }) => {
               isTodayDate
                 ? ['rgba(16, 185, 129, 0.2)', 'rgba(59, 130, 246, 0.2)']
                 : isSelectedDate
-                ? ['rgba(16, 185, 129, 0.1)', 'rgba(59, 130, 246, 0.1)']
-                : ['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']
+                  ? ['rgba(16, 185, 129, 0.1)', 'rgba(59, 130, 246, 0.1)']
+                  : ['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']
             }
             style={styles.dayCellGradient}
           >
@@ -444,9 +385,9 @@ const SmartCalendar = ({ navigation }) => {
           <Animated.View
             style={[
               styles.eventItem,
-              { 
+              {
                 opacity: fadeAnim,
-                transform: [{ translateX: slideAnim }] 
+                transform: [{ translateX: slideAnim }]
               }
             ]}
           >
@@ -535,18 +476,20 @@ const SmartCalendar = ({ navigation }) => {
   const handleDeleteEvent = (event) => {
     Alert.alert('Delete Event', `Are you sure you want to delete "${event.task}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        setEventModalLoading(true);
-        // Optimistically update UI
-        const newEvents = calendarEvents.filter(e => e.eventId !== event.eventId);
-        setCalendarEvents(newEvents);
-        // Update cache
-        await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
-        setEventModalLoading(false);
-        // Sync with backend
-        fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/${event.eventId}`, { method: 'DELETE' })
-          .catch(() => { Alert.alert('Error', 'Failed to delete event on server.'); });
-      }}
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          setEventModalLoading(true);
+          // Optimistically update UI
+          const newEvents = calendarEvents.filter(e => e.eventId !== event.eventId);
+          setCalendarEvents(newEvents);
+          // Update cache
+          await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
+          setEventModalLoading(false);
+          // Sync with backend
+          fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/${event.eventId}`, { method: 'DELETE' })
+            .catch(() => { Alert.alert('Error', 'Failed to delete event on server.'); });
+        }
+      }
     ]);
   };
   const handleEventModalSave = async () => {
@@ -600,10 +543,10 @@ const SmartCalendar = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       {/* Background */}
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]} />
-      
+
       {/* Background Gradients */}
       <LinearGradient
         colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
@@ -653,91 +596,57 @@ const SmartCalendar = ({ navigation }) => {
           </BlurView>
         </Animated.View>
 
-        {/* AI Summary */}
-        <Animated.View style={[styles.summaryContainer, { opacity: fadeAnim }]}>
-          <LinearGradient
-            colors={['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)']}
-            style={styles.summaryCard}
-          >
-            <View style={styles.summaryHeader}>
-              <LinearGradient
-                colors={['#10b981', '#3b82f6']}
-                style={styles.summaryIcon}
-              >
-                <Ionicons name="sparkles" size={16} color="white" />
-              </LinearGradient>
-              <Text style={styles.summaryTitle}>AI Farm Assistant</Text>
-              {loading && (
-                <Animated.View style={[styles.typingIndicator, { opacity: pulseAnim }]} />
-              )}
-            </View>
-            {/* --- Replace summaryText rendering with 4-line effect --- */}
-            <Text style={styles.summaryText}>
-              {summaryLines.map((line, idx) => (
-                <Text key={idx}>
-                  {line !== "" && `• `}{line}
-                  {loading && currentLine === idx && showCursor && <Text style={styles.cursor}>|</Text>}
-                  {"\n"}
-                </Text>
-              ))}
-            </Text>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* AI Calendar Analysis Section (movable, scrollable) */}
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: analysisBoxPosition.x + pan.x._value,
-            top: analysisBoxPosition.y + pan.y._value + 100, // offset from top
-            zIndex: 100,
-            width: width - 32,
-            maxWidth: 500,
-            elevation: 10,
-          }}
-          {...panResponder.panHandlers}
-        >
-          <View style={{backgroundColor: '#18181b', borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'}}>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
-              <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{marginRight: 8}} />
-              <Text style={{color: '#10b981', fontWeight: 'bold', fontSize: 17}}>AI Calendar Analysis</Text>
-              <TouchableOpacity onPress={updateCalendarAnalysis} style={{marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6}}>
-                <Text style={{color: '#fff', fontWeight: 'bold'}}>Update</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{maxHeight: 250}}>
-              {analysisLoading ? (
-                <Text style={{color: '#fff'}}>Loading analysis...</Text>
-              ) : (
-                (() => {
-                  const lines = calendarAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
-                  const previewLines = lines.slice(0, 4);
-                  const isLong = lines.length > 4;
-                  return (
-                    <>
-                      <Markdown style={{body: {color: '#fff', fontSize: 15}}}>
-                        {showFullAnalysis ? calendarAnalysis : previewLines.join('\n')}
-                      </Markdown>
-                      {isLong && (
-                        <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{marginTop: 8, alignSelf: 'flex-start'}}>
-                          <Text style={{color: '#3B82F6', fontWeight: 'bold'}}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </>
-                  );
-                })()
-              )}
-            </ScrollView>
+        {/* AI Calendar Analysis Section (static, above calendar) */}
+        <View style={{
+          backgroundColor: '#18181b',
+          borderRadius: 16,
+          padding: 16,
+          marginHorizontal: 16,
+          marginTop: 4,
+          marginBottom: 0,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)',
+          elevation: 10,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>AI Calendar Analysis</Text>
+            <TouchableOpacity onPress={updateCalendarAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Update</Text>
+            </TouchableOpacity>
           </View>
-        </Animated.View>
+          <ScrollView style={{ maxHeight: 250 }}>
+            {analysisLoading ? (
+              <Text style={{ color: '#fff' }}>Loading analysis...</Text>
+            ) : (
+              (() => {
+                const lines = calendarAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
+                const previewLines = lines.slice(0, 4); // Still show preview lines if desired
+                const isLong = lines.length > 4;
+                return (
+                  <>
+                    <Markdown style={{ body: { color: '#fff', fontSize: 15} }}>
+                      {showFullAnalysis ? calendarAnalysis : previewLines.join('\n')}
+                    </Markdown>
+                    {isLong && (
+                      <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()
+            )}
+          </ScrollView>
+        </View>
 
+        {/* Main content: loading, error, or calendar UI */}
         {dataLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
         ) : dataError ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{dataError}</Text></View>
         ) : (
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {/* Calendar Navigation */}
             <View style={styles.calendarNav}>
               <TouchableOpacity
                 style={styles.navButton}
@@ -751,11 +660,9 @@ const SmartCalendar = ({ navigation }) => {
                   <Ionicons name="chevron-back" size={20} color="#10b981" />
                 </LinearGradient>
               </TouchableOpacity>
-
               <Text style={styles.monthYear}>
                 {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
               </Text>
-
               <TouchableOpacity
                 style={styles.navButton}
                 onPress={() => changeMonth(1)}
@@ -800,10 +707,10 @@ const SmartCalendar = ({ navigation }) => {
                   <Ionicons name="time-outline" size={18} color="white" />
                 </LinearGradient>
                 <Text style={styles.eventsSectionTitle}>
-                  {selectedDate.toLocaleDateString('default', { 
+                  {selectedDate.toLocaleDateString('default', {
                     weekday: 'long',
-                    month: 'short', 
-                    day: 'numeric' 
+                    month: 'short',
+                    day: 'numeric'
                   })}
                 </Text>
                 <Text style={styles.eventsCount}>
@@ -855,7 +762,7 @@ const SmartCalendar = ({ navigation }) => {
                   </LinearGradient>
                   <Text style={styles.weatherTitle}>Weather Sync</Text>
                 </View>
-                
+
                 <View style={styles.weatherStats}>
                   <View style={styles.weatherStat}>
                     <Ionicons name="thermometer-outline" size={16} color="#10b981" />
@@ -1029,50 +936,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  summaryContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  summaryCard: {
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  summaryTitle: {
-    color: '#10b981',
-    fontSize: 19,
-    fontWeight: '600',
-    flex: 1,
-  },
-  typingIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
-  },
-  summaryText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 17,
-    lineHeight: 18,
-  },
-  cursor: {
-    color: '#10b981',
-    fontWeight: '600',
-  },
+  // REMOVED: Styles related to summaryContainer, summaryCard, summaryHeader,
+  // summaryIcon, summaryTitle, typingIndicator, summaryText, cursor
+  // as the hardcoded AI Farm Assistant is removed.
   scrollView: {
     flex: 1,
   },

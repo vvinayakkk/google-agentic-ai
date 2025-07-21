@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Markdown from 'react-native-markdown-display';
+import * as ImagePicker from 'expo-image-picker';
 
 
 // --- Simulated API Configuration ---
@@ -13,39 +14,14 @@ const getKissanAIResponse = async (message, context) => {
     // If not a text message, fallback to simulation
     if (message.type !== 'text') {
         console.log("Simulating AI response for:", message);
-        
-        // If context is passed, the AI can give context-aware answers
-        if (context && message.type === 'text') {
-            const lowerCaseQuery = message.content.toLowerCase();
-            if (lowerCaseQuery.includes('first solution') || lowerCaseQuery.includes('fungicide')) {
-                return new Promise(resolve => setTimeout(() => resolve(`Based on the analysis for **${context.diseaseName}**, the first recommended solution is **${context.solutions[0].title}**. This involves: ${context.solutions[0].details}`), 1500));
-            }
+        if (message.type === 'image') {
+            return new Promise(resolve => setTimeout(() => resolve(`Image \"${message.content.name}\" received!`), 1500));
         }
-
-        return new Promise(resolve => {
-            setTimeout(() => {
-                if (message.type === 'document') {
-                    resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`);
-                    return;
-                }
-                const lowerCaseQuery = message.content.toLowerCase();
-                const responses = {
-                    "weather": `The forecast for Pune, Maharashtra is clear skies for the next 3 days, with a chance of light showers over the weekend. Current temperature is 28°C.`,
-                    "fertilizer for wheat": "For wheat crops in this region, a balanced NPK fertilizer (e.g., 12-32-16) is recommended during the sowing stage. It's best to confirm with a recent soil test.",
-                    "market price for tomatoes": "The current average market price for tomatoes in the Pune market is approximately ₹30 per kg for good quality produce.",
-                    "pest control": "For common pests on vegetable plants, a neem oil solution is a good organic first step. Can you specify the crop and the pest you are seeing?",
-                    "hello": "Hello there! How can I help you today?",
-                    "default": "I am Kissan AI, ready to assist with your farming questions. You can ask me about crop management, weather, market prices, and more."
-                };
-                for (const key in responses) {
-                    if (lowerCaseQuery.includes(key)) {
-                        resolve(responses[key]);
-                        return;
-                    }
-                }
-                resolve(responses.default);
-            }, 2000);
-        });
+        if (message.type === 'document') {
+            return new Promise(resolve => setTimeout(() => resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`), 1500));
+        }
+        // ... handle other types if needed ...
+        return new Promise(resolve => setTimeout(() => resolve("Unsupported message type."), 1500));
     }
     // For text messages, call backend RAG endpoint
     try {
@@ -81,6 +57,7 @@ const FormattedText = ({ text }) => {
 const ChatMessage = ({ message, chatHistory }) => {
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
+    const isImage = message.type === 'image'; // Add image type check
     const isContext = message.type === 'context'; // Check for context message
     const [liked, setLiked] = useState(false);
     const [disliked, setDisliked] = useState(false);
@@ -105,7 +82,7 @@ const ChatMessage = ({ message, chatHistory }) => {
 
     return (
         <View style={styles.chatMessageWrapper}>
-            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>}
+            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>} 
             <View style={[
                 styles.chatMessageContainer, 
                 isUser ? styles.userMessageContainer : styles.aiMessageContainer,
@@ -116,12 +93,17 @@ const ChatMessage = ({ message, chatHistory }) => {
                         <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
                         <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
                     </View>
+                ) : isImage ? (
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <Image source={{ uri: message.content.uri }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
+                        <Text style={styles.chatMessageText}>{message.content.name || 'Image attached'}</Text>
+                    </View>
                 ) : isContext ? (
                     <Text style={styles.contextMessageText}>{message.content}</Text>
                 ) : (
                     isUser ? <FormattedText text={message.content} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content}</Markdown>
                 )}
-                {!isUser && !isDocument && (
+                {!isUser && !isDocument && !isImage && (
                     <View style={styles.actionIconContainer}>
                         <TouchableOpacity onPress={handleLike}><MaterialCommunityIcons name={liked ? "thumb-up" : "thumb-up-outline"} size={20} color={liked ? "#4CAF50" : "gray"} style={styles.actionIcon} /></TouchableOpacity>
                         <TouchableOpacity onPress={handleDislike}><MaterialCommunityIcons name={disliked ? "thumb-down" : "thumb-down-outline"} size={20} color={disliked ? "#4CAF50" : "gray"} style={styles.actionIcon} /></TouchableOpacity>
@@ -262,10 +244,28 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             const result = await DocumentPicker.getDocumentAsync();
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const doc = result.assets[0];
-                const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
-                handleSendMessage(message);
+                // Check if the file is an image by mime type or extension
+                const isImage = (doc.mimeType && doc.mimeType.startsWith('image/')) || (doc.name && doc.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i));
+                if (isImage) {
+                    const message = { type: 'image', content: { name: doc.name, uri: doc.uri } };
+                    handleSendMessage(message);
+                } else {
+                    const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
+                    handleSendMessage(message);
+                }
             }
         } catch (err) { Alert.alert('Error', 'Could not open the document picker.'); }
+    };
+
+    const handleAttachImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: [ImagePicker.MediaType.IMAGE], allowsEditing: true, quality: 1 });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const img = result.assets[0];
+                const message = { type: 'image', content: { name: img.fileName || 'Image', uri: img.uri } };
+                handleSendMessage(message);
+            }
+        } catch (err) { Alert.alert('Error', 'Could not open the image picker.'); }
     };
 
     return (
@@ -296,6 +296,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 </View>
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}><Ionicons name="add" size={28} color="gray" /></TouchableOpacity>
+                    <TouchableOpacity style={styles.plusButton} onPress={handleAttachImage}><MaterialCommunityIcons name="image-plus" size={28} color="gray" /></TouchableOpacity>
                     <TextInput style={styles.textInput} placeholder="Ask Kissan AI" placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
                     {inputValue.length === 0 ? (
                         <TouchableOpacity style={styles.voiceButton} onPress={() => navigation.navigate('LiveVoiceScreen')}><MaterialCommunityIcons name="waveform" size={26} color="white" /></TouchableOpacity>
