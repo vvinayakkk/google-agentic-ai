@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from routers import farmer
 from routers import weather
 from routers import crop_disease
+from routers import chat_rag
 
 app = FastAPI()
 
@@ -24,6 +25,7 @@ load_dotenv()
 app.include_router(farmer.router)
 app.include_router(weather.router)
 app.include_router(crop_disease.router)
+app.include_router(chat_rag.router)
 
 @app.get("/")
 def root():

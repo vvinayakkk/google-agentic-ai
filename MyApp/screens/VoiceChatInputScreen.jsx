@@ -4,44 +4,63 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import Markdown from 'react-native-markdown-display';
 
 
 // --- Simulated API Configuration ---
 const getKissanAIResponse = async (message, context) => {
-    console.log("Simulating AI response for:", message);
-    
-    // If context is passed, the AI can give context-aware answers
-    if (context && message.type === 'text') {
-        const lowerCaseQuery = message.content.toLowerCase();
-        if (lowerCaseQuery.includes('first solution') || lowerCaseQuery.includes('fungicide')) {
-            return new Promise(resolve => setTimeout(() => resolve(`Based on the analysis for **${context.diseaseName}**, the first recommended solution is **${context.solutions[0].title}**. This involves: ${context.solutions[0].details}`), 1500));
-        }
-    }
-
-    return new Promise(resolve => {
-        setTimeout(() => {
-            if (message.type === 'document') {
-                resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`);
-                return;
-            }
+    // If not a text message, fallback to simulation
+    if (message.type !== 'text') {
+        console.log("Simulating AI response for:", message);
+        
+        // If context is passed, the AI can give context-aware answers
+        if (context && message.type === 'text') {
             const lowerCaseQuery = message.content.toLowerCase();
-            const responses = {
-                "weather": `The forecast for Pune, Maharashtra is clear skies for the next 3 days, with a chance of light showers over the weekend. Current temperature is 28°C.`,
-                "fertilizer for wheat": "For wheat crops in this region, a balanced NPK fertilizer (e.g., 12-32-16) is recommended during the sowing stage. It's best to confirm with a recent soil test.",
-                "market price for tomatoes": "The current average market price for tomatoes in the Pune market is approximately ₹30 per kg for good quality produce.",
-                "pest control": "For common pests on vegetable plants, a neem oil solution is a good organic first step. Can you specify the crop and the pest you are seeing?",
-                "hello": "Hello there! How can I help you today?",
-                "default": "I am Kissan AI, ready to assist with your farming questions. You can ask me about crop management, weather, market prices, and more."
-            };
-            for (const key in responses) {
-                if (lowerCaseQuery.includes(key)) {
-                    resolve(responses[key]);
+            if (lowerCaseQuery.includes('first solution') || lowerCaseQuery.includes('fungicide')) {
+                return new Promise(resolve => setTimeout(() => resolve(`Based on the analysis for **${context.diseaseName}**, the first recommended solution is **${context.solutions[0].title}**. This involves: ${context.solutions[0].details}`), 1500));
+            }
+        }
+
+        return new Promise(resolve => {
+            setTimeout(() => {
+                if (message.type === 'document') {
+                    resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`);
                     return;
                 }
-            }
-            resolve(responses.default);
-        }, 2000);
-    });
+                const lowerCaseQuery = message.content.toLowerCase();
+                const responses = {
+                    "weather": `The forecast for Pune, Maharashtra is clear skies for the next 3 days, with a chance of light showers over the weekend. Current temperature is 28°C.`,
+                    "fertilizer for wheat": "For wheat crops in this region, a balanced NPK fertilizer (e.g., 12-32-16) is recommended during the sowing stage. It's best to confirm with a recent soil test.",
+                    "market price for tomatoes": "The current average market price for tomatoes in the Pune market is approximately ₹30 per kg for good quality produce.",
+                    "pest control": "For common pests on vegetable plants, a neem oil solution is a good organic first step. Can you specify the crop and the pest you are seeing?",
+                    "hello": "Hello there! How can I help you today?",
+                    "default": "I am Kissan AI, ready to assist with your farming questions. You can ask me about crop management, weather, market prices, and more."
+                };
+                for (const key in responses) {
+                    if (lowerCaseQuery.includes(key)) {
+                        resolve(responses[key]);
+                        return;
+                    }
+                }
+                resolve(responses.default);
+            }, 2000);
+        });
+    }
+    // For text messages, call backend RAG endpoint
+    try {
+        const response = await axios.post('http://10.123.4.245:8000/chat/rag', {
+            user_query: message.content,
+            chat_history: context ? JSON.stringify(context) : ""
+        });
+        // Prefer bullet points and links if present
+        if (response.data && response.data.response) {
+            return response.data.response;
+        }
+        return "Sorry, I couldn't get a response from the server.";
+    } catch (error) {
+        return "Sorry, there was an error connecting to the server.";
+    }
 };
 
 // --- Helper to render bold text ---
@@ -100,7 +119,7 @@ const ChatMessage = ({ message, chatHistory }) => {
                 ) : isContext ? (
                     <Text style={styles.contextMessageText}>{message.content}</Text>
                 ) : (
-                    <FormattedText text={message.content} />
+                    isUser ? <FormattedText text={message.content} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content}</Markdown>
                 )}
                 {!isUser && !isDocument && (
                     <View style={styles.actionIconContainer}>
