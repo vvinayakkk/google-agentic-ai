@@ -16,14 +16,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://10.123.4.245:8000'; // Use device IP for backend
+const API_BASE = 'http://192.168.0.111:8000'; // Use device IP for backend
 const FARMER_ID = 'f001';
+const STORAGE_KEY = 'market-listings-cache';
 
 // --- Initial Data ---
 const initialMarketData = [
@@ -179,13 +181,25 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   };
 
-  useEffect(() => {
+  // Load listings from cache, then fetch from backend
+  const fetchListings = async () => {
     setLoading(true);
     setError(null);
+    // Try to load from cache first
+    try {
+      const cached = await AsyncStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setMyListings(parsed);
+        setLoading(false); // Show cached data immediately
+      }
+    } catch (e) {}
+    // Always fetch from backend in background
     fetch(`${API_BASE}/farmer/${FARMER_ID}/market`)
       .then(res => res.json())
       .then(data => {
         setMyListings(data);
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         setLoading(false);
       })
       .catch(err => {
@@ -193,12 +207,15 @@ const MarketplaceScreen = ({ navigation }) => {
         setLoading(false);
       });
     // Optionally, fetch market prices from another endpoint if needed
-    // For now, use listings as marketData for demo
     setMarketData([
       { id: 1, name: 'Wheat', price: 245.50, change: +12.30, changePercent: +5.27, volume: '2.4K tons', high: 248.00, low: 232.10, emoji: '🌾' },
       { id: 2, name: 'Rice', price: 189.75, change: -8.45, changePercent: -4.26, volume: '3.1K tons', high: 198.20, low: 185.30, emoji: '🍚' },
       { id: 3, name: 'Corn', price: 156.20, change: +3.80, changePercent: +2.49, volume: '1.8K tons', high: 159.40, low: 152.60, emoji: '🌽' },
     ]);
+  };
+
+  useEffect(() => {
+    fetchListings();
   }, []);
 
   return (

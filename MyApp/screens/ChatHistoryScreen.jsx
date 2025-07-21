@@ -14,28 +14,50 @@ const HistoryItem = ({ title, date, onPress }) => (
   </TouchableOpacity>
 );
 
+const API_BASE = 'http://192.168.0.111:8000';
+const FARMER_ID = 'f001';
+const CHAT_CACHE_KEY = 'chat-history-cache';
+
 export default function ChatHistoryScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [history, setHistory] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
 
-  // Load chat history from AsyncStorage
-  const loadHistory = async () => {
+  // Load chat history from cache, then fetch from backend
+  const fetchChatHistory = async () => {
+    setLoading(true);
+    setError(null);
+    // Try to load from cache first
     try {
-      let stored = await AsyncStorage.getItem('chatHistory');
-      stored = stored ? JSON.parse(stored) : [];
-      setHistory(stored);
-    } catch (e) {
-      setHistory([]);
-    }
+      const cached = await AsyncStorage.getItem(CHAT_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setHistory(parsed);
+        setLoading(false); // Show cached data immediately
+      }
+    } catch (e) {}
+    // Always fetch from backend in background
+    fetch(`${API_BASE}/farmer/${FARMER_ID}/chat`)
+      .then(res => res.json())
+      .then(data => {
+        setHistory(data);
+        AsyncStorage.setItem(CHAT_CACHE_KEY, JSON.stringify(data));
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load chat history');
+        setLoading(false);
+      });
   };
 
   React.useEffect(() => {
-    loadHistory();
+    fetchChatHistory();
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadHistory();
+      fetchChatHistory();
     }, [])
   );
 

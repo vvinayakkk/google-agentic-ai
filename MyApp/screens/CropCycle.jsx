@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Dimensions, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScrollView as RNScrollView } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +95,7 @@ const getCurrentStageInfo = (crop) => {
 
 // --- Components ---
 
-const CropWallboard = ({ onSelectCrop }) => {
+const CropWallboard = ({ onSelectCrop, CROP_DATA }) => {
     const animValues = useRef(Object.keys(CROP_DATA).map(() => new Animated.Value(0))).current;
 
     useEffect(() => {
@@ -103,7 +105,7 @@ const CropWallboard = ({ onSelectCrop }) => {
             useNativeDriver: true,
         }));
         Animated.stagger(100, animations).start();
-    }, []);
+    }, [CROP_DATA]);
 
     return (
         <ScrollView contentContainerStyle={styles.wallboardContainer}>
@@ -412,41 +414,273 @@ const SubsidyInfo = ({ crop }) => (
     </ScrollView>
 );
 
-
 export default function CropCycleScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [selectedCropKey, setSelectedCropKey] = useState(null);
+  const [crops, setCrops] = useState([]);
+  const [CROP_DATA, setCROP_DATA] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  const [modalCrop, setModalCrop] = useState({ name: '', icon: '', plantingDate: '', totalDuration: '', stages: [] });
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const API_BASE = 'http://192.168.0.111:8000';
+  const FARMER_ID = 'f001';
+  const STORAGE_KEY = 'crops-cache';
+
+  function cropsArrayToObject(crops) {
+    const obj = {};
+    crops.forEach(crop => {
+      obj[crop.name.toLowerCase()] = crop;
+    });
+    return obj;
+  }
+
+  // Load crops from cache, then fetch from backend
+  const fetchCrops = async () => {
+    setLoading(true);
+    setError(null);
+    // Try to load from cache first
+    try {
+      const cached = await AsyncStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setCrops(parsed);
+        setCROP_DATA(cropsArrayToObject(parsed));
+        setLoading(false); // Show cached data immediately
+      }
+    } catch (e) {}
+    // Always fetch from backend in background
+    fetch(`${API_BASE}/farmer/${FARMER_ID}/crops`)
+      .then(res => res.json())
+      .then(data => {
+        setCrops(data);
+        setCROP_DATA(cropsArrayToObject(data));
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load crops');
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchCrops();
+  }, []);
 
   const handleBackPress = () => {
-      if (selectedCropKey) {
-          setSelectedCropKey(null);
-      } else {
-          navigation.goBack();
-      }
+    if (selectedCropKey) {
+      setSelectedCropKey(null);
+    } else {
+      navigation.goBack();
+    }
   };
+
+  // --- Add/Edit/Delete Crop Logic ---
+  const openAddModal = () => {
+    setModalMode('add');
+    setModalCrop({ name: '', icon: '', plantingDate: '', totalDuration: '', stages: [] });
+    setModalVisible(true);
+  };
+  const openEditModal = (crop) => {
+    setModalMode('edit');
+    setModalCrop({ ...crop });
+    setModalVisible(true);
+  };
+  const handleDeleteCrop = (crop) => {
+    Alert.alert('Delete Crop', `Are you sure you want to delete "${crop.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        setModalLoading(true);
+        // Optimistically update cache/UI
+        const newCrops = crops.filter(c => c.cropId !== crop.cropId);
+        setCrops(newCrops);
+        setCROP_DATA(cropsArrayToObject(newCrops));
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newCrops));
+        setModalLoading(false);
+        setSelectedCropKey(null);
+        // Sync with backend
+        fetch(`${API_BASE}/farmer/${FARMER_ID}/crops/${crop.cropId}`, { method: 'DELETE' })
+          .catch(() => { Alert.alert('Error', 'Failed to delete crop on server.'); });
+      }}
+    ]);
+  };
+  const handleModalSave = async () => {
+    if (!modalCrop.name || !modalCrop.icon || !modalCrop.plantingDate || !modalCrop.totalDuration) {
+      Alert.alert('Missing Info', 'Please fill all required fields.');
+      return;
+    }
+    setModalLoading(true);
+    const method = modalMode === 'add' ? 'POST' : 'PUT';
+    const url = modalMode === 'add'
+      ? `${API_BASE}/farmer/${FARMER_ID}/crops`
+      : `${API_BASE}/farmer/${FARMER_ID}/crops/${modalCrop.cropId}`;
+    const newCrop = {
+      ...modalCrop,
+      cropId: modalCrop.cropId || `cr${Date.now()}`,
+      stages: modalCrop.stages && modalCrop.stages.length > 0 ? modalCrop.stages : [
+        { id: 1, title: 'Stage 1', durationWeeks: 2, icon: 'seed-outline', color: '#a1662f', tasks: ['Task 1'], needs: '', threats: '' }
+      ]
+    };
+    // Optimistically update cache/UI
+    let newCrops;
+    if (modalMode === 'add') {
+      newCrops = [newCrop, ...crops];
+    } else {
+      newCrops = crops.map(c => c.cropId === newCrop.cropId ? newCrop : c);
+    }
+    setCrops(newCrops);
+    setCROP_DATA(cropsArrayToObject(newCrops));
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newCrops));
+    setModalLoading(false);
+    setModalVisible(false);
+    // Sync with backend
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCrop)
+    })
+      .catch(() => { Alert.alert('Error', 'Failed to save crop on server.'); });
+  };
+
+  if (loading) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>;
+  }
+  if (error) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}><Text style={{ color: 'red' }}>{error}</Text></View>;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Only show top bar if not in crop detail view (handled inside CropDetailView) */}
+      {/* Top bar with Add Crop button */}
       {!selectedCropKey && (
         <View style={[styles.topBar, { paddingTop: insets.top }]}> 
           <TouchableOpacity onPress={handleBackPress}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
-          <Text style={styles.topBarTitle}>
-              Crop Cycle Dashboard
-          </Text>
-          <View style={{ width: 28 }} />
+          <Text style={styles.topBarTitle}>Crop Cycle Dashboard</Text>
+          <TouchableOpacity onPress={openAddModal} style={{ backgroundColor: '#10B981', borderRadius: 20, padding: 8, marginLeft: 8 }}>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
       )}
+      {/* Crop Detail View with Edit/Delete */}
       {selectedCropKey ? (
+        <View style={{ flex: 1 }}>
+          <View style={[styles.topBar, { paddingTop: insets.top }]}> 
+            <TouchableOpacity onPress={handleBackPress}>
+              <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.topBarTitle}>{CROP_DATA[selectedCropKey]?.name || ''}</Text>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity onPress={() => openEditModal(CROP_DATA[selectedCropKey])} style={{ backgroundColor: '#3B82F6', borderRadius: 20, padding: 8, marginRight: 8 }}>
+                <Ionicons name="create-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteCrop(CROP_DATA[selectedCropKey])} style={{ backgroundColor: '#EF4444', borderRadius: 20, padding: 8 }}>
+                <Ionicons name="trash-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
           <CropDetailView crop={CROP_DATA[selectedCropKey]} onBack={() => setSelectedCropKey(null)} />
+        </View>
       ) : (
-          <CropWallboard onSelectCrop={setSelectedCropKey} />
+        <CropWallboard onSelectCrop={setSelectedCropKey} CROP_DATA={CROP_DATA} />
       )}
+      {/* Add/Edit Crop Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, maxHeight: '90%' }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{modalMode === 'add' ? 'Add New Crop' : 'Edit Crop'}</Text>
+            <RNScrollView style={{ maxHeight: 400 }}>
+              <TextInput style={modalInputStyle} placeholder="Crop Name" placeholderTextColor="#64748B" value={modalCrop.name} onChangeText={v => setModalCrop({ ...modalCrop, name: v })} />
+              <TextInput style={modalInputStyle} placeholder="Icon (e.g. tomato, wheat)" placeholderTextColor="#64748B" value={modalCrop.icon} onChangeText={v => setModalCrop({ ...modalCrop, icon: v })} />
+              <TextInput style={modalInputStyle} placeholder="Planting Date (YYYY-MM-DD)" placeholderTextColor="#64748B" value={modalCrop.plantingDate} onChangeText={v => setModalCrop({ ...modalCrop, plantingDate: v })} />
+              <TextInput style={modalInputStyle} placeholder="Total Duration (e.g. 5 Months)" placeholderTextColor="#64748B" value={modalCrop.totalDuration} onChangeText={v => setModalCrop({ ...modalCrop, totalDuration: v })} />
+              <Text style={{ color: '#fff', marginTop: 12, marginBottom: 6, fontWeight: 'bold' }}>Stages</Text>
+              {(modalCrop.stages || []).map((stage, idx) => (
+                <View key={idx} style={{ backgroundColor: '#23232a', borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', flex: 1 }}>Stage {idx + 1}</Text>
+                    <TouchableOpacity onPress={() => {
+                      const newStages = [...modalCrop.stages];
+                      newStages.splice(idx, 1);
+                      setModalCrop({ ...modalCrop, stages: newStages });
+                    }}>
+                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput style={modalInputStyle} placeholder="Title" placeholderTextColor="#64748B" value={stage.title || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], title: v };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                  <TextInput style={modalInputStyle} placeholder="Duration Weeks" placeholderTextColor="#64748B" value={stage.durationWeeks?.toString() || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], durationWeeks: parseInt(v) || 1 };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} keyboardType="numeric" />
+                  <TextInput style={modalInputStyle} placeholder="Icon" placeholderTextColor="#64748B" value={stage.icon || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], icon: v };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                  <TextInput style={modalInputStyle} placeholder="Color" placeholderTextColor="#64748B" value={stage.color || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], color: v };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                  <TextInput style={modalInputStyle} placeholder="Tasks (comma separated)" placeholderTextColor="#64748B" value={stage.tasks?.join(', ') || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], tasks: v.split(',').map(s => s.trim()) };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                  <TextInput style={modalInputStyle} placeholder="Needs" placeholderTextColor="#64748B" value={stage.needs || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], needs: v };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                  <TextInput style={modalInputStyle} placeholder="Threats" placeholderTextColor="#64748B" value={stage.threats || ''} onChangeText={v => {
+                    const newStages = [...modalCrop.stages];
+                    newStages[idx] = { ...newStages[idx], threats: v };
+                    setModalCrop({ ...modalCrop, stages: newStages });
+                  }} />
+                </View>
+              ))}
+              <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 10, alignItems: 'center', marginBottom: 10 }} onPress={() => {
+                setModalCrop({ ...modalCrop, stages: [...(modalCrop.stages || []), { id: (modalCrop.stages?.length || 0) + 1, title: '', durationWeeks: 1, icon: '', color: '', tasks: [], needs: '', threats: '' }] });
+              }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>+ Add Stage</Text>
+              </TouchableOpacity>
+            </RNScrollView>
+            <View style={{ flexDirection: 'row', marginTop: 24 }}>
+              <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#27272a', borderRadius: 8, marginRight: 8 }} onPress={() => setModalVisible(false)}>
+                <Text style={{ color: '#64748B' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#10B981', borderRadius: 8, marginLeft: 8 }} onPress={handleModalSave} disabled={modalLoading}>
+                {modalLoading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff' }}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const modalInputStyle = {
+  backgroundColor: '#27272a',
+  borderRadius: 8,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  fontSize: 16,
+  color: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#475569',
+  marginTop: 10,
+};
 
 const styles = StyleSheet.create({
   container: {

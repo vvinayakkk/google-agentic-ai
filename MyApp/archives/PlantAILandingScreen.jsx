@@ -162,7 +162,7 @@ export default function PlantAILandingScreen() {
       for (let pair of formData.entries()) {
         console.log('FormData:', pair[0], pair[1]);
       }
-      const url = 'http://10.123.4.245:3000/api/crop-doctor';
+      const url = 'http:// 192.168.0.111:3000/api/crop-doctor';
       console.log('FETCH URL:', url);
       const response = await fetch(url, {
         method: 'POST',

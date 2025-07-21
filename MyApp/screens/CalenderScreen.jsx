@@ -15,11 +15,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
 const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
+const CALENDAR_CACHE_KEY = 'calendar-events-cache';
 
 const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -166,9 +168,27 @@ const SmartCalendar = ({ navigation }) => {
     return () => {};
   }, []);
 
-  useEffect(() => {
+  // Load calendar events from cache, then fetch from backend
+  const fetchCalendarEvents = async () => {
     setDataLoading(true);
     setDataError(null);
+    // Try to load from cache first
+    try {
+      const cached = await AsyncStorage.getItem(CALENDAR_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setCalendarEvents(parsed);
+        // Transform array to date-keyed object
+        const eventsByDate = {};
+        parsed.forEach(ev => {
+          if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+          eventsByDate[ev.date].push(ev);
+        });
+        setEvents(eventsByDate);
+        setDataLoading(false); // Show cached data immediately
+      }
+    } catch (e) {}
+    // Always fetch from backend in background
     fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`)
       .then(res => res.json())
       .then(data => {
@@ -180,12 +200,17 @@ const SmartCalendar = ({ navigation }) => {
           eventsByDate[ev.date].push(ev);
         });
         setEvents(eventsByDate);
+        AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(data));
         setDataLoading(false);
       })
       .catch(err => {
         setDataError('Failed to load calendar events');
         setDataLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchCalendarEvents();
   }, []);
 
   // Blinking cursor effect

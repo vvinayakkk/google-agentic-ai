@@ -8,9 +8,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { ChevronLeft, ChevronDown, ChevronRight, Droplets, Egg, Calendar, MapPin } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
+const LIVESTOCK_CACHE_KEY = 'livestock-cache';
+const CALENDAR_CACHE_KEY = 'cattle-calendar-cache';
 
 const CattleScreen = ({ navigation }) => {
   const [expandedCard, setExpandedCard] = useState(null);
@@ -25,23 +28,38 @@ const CattleScreen = ({ navigation }) => {
     'Billy shows signs of nutritional needs - supplement recommended'
   ];
 
-  useEffect(() => {
+  // Load livestock and calendar from cache, then fetch from backend
+  const fetchCattleData = async () => {
     setLoading(true);
     setError(null);
+    // Try to load from cache first
+    try {
+      const cachedLivestock = await AsyncStorage.getItem(LIVESTOCK_CACHE_KEY);
+      const cachedCalendar = await AsyncStorage.getItem(CALENDAR_CACHE_KEY);
+      if (cachedLivestock) setCattleData(JSON.parse(cachedLivestock));
+      if (cachedCalendar) setCalendarUpdates(JSON.parse(cachedCalendar));
+      if (cachedLivestock || cachedCalendar) setLoading(false);
+    } catch (e) {}
+    // Always fetch from backend in background
     Promise.all([
       fetch(`${API_BASE}/farmer/${FARMER_ID}/livestock`).then(res => res.json()),
       fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`).then(res => res.json())
     ])
       .then(([livestock, calendar]) => {
         setCattleData(livestock);
-        // Filter calendar events for livestock-related ones (type === 'livestock')
         setCalendarUpdates(calendar.filter(e => e.type === 'livestock'));
+        AsyncStorage.setItem(LIVESTOCK_CACHE_KEY, JSON.stringify(livestock));
+        AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(calendar.filter(e => e.type === 'livestock')));
         setLoading(false);
       })
       .catch(err => {
         setError('Failed to load data');
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchCattleData();
   }, []);
 
   const toggleCard = (id) => {
