@@ -10,6 +10,10 @@ import {
   Dimensions,
   StatusBar,
   FlatList,
+  Modal,
+  TextInput,
+  Alert,
+  Easing,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -418,7 +422,118 @@ const SmartCalendar = ({ navigation }) => {
     );
   };
 
+  // Add state for event modals and mic
+  const [eventModalVisible, setEventModalVisible] = useState(false);
+  const [eventModalMode, setEventModalMode] = useState('add');
+  const [eventModalEvent, setEventModalEvent] = useState({ date: '', time: '', task: '', type: '', priority: 'medium', details: '' });
+  const [eventModalLoading, setEventModalLoading] = useState(false);
+  const [eventAddOptionSheet, setEventAddOptionSheet] = useState(false);
+  const [eventMicModal, setEventMicModal] = useState(false);
+  const eventMicAnim = useRef(new Animated.Value(1)).current;
+
+  // Mic animation effect
+  useEffect(() => {
+    let timer;
+    if (eventMicModal) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(eventMicAnim, { toValue: 1.2, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(eventMicAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
+      timer = setTimeout(() => {
+        setEventMicModal(false);
+        setEventModalMode('add');
+        setEventModalEvent({ date: formatDateKey(selectedDate), time: '09:00', task: 'Irrigation for Wheat', type: 'irrigation', priority: 'high', details: 'Irrigate field A for wheat.' });
+        setEventModalVisible(true);
+      }, 5000);
+    } else {
+      eventMicAnim.setValue(1);
+    }
+    return () => clearTimeout(timer);
+  }, [eventMicModal]);
+
+  // Add event handlers
+  const openAddEventModal = () => setEventAddOptionSheet(true);
+  const handleManualAddEvent = () => {
+    setEventAddOptionSheet(false);
+    setEventModalMode('add');
+    setEventModalEvent({ date: formatDateKey(selectedDate), time: '', task: '', type: '', priority: 'medium', details: '' });
+    setEventModalVisible(true);
+  };
+  const handleSpeakAddEvent = () => {
+    setEventAddOptionSheet(false);
+    setEventMicModal(true);
+  };
+  const openEditEventModal = (event) => {
+    setEventModalMode('edit');
+    setEventModalEvent({ ...event });
+    setEventModalVisible(true);
+  };
+  const handleDeleteEvent = (event) => {
+    Alert.alert('Delete Event', `Are you sure you want to delete "${event.task}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        setEventModalLoading(true);
+        // Optimistically update UI
+        const newEvents = calendarEvents.filter(e => e.eventId !== event.eventId);
+        setCalendarEvents(newEvents);
+        // Update cache
+        await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
+        setEventModalLoading(false);
+        // Sync with backend
+        fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/${event.eventId}`, { method: 'DELETE' })
+          .catch(() => { Alert.alert('Error', 'Failed to delete event on server.'); });
+      }}
+    ]);
+  };
+  const handleEventModalSave = async () => {
+    if (!eventModalEvent.task || !eventModalEvent.time || !eventModalEvent.type) {
+      Alert.alert('Missing Info', 'Please fill all required fields.');
+      return;
+    }
+    setEventModalLoading(true);
+    const method = eventModalMode === 'add' ? 'POST' : 'PUT';
+    const url = eventModalMode === 'add'
+      ? `${API_BASE}/farmer/${FARMER_ID}/calendar`
+      : `${API_BASE}/farmer/${FARMER_ID}/calendar/${eventModalEvent.eventId}`;
+    const newEvent = {
+      ...eventModalEvent,
+      eventId: eventModalEvent.eventId || `ev${Date.now()}`,
+      date: eventModalEvent.date || formatDateKey(selectedDate),
+    };
+    // Optimistically update UI
+    let newEvents;
+    if (eventModalMode === 'add') {
+      newEvents = [newEvent, ...calendarEvents];
+    } else {
+      newEvents = calendarEvents.map(e => e.eventId === newEvent.eventId ? newEvent : e);
+    }
+    setCalendarEvents(newEvents);
+    await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
+    setEventModalLoading(false);
+    setEventModalVisible(false);
+    // Sync with backend
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEvent)
+    })
+      .catch(() => { Alert.alert('Error', 'Failed to save event on server.'); });
+  };
+
   if (!mounted) return null;
+
+  const modalInputStyle = {
+    backgroundColor: '#23232a',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 12,
+  };
 
   return (
     <View style={styles.container}>
@@ -589,9 +704,19 @@ const SmartCalendar = ({ navigation }) => {
 
               {selectedDateEvents.length > 0 ? (
                 <View style={styles.eventsList}>
-                  {selectedDateEvents.map((item, index) =>
-                    renderEventItem({ item, index })
-                  )}
+                  {selectedDateEvents.map((item, index) => (
+                    <View key={index}>
+                      {renderEventItem({ item, index })}
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+                        <TouchableOpacity onPress={() => openEditEventModal(item)} style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 8, marginRight: 8 }}>
+                          <Ionicons name="create-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteEvent(item)} style={{ backgroundColor: '#EF4444', borderRadius: 8, padding: 8 }}>
+                          <Ionicons name="trash-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
                 </View>
               ) : (
                 <Animated.View style={[styles.noEventsContainer, { opacity: fadeAnim }]}>
@@ -641,8 +766,73 @@ const SmartCalendar = ({ navigation }) => {
                 </View>
               </LinearGradient>
             </Animated.View>
+
+            {/* Add Event Option Sheet */}
+            <Modal visible={eventAddOptionSheet} transparent animationType="fade">
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#23232a', borderRadius: 16, padding: 24, width: 300 }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Event</Text>
+                  <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 }} onPress={handleManualAddEvent}>
+                    <Ionicons name="create-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Type Manually</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 14, alignItems: 'center' }} onPress={handleSpeakAddEvent}>
+                    <Ionicons name="mic-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Speak (AI Extract)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 18, alignItems: 'center' }} onPress={() => setEventAddOptionSheet(false)}>
+                    <Text style={{ color: '#64748B' }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Mic Modal for Event */}
+            <Modal visible={eventMicModal} transparent animationType="fade">
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+                <Animated.View style={{
+                  width: 120, height: 120, borderRadius: 60, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center',
+                  transform: [{ scale: eventMicAnim }], marginBottom: 32
+                }}>
+                  <Ionicons name="mic" size={56} color="#fff" />
+                </Animated.View>
+                <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>Listening...</Text>
+                <TouchableOpacity onPress={() => setEventMicModal(false)} style={{ backgroundColor: '#23232a', borderRadius: 8, padding: 14, alignItems: 'center', width: 120 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </Modal>
+
+            {/* Event Add/Edit Modal */}
+            <Modal visible={eventModalVisible} animationType="slide" transparent>
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, maxHeight: '90%' }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{eventModalMode === 'add' ? 'Add New Event' : 'Edit Event'}</Text>
+                  <ScrollView style={{ maxHeight: 400 }}>
+                    <TextInput style={modalInputStyle} placeholder="Task" placeholderTextColor="#64748B" value={eventModalEvent.task} onChangeText={v => setEventModalEvent({ ...eventModalEvent, task: v })} />
+                    <TextInput style={modalInputStyle} placeholder="Time (e.g. 09:00)" placeholderTextColor="#64748B" value={eventModalEvent.time} onChangeText={v => setEventModalEvent({ ...eventModalEvent, time: v })} />
+                    <TextInput style={modalInputStyle} placeholder="Type (e.g. irrigation, planting)" placeholderTextColor="#64748B" value={eventModalEvent.type} onChangeText={v => setEventModalEvent({ ...eventModalEvent, type: v })} />
+                    <TextInput style={modalInputStyle} placeholder="Priority (high, medium, low)" placeholderTextColor="#64748B" value={eventModalEvent.priority} onChangeText={v => setEventModalEvent({ ...eventModalEvent, priority: v })} />
+                    <TextInput style={modalInputStyle} placeholder="Details" placeholderTextColor="#64748B" value={eventModalEvent.details} onChangeText={v => setEventModalEvent({ ...eventModalEvent, details: v })} multiline />
+                  </ScrollView>
+                  <View style={{ flexDirection: 'row', marginTop: 24 }}>
+                    <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#27272a', borderRadius: 8, marginRight: 8 }} onPress={() => setEventModalVisible(false)}>
+                      <Text style={{ color: '#64748B' }}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#10B981', borderRadius: 8, marginLeft: 8 }} onPress={handleEventModalSave} disabled={eventModalLoading}>
+                      <Text style={{ color: '#fff' }}>{eventModalLoading ? 'Saving...' : 'Save'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </ScrollView>
         )}
+        <View style={{ position: 'absolute', bottom: 32, right: 32, zIndex: 100 }}>
+          <TouchableOpacity onPress={openAddEventModal} style={{ backgroundColor: '#10B981', borderRadius: 32, width: 64, height: 64, alignItems: 'center', justifyContent: 'center', shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}>
+            <Ionicons name="add" size={36} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </View>
   );

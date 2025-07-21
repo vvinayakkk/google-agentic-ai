@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,15 @@ import {
   TouchableOpacity,
   StatusBar,
   StyleSheet,
+  Modal,
+  TextInput,
+  Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { ChevronLeft, ChevronDown, ChevronRight, Droplets, Egg, Calendar, MapPin } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
@@ -21,6 +27,15 @@ const CattleScreen = ({ navigation }) => {
   const [calendarUpdates, setCalendarUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Add state for animal modals and mic
+  const [animalModalVisible, setAnimalModalVisible] = useState(false);
+  const [animalModalMode, setAnimalModalMode] = useState('add');
+  const [animalModalAnimal, setAnimalModalAnimal] = useState({ name: '', breed: '', age: '', type: '', icon: '🐄', color: '#10B981', health: 'Good', lastCheckup: '', milkCapacity: '', eggCapacity: '' });
+  const [animalModalLoading, setAnimalModalLoading] = useState(false);
+  const [animalAddOptionSheet, setAnimalAddOptionSheet] = useState(false);
+  const [animalMicModal, setAnimalMicModal] = useState(false);
+  const animalMicAnim = useRef(new Animated.Value(1)).current;
 
   const suggestions = [
     'Bella needs more pasture space - consider rotation',
@@ -62,6 +77,95 @@ const CattleScreen = ({ navigation }) => {
     fetchCattleData();
   }, []);
 
+  // Mic animation effect
+  useEffect(() => {
+    let timer;
+    if (animalMicModal) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(animalMicAnim, { toValue: 1.2, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(animalMicAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
+      timer = setTimeout(() => {
+        setAnimalMicModal(false);
+        setAnimalModalMode('add');
+        setAnimalModalAnimal({ name: 'Bella', breed: 'Jersey', age: '3', type: 'cow', icon: '🐄', color: '#10B981', health: 'Excellent', lastCheckup: '2024-06-01', milkCapacity: '12L/day', eggCapacity: '' });
+        setAnimalModalVisible(true);
+      }, 5000);
+    } else {
+      animalMicAnim.setValue(1);
+    }
+    return () => clearTimeout(timer);
+  }, [animalMicModal]);
+
+  // Add animal handlers
+  const openAddAnimalModal = () => setAnimalAddOptionSheet(true);
+  const handleManualAddAnimal = () => {
+    setAnimalAddOptionSheet(false);
+    setAnimalModalMode('add');
+    setAnimalModalAnimal({ name: '', breed: '', age: '', type: '', icon: '🐄', color: '#10B981', health: 'Good', lastCheckup: '', milkCapacity: '', eggCapacity: '' });
+    setAnimalModalVisible(true);
+  };
+  const handleSpeakAddAnimal = () => {
+    setAnimalAddOptionSheet(false);
+    setAnimalMicModal(true);
+  };
+  const openEditAnimalModal = (animal) => {
+    setAnimalModalMode('edit');
+    setAnimalModalAnimal({ ...animal });
+    setAnimalModalVisible(true);
+  };
+  const handleDeleteAnimal = (animal) => {
+    Alert.alert('Delete Animal', `Are you sure you want to delete "${animal.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        setAnimalModalLoading(true);
+        // Optimistically update UI
+        const newAnimals = cattleData.filter(a => a.id !== animal.id);
+        setCattleData(newAnimals);
+        await AsyncStorage.setItem(LIVESTOCK_CACHE_KEY, JSON.stringify(newAnimals));
+        setAnimalModalLoading(false);
+        // Sync with backend
+        fetch(`${API_BASE}/farmer/${FARMER_ID}/livestock/${animal.id}`, { method: 'DELETE' })
+          .catch(() => { Alert.alert('Error', 'Failed to delete animal on server.'); });
+      }}
+    ]);
+  };
+  const handleAnimalModalSave = async () => {
+    if (!animalModalAnimal.name || !animalModalAnimal.breed || !animalModalAnimal.type) {
+      Alert.alert('Missing Info', 'Please fill all required fields.');
+      return;
+    }
+    setAnimalModalLoading(true);
+    const method = animalModalMode === 'add' ? 'POST' : 'PUT';
+    const url = animalModalMode === 'add'
+      ? `${API_BASE}/farmer/${FARMER_ID}/livestock`
+      : `${API_BASE}/farmer/${FARMER_ID}/livestock/${animalModalAnimal.id}`;
+    const newAnimal = {
+      ...animalModalAnimal,
+      id: animalModalAnimal.id || `an${Date.now()}`,
+    };
+    // Optimistically update UI
+    let newAnimals;
+    if (animalModalMode === 'add') {
+      newAnimals = [newAnimal, ...cattleData];
+    } else {
+      newAnimals = cattleData.map(a => a.id === newAnimal.id ? newAnimal : a);
+    }
+    setCattleData(newAnimals);
+    await AsyncStorage.setItem(LIVESTOCK_CACHE_KEY, JSON.stringify(newAnimals));
+    setAnimalModalLoading(false);
+    setAnimalModalVisible(false);
+    // Sync with backend
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAnimal)
+    })
+      .catch(() => { Alert.alert('Error', 'Failed to save animal on server.'); });
+  };
+
   const toggleCard = (id) => {
     setExpandedCard(expandedCard === id ? null : id);
   };
@@ -84,13 +188,19 @@ const CattleScreen = ({ navigation }) => {
               <Text style={styles.animalBreed}>{animal.breed}</Text>
             </View>
           </View>
-          <ChevronDown 
-            color="#64748B" 
-            size={20} 
-            style={{ 
-              transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] 
-            }} 
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => openEditAnimalModal(animal)} style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 6, marginRight: 6, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteAnimal(animal)} style={{ backgroundColor: '#EF4444', borderRadius: 8, padding: 6, marginRight: 6, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="trash-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+            <ChevronDown 
+              color="#64748B" 
+              size={20} 
+              style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} 
+            />
+          </View>
         </View>
 
         {isExpanded && (
@@ -200,6 +310,76 @@ const CattleScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       )}
+
+      {/* Floating + Add Animal Button */}
+      <View style={{ position: 'absolute', bottom: 32, right: 32, zIndex: 100 }}>
+        <TouchableOpacity onPress={openAddAnimalModal} style={{ backgroundColor: '#10B981', borderRadius: 32, width: 64, height: 64, alignItems: 'center', justifyContent: 'center', shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}>
+          <Text style={{ fontSize: 36, color: '#fff', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Animal Add Option Sheet */}
+      <Modal visible={animalAddOptionSheet} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#23232a', borderRadius: 16, padding: 24, width: 300 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Animal</Text>
+            <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 }} onPress={handleManualAddAnimal}>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Type Manually</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 14, alignItems: 'center' }} onPress={handleSpeakAddAnimal}>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Speak (AI Extract)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 18, alignItems: 'center' }} onPress={() => setAnimalAddOptionSheet(false)}>
+              <Text style={{ color: '#64748B' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Animal Add/Edit Modal */}
+      <Modal visible={animalModalVisible} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, maxHeight: '90%' }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{animalModalMode === 'add' ? 'Add New Animal' : 'Edit Animal'}</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              <TextInput style={styles.input} placeholder="Name" placeholderTextColor="#64748B" value={animalModalAnimal.name} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, name: v })} />
+              <TextInput style={styles.input} placeholder="Breed" placeholderTextColor="#64748B" value={animalModalAnimal.breed} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, breed: v })} />
+              <TextInput style={styles.input} placeholder="Age" placeholderTextColor="#64748B" value={animalModalAnimal.age} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, age: v })} keyboardType="numeric" />
+              <TextInput style={styles.input} placeholder="Type (cow, goat, chicken)" placeholderTextColor="#64748B" value={animalModalAnimal.type} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, type: v })} />
+              <TextInput style={styles.input} placeholder="Icon (emoji)" placeholderTextColor="#64748B" value={animalModalAnimal.icon} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, icon: v })} />
+              <TextInput style={styles.input} placeholder="Color (hex)" placeholderTextColor="#64748B" value={animalModalAnimal.color} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, color: v })} />
+              <TextInput style={styles.input} placeholder="Health" placeholderTextColor="#64748B" value={animalModalAnimal.health} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, health: v })} />
+              <TextInput style={styles.input} placeholder="Last Checkup" placeholderTextColor="#64748B" value={animalModalAnimal.lastCheckup} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, lastCheckup: v })} />
+              <TextInput style={styles.input} placeholder="Milk Capacity (if applicable)" placeholderTextColor="#64748B" value={animalModalAnimal.milkCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, milkCapacity: v })} />
+              <TextInput style={styles.input} placeholder="Egg Capacity (if applicable)" placeholderTextColor="#64748B" value={animalModalAnimal.eggCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, eggCapacity: v })} />
+            </ScrollView>
+            <View style={{ flexDirection: 'row', marginTop: 24 }}>
+              <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#27272a', borderRadius: 8, marginRight: 8 }} onPress={() => setAnimalModalVisible(false)}>
+                <Text style={{ color: '#64748B' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#10B981', borderRadius: 8, marginLeft: 8 }} onPress={handleAnimalModalSave} disabled={animalModalLoading}>
+                <Text style={{ color: '#fff' }}>{animalModalLoading ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Mic Modal for Animal */}
+      <Modal visible={animalMicModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+          <Animated.View style={{
+            width: 120, height: 120, borderRadius: 60, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center',
+            transform: [{ scale: animalMicAnim }], marginBottom: 32
+          }}>
+            <Text style={{ fontSize: 56, color: '#fff' }}>🎤</Text>
+          </Animated.View>
+          <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>Listening...</Text>
+          <TouchableOpacity onPress={() => setAnimalMicModal(false)} style={{ backgroundColor: '#23232a', borderRadius: 8, padding: 14, alignItems: 'center', width: 120 }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -395,6 +575,15 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
     flex: 1,
     lineHeight: 18,
+  },
+  input: {
+    backgroundColor: '#23232a',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 16,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#374151',
   },
 });
 

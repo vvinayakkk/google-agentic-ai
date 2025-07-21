@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Dimensions, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Easing, Dimensions, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScrollView as RNScrollView } from 'react-native';
+import * as Speech from 'expo-speech';
 
 const { width } = Dimensions.get('window');
 
@@ -93,6 +94,18 @@ const getCurrentStageInfo = (crop) => {
     return { index: crop.stages.length - 1, progress: 100 };
 };
 
+// Add this helper at the top, after imports
+const cropIconMap = {
+  wheat: 'barley',
+  onion: 'food-variant',
+  tomato: 'food-apple-outline',
+  chickpea: 'sprout',
+};
+function getValidCropIcon(icon) {
+  if (!icon) return 'leaf';
+  return cropIconMap[icon.toLowerCase()] || icon;
+}
+
 // --- Components ---
 
 const CropWallboard = ({ onSelectCrop, CROP_DATA }) => {
@@ -121,7 +134,7 @@ const CropWallboard = ({ onSelectCrop, CROP_DATA }) => {
                     <Animated.View key={key} style={{ opacity: animValues[index], transform: [{ translateY }] }}>
                         <TouchableOpacity style={styles.wallboardCard} onPress={() => onSelectCrop(key)}>
                             <View style={styles.wallboardHeader}>
-                                <MaterialCommunityIcons name={crop.icon} size={40} color="white" />
+                                <MaterialCommunityIcons name={getValidCropIcon(crop.icon)} size={40} color="white" />
                                 <View>
                                     <Text style={styles.wallboardTitle}>{crop.name}</Text>
                                     <Text style={styles.wallboardDuration}>{crop.totalDuration}</Text>
@@ -139,7 +152,7 @@ const CropWallboard = ({ onSelectCrop, CROP_DATA }) => {
     );
 };
 
-const CropDetailView = ({ crop, onBack }) => {
+const CropDetailView = ({ crop, onBack, hideHeader }) => {
     const [activeView, setActiveView] = useState('menu'); // menu, timeline, subsidies, analysis, suggestions
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const insets = useSafeAreaInsets();
@@ -177,13 +190,15 @@ const CropDetailView = ({ crop, onBack }) => {
     return (
         <View style={{ flex: 1 }}>
             {/* Top bar for crop detail views */}
-            <View style={[styles.topBar, { paddingTop: insets.top }]}> {/* Add safe area top padding */}
-                <TouchableOpacity onPress={handleBack}>
-                    <Ionicons name="arrow-back" size={28} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.topBarTitle}>{crop.name}</Text>
-                <View style={{ width: 28 }} />
-            </View>
+            {!hideHeader && (
+                <View style={[styles.topBar, { paddingTop: insets.top }]}> {/* Add safe area top padding */}
+                    <TouchableOpacity onPress={handleBack}>
+                        <Ionicons name="arrow-back" size={28} color="white" />
+                    </TouchableOpacity>
+                    <Text style={styles.topBarTitle}>{crop.name}</Text>
+                    <View style={{ width: 28 }} />
+                </View>
+            )}
             <Animated.View style={{ flex: 1, opacity: fadeAnim, paddingTop: 0 }}>
                 {renderContent()}
             </Animated.View>
@@ -383,7 +398,7 @@ const TimelineStage = ({ stage, isLast, isCurrent, progress }) => {
       </View>
       <View style={[styles.stageContent, isCurrent && { borderColor: stage.color }]}>
         <View style={styles.stageHeader}>
-          <MaterialCommunityIcons name={stage.icon} size={24} color={stage.color} />
+          <MaterialCommunityIcons name={getValidCropIcon(stage.icon)} size={24} color={stage.color} />
           <Text style={[styles.stageTitle, { color: stage.color }]}>{stage.title}</Text>
           {isCurrent && <Text style={styles.youAreHere}>You are here</Text>}
         </View>
@@ -425,6 +440,11 @@ export default function CropCycleScreen({ navigation }) {
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
   const [modalCrop, setModalCrop] = useState({ name: '', icon: '', plantingDate: '', totalDuration: '', stages: [] });
   const [modalLoading, setModalLoading] = useState(false);
+  // Add state for new modal
+  const [addOptionSheet, setAddOptionSheet] = useState(false);
+  // Add state for mic animation modal
+  const [micModal, setMicModal] = useState(false);
+  const micAnim = useRef(new Animated.Value(1)).current;
 
   const API_BASE = 'http://192.168.0.111:8000';
   const FARMER_ID = 'f001';
@@ -471,6 +491,27 @@ export default function CropCycleScreen({ navigation }) {
     fetchCrops();
   }, []);
 
+  useEffect(() => {
+    let timer;
+    if (micModal) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(micAnim, { toValue: 1.2, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(micAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
+      timer = setTimeout(() => {
+        setMicModal(false);
+        setModalMode('add');
+        setModalCrop({ name: 'Wheat', icon: 'wheat', plantingDate: '2025-07-01', totalDuration: '5 Months', stages: [{ id: 1, title: 'Sowing', durationWeeks: 2, icon: 'seed-outline', color: '#a1662f', tasks: ['Sow seeds'], needs: '', threats: '' }] });
+        setModalVisible(true);
+      }, 5000);
+    } else {
+      micAnim.setValue(1);
+    }
+    return () => clearTimeout(timer);
+  }, [micModal]);
+
   const handleBackPress = () => {
     if (selectedCropKey) {
       setSelectedCropKey(null);
@@ -480,10 +521,16 @@ export default function CropCycleScreen({ navigation }) {
   };
 
   // --- Add/Edit/Delete Crop Logic ---
-  const openAddModal = () => {
+  const openAddModal = () => setAddOptionSheet(true);
+  const handleManualAdd = () => {
+    setAddOptionSheet(false);
     setModalMode('add');
     setModalCrop({ name: '', icon: '', plantingDate: '', totalDuration: '', stages: [] });
     setModalVisible(true);
+  };
+  const handleSpeakAdd = () => {
+    setAddOptionSheet(false);
+    setMicModal(true);
   };
   const openEditModal = (crop) => {
     setModalMode('edit');
@@ -562,14 +609,21 @@ export default function CropCycleScreen({ navigation }) {
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
           <Text style={styles.topBarTitle}>Crop Cycle Dashboard</Text>
-          <TouchableOpacity onPress={openAddModal} style={{ backgroundColor: '#10B981', borderRadius: 20, padding: 8, marginLeft: 8 }}>
-            <Ionicons name="add" size={24} color="#fff" />
+          {/* Remove the Add Crop button here */}
+        </View>
+      )}
+      {/* Add the floating + button at the bottom right, only when not in crop detail view */}
+      {!selectedCropKey && (
+        <View style={{ position: 'absolute', bottom: 32, right: 32, zIndex: 100 }}>
+          <TouchableOpacity onPress={openAddModal} style={{ backgroundColor: '#10B981', borderRadius: 32, width: 64, height: 64, alignItems: 'center', justifyContent: 'center', shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}>
+            <Ionicons name="add" size={36} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
       {/* Crop Detail View with Edit/Delete */}
       {selectedCropKey ? (
         <View style={{ flex: 1 }}>
+          {/* Single header bar for crop detail view */}
           <View style={[styles.topBar, { paddingTop: insets.top }]}> 
             <TouchableOpacity onPress={handleBackPress}>
               <Ionicons name="arrow-back" size={28} color="white" />
@@ -584,7 +638,8 @@ export default function CropCycleScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-          <CropDetailView crop={CROP_DATA[selectedCropKey]} onBack={() => setSelectedCropKey(null)} />
+          {/* Only render the crop detail content, not another header */}
+          <CropDetailView crop={CROP_DATA[selectedCropKey]} onBack={() => setSelectedCropKey(null)} hideHeader />
         </View>
       ) : (
         <CropWallboard onSelectCrop={setSelectedCropKey} CROP_DATA={CROP_DATA} />
@@ -664,6 +719,40 @@ export default function CropCycleScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+      {/* Add options bottom sheet */}
+      <Modal visible={addOptionSheet} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#23232a', borderRadius: 16, padding: 24, width: 300 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Crop</Text>
+            <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 }} onPress={handleManualAdd}>
+              <Ionicons name="create-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Type Manually</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 14, alignItems: 'center' }} onPress={handleSpeakAdd}>
+              <Ionicons name="mic-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Speak (AI Extract)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 18, alignItems: 'center' }} onPress={() => setAddOptionSheet(false)}>
+              <Text style={{ color: '#64748B' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* Add this modal for mic animation after addOptionSheet modal */}
+      <Modal visible={micModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+          <Animated.View style={{
+            width: 120, height: 120, borderRadius: 60, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center',
+            transform: [{ scale: micAnim }], marginBottom: 32
+          }}>
+            <Ionicons name="mic" size={56} color="#fff" />
+          </Animated.View>
+          <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>Listening...</Text>
+          <TouchableOpacity onPress={() => setMicModal(false)} style={{ backgroundColor: '#23232a', borderRadius: 8, padding: 14, alignItems: 'center', width: 120 }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
