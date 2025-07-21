@@ -115,7 +115,7 @@ def get_calendar_ai_analysis(farmer_id: str):
         f"- **{ev.get('date', '')}**: {ev.get('task', '')} ({ev.get('details', '')})" for ev in events
     ])
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert farm assistant. Analyze the following farmer's calendar events and generate a helpful, concise summary and actionable insights for the upcoming week. Use bullet points, markdown, and be specific. Always answer in English. If there are important tasks, highlight them. If there are gaps or suggestions, mention them. Do not greet, just start with the analysis."),
+        ("system", "You are an expert farm assistant. Analyze the following farmer's calendar events and generate a helpful, concise summary and actionable insights for the upcoming week. Use bullet points, markdown, and be specific. Always answer in English. If there are important tasks, highlight them. If there are gaps or suggestions, mention them. Do not greet, just start with the analysis. By default, summarize in no more than 4 bullet points unless asked for more detail."),
         ("human", "Farmer's calendar events:\n{events_md}\n\nGenerate an AI analysis for the upcoming week in markdown.")
     ])
     chain = prompt | gemini_model | StrOutputParser()
@@ -196,7 +196,7 @@ def add_document(farmer_id: str, document: Document):
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Farmer not found")
     data = doc.to_dict()
-    documents = data.get('documents', [])
+    documrents = data.get('documents', [])
     documents.append(document.dict())
     doc_ref.update({'documents': documents})
     return {"message": "Document added"}

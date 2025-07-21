@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
+import { PanResponder } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,6 +55,26 @@ const SmartCalendar = ({ navigation }) => {
   const [dataError, setDataError] = useState(null);
   const [calendarAnalysis, setCalendarAnalysis] = useState('');
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [analysisBoxPosition, setAnalysisBoxPosition] = useState({ x: 0, y: 0 });
+  const pan = useRef(new Animated.ValueXY()).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: Animated.event([
+        null,
+        { dx: pan.x, dy: pan.y },
+      ], { useNativeDriver: false }),
+      onPanResponderRelease: (e, gesture) => {
+        setAnalysisBoxPosition({
+          x: analysisBoxPosition.x + gesture.dx,
+          y: analysisBoxPosition.y + gesture.dy,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+    })
+  ).current;
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -663,21 +684,52 @@ const SmartCalendar = ({ navigation }) => {
           </LinearGradient>
         </Animated.View>
 
-        {/* AI Calendar Analysis Section */}
-        <View style={{paddingHorizontal: 16, marginBottom: 20}}>
-          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
-            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{marginRight: 8}} />
-            <Text style={{color: '#10b981', fontWeight: 'bold', fontSize: 17}}>AI Calendar Analysis</Text>
-            <TouchableOpacity onPress={updateCalendarAnalysis} style={{marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6}}>
-              <Text style={{color: '#fff', fontWeight: 'bold'}}>Update</Text>
-            </TouchableOpacity>
+        {/* AI Calendar Analysis Section (movable, scrollable) */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: analysisBoxPosition.x + pan.x._value,
+            top: analysisBoxPosition.y + pan.y._value + 100, // offset from top
+            zIndex: 100,
+            width: width - 32,
+            maxWidth: 500,
+            elevation: 10,
+          }}
+          {...panResponder.panHandlers}
+        >
+          <View style={{backgroundColor: '#18181b', borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'}}>
+            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
+              <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{marginRight: 8}} />
+              <Text style={{color: '#10b981', fontWeight: 'bold', fontSize: 17}}>AI Calendar Analysis</Text>
+              <TouchableOpacity onPress={updateCalendarAnalysis} style={{marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6}}>
+                <Text style={{color: '#fff', fontWeight: 'bold'}}>Update</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{maxHeight: 250}}>
+              {analysisLoading ? (
+                <Text style={{color: '#fff'}}>Loading analysis...</Text>
+              ) : (
+                (() => {
+                  const lines = calendarAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
+                  const previewLines = lines.slice(0, 4);
+                  const isLong = lines.length > 4;
+                  return (
+                    <>
+                      <Markdown style={{body: {color: '#fff', fontSize: 15}}}>
+                        {showFullAnalysis ? calendarAnalysis : previewLines.join('\n')}
+                      </Markdown>
+                      {isLong && (
+                        <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{marginTop: 8, alignSelf: 'flex-start'}}>
+                          <Text style={{color: '#3B82F6', fontWeight: 'bold'}}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  );
+                })()
+              )}
+            </ScrollView>
           </View>
-          {analysisLoading ? (
-            <Text style={{color: '#fff'}}>Loading analysis...</Text>
-          ) : (
-            <Markdown style={{body: {color: '#fff', fontSize: 15}}}>{calendarAnalysis}</Markdown>
-          )}
-        </View>
+        </Animated.View>
 
         {dataLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
