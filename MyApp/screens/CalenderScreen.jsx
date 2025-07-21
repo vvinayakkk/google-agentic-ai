@@ -20,12 +20,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Markdown from 'react-native-markdown-display';
 
 const { width, height } = Dimensions.get('window');
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://10.123.4.245:8000';
 const FARMER_ID = 'f001';
 const CALENDAR_CACHE_KEY = 'calendar-events-cache';
+const CALENDAR_ANALYSIS_CACHE_KEY = 'calendar-ai-analysis-f001';
 
 const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -50,6 +52,8 @@ const SmartCalendar = ({ navigation }) => {
   const [events, setEvents] = useState({});
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
+  const [calendarAnalysis, setCalendarAnalysis] = useState('');
+  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -213,8 +217,45 @@ const SmartCalendar = ({ navigation }) => {
       });
   };
 
+  // Fetch or load cached AI analysis
+  const loadCalendarAnalysis = async () => {
+    setAnalysisLoading(true);
+    try {
+      const cached = await AsyncStorage.getItem(CALENDAR_ANALYSIS_CACHE_KEY);
+      if (cached) {
+        setCalendarAnalysis(cached);
+        setAnalysisLoading(false);
+        return;
+      }
+      // If not cached, fetch from backend
+      const res = await fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/ai-analysis`);
+      const data = await res.json();
+      setCalendarAnalysis(data.analysis);
+      await AsyncStorage.setItem(CALENDAR_ANALYSIS_CACHE_KEY, data.analysis);
+      setAnalysisLoading(false);
+    } catch (e) {
+      setCalendarAnalysis('Failed to load AI analysis.');
+      setAnalysisLoading(false);
+    }
+  };
+
+  const updateCalendarAnalysis = async () => {
+    setAnalysisLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/ai-analysis`);
+      const data = await res.json();
+      setCalendarAnalysis(data.analysis);
+      await AsyncStorage.setItem(CALENDAR_ANALYSIS_CACHE_KEY, data.analysis);
+      setAnalysisLoading(false);
+    } catch (e) {
+      setCalendarAnalysis('Failed to update AI analysis.');
+      setAnalysisLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCalendarEvents();
+    loadCalendarAnalysis();
   }, []);
 
   // Blinking cursor effect
@@ -621,6 +662,22 @@ const SmartCalendar = ({ navigation }) => {
             </Text>
           </LinearGradient>
         </Animated.View>
+
+        {/* AI Calendar Analysis Section */}
+        <View style={{paddingHorizontal: 16, marginBottom: 20}}>
+          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
+            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{marginRight: 8}} />
+            <Text style={{color: '#10b981', fontWeight: 'bold', fontSize: 17}}>AI Calendar Analysis</Text>
+            <TouchableOpacity onPress={updateCalendarAnalysis} style={{marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6}}>
+              <Text style={{color: '#fff', fontWeight: 'bold'}}>Update</Text>
+            </TouchableOpacity>
+          </View>
+          {analysisLoading ? (
+            <Text style={{color: '#fff'}}>Loading analysis...</Text>
+          ) : (
+            <Markdown style={{body: {color: '#fff', fontSize: 15}}}>{calendarAnalysis}</Markdown>
+          )}
+        </View>
 
         {dataLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>

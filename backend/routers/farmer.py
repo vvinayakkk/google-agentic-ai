@@ -5,6 +5,9 @@ import base64
 import uuid
 from models.farmer import Farmer, FarmerProfile, Livestock, Crop, CalendarEvent, MarketListing, ChatHistory, Document, Vectors
 from typing import List, Dict, Any
+from services.chat_rag import model as gemini_model
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 router = APIRouter()
 
@@ -96,6 +99,28 @@ def get_farmer_vectors(farmer_id: str):
         raise HTTPException(status_code=404, detail="Farmer not found")
     data = doc.to_dict()
     return data.get('vectors', {})
+
+@router.get("/farmer/{farmer_id}/calendar/ai-analysis")
+def get_calendar_ai_analysis(farmer_id: str):
+    doc_ref = db.collection('farmers').document(farmer_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    data = doc.to_dict()
+    events = data.get('calendarEvents', [])
+    if not events:
+        return {"analysis": "No calendar events found."}
+    # Build prompt for Gemini
+    events_md = '\n'.join([
+        f"- **{ev.get('date', '')}**: {ev.get('task', '')} ({ev.get('details', '')})" for ev in events
+    ])
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert farm assistant. Analyze the following farmer's calendar events and generate a helpful, concise summary and actionable insights for the upcoming week. Use bullet points, markdown, and be specific. Always answer in English. If there are important tasks, highlight them. If there are gaps or suggestions, mention them. Do not greet, just start with the analysis."),
+        ("human", "Farmer's calendar events:\n{events_md}\n\nGenerate an AI analysis for the upcoming week in markdown.")
+    ])
+    chain = prompt | gemini_model | StrOutputParser()
+    analysis = chain.invoke({"events_md": events_md})
+    return {"analysis": analysis}
 
 # --- POST endpoints ---
 @router.post("/farmer", response_model=Dict[str, Any])
