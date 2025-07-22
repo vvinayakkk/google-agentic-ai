@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = 'http://192.168.0.111:8000';
@@ -32,6 +33,7 @@ const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
 
 const WeatherScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
@@ -348,7 +350,7 @@ const WeatherScreen = ({ navigation }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 0 }}>
           <TextInput
             style={{ flex: 1, backgroundColor: '#23232a', borderRadius: 12, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginRight: 8 }}
-            placeholder="Enter city (Pune,IN) or lat,lon"
+            placeholder={t('weather.search_placeholder')}
             placeholderTextColor="#64748B"
             value={searchValue}
             onChangeText={setSearchValue}
@@ -385,13 +387,13 @@ const WeatherScreen = ({ navigation }) => {
               <View style={styles.headerCenter}>
                 <View style={styles.headerTitleContainer}>
                   <Ionicons name="cloudy-night" size={20} color="#3B82F6" />
-                  <Text style={styles.headerTitle}>Weather</Text>
+                  <Text style={styles.headerTitle}>{t('weather.title')}</Text>
                 </View>
-                <Text style={styles.headerSubtitle}>Farm Weather Insights</Text>
+                <Text style={styles.headerSubtitle}>{t('weather.subtitle')}</Text>
               </View>
               <View style={styles.syncIndicator}>
                 <Animated.View style={[styles.syncDot, { transform: [{ scale: fadeAnim }] }]} />
-                <Text style={styles.syncText}>LIVE</Text>
+                <Text style={styles.syncText}>{t('weather.live')}</Text>
               </View>
             </View>
           </BlurView>
@@ -410,14 +412,14 @@ const WeatherScreen = ({ navigation }) => {
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>AI Weather Insights</Text>
+            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>{t('weather.ai_insights_title')}</Text>
             <TouchableOpacity onPress={updateWeatherAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Update</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('weather.update_analysis')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 250 }}>
             {analysisLoading ? (
-              <Text style={{ color: '#fff' }}>Loading analysis...</Text>
+              <Text style={{ color: '#fff' }}>{t('weather.loading_analysis')}</Text>
             ) : (
               (() => {
                 const lines = weatherAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
@@ -430,7 +432,7 @@ const WeatherScreen = ({ navigation }) => {
                     </Markdown>
                     {isLong && (
                       <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
+                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? t('weather.show_less') : t('weather.show_more')}</Text>
                       </TouchableOpacity>
                     )}
                   </>
@@ -444,11 +446,11 @@ const WeatherScreen = ({ navigation }) => {
           {(loading && !weather && !forecast) ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80 }}>
               <ActivityIndicator size="large" color="#3B82F6" />
-              <Text style={{ color: '#fff', marginTop: 16 }}>Loading weather...</Text>
+              <Text style={{ color: '#fff', marginTop: 16 }}>{t('weather.loading')}</Text>
             </View>
           ) : error ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80 }}>
-              <Text style={{ color: 'red' }}>{error}</Text>
+              <Text style={{ color: 'red' }}>{t('weather.error')}</Text>
             </View>
           ) : (
             <>
@@ -460,19 +462,19 @@ const WeatherScreen = ({ navigation }) => {
                       <Image source={{ uri: getWeatherIcon(weather.weather[0].icon) }} style={styles.weatherIcon} />
                     )}
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.weatherMain}>{weather?.weather?.[0]?.main || '--'}</Text>
-                      <Text style={styles.weatherDesc}>{weather?.weather?.[0]?.description || ''}</Text>
+                      <Text style={styles.weatherMain}>{weather?.weather?.[0]?.main ? t(`weather.${weather.weather[0].main.toLowerCase()}`) : '--'}</Text>
+                      <Text style={styles.weatherDesc}>{weather?.weather?.[0]?.description ? t(`weather.${weather.weather[0].description.toLowerCase().replace(/ /g, '_')}`) : ''}</Text>
                       <Text style={styles.weatherTemp}>{Math.round(weather?.main?.temp || 0)}°C</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.weatherLabel}>Humidity</Text>
+                      <Text style={styles.weatherLabel}>{t('weather.humidity')}</Text>
                       <Text style={styles.weatherValue}>{weather?.main?.humidity}%</Text>
-                      <Text style={styles.weatherLabel}>Wind</Text>
+                      <Text style={styles.weatherLabel}>{t('weather.wind')}</Text>
                       <Text style={styles.weatherValue}>{weather?.wind?.speed} m/s</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'space-between' }}>
-                    <Text style={styles.weatherLocation}>{profile?.village || 'Your Farm'}</Text>
+                    <Text style={styles.weatherLocation}>{profile?.village || t('weather.your_farm')}</Text>
                     <Text style={styles.weatherLocation}>{profile?.farmLocation ? `${profile.farmLocation.lat?.toFixed(3)}, ${profile.farmLocation.lng?.toFixed(3)}` : ''}</Text>
                   </View>
                 </LinearGradient>
@@ -480,7 +482,7 @@ const WeatherScreen = ({ navigation }) => {
               {/* Forecast Section */}
               <View style={styles.sectionHeader}>
                 <MaterialCommunityIcons name="weather-partly-cloudy" size={22} color="#3B82F6" style={{ marginRight: 8 }} />
-                <Text style={styles.sectionTitle}>5-Day Forecast</Text>
+                <Text style={styles.sectionTitle}>{t('weather.5_day_forecast')}</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                 {forecast && forecast.list && groupForecastByDay(forecast.list).map((day, idx) => {
@@ -492,7 +494,7 @@ const WeatherScreen = ({ navigation }) => {
                       <Image source={{ uri: getWeatherIcon(midday.weather[0].icon) }} style={styles.forecastIcon} />
                       <Text style={styles.forecastTemp}>{Math.round(midday.main.temp)}°C</Text>
                       <Text style={styles.forecastDesc}>{midday.weather[0].main}</Text>
-                      <Text style={styles.forecastLabel}>Rain</Text>
+                      <Text style={styles.forecastLabel}>{t('weather.rain')}</Text>
                       <Text style={styles.forecastValue}>{midday.rain?.['3h'] ? `${midday.rain['3h']} mm` : '0 mm'}</Text>
                     </LinearGradient>
                   );
@@ -501,10 +503,10 @@ const WeatherScreen = ({ navigation }) => {
               {/* --- Air Quality Section --- */}
               {airQuality && airQuality.list && airQuality.list[0] && (
                 <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#23232a', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.1)' }}>
-                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>Air Quality</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>AQI: {airQuality.list[0].main.aqi}</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>CO: {airQuality.list[0].components.co} | NO₂: {airQuality.list[0].components.no2} | O₃: {airQuality.list[0].components.o3}</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>PM2.5: {airQuality.list[0].components.pm2_5} | PM10: {airQuality.list[0].components.pm10}</Text>
+                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{t('weather.air_quality')}</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.aqi')}: {airQuality.list[0].main.aqi}</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.co')}: {airQuality.list[0].components.co} | {t('weather.no2')}: {airQuality.list[0].components.no2} | {t('weather.o3')}: {airQuality.list[0].components.o3}</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.pm25')}: {airQuality.list[0].components.pm2_5} | {t('weather.pm10')}: {airQuality.list[0].components.pm10}</Text>
                 </View>
               )}
             </>

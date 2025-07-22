@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import ModalDropdown from 'react-native-modal-dropdown';
+import { useTranslation } from 'react-i18next';
+import { setLanguage, getStoredLanguage } from '../i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const indianLanguages = [
+const LANGUAGES = [
   { label: 'English', value: 'en' },
   { label: 'हिन्दी (Hindi)', value: 'hi' },
   { label: 'বাংলা (Bengali)', value: 'bn' },
@@ -12,103 +15,52 @@ const indianLanguages = [
   { label: 'మరాఠీ (Marathi)', value: 'mr' },
   { label: 'தமிழ் (Tamil)', value: 'ta' },
   { label: 'ગુજરાતી (Gujarati)', value: 'gu' },
-  { label: 'اردو (Urdu)', value: 'ur' },
   { label: 'ಕನ್ನಡ (Kannada)', value: 'kn' },
-  { label: 'ଓଡ଼ିଆ (Odia)', value: 'or' },
-  { label: 'മലയാളം (Malayalam)', value: 'ml' },
-  { label: 'ਪੰਜਾਬੀ (Punjabi)', value: 'pa' },
-  { label: 'অসমীয়া (Assamese)', value: 'as' },
-  { label: 'संस्कृतम् (Sanskrit)', value: 'sa' },
-  { label: 'मैथिली (Maithili)', value: 'mai' },
-  { label: 'संथाली (Santali)', value: 'sat' },
-  { label: 'Dogri', value: 'doi' },
-  { label: 'Konkani', value: 'kok' },
-  { label: 'Manipuri', value: 'mni' },
-  { label: 'Bodo', value: 'brx' },
-  { label: 'राजस्थानी (Rajasthani)', value: 'raj' },
-  { label: 'भोजपुरी (Bhojpuri)', value: 'bho' },
-  { label: 'छत्तीसगढ़ी (Chhattisgarhi)', value: 'hne' },
-  { label: 'हरियाणवी (Haryanvi)', value: 'bgc' },
-  { label: 'अवधी (Awadhi)', value: 'awa' },
-  { label: 'मगही (Magahi)', value: 'mag' },
-  { label: 'तुलु (Tulu)', value: 'tcy' },
-  { label: 'मणिपुरी (Meitei)', value: 'mni' },
-  { label: 'नागपुरी (Nagpuri)', value: 'nag' },
-  { label: 'सिंधी (Sindhi)', value: 'sd' },
-  { label: 'कश्मीरी (Kashmiri)', value: 'ks' },
-  { label: 'लद्दाखी (Ladakhi)', value: 'lb' },
-  { label: 'मिज़ो (Mizo)', value: 'lus' },
-  { label: 'न्यासी (Nyishi)', value: 'njz' },
-  { label: 'अरुणाचली (Arunachali)', value: 'arun' },
-  { label: 'त्रिपुरी (Tripuri)', value: 'trp' },
-  { label: 'गढ़वाली (Garhwali)', value: 'gbm' },
-  { label: 'कुमाऊँनी (Kumaoni)', value: 'kfy' },
-  { label: 'अंगिका (Angika)', value: 'anp' },
-  { label: 'भिल्ल (Bhil)', value: 'bhil' },
-  { label: 'गोंडी (Gondi)', value: 'gon' },
-  { label: 'हो (Ho)', value: 'hoc' },
-  { label: 'खासी (Khasi)', value: 'kha' },
-  { label: 'लंबाडी (Lambadi)', value: 'lmn' },
-  { label: 'मालवी (Malvi)', value: 'mup' },
-  { label: 'मुण्डारी (Mundari)', value: 'unr' },
-  { label: 'नागा (Naga)', value: 'nag' },
-  { label: 'सद्दरी (Sadri)', value: 'sck' },
-  { label: 'शेरपा (Sherpa)', value: 'xsr' },
-  { label: 'सौराष्ट्र (Saurashtra)', value: 'saz' },
-  { label: 'सिल्हटी (Sylheti)', value: 'syl' },
-  { label: 'तोडा (Toda)', value: 'tcx' },
-  { label: 'वर्ली (Varli)', value: 'vav' },
 ];
 
 const LanguageSelectScreen = () => {
   const navigation = useNavigation();
+  const { t, i18n } = useTranslation();
   const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [search, setSearch] = useState('');
-  // Find the index of the selected language, default to 0 if not found
-  const selectedIndex = Math.max(0, indianLanguages.findIndex(l => l.value === selectedLanguage));
-  // Filter languages based on search
-  const filteredLanguages = indianLanguages.filter(l => l.label.toLowerCase().includes(search.toLowerCase()));
 
-  const handleNext = () => {
-    navigation.navigate('ChoiceScreen', {}, {
-      animation: 'slide_from_right', // For crazy effect, will configure in stack
+  useEffect(() => {
+    getStoredLanguage().then((lang) => setSelectedLanguage(lang));
+  }, []);
+
+  const handleNext = async () => {
+    await setLanguage(selectedLanguage);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'ChoiceScreen' }],
     });
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.greeting}>Hello Farmer,</Text>
-        <Text style={styles.subtext}>Please choose your language</Text>
-        <TextInput
-          style={styles.searchBar}
-          placeholder="Search language..."
-          placeholderTextColor="#888"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <ModalDropdown
-          options={filteredLanguages.map(l => l.label)}
-          defaultValue={filteredLanguages[selectedIndex]?.label || (filteredLanguages[0]?.label || 'Select Language')}
-          onSelect={(index) => setSelectedLanguage(filteredLanguages[index].value)}
-          style={styles.dropdown}
-          textStyle={styles.dropdownText}
-          dropdownStyle={styles.dropdownList}
-          dropdownTextStyle={styles.dropdownOption}
-          dropdownTextHighlightStyle={styles.dropdownOptionHighlight}
-          animated={true}
-          showsVerticalScrollIndicator={true}
-          // Only open dropdown if search is not empty or user is changing language
-          onDropdownWillShow={() => {
-            // If search is empty and selected language is English, prevent opening
-            if (!search && filteredLanguages[selectedIndex]?.value === 'en') {
-              return false;
-            }
-            return true;
-          }}
-        />
+        <Text style={styles.greeting}>{t('languageselect.greeting')}</Text>
+        <Text style={styles.subtext}>{t('languageselect.subtext')}</Text>
+        {LANGUAGES.map((lang) => (
+          <TouchableOpacity
+            key={lang.value}
+            style={[
+              styles.langButton,
+              selectedLanguage === lang.value && styles.langButtonSelected,
+            ]}
+            onPress={() => setSelectedLanguage(lang.value)}
+          >
+            <Text
+              style={[
+                styles.langButtonText,
+                selectedLanguage === lang.value && styles.langButtonTextSelected,
+              ]}
+            >
+              {lang.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
         <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>{'→'}</Text>
+          <Text style={styles.buttonText}>{t('languageselect.next')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -245,6 +197,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 14,
     marginTop: 4,
+  },
+  langButton: {
+    width: '100%',
+    backgroundColor: '#181820',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  langButtonSelected: {
+    backgroundColor: '#fff',
+    borderColor: '#000',
+  },
+  langButtonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  langButtonTextSelected: {
+    color: '#000',
+    fontWeight: 'bold',
   },
 });
 

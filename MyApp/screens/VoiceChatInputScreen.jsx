@@ -8,6 +8,7 @@ import axios from 'axios';
 import Markdown from 'react-native-markdown-display';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { useTranslation } from 'react-i18next';
 
 
 // --- Simulated API Configuration ---
@@ -175,26 +176,27 @@ const ThinkingIndicator = () => {
 };
 
 const featureOptions = [
-    { icon: <MaterialCommunityIcons name="bank" size={20} color="#f59e0b" />, label: 'Marketplace', screen: 'MarketplaceScreen', color: '#f59e0b' },
-    { icon: <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#3b82f6" />, label: 'Calendar', screen: 'CalenderScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="cow" size={20} color="#10b981" />, label: 'Cattle Schedule', screen: 'CattleScreen', color: '#10b981' },
-    { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'Crop Cycle', screen: 'CropCycle', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="bank" size={20} color="#f59e0b" />, label: 'marketplace', screen: 'MarketplaceScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#3b82f6" />, label: 'calendar', screen: 'CalenderScreen', color: '#3b82f6' },
+    { icon: <MaterialCommunityIcons name="cow" size={20} color="#10b981" />, label: 'cattle', screen: 'CattleScreen', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'cropcycle', screen: 'CropCycle', color: '#f59e0b' },
     // More options
-    { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'Weather', screen: 'WeatherScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'Soil', screen: 'SoilMoistureScreen', color: '#38bdf8' },
-    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'EduFinance', screen: 'UPI', color: '#a78bfa' },
-    { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'Document Builder', screen: 'DocumentAgentScreen', color: '#f59e0b' },
-    { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'Crop Doctor', screen: 'CropDoctor', color: '#10b981' },
-    { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: 'Rental system', screen: 'RentalSystemScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'weather', screen: 'WeatherScreen', color: '#3b82f6' },
+    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'soil', screen: 'SoilMoistureScreen', color: '#38bdf8' },
+    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'edufinance', screen: 'UPI', color: '#a78bfa' },
+    { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'document', screen: 'DocumentAgentScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'cropdoctor', screen: 'CropDoctor', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: 'rental', screen: 'RentalSystemScreen', color: '#f59e0b' },
 ];
 
 const FeaturesView = ({ navigation }) => {
+    const { t } = useTranslation();
     const [showAll, setShowAll] = useState(false);
     const mainOptions = featureOptions.slice(0, 4);
     const extraOptions = featureOptions.slice(4);
     return (
         <View style={styles.featuresPillContainer}>
-            <Text style={styles.featuresTitle}>What can I help with?</Text>
+            <Text style={styles.featuresTitle}>{t('voicechat.features_title')}</Text>
             <View style={styles.pillRow}>
                 {mainOptions.map((opt) => (
                     <TouchableOpacity
@@ -204,12 +206,12 @@ const FeaturesView = ({ navigation }) => {
                         activeOpacity={0.85}
                     >
                         {opt.icon}
-                        <Text style={styles.pillLabel}>{opt.label}</Text>
+                        <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`)}</Text>
                     </TouchableOpacity>
                 ))}
                 <TouchableOpacity style={styles.pillButton} onPress={() => setShowAll((v) => !v)}>
                     <MaterialCommunityIcons name="dots-horizontal" size={20} color="#fff" />
-                    <Text style={[styles.pillLabel, { color: '#fff' }]}>More</Text>
+                    <Text style={[styles.pillLabel, { color: '#fff' }]}>{t('voicechat.more')}</Text>
                 </TouchableOpacity>
             </View>
             {showAll && (
@@ -222,7 +224,7 @@ const FeaturesView = ({ navigation }) => {
                             activeOpacity={0.85}
                         >
                             {opt.icon}
-                            <Text style={styles.pillLabel}>{opt.label}</Text>
+                            <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`)}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -234,6 +236,7 @@ const FeaturesView = ({ navigation }) => {
 // --- Main Chat Screen Component ---
 export default function VoiceChatInputScreen({ navigation, route }) {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation(); // Add useTranslation hook
     const [inputValue, setInputValue] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [chatTitle, setChatTitle] = useState('');
@@ -247,7 +250,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         const context = route.params?.context;
         if (context) {
             setCurrentContext(context);
-            setChatTitle('Kissan AI');
+            setChatTitle(t('voicechat.title'));
             setChatHistory([]); // Start with empty chat
         }
     }, [route.params?.context]);
@@ -259,7 +262,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 
     const saveChatToHistory = async (title, messages) => {
         try {
-            const newChat = { id: Date.now().toString(), title: title || 'Untitled Chat', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), messages };
+            const newChat = { id: Date.now().toString(), title: title || t('voicechat.new_chat'), date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), messages };
             let history = await AsyncStorage.getItem('chatHistory');
             history = history ? JSON.parse(history) : [];
             history.unshift(newChat);
@@ -290,7 +293,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             msgToSend = {
                 type: 'image',
                 content: {
-                    name: attachedImage.name || 'Image',
+                    name: attachedImage.name || t('voicechat.image'),
                     uri: attachedImage.uri,
                     text: inputValue.trim() ? inputValue : undefined,
                 },
@@ -340,7 +343,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     handleSendMessage(message);
                 }
             }
-        } catch (err) { Alert.alert('Error', 'Could not open the document picker.'); }
+        } catch (err) { Alert.alert(t('common.error'), t('voicechat.could_not_open_document_picker')) }
     };
 
     const handleAttachImage = async () => {
@@ -358,9 +361,9 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 }
                 const mime = ext === 'jpg' || ext === 'jpeg' ? 'jpeg' : ext;
                 const dataUrl = `data:image/${mime};base64,${base64}`;
-                setAttachedImage({ name: img.fileName || 'Image', uri: dataUrl });
+                setAttachedImage({ name: img.fileName || t('voicechat.image'), uri: dataUrl });
             }
-        } catch (err) { Alert.alert('Error', 'Could not open the image picker.'); }
+        } catch (err) { Alert.alert(t('common.error'), t('voicechat.could_not_open_image_picker')) }
     };
 
     const FARMER_ID = 'f001';
@@ -374,7 +377,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         <SafeAreaView style={styles.container}>
             <View style={[styles.topBar, { paddingTop: insets.top }]}>
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}><Ionicons name="time-outline" size={28} color="white" /></TouchableOpacity>
-                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Kissan AI'}</Text>
+                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || t('voicechat.title')}</Text>
                 <View style={styles.topRightIcons}>
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}><Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('ChoiceScreen')}><Ionicons name="home-outline" size={28} color="white" /></TouchableOpacity>
@@ -412,7 +415,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             </TouchableOpacity>
                         </View>
                     )}
-                    <TextInput style={styles.textInput} placeholder="Ask Kissan AI" placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
+                    <TextInput style={styles.textInput} placeholder={t('voicechat.placeholder')} placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
                     {(inputValue.length === 0 && !attachedImage) ? (
                         <TouchableOpacity style={styles.voiceButton} onPress={() => navigation.navigate('LiveVoiceScreen')}><MaterialCommunityIcons name="waveform" size={26} color="white" /></TouchableOpacity>
                     ) : (
@@ -424,7 +427,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             if (chatHistory.length > 0) {
                                 const newChat = {
                                     id: Date.now().toString(),
-                                    title: chatTitle || 'Untitled Chat',
+                                    title: chatTitle || t('voicechat.new_chat'),
                                     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                                     messages: chatHistory,
                                     context: allContext // Save context with chat history
@@ -432,7 +435,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                                 try {
                                     await axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat);
                                 } catch (e) {
-                                    Alert.alert('Error', 'Failed to save chat to backend.');
+                                    Alert.alert(t('common.error'), t('voicechat.failed_to_save_chat_backend'));
                                 }
                             }
                             setChatHistory([]);

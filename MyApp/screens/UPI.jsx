@@ -18,8 +18,10 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 const UPIScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [searchText, setSearchText] = useState('');
   const [currentScreen, setCurrentScreen] = useState('main'); // 'main' or 'payment'
@@ -117,8 +119,8 @@ const UPIScreen = () => {
     <>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Businesses</Text>
-        <Text style={styles.exploreText}>Explore</Text>
+        <Text style={styles.headerTitle}>{t('upi.header.businesses')}</Text>
+        <Text style={styles.exploreText}>{t('upi.header.explore')}</Text>
       </View>
 
       {/* App Icons */}
@@ -127,54 +129,54 @@ const UPIScreen = () => {
           <View style={styles.iconCircle}>
             <Icon name="cloud" size={24} color="#4285F4" />
           </View>
-          <Text style={styles.appIconText}>Google Clo...</Text>
+          <Text style={styles.appIconText}>{t('upi.app.google_cloud')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.appIcon} onPress={() => handleButtonPress('Google Play')}>
           <View style={styles.iconCircle}>
             <Icon name="play-arrow" size={24} color="#34A853" />
           </View>
-          <Text style={styles.appIconText}>Google Play</Text>
+          <Text style={styles.appIconText}>{t('upi.app.google_play')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.appIcon} onPress={() => handleButtonPress('MakeMy...')}>
           <View style={[styles.iconCircle, { backgroundColor: '#8B5CF6' }]}>
             <Text style={styles.iconLetter}>M</Text>
           </View>
-          <Text style={styles.appIconText}>MAKEMYT...</Text>
+          <Text style={styles.appIconText}>{t('upi.app.makemytrip')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.appIcon} onPress={() => handleButtonPress('More')}>
           <View style={styles.moreIcon}>
             <Icon name="keyboard-arrow-down" size={24} color="#666" />
           </View>
-          <Text style={styles.appIconText}>More</Text>
+          <Text style={styles.appIconText}>{t('upi.app.more')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Offers & Rewards */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Offers & rewards</Text>
+        <Text style={styles.sectionTitle}>{t('upi.section.offers_rewards')}</Text>
         <View style={styles.rewardsContainer}>
           <TouchableOpacity style={styles.rewardItem} onPress={() => handleButtonPress('Rewards')}>
             <View style={[styles.rewardIcon, { backgroundColor: '#F59E0B' }]}>
               <Icon name="stars" size={24} color="#FFF" />
             </View>
-            <Text style={styles.rewardText}>Rewards</Text>
+            <Text style={styles.rewardText}>{t('upi.reward.rewards')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.rewardItem} onPress={() => handleButtonPress('Offers')}>
             <View style={[styles.rewardIcon, { backgroundColor: '#EC4899' }]}>
               <Icon name="local-offer" size={24} color="#FFF" />
             </View>
-            <Text style={styles.rewardText}>Offers</Text>
+            <Text style={styles.rewardText}>{t('upi.reward.offers')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.rewardItem} onPress={() => handleButtonPress('Referrals')}>
             <View style={[styles.rewardIcon, { backgroundColor: '#3B82F6' }]}>
               <Icon name="people" size={24} color="#FFF" />
             </View>
-            <Text style={styles.rewardText}>Referrals</Text>
+            <Text style={styles.rewardText}>{t('upi.reward.referrals')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -182,10 +184,10 @@ const UPIScreen = () => {
       {/* Loan Banner */}
       <View style={styles.loanBanner}>
         <View style={styles.loanContent}>
-          <Text style={styles.loanTitle}>Loan amount in account,</Text>
-          <Text style={styles.loanTitle}>in under 24 hrs</Text>
+          <Text style={styles.loanTitle}>{t('upi.loan.banner_title')}</Text>
+          <Text style={styles.loanTitle}>{t('upi.loan.banner_subtitle')}</Text>
           <TouchableOpacity style={styles.applyButton} onPress={() => handleButtonPress('Apply Loan')}>
-            <Text style={styles.applyButtonText}>Apply now</Text>
+            <Text style={styles.applyButtonText}>{t('upi.loan.apply_now')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.loanIllustration}>
@@ -210,23 +212,23 @@ const UPIScreen = () => {
 
       {/* Manage Your Money */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Manage your money</Text>
+        <Text style={styles.sectionTitle}>{t('upi.manage_money')}</Text>
         <View style={styles.moneyOptionsContainer}>
           <TouchableOpacity style={styles.moneyOption} onPress={() => handleButtonPress('Personal Loan')}>
             <Icon name="account-balance-wallet" size={32} color="#3B82F6" />
-            <Text style={styles.moneyOptionTitle}>Personal loan</Text>
-            <Text style={styles.moneyOptionSubtitle}>Up to ₹10 lakh, instant approval</Text>
+            <Text style={styles.moneyOptionTitle}>{t('upi.money.personal_loan')}</Text>
+            <Text style={styles.moneyOptionSubtitle}>{t('upi.money.personal_loan_subtitle')}</Text>
             <TouchableOpacity style={styles.smallApplyButton} onPress={() => handleButtonPress('Apply Personal Loan')}>
-              <Text style={styles.smallApplyButtonText}>Apply now</Text>
+              <Text style={styles.smallApplyButtonText}>{t('upi.money.apply_now')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.moneyOption} onPress={() => handleButtonPress('Credit Card')}>
             <Icon name="credit-card" size={32} color="#3B82F6" />
-            <Text style={styles.moneyOptionTitle}>Credit card</Text>
-            <Text style={styles.moneyOptionSubtitle}>Save up to ₹12,00</Text>
+            <Text style={styles.moneyOptionTitle}>{t('upi.money.credit_card')}</Text>
+            <Text style={styles.moneyOptionSubtitle}>{t('upi.money.credit_card_subtitle')}</Text>
             <TouchableOpacity style={styles.smallApplyButton} onPress={() => handleButtonPress('Apply Credit Card')}>
-              <Text style={styles.smallApplyButtonText}>Apply now</Text>
+              <Text style={styles.smallApplyButtonText}>{t('upi.money.apply_now')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </View>
@@ -236,19 +238,19 @@ const UPIScreen = () => {
       <View style={styles.accountOptions}>
         <TouchableOpacity style={styles.accountOption} onPress={() => handleButtonPress('Check CIBIL Score')}>
           <Icon name="assessment" size={24} color="#666" />
-          <Text style={styles.accountOptionText}>Check your CIBIL score for free</Text>
+          <Text style={styles.accountOptionText}>{t('upi.account.check_cibil')}</Text>
           <Icon name="chevron-right" size={24} color="#666" />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.accountOption} onPress={() => handleButtonPress('Transaction History')}>
           <Icon name="history" size={24} color="#666" />
-          <Text style={styles.accountOptionText}>See transaction history</Text>
+          <Text style={styles.accountOptionText}>{t('upi.account.transaction_history')}</Text>
           <Icon name="chevron-right" size={24} color="#666" />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.accountOption} onPress={() => handleButtonPress('Bank Balance')}>
           <Icon name="account-balance" size={24} color="#666" />
-          <Text style={styles.accountOptionText}>Check bank balance</Text>
+          <Text style={styles.accountOptionText}>{t('upi.account.bank_balance')}</Text>
           <Icon name="chevron-right" size={24} color="#666" />
         </TouchableOpacity>
       </View>
@@ -278,7 +280,7 @@ const UPIScreen = () => {
           <Icon name="search" size={20} color="#666" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Pay by name or phone number"
+            placeholder={t('upi.search.pay_by_name')}
             placeholderTextColor="#666"
             value={searchText}
             onChangeText={setSearchText}
@@ -292,10 +294,10 @@ const UPIScreen = () => {
       {/* UPI Lite Banner */}
       <View style={styles.upiBanner}>
         <View style={styles.upiBannerContent}>
-          <Text style={styles.upiBannerTitle}>Pay even when bank</Text>
-          <Text style={styles.upiBannerTitle}>server is down</Text>
+          <Text style={styles.upiBannerTitle}>{t('upi.upi_lite.banner_title')}</Text>
+          <Text style={styles.upiBannerTitle}>{t('upi.upi_lite.banner_subtitle')}</Text>
           <TouchableOpacity style={styles.upiLiteButton} onPress={() => handleButtonPress('UPI Lite')}>
-            <Text style={styles.upiLiteButtonText}>Try UPI Lite</Text>
+            <Text style={styles.upiLiteButtonText}>{t('upi.upi_lite.try')}</Text>
             <Icon name="arrow-forward" size={16} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -316,32 +318,32 @@ const UPIScreen = () => {
           <View style={styles.quickActionIcon}>
             <Icon name="qr-code-scanner" size={24} color="#FFF" />
           </View>
-          <Text style={styles.quickActionText}>Scan any</Text>
-          <Text style={styles.quickActionText}>QR code</Text>
+          <Text style={styles.quickActionText}>{t('upi.quick_actions.scan_qr')}</Text>
+          {/* <Text style={styles.quickActionText}>{t('upi.quick_actions.qr_code')}</Text> */}
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.quickAction} onPress={() => handlePaymentAction('Pay Anyone')}>
           <View style={styles.quickActionIcon}>
             <Icon name="person" size={24} color="#FFF" />
           </View>
-          <Text style={styles.quickActionText}>Pay</Text>
-          <Text style={styles.quickActionText}>anyone</Text>
+          <Text style={styles.quickActionText}>{t('upi.quick_actions.pay_anyone')}</Text>
+          {/* <Text style={styles.quickActionText}>{t('upi.quick_actions.anyone')}</Text> */}
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.quickAction} onPress={() => handlePaymentAction('Bank Transfer')}>
           <View style={styles.quickActionIcon}>
             <Icon name="account-balance" size={24} color="#FFF" />
           </View>
-          <Text style={styles.quickActionText}>Bank</Text>
-          <Text style={styles.quickActionText}>transfer</Text>
+          <Text style={styles.quickActionText}>{t('upi.quick_actions.bank_transfer')}</Text>
+          {/* <Text style={styles.quickActionText}>{t('upi.quick_actions.transfer')}</Text> */}
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.quickAction} onPress={() => handlePaymentAction('Mobile Recharge')}>
           <View style={styles.quickActionIcon}>
             <Icon name="phone-android" size={24} color="#FFF" />
           </View>
-          <Text style={styles.quickActionText}>Mobile</Text>
-          <Text style={styles.quickActionText}>recharge</Text>
+          <Text style={styles.quickActionText}>{t('upi.quick_actions.mobile_recharge')}</Text>
+          {/* <Text style={styles.quickActionText}>{t('upi.quick_actions.recharge')}</Text> */}
         </TouchableOpacity>
       </View>
 
@@ -349,24 +351,24 @@ const UPIScreen = () => {
       <View style={styles.upiOptions}>
         <TouchableOpacity style={styles.upiOption} onPress={() => handleButtonPress('Tap & Pay')}>
           <Icon name="tap-and-play" size={20} color="#666" />
-          <Text style={styles.upiOptionText}>Tap & Pay</Text>
+          <Text style={styles.upiOptionText}>{t('upi.upi_options.tap_pay')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={[styles.upiOption, styles.activateUpiLite]} onPress={() => handleButtonPress('Activate UPI Lite')}>
           <Icon name="add-circle-outline" size={20} color="#666" />
-          <Text style={styles.upiOptionText}>Activate UPI Lite</Text>
+          <Text style={styles.upiOptionText}>{t('upi.upi_options.activate_upi_lite')}</Text>
         </TouchableOpacity>
         
         <View style={styles.upiId}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <Text style={styles.upiIdText}>UPI ID: kisanai@okhdfcbank</Text>
+            <Text style={styles.upiIdText}>{t('upi.upi_id', {id: 'kisanai@okhdfcbank'})}</Text>
           </ScrollView>
         </View>
       </View>
 
       {/* People Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>People</Text>
+        <Text style={styles.sectionTitle}>{t('upi.people')}</Text>
         <View style={styles.peopleContainer}>
           {/* First row: 4 contacts */}
           {contacts.slice(0, 4).map((contact, index) => (
@@ -420,44 +422,44 @@ const UPIScreen = () => {
             <View style={[styles.contactAvatar, { backgroundColor: '#333', justifyContent: 'center', alignItems: 'center' }]}> 
               <Icon name="keyboard-arrow-down" size={32} color="#FFF" />
             </View>
-            <Text style={styles.contactName} numberOfLines={1}>More</Text>
+            <Text style={styles.contactName} numberOfLines={1}>{t('upi.people.more')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Bills & Recharges */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bills & recharges</Text>
+        <Text style={styles.sectionTitle}>{t('upi.bills_recharges')}</Text>
         <View style={styles.billsContainer}>
           <View style={styles.billsRow}>
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Jio Prepaid')}>
               <View style={[styles.billIcon, { backgroundColor: '#003F7F' }]}>
                 <Text style={styles.billIconText}>Jio</Text>
               </View>
-              <Text style={styles.billText}>Jio Prepaid</Text>
+              <Text style={styles.billText}>{t('upi.bills.jio_prepaid')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Mobile Recharge')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="phone-android" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>Mobile</Text>
-              <Text style={styles.billText}>recharge</Text>
+              <Text style={styles.billText}>{t('upi.bills.mobile_recharge')}</Text>
+              {/* <Text style={styles.billText}>{t('upi.bills.recharge')}</Text> */}
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('DTH/Cable')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="tv" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>DTH / Cable</Text>
-              <Text style={styles.billText}>TV</Text>
+              <Text style={styles.billText}>{t('upi.bills.dth_cable')}</Text>
+              {/* <Text style={styles.billText}>{t('upi.bills.tv')}</Text> */}
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Electricity')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="lightbulb" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>Electricity</Text>
+              <Text style={styles.billText}>{t('upi.bills.electricity')}</Text>
             </TouchableOpacity>
           </View>
           
@@ -466,28 +468,28 @@ const UPIScreen = () => {
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="security" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>LIC /</Text>
+              <Text style={styles.billText}>{t('upi.bills.lic')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Loan EMI')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="description" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>Loan EMI</Text>
+              <Text style={styles.billText}>{t('upi.bills.loan_emi')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Postpaid')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="receipt" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>Postpaid</Text>
+              <Text style={styles.billText}>{t('upi.bills.postpaid')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.billItem} onPress={() => handlePaymentAction('Credit Cards')}>
               <View style={[styles.billIcon, { backgroundColor: '#1E40AF' }]}>
                 <Icon name="credit-card" size={20} color="#FFF" />
               </View>
-              <Text style={styles.billText}>Credit cards</Text>
+              <Text style={styles.billText}>{t('upi.bills.credit_cards')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -529,28 +531,28 @@ const UPIScreen = () => {
             {/* Camera Step */}
             {scanStep === 'camera' && (
               <View style={styles.mockCameraContainer}>
-                <Text style={styles.mockCameraTitle}>Scan QR Code</Text>
+                <Text style={styles.mockCameraTitle}>{t('upi.mock.scan_qr_title')}</Text>
                 <View style={styles.mockCameraFrame}>
                   <View style={styles.mockQR} />
                 </View>
-                <Text style={styles.mockCameraHint}>Align the QR code within the frame</Text>
+                <Text style={styles.mockCameraHint}>{t('upi.mock.scan_qr_hint')}</Text>
                 <TouchableOpacity style={styles.mockScanButton} onPress={handleFakeScan}>
-                  <Text style={styles.mockScanButtonText}>Simulate Scan</Text>
+                  <Text style={styles.mockScanButtonText}>{t('upi.mock.simulate_scan')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.mockCloseButton} onPress={closeScanQR}>
-                  <Text style={styles.mockCloseButtonText}>Cancel</Text>
+                  <Text style={styles.mockCloseButtonText}>{t('upi.mock.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             )}
             {/* Payment Form Step */}
             {scanStep === 'form' && (
               <View style={styles.mockFormContainer}>
-                <Text style={styles.mockFormTitle}>Pay to</Text>
+                <Text style={styles.mockFormTitle}>{t('upi.mock.pay_to')}</Text>
                 <Text style={styles.mockFormRecipient}>{MOCK_RECIPIENT.name}</Text>
                 <Text style={styles.mockFormUpi}>{MOCK_RECIPIENT.upi}</Text>
                 <TextInput
                   style={styles.mockInput}
-                  placeholder="Enter amount"
+                  placeholder={t('upi.mobilerecharge.amount_placeholder')}
                   placeholderTextColor="#888"
                   keyboardType="numeric"
                   value={mockAmount}
@@ -558,7 +560,7 @@ const UPIScreen = () => {
                 />
                 <TextInput
                   style={styles.mockInput}
-                  placeholder="Add a remark (optional)"
+                  placeholder={t('upi.mobilerecharge.note_placeholder')}
                   placeholderTextColor="#888"
                   value={mockRemark}
                   onChangeText={setMockRemark}
@@ -568,20 +570,20 @@ const UPIScreen = () => {
                   onPress={handlePay}
                   disabled={!mockAmount}
                 >
-                  <Text style={styles.mockPayButtonText}>Pay ₹{mockAmount || '0'}</Text>
+                  <Text style={styles.mockPayButtonText}>{t('upi.mock.pay_amount', {amount: mockAmount || '0'})}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.mockBackButton} onPress={() => setScanStep('camera')}>
-                  <Text style={styles.mockBackButtonText}>Back</Text>
+                  <Text style={styles.mockBackButtonText}>{t('upi.mock.back')}</Text>
                 </TouchableOpacity>
               </View>
             )}
             {/* PIN Step */}
             {scanStep === 'pin' && (
               <View style={styles.mockPinContainer}>
-                <Text style={styles.mockPinTitle}>Enter UPI PIN</Text>
+                <Text style={styles.mockPinTitle}>{t('upi.mock.enter_upi_pin')}</Text>
                 <TextInput
                   style={styles.mockInput}
-                  placeholder="Enter 4-digit PIN"
+                  placeholder={t('upi.enter_pin.enter_pin')}
                   placeholderTextColor="#888"
                   keyboardType="numeric"
                   secureTextEntry
@@ -595,10 +597,10 @@ const UPIScreen = () => {
                   onPress={handlePinSubmit}
                   disabled={mockPin.length !== 4}
                 >
-                  <Text style={styles.mockPayButtonText}>Submit</Text>
+                  <Text style={styles.mockPayButtonText}>{t('upi.mock.submit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.mockBackButton} onPress={() => setScanStep('form')}>
-                  <Text style={styles.mockBackButtonText}>Back</Text>
+                  <Text style={styles.mockBackButtonText}>{t('upi.mock.back')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -613,13 +615,13 @@ const UPIScreen = () => {
                 >
                   <IonIcon name="checkmark-circle" size={80} color="#10B981" />
                 </Animated.View>
-                <Text style={styles.mockSuccessText}>Payment Successful!</Text>
-                <Text style={styles.mockSuccessAmount}>₹{mockAmount} paid to {MOCK_RECIPIENT.name}</Text>
+                <Text style={styles.mockSuccessText}>{t('upi.mock.payment_successful')}</Text>
+                <Text style={styles.mockSuccessAmount}>{t('upi.mock.payment_amount', {amount: mockAmount, name: MOCK_RECIPIENT.name})}</Text>
                 <TouchableOpacity style={styles.mockPayButton} onPress={handlePracticeAgain}>
-                  <Text style={styles.mockPayButtonText}>Practice Again</Text>
+                  <Text style={styles.mockPayButtonText}>{t('upi.mock.practice_again')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.mockCloseButton} onPress={closeScanQR}>
-                  <Text style={styles.mockCloseButtonText}>Close</Text>
+                  <Text style={styles.mockCloseButtonText}>{t('upi.mock.close')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -650,13 +652,13 @@ const PayAnyoneScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.payAnyoneBackBtn}>
           <IonIcon name="arrow-back" size={26} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.payAnyoneTitle}>Pay anyone</Text>
+        <Text style={styles.payAnyoneTitle}>{t('upi.pay_anyone.title')}</Text>
       </View>
-      <Text style={styles.payAnyoneSubtitle}>Pay any <Text style={{fontFamily:'monospace',fontWeight:'bold'}}>UPI</Text> app using name, number or UPI ID</Text>
+      <Text style={styles.payAnyoneSubtitle}>{t('upi.pay_anyone.subtitle')}</Text>
       <View style={styles.payAnyoneInputRow}>
         <TextInput
           style={styles.payAnyoneInput}
-          placeholder="Enter UPI ID or number"
+          placeholder={t('upi.payanyone.input_placeholder')}
           placeholderTextColor="#aaa"
           value={payAnyoneInput}
           onChangeText={setPayAnyoneInput}
@@ -669,7 +671,7 @@ const PayAnyoneScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       <ScrollView style={{flex:1}} contentContainerStyle={{paddingBottom:24}}>
-        <Text style={styles.payAnyoneSectionTitle}>Recents</Text>
+        <Text style={styles.payAnyoneSectionTitle}>{t('upi.pay_anyone.recents')}</Text>
         {payAnyoneRecents.map((item, i) => (
           <View key={i} style={styles.payAnyoneRecentRow}>
             <View style={[styles.payAnyoneAvatar, {backgroundColor: item.color}]}> 
@@ -681,7 +683,7 @@ const PayAnyoneScreen = ({ navigation }) => {
             </View>
           </View>
         ))}
-        <Text style={styles.payAnyoneSectionTitle}>All people on UPI</Text>
+        <Text style={styles.payAnyoneSectionTitle}>{t('upi.pay_anyone.all_people_on_upi')}</Text>
         {payAnyoneAll.map((item, i) => (
           item.type === 'self' ? (
             <View key={i} style={styles.payAnyoneAllRow}>

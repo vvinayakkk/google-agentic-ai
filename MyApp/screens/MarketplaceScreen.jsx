@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewMarketPricesScreen from './NewMarketPricesScreen';
+import { useTranslation } from 'react-i18next';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -68,6 +69,7 @@ const AnimatedListItem = ({ children, index }) => {
 
 // --- Main Screen ---
 const MarketplaceScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [selectedTab, setSelectedTab] = useState('market');
   const [marketData, setMarketData] = useState([]);
   const [myListings, setMyListings] = useState([]);
@@ -107,7 +109,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
   const handleSave = () => {
     if (!productName || !productQuantity || !productPrice) {
-      Alert.alert('Missing Information', 'Please fill out all fields.');
+      Alert.alert(t('marketplace.missing_info'), t('marketplace.fill_all_fields'));
       return;
     }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -117,7 +119,7 @@ const MarketplaceScreen = ({ navigation }) => {
           ? { ...item, name: productName, quantity: productQuantity, myPrice: parseFloat(productPrice), emoji: productEmoji || '📦' }
           : item
       ));
-      Alert.alert('Success', `${productName} has been updated.`);
+      Alert.alert(t('marketplace.success_updated', { name: productName }));
     } else {
       const newListing = {
         id: Date.now(),
@@ -131,20 +133,20 @@ const MarketplaceScreen = ({ navigation }) => {
         emoji: productEmoji || '📦',
       };
       setMyListings([newListing, ...myListings]);
-      Alert.alert('Success', `${productName} has been added to your listings.`);
+      Alert.alert(t('marketplace.success_added', { name: productName }));
     }
     setIsModalVisible(false);
   };
 
   const handleDelete = (itemToDelete) => {
     Alert.alert(
-      "Delete Listing",
-      `Are you sure you want to delete "${itemToDelete.name}"?`,
+      t('marketplace.delete_listing'),
+      t('marketplace.delete_confirm', { name: itemToDelete.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('marketplace.cancel'), style: 'cancel' },
         {
-          text: "Delete",
-          style: "destructive",
+          text: t('marketplace.delete'),
+          style: 'destructive',
           onPress: () => {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setMyListings(myListings.filter(item => item.id !== itemToDelete.id));
@@ -313,12 +315,12 @@ const MarketplaceScreen = ({ navigation }) => {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>Marketplace</Text><Text style={styles.headerSubtitle}>Live market prices & listings</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View></View>
-      <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>Market Prices</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>My Listings</Text></TouchableOpacity></View>
+      <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>{t('marketplace.title')}</Text><Text style={styles.headerSubtitle}>{t('marketplace.subtitle')}</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>{t('marketplace.live')}</Text></View></View>
+      <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>{t('marketplace.tab_market_prices')}</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>{t('marketplace.tab_my_listings')}</Text></TouchableOpacity></View>
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>{t('common.loading')}</Text></View>
       ) : error ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{t('marketplace.error_occurred')}</Text></View>
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {selectedTab === 'market' && (
@@ -330,7 +332,7 @@ const MarketplaceScreen = ({ navigation }) => {
           {selectedTab === 'listings' && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Your Listings ({myListings.length})</Text>
+                <Text style={styles.sectionTitle}>{t('marketplace.your_listings', { count: myListings.length })}</Text>
                 <TouchableOpacity style={styles.addButton} onPress={openAddModal}><Ionicons name="add" size={20} color="#10B981" /></TouchableOpacity>
               </View>
               {listingsLoading && myListings.length === 0 ? (
@@ -345,14 +347,14 @@ const MarketplaceScreen = ({ navigation }) => {
       {isModalVisible && (
         <View style={styles.modalOverlay}>
             <Animated.View style={styles.modal}>
-                <Text style={styles.modalTitle}>{editingItem ? 'Edit Listing' : 'Add New Listing'}</Text>
-                <View style={styles.inputContainer}><Text style={styles.inputLabel}>Product Name</Text><TextInput style={styles.priceInput} value={productName} onChangeText={setProductName} placeholder="e.g., Organic Wheat" placeholderTextColor="#64748B" /></View>
-                <View style={styles.inputContainer}><Text style={styles.inputLabel}>Quantity</Text><TextInput style={styles.priceInput} value={productQuantity} onChangeText={setProductQuantity} placeholder="e.g., 50 tons" placeholderTextColor="#64748B" /></View>
-                <View style={styles.inputContainer}><Text style={styles.inputLabel}>Your Price (₹)</Text><TextInput style={styles.priceInput} value={productPrice} onChangeText={setProductPrice} keyboardType="numeric" placeholder="e.g., 260.00" placeholderTextColor="#64748B" /></View>
-                <View style={styles.inputContainer}><Text style={styles.inputLabel}>Emoji (Optional)</Text><TextInput style={styles.priceInput} value={productEmoji} onChangeText={setProductEmoji} placeholder="e.g., 🌾" placeholderTextColor="#64748B" /></View>
+                <Text style={styles.modalTitle}>{editingItem ? t('marketplace.edit_listing') : t('marketplace.add_new_listing')}</Text>
+                <View style={styles.inputContainer}><Text style={styles.inputLabel}>{t('marketplace.product_name')}</Text><TextInput style={styles.priceInput} value={productName} onChangeText={setProductName} placeholder={t('marketplace.product_name_placeholder')} placeholderTextColor="#64748B" /></View>
+                <View style={styles.inputContainer}><Text style={styles.inputLabel}>{t('marketplace.quantity')}</Text><TextInput style={styles.priceInput} value={productQuantity} onChangeText={setProductQuantity} placeholder={t('marketplace.quantity_placeholder')} placeholderTextColor="#64748B" /></View>
+                <View style={styles.inputContainer}><Text style={styles.inputLabel}>{t('marketplace.your_price')}</Text><TextInput style={styles.priceInput} value={productPrice} onChangeText={setProductPrice} keyboardType="numeric" placeholder={t('marketplace.your_price_placeholder')} placeholderTextColor="#64748B" /></View>
+                <View style={styles.inputContainer}><Text style={styles.inputLabel}>{t('marketplace.emoji')}</Text><TextInput style={styles.priceInput} value={productEmoji} onChangeText={setProductEmoji} placeholder={t('marketplace.emoji_placeholder')} placeholderTextColor="#64748B" /></View>
                 <View style={styles.modalButtons}>
-                    <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}><Text style={styles.saveText}>Save</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}><Text style={styles.saveText}>{t('common.save')}</Text></TouchableOpacity>
                 </View>
             </Animated.View>
         </View>

@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronDown, Calendar, MapPin, Droplets, Egg } from 'lucid
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 
 const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
@@ -64,6 +65,8 @@ const CattleScreen = ({ navigation }) => {
     'Chicken coop humidity levels need monitoring',
     'Billy shows signs of nutritional needs - supplement recommended'
   ];
+
+  const { t } = useTranslation();
 
   // Function to fetch and cache data
   const fetchCattleData = async () => {
@@ -503,8 +506,8 @@ const CattleScreen = ({ navigation }) => {
           <ChevronLeft color="#FFFFFF" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Cattle Management</Text>
-          <Text style={styles.headerSubtitle}>Animal health & productivity</Text>
+          <Text style={styles.headerTitle}>{t('cattle.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('cattle.suggestions')}</Text>
         </View>
         <View style={styles.liveIndicator}>
           <View style={styles.liveDot} />
@@ -515,23 +518,23 @@ const CattleScreen = ({ navigation }) => {
       {loading && cattleData.length === 0 ? ( // Show full loading screen only if no cached data
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>Loading data...</Text>
+          <Text style={styles.loadingText}>{t('cattle.loading')}</Text>
         </View>
       ) : error ? ( // Show error if fetching failed and no data in cache
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t('cattle.error')}</Text>
           <TouchableOpacity onPress={fetchCattleData} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('common.refresh')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Animals Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Animals ({cattleData.length})</Text>
+            <Text style={styles.sectionTitle}>{t('cattle.title')} ({cattleData.length})</Text>
             {cattleData.map(renderAnimalCard)}
             {cattleData.length === 0 && !loading && ( // Message if no animals and not loading
-                <Text style={styles.noDataText}>No animals added yet. Tap '+' to add one!</Text>
+                <Text style={styles.noDataText}>{t('cattle.no_animals')}</Text>
             )}
           </View>
 
@@ -540,7 +543,7 @@ const CattleScreen = ({ navigation }) => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Calendar color="#10B981" size={20} />
-                <Text style={styles.sectionTitle}>Calendar Updates</Text>
+                <Text style={styles.sectionTitle}>{t('calendar.title')}</Text>
               </View>
               {calendarUpdates.length > 0 ? (
                 calendarUpdates.map((update, idx) => (
@@ -555,7 +558,7 @@ const CattleScreen = ({ navigation }) => {
                   </View>
                 ))
               ) : (
-                <Text style={styles.noDataText}>No upcoming calendar updates.</Text>
+                <Text style={styles.noDataText}>{t('calendar.no_events')}</Text>
               )}
             </View>
           </TouchableOpacity>
@@ -564,20 +567,20 @@ const CattleScreen = ({ navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <MapPin color="#8B5CF6" size={20} />
-              <Text style={styles.sectionTitle}>Space Suggestions</Text>
+              <Text style={styles.sectionTitle}>{t('cattle.space_suggestion')}</Text>
             </View>
             <View style={{ marginBottom: 10, marginLeft: 2 }}>
-              <Text style={styles.helperText}>Upload a photo of your crop field to get personalized space suggestions.</Text>
+              <Text style={styles.helperText}>{t('cattle.suggestions')}</Text>
             </View>
             <TouchableOpacity onPress={handleAddImagePress} style={styles.addFieldPhotoButton} activeOpacity={0.85}>
               <Ionicons name="camera" size={24} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={styles.addFieldPhotoButtonText}>Add Field Photo</Text>
+              <Text style={styles.addFieldPhotoButtonText}>{t('cattle.add_image')}</Text>
             </TouchableOpacity>
             <View style={{ position: 'relative' }}>
               {imageLoading && (
                 <View style={styles.suggestionLoadingOverlay}>
                   <ActivityIndicator size="large" color="#10B981" />
-                  <Text style={styles.loadingText}>Analyzing image and updating suggestions...</Text>
+                  <Text style={styles.loadingText}>{t('cattle.image_loading')}</Text>
                 </View>
               )}
               {spaceSuggestions.length > 0 ? (
@@ -592,7 +595,7 @@ const CattleScreen = ({ navigation }) => {
               )}
               {lastSpaceImage && (
                 <View style={{ alignItems: 'center', marginTop: 16 }}>
-                  <Text style={{ color: '#94A3B8', marginBottom: 8 }}>Last Uploaded Field Image:</Text>
+                  <Text style={{ color: '#94A3B8', marginBottom: 8 }}>{t('cattle.upload_image')}</Text>
                   <Image source={{ uri: lastSpaceImage }} style={{ width: 220, height: 140, borderRadius: 12, borderWidth: 2, borderColor: '#10B981' }} resizeMode="cover" />
                 </View>
               )}
@@ -613,15 +616,15 @@ const CattleScreen = ({ navigation }) => {
       <Modal visible={animalAddOptionSheet} transparent animationType="fade" onRequestClose={() => setAnimalAddOptionSheet(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.optionSheetContainer}>
-            <Text style={styles.optionSheetTitle}>Add Animal</Text>
+            <Text style={styles.optionSheetTitle}>{t('cattle.add_animal')}</Text>
             <TouchableOpacity style={styles.optionButton} onPress={handleManualAddAnimal}>
-              <Text style={styles.optionButtonText}>Type Manually</Text>
+              <Text style={styles.optionButtonText}>{t('calendar.type_manually')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#3B82F6' }]} onPress={handleSpeakAddAnimal}>
-              <Text style={styles.optionButtonText}>Speak (AI Extract)</Text>
+              <Text style={styles.optionButtonText}>{t('calendar.speak_ai_extract')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelOptionButton} onPress={() => setAnimalAddOptionSheet(false)}>
-              <Text style={styles.cancelOptionButtonText}>Cancel</Text>
+              <Text style={styles.cancelOptionButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -631,28 +634,26 @@ const CattleScreen = ({ navigation }) => {
       <Modal visible={animalModalVisible} animationType="slide" transparent onRequestClose={() => setAnimalModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.animalModalContainer}>
-            <Text style={styles.animalModalTitle}>{animalModalMode === 'add' ? 'Add New Animal' : 'Edit Animal'}</Text>
+            <Text style={styles.animalModalTitle}>{animalModalMode === 'add' ? t('cattle.add_animal') : t('cattle.edit_animal')}</Text>
             <ScrollView style={styles.animalModalScrollView}>
-              <TextInput style={styles.input} placeholder="Name (e.g., Gauri)" placeholderTextColor="#64748B" value={animalModalAnimal.name} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, name: v })} />
-              <TextInput style={styles.input} placeholder="Breed (e.g., Gir, Murrah)" placeholderTextColor="#64748B" value={animalModalAnimal.breed} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, breed: v })} />
-              <TextInput style={styles.input} placeholder="Age (e.g., 3 years)" placeholderTextColor="#64748B" value={animalModalAnimal.age} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, age: v })} keyboardType="default" />
-              <TextInput style={styles.input} placeholder="Type (cow, goat, chicken)" placeholderTextColor="#64748B" value={animalModalAnimal.type} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, type: v })} autoCapitalize="none" />
-              <TextInput style={styles.input} placeholder="Icon (e.g., 🐄, 🐐, 🐔)" placeholderTextColor="#64748B" value={animalModalAnimal.icon} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, icon: v })} />
-              <TextInput style={styles.input} placeholder="Card Color (e.g., #FF5733)" placeholderTextColor="#64748B" value={animalModalAnimal.color} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, color: v })} />
-              <TextInput style={styles.input} placeholder="Health (e.g., Good, Excellent, Poor)" placeholderTextColor="#64748B" value={animalModalAnimal.health} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, health: v })} />
-              <TextInput style={styles.input} placeholder="Last Checkup Date (YYYY-MM-DD)" placeholderTextColor="#64748B" value={animalModalAnimal.lastCheckup} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, lastCheckup: v })} />
-              <TextInput style={styles.input} placeholder="Milk Capacity (e.g., 10L/day)" placeholderTextColor="#64748B" value={animalModalAnimal.milkCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, milkCapacity: v })} />
-              <TextInput style={styles.input} placeholder="Egg Capacity (e.g., 5 eggs/week)" placeholderTextColor="#64748B" value={animalModalAnimal.eggCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, eggCapacity: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_name')} placeholderTextColor="#64748B" value={animalModalAnimal.name} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, name: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_breed')} placeholderTextColor="#64748B" value={animalModalAnimal.breed} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, breed: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_age')} placeholderTextColor="#64748B" value={animalModalAnimal.age} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, age: v })} keyboardType="default" />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_type')} placeholderTextColor="#64748B" value={animalModalAnimal.type} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, type: v })} autoCapitalize="none" />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_health')} placeholderTextColor="#64748B" value={animalModalAnimal.health} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, health: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_last_checkup')} placeholderTextColor="#64748B" value={animalModalAnimal.lastCheckup} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, lastCheckup: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_milk_capacity')} placeholderTextColor="#64748B" value={animalModalAnimal.milkCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, milkCapacity: v })} />
+              <TextInput style={styles.input} placeholder={t('cattle.animal_egg_capacity')} placeholderTextColor="#64748B" value={animalModalAnimal.eggCapacity} onChangeText={v => setAnimalModalAnimal({ ...animalModalAnimal, eggCapacity: v })} />
             </ScrollView>
             <View style={styles.animalModalButtons}>
               <TouchableOpacity style={styles.animalModalCancelButton} onPress={() => setAnimalModalVisible(false)}>
-                <Text style={styles.animalModalButtonText}>Cancel</Text>
+                <Text style={styles.animalModalButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.animalModalSaveButton} onPress={handleAnimalModalSave} disabled={animalModalLoading}>
                 {animalModalLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.animalModalButtonText}>Save</Text>
+                  <Text style={styles.animalModalButtonText}>{t('common.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -666,9 +667,9 @@ const CattleScreen = ({ navigation }) => {
           <Animated.View style={[styles.micButtonAnimated, { transform: [{ scale: animalMicAnim }] }]}>
             <Text style={styles.micIcon}>🎤</Text>
           </Animated.View>
-          <Text style={styles.micListeningText}>Listening...</Text>
+          <Text style={styles.micListeningText}>{t('calendar.listening')}</Text>
           <TouchableOpacity onPress={() => setAnimalMicModal(false)} style={styles.micCancelButton}>
-            <Text style={styles.micCancelButtonText}>Cancel</Text>
+            <Text style={styles.micCancelButtonText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -677,12 +678,12 @@ const CattleScreen = ({ navigation }) => {
       <Modal visible={imageModalVisible} transparent animationType="fade" onRequestClose={() => setImageModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.optionSheetContainer, { maxHeight: '80%', paddingBottom: 0 }]}> {/* Limit height for scrollability */}
-            <Text style={styles.optionSheetTitle}>Add Crop Field Image</Text>
+            <Text style={styles.optionSheetTitle}>{t('cattle.add_image')}</Text>
             <TouchableOpacity style={styles.optionButton} onPress={() => handleImagePick(true)}>
-              <Text style={styles.optionButtonText}>Take Photo</Text>
+              <Text style={styles.optionButtonText}>{t('cropdoctor.take_photo')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#3B82F6' }]} onPress={() => handleImagePick(false)}>
-              <Text style={styles.optionButtonText}>Pick from Gallery</Text>
+              <Text style={styles.optionButtonText}>{t('cropdoctor.pick_image')}</Text>
             </TouchableOpacity>
             {selectedImage && (
               <View style={styles.imagePreviewContainer}>
@@ -692,10 +693,10 @@ const CattleScreen = ({ navigation }) => {
             )}
             <View style={styles.modalFooter}>
               <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#10B981', marginTop: 0 }]} onPress={handleSubmitImage}>
-                <Text style={styles.optionButtonText}>Submit Image</Text>
+                <Text style={styles.optionButtonText}>{t('cattle.upload_image')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelOptionButton} onPress={() => setImageModalVisible(false)}>
-                <Text style={styles.cancelOptionButtonText}>Cancel</Text>
+                <Text style={styles.cancelOptionButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>

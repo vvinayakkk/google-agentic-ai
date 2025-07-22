@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, SafeAreaView, Image, TouchableOpacity, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 // Using the same theme for consistency
 const theme = {
@@ -20,6 +21,7 @@ const theme = {
 
 export default function FollowUpScreen({ route, navigation }) {
     const { context } = route.params;
+    const { t } = useTranslation();
 
     const handleNavigate = (screen) => {
         // First, go back to dismiss the modal, then navigate.
@@ -34,25 +36,25 @@ export default function FollowUpScreen({ route, navigation }) {
         <View style={styles.overlay}>
             <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => navigation.goBack()} />
             <Animated.View style={styles.modalContainer}>
-                <Text style={styles.title}>Follow-up for</Text>
+                <Text style={styles.title}>{t('followup.title')}</Text>
                 <Text style={styles.diseaseName}>{context.diseaseName}</Text>
                 
                 <Image source={{ uri: context.userImageUri }} style={styles.imagePreview} />
                 
-                <Text style={styles.prompt}>How would you like to continue?</Text>
+                <Text style={styles.prompt}>{t('followup.prompt')}</Text>
 
                 <TouchableOpacity style={styles.button} onPress={() => handleNavigate('VoiceChatInputScreen')}>
                     <Feather name="message-circle" size={22} color={theme.colors.text} />
-                    <Text style={styles.buttonText}>Start Text Chat</Text>
+                    <Text style={styles.buttonText}>{t('followup.start_text_chat')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.button} onPress={() => handleNavigate('LiveVoiceScreen')}>
                     <Feather name="mic" size={22} color={theme.colors.text} />
-                    <Text style={styles.buttonText}>Start Live Voice Chat</Text>
+                    <Text style={styles.buttonText}>{t('followup.start_live_voice_chat')}</Text>
                 </TouchableOpacity>
 
                  <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>{t('followup.cancel')}</Text>
                 </TouchableOpacity>
             </Animated.View>
         </View>

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -68,6 +69,7 @@ const conversationFlow = [
 ];
 
 export default function DocumentAgentScreen({ navigation }) {
+  const { t } = useTranslation();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [agentState, setAgentState] = useState('ready');
@@ -170,7 +172,7 @@ export default function DocumentAgentScreen({ navigation }) {
         <View style={styles.infoCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Ionicons name="information-circle" size={22} color="#2563eb" style={{ marginRight: 6 }} />
-            <Text style={styles.infoCardTitle}>How to use Document Agent</Text>
+            <Text style={styles.infoCardTitle}>{t('documentagent.title')}</Text>
             <TouchableOpacity onPress={() => setShowInfo(false)} style={{ marginLeft: 'auto' }}>
               <Ionicons name="close-circle" size={22} color="#f87171" />
             </TouchableOpacity>

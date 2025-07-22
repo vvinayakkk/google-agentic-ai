@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import RNPickerSelect from 'react-native-picker-select';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
+import { useTranslation } from 'react-i18next';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -49,6 +50,7 @@ const SoilMoistureScreen = ({ navigation }) => {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const { t } = useTranslation();
 
   // Load cached data on mount, then fetch fresh data in background
   useEffect(() => {
@@ -256,7 +258,7 @@ const SoilMoistureScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Soil Moisture Data</Text>
+        <Text style={styles.headerTitle}>{t('soil.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -267,11 +269,11 @@ const SoilMoistureScreen = ({ navigation }) => {
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="analytics" size={22} color="#232526" style={{ marginRight: 8 }} />
-                  <Text style={styles.summaryText}>Records: <Text style={styles.summaryValue}>{filteredData.length}</Text></Text>
+                  <Text style={styles.summaryText}>{t('soil.records')}: <Text style={styles.summaryValue}>{filteredData.length}</Text></Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="water" size={20} color="#232526" style={{ marginRight: 4 }} />
-                  <Text style={styles.summaryText}>Avg Moisture: <Text style={styles.summaryValue}>{filteredData.length > 0 ? (filteredData.reduce((acc, item) => acc + (parseFloat(item.Avg_smlvl_at15cm) || 0), 0) / filteredData.length).toFixed(2) : '--'}</Text></Text>
+                  <Text style={styles.summaryText}>{t('soil.avg_moisture')}: <Text style={styles.summaryValue}>{filteredData.length > 0 ? (filteredData.reduce((acc, item) => acc + (parseFloat(item.Avg_smlvl_at15cm) || 0), 0) / filteredData.length).toFixed(2) : '--'}</Text></Text>
                 </View>
               </View>
             </LinearGradient>
@@ -279,7 +281,7 @@ const SoilMoistureScreen = ({ navigation }) => {
           {/* AI Assistant Button */}
           <TouchableOpacity style={styles.aiButton} onPress={handleAIAssistant}>
             <Ionicons name="chatbubbles" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.aiButtonText}>Ask AI Assistant</Text>
+            <Text style={styles.aiButtonText}>{t('soil.ai_assistant')}</Text>
           </TouchableOpacity>
           <View style={styles.searchContainer}>
             {/* State Input with Suggestions */}
@@ -288,7 +290,7 @@ const SoilMoistureScreen = ({ navigation }) => {
                 style={styles.searchInput}
                 value={state}
                 onChangeText={setState}
-                placeholder="State"
+                placeholder={t('soil.state')}
                 placeholderTextColor="#555"
                 autoCapitalize="words"
               />
@@ -308,7 +310,7 @@ const SoilMoistureScreen = ({ navigation }) => {
                 style={styles.searchInput}
                 value={district}
                 onChangeText={setDistrict}
-                placeholder="District"
+                placeholder={t('soil.district')}
                 placeholderTextColor="#555"
                 autoCapitalize="words"
               />
@@ -323,13 +325,13 @@ const SoilMoistureScreen = ({ navigation }) => {
               )}
             </View>
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>Clear Filters</Text>
+              <Text style={styles.clearButtonText}>{t('soil.clear_filters')}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={[styles.searchButton, loading && styles.disabledButton]} onPress={fetchData} disabled={loading}>
-            {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>Search</Text>}
+            {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>{t('common.search')}</Text>}
           </TouchableOpacity>
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error && <Text style={styles.errorText}>{error.includes('AI') ? t('soil.error_ai') : t('soil.error')}</Text>}
         </View>
         {/* Data Cards Rendered Below Filters */}
         {loading && filteredData.length === 0 ? (
@@ -338,9 +340,7 @@ const SoilMoistureScreen = ({ navigation }) => {
           filteredData.map((item, index) => renderDataItem(item, index))
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              No soil moisture data found for this selection.
-            </Text>
+            <Text style={styles.emptyText}>{t('soil.no_data')}</Text>
           </View>
         )}
       </ScrollView>
@@ -353,7 +353,7 @@ const SoilMoistureScreen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>AI Suggestions for {district ? `${district}, ` : ''}{state}</Text>
+            <Text style={styles.modalTitle}>{t('ai_suggestions_title', { district: district ? `${district}, ` : '', state: state })}</Text>
             {aiLoading ? (
               <ActivityIndicator size="large" color="#FFD580" style={{ marginVertical: 20 }} />
             ) : aiError ? (
@@ -362,11 +362,11 @@ const SoilMoistureScreen = ({ navigation }) => {
               aiSuggestions.length > 0 ? (
                 <Markdown style={{ body: { color: '#fff', fontSize: 16 } }}>{aiSuggestions[0]}</Markdown>
               ) : (
-                <Text style={styles.emptyText}>No suggestions found.</Text>
+                <Text style={styles.emptyText}>{t('no_suggestions_found')}</Text>
               )
             )}
             <TouchableOpacity style={styles.closeButton} onPress={() => setAiModalVisible(false)}>
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -22,6 +22,7 @@ import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
 import { PanResponder } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const CALENDAR_ANALYSIS_CACHE_KEY = 'calendar-ai-analysis-f001';
 
 const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -583,9 +585,9 @@ const SmartCalendar = ({ navigation }) => {
                   <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                     <Ionicons name="calendar" size={20} color="#10b981" />
                   </Animated.View>
-                  <Text style={styles.headerTitle}>Smart Calendar</Text>
+                  <Text style={styles.headerTitle}>{t('calendar.title')}</Text>
                 </View>
-                <Text style={styles.headerSubtitle}>Weather-synced farming</Text>
+                <Text style={styles.headerSubtitle}>{t('calendar.subtitle')}</Text>
               </View>
 
               <View style={styles.syncIndicator}>
@@ -610,14 +612,14 @@ const SmartCalendar = ({ navigation }) => {
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>AI Calendar Analysis</Text>
+            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>{t('calendar.ai_analysis')}</Text>
             <TouchableOpacity onPress={updateCalendarAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Update</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.update')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 250 }}>
             {analysisLoading ? (
-              <Text style={{ color: '#fff' }}>Loading analysis...</Text>
+              <Text style={{ color: '#fff' }}>{t('calendar.loading_analysis')}</Text>
             ) : (
               (() => {
                 const lines = calendarAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
@@ -630,7 +632,7 @@ const SmartCalendar = ({ navigation }) => {
                     </Markdown>
                     {isLong && (
                       <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
+                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? t('calendar.show_less') : t('calendar.show_more')}</Text>
                       </TouchableOpacity>
                     )}
                   </>
@@ -642,9 +644,9 @@ const SmartCalendar = ({ navigation }) => {
 
         {/* Main content: loading, error, or calendar UI */}
         {dataLoading ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>Loading...</Text></View>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>{t('common.loading')}</Text></View>
         ) : dataError ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{dataError}</Text></View>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{t('calendar.error_loading_events')}</Text></View>
         ) : (
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.calendarNav}>
@@ -685,8 +687,8 @@ const SmartCalendar = ({ navigation }) => {
               >
                 {/* Days of week */}
                 <View style={styles.weekDaysHeader}>
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <Text key={day} style={styles.weekDayText}>{day}</Text>
+                  {['calendar.sun', 'calendar.mon', 'calendar.tue', 'calendar.wed', 'calendar.thu', 'calendar.fri', 'calendar.sat'].map(dayKey => (
+                    <Text key={dayKey} style={styles.weekDayText}>{t(dayKey)}</Text>
                   ))}
                 </View>
 
@@ -714,7 +716,7 @@ const SmartCalendar = ({ navigation }) => {
                   })}
                 </Text>
                 <Text style={styles.eventsCount}>
-                  {selectedDateEvents.length} task{selectedDateEvents.length !== 1 ? 's' : ''}
+                  {selectedDateEvents.length} {selectedDateEvents.length === 1 ? t('calendar.task') : t('calendar.tasks')}
                 </Text>
               </View>
 
@@ -741,7 +743,7 @@ const SmartCalendar = ({ navigation }) => {
                     style={styles.noEventsCard}
                   >
                     <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.3)" />
-                    <Text style={styles.noEventsText}>No tasks scheduled</Text>
+                    <Text style={styles.noEventsText}>{t('calendar.no_tasks_scheduled')}</Text>
                   </LinearGradient>
                 </Animated.View>
               )}
@@ -760,23 +762,23 @@ const SmartCalendar = ({ navigation }) => {
                   >
                     <Ionicons name="sunny-outline" size={16} color="white" />
                   </LinearGradient>
-                  <Text style={styles.weatherTitle}>Weather Sync</Text>
+                  <Text style={styles.weatherTitle}>{t('calendar.weather_sync')}</Text>
                 </View>
 
                 <View style={styles.weatherStats}>
                   <View style={styles.weatherStat}>
                     <Ionicons name="thermometer-outline" size={16} color="#10b981" />
-                    <Text style={styles.weatherLabel}>Temperature</Text>
+                    <Text style={styles.weatherLabel}>{t('calendar.temperature')}</Text>
                     <Text style={styles.weatherValue}>28°C</Text>
                   </View>
                   <View style={styles.weatherStat}>
                     <Ionicons name="water-outline" size={16} color="#3b82f6" />
-                    <Text style={styles.weatherLabel}>Humidity</Text>
+                    <Text style={styles.weatherLabel}>{t('calendar.humidity')}</Text>
                     <Text style={styles.weatherValue}>65%</Text>
                   </View>
                   <View style={styles.weatherStat}>
                     <Ionicons name="rainy-outline" size={16} color="#f59e0b" />
-                    <Text style={styles.weatherLabel}>Rain</Text>
+                    <Text style={styles.weatherLabel}>{t('calendar.rain')}</Text>
                     <Text style={styles.weatherValue}>Tomorrow</Text>
                   </View>
                 </View>
@@ -787,17 +789,17 @@ const SmartCalendar = ({ navigation }) => {
             <Modal visible={eventAddOptionSheet} transparent animationType="fade">
               <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ backgroundColor: '#23232a', borderRadius: 16, padding: 24, width: 300 }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Event</Text>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{t('calendar.add_event')}</Text>
                   <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 }} onPress={handleManualAddEvent}>
                     <Ionicons name="create-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Type Manually</Text>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.type_manually')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 14, alignItems: 'center' }} onPress={handleSpeakAddEvent}>
                     <Ionicons name="mic-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Speak (AI Extract)</Text>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.speak_ai_extract')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={{ marginTop: 18, alignItems: 'center' }} onPress={() => setEventAddOptionSheet(false)}>
-                    <Text style={{ color: '#64748B' }}>Cancel</Text>
+                    <Text style={{ color: '#64748B' }}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -812,9 +814,9 @@ const SmartCalendar = ({ navigation }) => {
                 }}>
                   <Ionicons name="mic" size={56} color="#fff" />
                 </Animated.View>
-                <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>Listening...</Text>
+                <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>{t('calendar.listening')}</Text>
                 <TouchableOpacity onPress={() => setEventMicModal(false)} style={{ backgroundColor: '#23232a', borderRadius: 8, padding: 14, alignItems: 'center', width: 120 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </Modal>
@@ -823,20 +825,20 @@ const SmartCalendar = ({ navigation }) => {
             <Modal visible={eventModalVisible} animationType="slide" transparent>
               <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                 <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, maxHeight: '90%' }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{eventModalMode === 'add' ? 'Add New Event' : 'Edit Event'}</Text>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{eventModalMode === 'add' ? t('calendar.add_new_event') : t('calendar.edit_event')}</Text>
                   <ScrollView style={{ maxHeight: 400 }}>
-                    <TextInput style={modalInputStyle} placeholder="Task" placeholderTextColor="#64748B" value={eventModalEvent.task} onChangeText={v => setEventModalEvent({ ...eventModalEvent, task: v })} />
-                    <TextInput style={modalInputStyle} placeholder="Time (e.g. 09:00)" placeholderTextColor="#64748B" value={eventModalEvent.time} onChangeText={v => setEventModalEvent({ ...eventModalEvent, time: v })} />
-                    <TextInput style={modalInputStyle} placeholder="Type (e.g. irrigation, planting)" placeholderTextColor="#64748B" value={eventModalEvent.type} onChangeText={v => setEventModalEvent({ ...eventModalEvent, type: v })} />
-                    <TextInput style={modalInputStyle} placeholder="Priority (high, medium, low)" placeholderTextColor="#64748B" value={eventModalEvent.priority} onChangeText={v => setEventModalEvent({ ...eventModalEvent, priority: v })} />
-                    <TextInput style={modalInputStyle} placeholder="Details" placeholderTextColor="#64748B" value={eventModalEvent.details} onChangeText={v => setEventModalEvent({ ...eventModalEvent, details: v })} multiline />
+                    <TextInput style={modalInputStyle} placeholder={t('calendar.task_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.task} onChangeText={v => setEventModalEvent({ ...eventModalEvent, task: v })} />
+                    <TextInput style={modalInputStyle} placeholder={t('calendar.time_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.time} onChangeText={v => setEventModalEvent({ ...eventModalEvent, time: v })} />
+                    <TextInput style={modalInputStyle} placeholder={t('calendar.type_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.type} onChangeText={v => setEventModalEvent({ ...eventModalEvent, type: v })} />
+                    <TextInput style={modalInputStyle} placeholder={t('calendar.priority_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.priority} onChangeText={v => setEventModalEvent({ ...eventModalEvent, priority: v })} />
+                    <TextInput style={modalInputStyle} placeholder={t('calendar.details_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.details} onChangeText={v => setEventModalEvent({ ...eventModalEvent, details: v })} multiline />
                   </ScrollView>
                   <View style={{ flexDirection: 'row', marginTop: 24 }}>
                     <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#27272a', borderRadius: 8, marginRight: 8 }} onPress={() => setEventModalVisible(false)}>
-                      <Text style={{ color: '#64748B' }}>Cancel</Text>
+                      <Text style={{ color: '#64748B' }}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#10B981', borderRadius: 8, marginLeft: 8 }} onPress={handleEventModalSave} disabled={eventModalLoading}>
-                      <Text style={{ color: '#fff' }}>{eventModalLoading ? 'Saving...' : 'Save'}</Text>
+                      <Text style={{ color: '#fff' }}>{eventModalLoading ? t('calendar.saving') : t('common.save')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

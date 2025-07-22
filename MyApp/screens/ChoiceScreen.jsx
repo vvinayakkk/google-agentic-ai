@@ -8,6 +8,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
+import { useTranslation } from 'react-i18next';
 
 const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
@@ -16,6 +17,7 @@ const FARMER_ID = 'f001';
 
 export default function ChoiceScreen({ navigation }) {
   const [showHelp, setShowHelp] = useState(false);
+  const { t } = useTranslation();
   // REMOVED: loading state and timeoutRef
 
   // Debug: log loading state changes
@@ -40,7 +42,7 @@ export default function ChoiceScreen({ navigation }) {
       await AsyncStorage.setItem('userMode', mode);
       const newChat = {
         id: Date.now().toString(),
-        title: 'New Chat',
+        title: t('voicechat.new_chat'),
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         messages: [],
         context: { weather: '', soil: '', market: '' }
@@ -53,15 +55,15 @@ export default function ChoiceScreen({ navigation }) {
           // Optionally show a toast or log error, but don't block navigation
         });
     } catch (e) {
-      Alert.alert("Error", "Could not start chat session.");
+      Alert.alert(t('common.error'), t('choice.error_start_chat'));
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <Text style={styles.title}>Kisaan AI</Text>
-      <Text style={styles.subtitle}>Select Your Interaction Mode</Text>
+      <Text style={styles.title}>{t('choice.title')}</Text>
+      <Text style={styles.subtitle}>{t('choice.subtitle')}</Text>
       
       <View style={styles.optionsContainer}>
         <TouchableOpacity 
@@ -70,10 +72,10 @@ export default function ChoiceScreen({ navigation }) {
           // REMOVED: disabled={loading}
         >
           <MaterialCommunityIcons name="microphone-outline" size={60} color="#fff" />
-          <Text style={styles.optionText}>Voice Pilot</Text>
+          <Text style={styles.optionText}>{t('choice.voice_pilot')}</Text>
         </TouchableOpacity>
         
-        <Text style={styles.orText}>OR</Text>
+        <Text style={styles.orText}>{t('choice.or')}</Text>
         
         <TouchableOpacity 
           style={styles.optionButton} 
@@ -81,7 +83,7 @@ export default function ChoiceScreen({ navigation }) {
           // REMOVED: disabled={loading}
         >
           <Ionicons name="hand-right-outline" size={60} color="#fff" />
-          <Text style={styles.optionText}>Manual Mode</Text>
+          <Text style={styles.optionText}>{t('choice.manual_mode')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -91,7 +93,7 @@ export default function ChoiceScreen({ navigation }) {
         // REMOVED: disabled={loading}
       >
         <Ionicons name="trending-up-outline" size={24} color="#10B981" />
-        <Text style={styles.featureButtonText}>View Market Prices</Text>
+        <Text style={styles.featureButtonText}>{t('choice.view_market_prices')}</Text>
       </TouchableOpacity>
       
       <TouchableOpacity 
@@ -100,15 +102,13 @@ export default function ChoiceScreen({ navigation }) {
         // REMOVED: disabled={loading}
       >
         <Ionicons name="water-outline" size={24} color="#3B82F6" />
-        <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>Check Soil Moisture</Text>
+        <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>{t('choice.check_soil_moisture')}</Text>
       </TouchableOpacity>
 
       <View style={styles.helpCardContainer}>
         {showHelp && (
           <View style={styles.helpCard}>
-            <Text style={styles.helpCardText}>
-              Select "Voice Pilot" to control the app with your voice, or "Manual Mode" for traditional touch interaction.
-            </Text>
+            <Text style={styles.helpCardText}>{t('choice.help_text')}</Text>
           </View>
         )}
         <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)} disabled={false}>

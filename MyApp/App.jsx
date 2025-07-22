@@ -1,4 +1,7 @@
-import React from 'react';
+import './i18n';
+import { I18nextProvider } from 'react-i18next';
+import i18n, { getStoredLanguage } from './i18n';
+import React, { Suspense, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CardStyleInterpolators } from '@react-navigation/stack';
@@ -33,163 +36,175 @@ import SoilMoistureScreen from './screens/SoilMoistureScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    getStoredLanguage().then((lang) => {
+      if (i18n.language !== lang) {
+        i18n.changeLanguage(lang);
+      }
+    });
+  }, []);
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="LanguageSelectScreen"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen 
-          name="LanguageSelectScreen" 
-          component={LanguageSelectScreen} 
-          options={{
-            headerShown: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="ChoiceScreen" 
-          component={ChoiceScreen} 
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-          }} 
-        />
-        <Stack.Screen 
-          name="VoiceChatInputScreen" 
-          component={VoiceChatInputScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="LiveVoiceScreen" 
-          component={LiveVoiceScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="Featured" 
-          component={FeaturedScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="ChatHistory" 
-          component={ChatHistoryScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="CropCycle" 
-          component={CropCycleScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="CalenderScreen" 
-          component={SmartCalendar} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="CattleScreen" 
-          component={CattleScreen} 
-          options={{ headerShown: false }} 
-        />
-         <Stack.Screen 
-          name="MarketplaceScreen" 
-          component={MarketplaceScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="UPI" 
-          component={UPIScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="CropDoctor" 
-          component={CropDoctorScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="FollowUpScreen" 
-          component={FollowUpScreen} 
-          options={{
-            headerShown: false,
-            presentation: 'transparentModal', 
-            animationEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="PayAnyone" 
-          component={PayAnyoneScreen} 
-          options={{ headerShown: false }} 
-        />
-         <Stack.Screen 
-          name="ContactUPIDetail" 
-          component={ContactUPIDetailScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="PaymentAmountScreen" 
-          component={PaymentAmountScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="BankSelectScreen" 
-          component={BankSelectScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="EnterPinScreen" 
-          component={EnterPinScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="PaymentSuccessScreen" 
-          component={PaymentSuccessScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="PaymentProcessingScreen" 
-          component={PaymentProcessingScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="BankTransferScreen" 
-          component={BankTransferScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="MobileRechargeScreen" 
-          component={MobileRechargeScreen} 
-          options={{ headerShown: false }} 
-        />
-         <Stack.Screen 
-          name="DocumentAgentScreen" 
-          component={DocumentAgentScreen} 
-          options={{
-            headerShown: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="WeatherScreen" 
-          component={WeatherScreen} 
-          options={{
-            headerShown: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="NewMarketPrices" 
-          component={NewMarketPricesScreen} 
-          options={{
-            headerShown: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="SoilMoistureScreen" 
-          component={SoilMoistureScreen} 
-          options={{
-            headerShown: false,
-          }} 
-        />
-      </Stack.Navigator>
-      <Toast />
-    </NavigationContainer>
+    <I18nextProvider i18n={i18n}>
+      <Suspense fallback={null}>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="LanguageSelectScreen"
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
+            <Stack.Screen 
+              name="LanguageSelectScreen" 
+              component={LanguageSelectScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="ChoiceScreen" 
+              component={ChoiceScreen} 
+              options={{
+                headerShown: false,
+                animationEnabled: true,
+                cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+              }} 
+            />
+            <Stack.Screen 
+              name="VoiceChatInputScreen" 
+              component={VoiceChatInputScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="LiveVoiceScreen" 
+              component={LiveVoiceScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Featured" 
+              component={FeaturedScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="ChatHistory" 
+              component={ChatHistoryScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CropCycle" 
+              component={CropCycleScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CalenderScreen" 
+              component={SmartCalendar} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CattleScreen" 
+              component={CattleScreen} 
+              options={{ headerShown: false }} 
+            />
+             <Stack.Screen 
+              name="MarketplaceScreen" 
+              component={MarketplaceScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="UPI" 
+              component={UPIScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CropDoctor" 
+              component={CropDoctorScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="FollowUpScreen" 
+              component={FollowUpScreen} 
+              options={{
+                headerShown: false,
+                presentation: 'transparentModal', 
+                animationEnabled: true,
+              }}
+            />
+            <Stack.Screen 
+              name="PayAnyone" 
+              component={PayAnyoneScreen} 
+              options={{ headerShown: false }} 
+            />
+             <Stack.Screen 
+              name="ContactUPIDetail" 
+              component={ContactUPIDetailScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="PaymentAmountScreen" 
+              component={PaymentAmountScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="BankSelectScreen" 
+              component={BankSelectScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="EnterPinScreen" 
+              component={EnterPinScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="PaymentSuccessScreen" 
+              component={PaymentSuccessScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="PaymentProcessingScreen" 
+              component={PaymentProcessingScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="BankTransferScreen" 
+              component={BankTransferScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="MobileRechargeScreen" 
+              component={MobileRechargeScreen} 
+              options={{ headerShown: false }} 
+            />
+             <Stack.Screen 
+              name="DocumentAgentScreen" 
+              component={DocumentAgentScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="WeatherScreen" 
+              component={WeatherScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="NewMarketPrices" 
+              component={NewMarketPricesScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="SoilMoistureScreen" 
+              component={SoilMoistureScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+        <Toast />
+      </Suspense>
+    </I18nextProvider>
   );
 }

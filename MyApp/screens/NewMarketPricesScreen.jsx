@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -44,6 +45,7 @@ const AnimatedListItem = ({ children, index }) => {
 };
 
 const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
+  const { t } = useTranslation();
   const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState(null);
   const [searchState, setSearchState] = useState('Maharashtra');
@@ -166,18 +168,18 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
                 <Text style={styles.cropEmoji}>🌾</Text>
                 <View>
                   <Text style={styles.cropName}>{item.Commodity}</Text>
-                  <Text style={styles.volume}>Market: {item.Market}</Text>
+                  <Text style={styles.volume}>{t('marketprices.market')}: {item.Market}</Text>
                 </View>
               </View>
               <View style={styles.priceInfo}>
                 <Text style={styles.price}>₹{modalPrice.toFixed(2)}</Text>
-                <Text style={styles.volume}>per Quintal</Text>
+                <Text style={styles.volume}>{t('marketprices.per_quintal')}</Text>
               </View>
             </View>
             <View style={styles.marketStats}>
-              <View style={styles.statItem}><Text style={styles.statLabel}>Variety</Text><Text style={styles.statValue}>{item.Variety}</Text></View>
-              <View style={styles.statItem}><Text style={styles.statLabel}>Min Price</Text><Text style={styles.statValue}>₹{minPrice.toFixed(2)}</Text></View>
-              <View style={styles.statItem}><Text style={styles.statLabel}>Max Price</Text><Text style={styles.statValue}>₹{maxPrice.toFixed(2)}</Text></View>
+              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.variety')}</Text><Text style={styles.statValue}>{item.Variety}</Text></View>
+              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.min_price')}</Text><Text style={styles.statValue}>₹{minPrice.toFixed(2)}</Text></View>
+              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.max_price')}</Text><Text style={styles.statValue}>₹{maxPrice.toFixed(2)}</Text></View>
             </View>
           </LinearGradient>
         </View>
@@ -193,35 +195,31 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Live Market Prices</Text>
+          <Text style={styles.headerTitle}>{t('marketprices.title')}</Text>
           <TouchableOpacity style={styles.refreshButton} onPress={() => fetchTopCommodities(true)} disabled={loading}>
               <Ionicons name="refresh" size={24} color={loading ? '#555' : '#FFFFFF'} />
           </TouchableOpacity>
         </View>
       )}
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <View style={styles.searchContainer}>
-            <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder="State (e.g., Maharashtra)" placeholderTextColor="#555" />
-            <TextInput style={styles.searchInput} value={searchDistrict} onChangeText={setSearchDistrict} placeholder="District (Optional)" placeholderTextColor="#555" />
-            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity (e.g., Wheat)" placeholderTextColor="#555" />
-          </View>
-          <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
-            {isSearching ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>Search Prices</Text>}
-          </TouchableOpacity>
-          {error && <Text style={styles.errorText}>{error}</Text>}
-          {loading ? (
-             <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
-          ) : marketData.length > 0 ? (
-            marketData.map((item, index) => renderMarketItem(item, index))
-          ) : (
-            <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                No market data found. Try refreshing or searching.
-                </Text>
-            </View>
-          )}
+        <View style={styles.searchContainer}>
+          <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder={t('marketprices.search_state')} placeholderTextColor="#555" />
+          <TextInput style={styles.searchInput} value={searchDistrict} onChangeText={setSearchDistrict} placeholder={t('marketprices.search_district')} placeholderTextColor="#555" />
+          <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder={t('marketprices.search_commodity')} placeholderTextColor="#555" />
         </View>
+        <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
+          {isSearching ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>{t('marketprices.search_button')}</Text>}
+        </TouchableOpacity>
+        {error && <Text style={styles.errorText}>{t('marketprices.error')}</Text>}
+        {loading ? (
+           <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
+        ) : marketData.length > 0 ? (
+          marketData.map((item, index) => renderMarketItem(item, index))
+        ) : (
+          <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>{t('marketprices.no_data')}</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
