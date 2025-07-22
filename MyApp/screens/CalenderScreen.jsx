@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
-const API_BASE = 'http://10.123.4.245:8000';
+const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
 const CALENDAR_CACHE_KEY = 'calendar-events-cache';
 const CALENDAR_ANALYSIS_CACHE_KEY = 'calendar-ai-analysis-f001';

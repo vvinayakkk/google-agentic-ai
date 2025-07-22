@@ -27,7 +27,7 @@ const getKissanAIResponse = async (message, context) => {
                     extra_context: contextToSend
                 };
                 console.log('Sending image+text to backend:', payload);
-                const response = await axios.post('http://10.123.4.245:8000/chat/rag', payload);
+                const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
                 if (response.data && response.data.response) {
                     return response.data.response;
                 }
@@ -62,7 +62,7 @@ const getKissanAIResponse = async (message, context) => {
             extra_context: contextToSend
         };
         console.log('Sending to backend:', payload);
-        const response = await axios.post('http://10.123.4.245:8000/chat/rag', payload);
+        const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
         // Prefer bullet points and links if present
         if (response.data && response.data.response) {
             return response.data.response;
@@ -367,7 +367,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     };
 
     const FARMER_ID = 'f001';
-    const API_BASE = 'http://10.123.4.245:8000';
+    const API_BASE = 'http://192.168.0.111:8000';
     const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
     const MARKET_CACHE_KEY = 'market-prices-cache';
 

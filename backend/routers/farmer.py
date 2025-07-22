@@ -37,6 +37,15 @@ def get_farmer_profile(farmer_id: str):
     profile['farmerId'] = farmer_id
     return profile
 
+@router.put("/farmer/{farmer_id}/profile")
+def update_farmer_profile(farmer_id: str, profile: dict = Body(...)):
+    doc_ref = db.collection('farmers').document(farmer_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    doc_ref.update({'profile': profile})
+    return {"message": "Profile updated", "profile": profile}
+
 @router.get("/farmer/{farmer_id}/livestock")
 def get_farmer_livestock(farmer_id: str):
     doc_ref = db.collection('farmers').document(farmer_id)

@@ -34,6 +34,7 @@ import WeatherScreen from './screens/WeatherScreen';
 import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
 import SoilMoistureScreen from './screens/SoilMoistureScreen';
 import FarmerProfileScreen from './screens/FarmerProfileScreen';
+import LoginScreen from './screens/LoginScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -57,6 +58,13 @@ export default function App() {
             <Stack.Screen 
               name="LanguageSelectScreen" 
               component={LanguageSelectScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="LoginScreen" 
+              component={LoginScreen} 
               options={{
                 headerShown: false,
               }} 

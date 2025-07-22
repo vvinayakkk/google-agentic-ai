@@ -24,7 +24,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://10.123.4.245:8000'; // Ensure this is your correct local IP
+const API_BASE = 'http://192.168.0.111:8000'; // Ensure this is your correct local IP
 const MARKET_CACHE_KEY = 'market-prices-cache';
 
 const AnimatedListItem = ({ children, index }) => {
@@ -222,7 +222,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.searchContainer}>
-            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity (e.g., Wheat)" placeholderTextColor="#555" />
+            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity" placeholderTextColor="#555" />
           </View>
           <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
             {isSearching ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>Search Prices</Text>}
