@@ -44,6 +44,22 @@ export default function ChoiceScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity 
+        style={styles.featureButton} 
+        onPress={() => navigation.navigate('NewMarketPrices')}
+      >
+        <Ionicons name="trending-up-outline" size={24} color="#10B981" />
+        <Text style={styles.featureButtonText}>View Market Prices</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.featureButton} 
+        onPress={() => navigation.navigate('SoilMoisture')}
+      >
+        <Ionicons name="water-outline" size={24} color="#3B82F6" />
+        <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>Check Soil Moisture</Text>
+      </TouchableOpacity>
+
       <View style={styles.helpCardContainer}>
         {showHelp && (
           <View style={styles.helpCard}>
@@ -106,6 +122,23 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 10,
+  },
+  featureButton: {
+    flexDirection: 'row',
+    backgroundColor: '#27272a',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 40,
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+  },
+  featureButtonText: {
+    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
   },
   orText: {
     color: 'gray',

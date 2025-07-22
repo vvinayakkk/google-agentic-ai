@@ -28,6 +28,8 @@ import MobileRechargeScreen from './UPI/MobileRechargeScreen';
 import LanguageSelectScreen from './screens/LanguageSelectScreen';
 import DocumentAgentScreen from './screens/DocumentAgentScreen';
 import WeatherScreen from './screens/WeatherScreen';
+import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
+import SoilMoistureScreen from './screens/SoilMoistureScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -168,6 +170,20 @@ export default function App() {
         <Stack.Screen 
           name="WeatherScreen" 
           component={WeatherScreen} 
+          options={{
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="NewMarketPrices" 
+          component={NewMarketPricesScreen} 
+          options={{
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="SoilMoisture" 
+          component={SoilMoistureScreen} 
           options={{
             headerShown: false,
           }} 

@@ -25,15 +25,15 @@ const FARMER_ID = 'f001';
 
 const WEATHER_CACHE_KEY = 'weather-cache';
 const FORECAST_CACHE_KEY = 'forecast-cache';
-const ALERTS_CACHE_KEY = 'alerts-cache';
 const FARMER_PROFILE_CACHE_KEY = 'farmer-profile-cache';
+const AIR_QUALITY_CACHE_KEY = 'air-quality-cache';
 
 const WeatherScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
-  const [alerts, setAlerts] = useState([]);
+  const [airQuality, setAirQuality] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
@@ -62,6 +62,18 @@ const WeatherScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
+  // Fetch air quality data
+  const fetchAirQuality = async (lat, lon) => {
+    try {
+      const res = await fetch(`${API_BASE}/weather/air_quality?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      setAirQuality(data);
+      await AsyncStorage.setItem(AIR_QUALITY_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // ignore
+    }
+  };
+
   // Only fetch from cache on mount and farm restore
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +85,7 @@ const WeatherScreen = ({ navigation }) => {
       let cachedProfile = null;
       let cachedWeather = null;
       let cachedForecast = null;
-      let cachedAlerts = null;
+      let cachedAirQuality = null;
       try {
         cachedProfile = await AsyncStorage.getItem(FARMER_PROFILE_CACHE_KEY);
         if (cachedProfile) {
@@ -84,14 +96,14 @@ const WeatherScreen = ({ navigation }) => {
           farmLocationRef.current = farmLocation;
         }
         setProfileLoading(false);
-        [cachedWeather, cachedForecast, cachedAlerts] = await Promise.all([
+        [cachedWeather, cachedForecast, cachedAirQuality] = await Promise.all([
           AsyncStorage.getItem(WEATHER_CACHE_KEY),
           AsyncStorage.getItem(FORECAST_CACHE_KEY),
-          AsyncStorage.getItem(ALERTS_CACHE_KEY),
+          AsyncStorage.getItem(AIR_QUALITY_CACHE_KEY),
         ]);
         if (cachedWeather) setWeather(JSON.parse(cachedWeather));
         if (cachedForecast) setForecast(JSON.parse(cachedForecast));
-        if (cachedAlerts) setAlerts(JSON.parse(cachedAlerts));
+        if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
         setIsCustomLocation(false);
       } catch (e) {
         if (isMounted) setError(e.message || 'Failed to load weather');
@@ -113,15 +125,15 @@ const WeatherScreen = ({ navigation }) => {
           farmLocationRef.current = farmLocation;
           await AsyncStorage.setItem(FARMER_PROFILE_CACHE_KEY, JSON.stringify(prof));
         }
-        // Fetch weather, forecast, alerts
-        const [wRes, fRes, aRes] = await Promise.all([
+        // Fetch weather, forecast, air quality
+        const [wRes, fRes] = await Promise.all([
           fetch(`${API_BASE}/weather/coords?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
           fetch(`${API_BASE}/weather/forecast/coords?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
-          fetch(`${API_BASE}/weather/alerts?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
         ]);
         const w = await wRes.json();
         const f = await fRes.json();
-        const a = await aRes.json();
+        await fetchAirQuality(farmLocation.lat, farmLocation.lng);
+
         // Compare and update weather if changed
         if (!cachedWeather || JSON.stringify(w) !== cachedWeather) {
           setWeather(w);
@@ -130,11 +142,6 @@ const WeatherScreen = ({ navigation }) => {
         if (!cachedForecast || JSON.stringify(f) !== cachedForecast) {
           setForecast(f);
           await AsyncStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(f));
-        }
-        const aArr = Array.isArray(a) ? a : (a.alerts || []);
-        if (!cachedAlerts || JSON.stringify(aArr) !== cachedAlerts) {
-          setAlerts(aArr);
-          await AsyncStorage.setItem(ALERTS_CACHE_KEY, JSON.stringify(aArr));
         }
       } catch (e) {
         // Silently ignore background errors
@@ -158,7 +165,7 @@ const WeatherScreen = ({ navigation }) => {
       city = trimmed;
     }
     try {
-      let w, f, a;
+      let w, f;
       if (city) {
         // By city
         const [wRes, fRes] = await Promise.all([
@@ -167,29 +174,24 @@ const WeatherScreen = ({ navigation }) => {
         ]);
         w = await wRes.json();
         f = await fRes.json();
-        // For alerts, need lat/lon from city result if available
+        // For air quality, need lat/lon from city result if available
         if (w.coord && w.coord.lat && w.coord.lon) {
-          const aRes = await fetch(`${API_BASE}/weather/alerts?lat=${w.coord.lat}&lon=${w.coord.lon}`);
-          a = await aRes.json();
-        } else {
-          a = [];
+          await fetchAirQuality(w.coord.lat, w.coord.lon);
         }
       } else if (lat !== null && lon !== null) {
         // By coordinates
-        const [wRes, fRes, aRes] = await Promise.all([
+        const [wRes, fRes] = await Promise.all([
           fetch(`${API_BASE}/weather/coords?lat=${lat}&lon=${lon}`),
           fetch(`${API_BASE}/weather/forecast/coords?lat=${lat}&lon=${lon}`),
-          fetch(`${API_BASE}/weather/alerts?lat=${lat}&lon=${lon}`),
         ]);
         w = await wRes.json();
         f = await fRes.json();
-        a = await aRes.json();
+        await fetchAirQuality(lat, lon);
       } else {
         throw new Error('Enter a city or coordinates');
       }
       setWeather(w);
       setForecast(f);
-      setAlerts(Array.isArray(a) ? a : (a.alerts || []));
       setIsCustomLocation(true);
     } catch (e) {
       setError(e.message || 'Failed to fetch weather for location');
@@ -213,21 +215,18 @@ const WeatherScreen = ({ navigation }) => {
       await AsyncStorage.setItem(FARMER_PROFILE_CACHE_KEY, JSON.stringify(prof));
       setProfileLoading(false);
       if (!farmLocation || !farmLocation.lat || !farmLocation.lng) throw new Error('No farm location set');
-      // Fetch weather, forecast, alerts and update cache
-      const [wRes, fRes, aRes] = await Promise.all([
+      // Fetch weather, forecast, air quality and update cache
+      const [wRes, fRes] = await Promise.all([
         fetch(`${API_BASE}/weather/coords?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
         fetch(`${API_BASE}/weather/forecast/coords?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
-        fetch(`${API_BASE}/weather/alerts?lat=${farmLocation.lat}&lon=${farmLocation.lng}`),
       ]);
       const w = await wRes.json();
       const f = await fRes.json();
-      const a = await aRes.json();
+      await fetchAirQuality(farmLocation.lat, farmLocation.lng);
       setWeather(w);
       setForecast(f);
-      setAlerts(Array.isArray(a) ? a : (a.alerts || []));
       await AsyncStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(w));
       await AsyncStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(f));
-      await AsyncStorage.setItem(ALERTS_CACHE_KEY, JSON.stringify(Array.isArray(a) ? a : (a.alerts || [])));
     } catch (e) {
       setError(e.message || 'Failed to update weather');
       setProfileLoading(false);
@@ -253,14 +252,14 @@ const WeatherScreen = ({ navigation }) => {
       }
       setProfileLoading(false);
       // Load from cache only
-      const [cachedWeather, cachedForecast, cachedAlerts] = await Promise.all([
+      const [cachedWeather, cachedForecast, cachedAirQuality] = await Promise.all([
         AsyncStorage.getItem(WEATHER_CACHE_KEY),
         AsyncStorage.getItem(FORECAST_CACHE_KEY),
-        AsyncStorage.getItem(ALERTS_CACHE_KEY),
+        AsyncStorage.getItem(AIR_QUALITY_CACHE_KEY),
       ]);
       if (cachedWeather) setWeather(JSON.parse(cachedWeather));
       if (cachedForecast) setForecast(JSON.parse(cachedForecast));
-      if (cachedAlerts) setAlerts(JSON.parse(cachedAlerts));
+      if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
       setIsCustomLocation(false);
     } catch (e) {
       setError(e.message || 'Failed to load farm weather');
@@ -280,6 +279,7 @@ const WeatherScreen = ({ navigation }) => {
 
   // Helper: group forecast by day
   const groupForecastByDay = (list) => {
+    if (!list) return [];
     const days = {};
     list.forEach(item => {
       const date = new Date(item.dt * 1000);
@@ -353,7 +353,7 @@ const WeatherScreen = ({ navigation }) => {
         </Animated.View>
         {/* Main Content */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          {(loading && !weather && !forecast && !alerts) ? (
+          {(loading && !weather && !forecast) ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80 }}>
               <ActivityIndicator size="large" color="#3B82F6" />
               <Text style={{ color: '#fff', marginTop: 16 }}>Loading weather...</Text>
@@ -410,21 +410,14 @@ const WeatherScreen = ({ navigation }) => {
                   );
                 })}
               </ScrollView>
-              {/* Alerts Section */}
-              <View style={styles.sectionHeader}>
-                <Ionicons name="alert-circle" size={22} color="#EF4444" style={{ marginRight: 8 }} />
-                <Text style={styles.sectionTitle}>Weather Alerts</Text>
-              </View>
-              {alerts && alerts.length > 0 ? (
-                alerts.map((alert, idx) => (
-                  <LinearGradient key={idx} colors={["#ef4444", "#18181b"]} style={styles.alertCard}>
-                    <Text style={styles.alertTitle}>{alert.event}</Text>
-                    <Text style={styles.alertDesc}>{alert.description}</Text>
-                    <Text style={styles.alertTime}>{new Date(alert.start * 1000).toLocaleString()} - {new Date(alert.end * 1000).toLocaleString()}</Text>
-                  </LinearGradient>
-                ))
-              ) : (
-                <Text style={{ color: '#fff', opacity: 0.7, marginLeft: 16, marginBottom: 24 }}>No weather alerts for your farm right now.</Text>
+              {/* --- Air Quality Section --- */}
+              {airQuality && airQuality.list && airQuality.list[0] && (
+                <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#23232a', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.1)' }}>
+                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>Air Quality</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>AQI: {airQuality.list[0].main.aqi}</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>CO: {airQuality.list[0].components.co} | NO₂: {airQuality.list[0].components.no2} | O₃: {airQuality.list[0].components.o3}</Text>
+                  <Text style={{ color: '#fff', fontSize: 13 }}>PM2.5: {airQuality.list[0].components.pm2_5} | PM10: {airQuality.list[0].components.pm10}</Text>
+                </View>
               )}
             </>
           )}
@@ -467,10 +460,6 @@ const styles = StyleSheet.create({
   forecastDesc: { color: '#3B82F6', fontSize: 13, fontWeight: '600', marginBottom: 2 },
   forecastLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
   forecastValue: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  alertCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  alertTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  alertDesc: { color: '#fff', fontSize: 13, marginBottom: 4 },
-  alertTime: { color: '#fff', fontSize: 12, opacity: 0.7 },
 });
 
 export default WeatherScreen; 

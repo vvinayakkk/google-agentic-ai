@@ -13,6 +13,7 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,10 +55,15 @@ const AnimatedListItem = ({ children, index }) => {
 // --- Main Screen ---
 const MarketplaceScreen = ({ navigation }) => {
   const [selectedTab, setSelectedTab] = useState('market');
-  const [marketData, setMarketData] = useState([]); // Will be fetched from backend
-  const [myListings, setMyListings] = useState([]); // Will be fetched from backend
+  const [marketData, setMarketData] = useState([]);
+  const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchState, setSearchState] = useState('Maharashtra');
+  const [searchDistrict, setSearchDistrict] = useState(''); // New field
+  const [searchCommodity, setSearchCommodity] = useState('Wheat');
+  const [searching, setSearching] = useState(false);
+  const [listingsLoading, setListingsLoading] = useState(true);
 
   // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -136,24 +142,24 @@ const MarketplaceScreen = ({ navigation }) => {
 
 
   const renderMarketItem = (item, index) => {
-    const isPositive = item.change > 0;
-    const changeColor = isPositive ? '#10B981' : '#EF4444';
-    const glowColor = isPositive ? '#10b981' : '#ef4444';
+    const price = parseFloat(item.modal_price) || 0;
+    // Use a more robust key to prevent errors from malformed API data
+    const key = `${item.arrival_date}-${item.market}-${item.variety}-${index}`;
     return (
-        <AnimatedListItem index={index} key={item.id}>
+        <AnimatedListItem index={index} key={key}>
             <TouchableOpacity style={styles.marketCard} activeOpacity={0.9}>
                  <View style={[StyleSheet.absoluteFillObject, styles.cardGlow]}>
-                    <LinearGradient colors={[glowColor, 'transparent']} style={styles.glowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                    <LinearGradient colors={['#3B82F6', 'transparent']} style={styles.glowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                 </View>
                 <LinearGradient colors={['#18181b', '#27272a']} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <View style={styles.marketHeader}>
-                        <View style={styles.marketInfo}><Text style={styles.cropEmoji}>{item.emoji}</Text><View><Text style={styles.cropName}>{item.name}</Text><Text style={styles.volume}>Vol: {item.volume}</Text></View></View>
-                        <View style={styles.priceInfo}><Text style={styles.price}>₹{item.price.toFixed(1)}</Text><View style={[styles.changeContainer, { backgroundColor: changeColor + '20' }]}><Ionicons name={isPositive ? "trending-up" : "trending-down"} size={12} color={changeColor} /><Text style={[styles.change, { color: changeColor }]}>{isPositive ? '+' : ''}{item.changePercent.toFixed(1)}%</Text></View></View>
+                        <View style={styles.marketInfo}><Text style={styles.cropEmoji}>📍</Text><View><Text style={styles.cropName}>{item.market}</Text><Text style={styles.volume}>District: {item.district}</Text></View></View>
+                        <View style={styles.priceInfo}><Text style={styles.price}>₹{price.toFixed(2)}</Text><Text style={styles.volume}>per Quintal</Text></View>
                     </View>
                     <View style={styles.marketStats}>
-                        <View style={styles.statItem}><Text style={styles.statLabel}>Change</Text><Text style={[styles.statValue, { color: changeColor }]}>₹{Math.abs(item.change).toFixed(2)}</Text></View>
-                        <View style={styles.statItem}><Text style={styles.statLabel}>High</Text><Text style={styles.statValue}>₹{item.high.toFixed(1)}</Text></View>
-                        <View style={styles.statItem}><Text style={styles.statLabel}>Low</Text><Text style={styles.statValue}>₹{item.low.toFixed(1)}</Text></View>
+                        <View style={styles.statItem}><Text style={styles.statLabel}>Variety</Text><Text style={styles.statValue}>{item.variety}</Text></View>
+                        <View style={styles.statItem}><Text style={styles.statLabel}>State</Text><Text style={styles.statValue}>{item.state}</Text></View>
+                        <View style={styles.statItem}><Text style={styles.statLabel}>Arrival</Text><Text style={styles.statValue}>{item.arrival_date}</Text></View>
                     </View>
                 </LinearGradient>
             </TouchableOpacity>
@@ -181,41 +187,55 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   };
 
-  // Load listings from cache, then fetch from backend
-  const fetchListings = async () => {
-    setLoading(true);
+  const fetchMarketPrices = async () => {
+    setSearching(true);
     setError(null);
-    // Try to load from cache first
+    try {
+      let url = `${API_BASE}/market/prices?state=${encodeURIComponent(searchState)}&commodity=${encodeURIComponent(searchCommodity)}`;
+      if (searchDistrict) {
+        url += `&district=${encodeURIComponent(searchDistrict)}`;
+      }
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Failed to fetch market prices.');
+      }
+      const data = await response.json();
+      setMarketData(data);
+    } catch (e) {
+      setError(e.message || 'An error occurred.');
+      setMarketData([]); // Clear old data on error
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const fetchMyListings = async () => {
+    setListingsLoading(true);
     try {
       const cached = await AsyncStorage.getItem(STORAGE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached);
-        setMyListings(parsed);
-        setLoading(false); // Show cached data immediately
+        setMyListings(JSON.parse(cached));
       }
-    } catch (e) {}
-    // Always fetch from backend in background
-    fetch(`${API_BASE}/farmer/${FARMER_ID}/market`)
-      .then(res => res.json())
-      .then(data => {
+    } catch (e) { /* ignore */ }
+
+    try {
+      const response = await fetch(`${API_BASE}/farmer/${FARMER_ID}/market`);
+      if (response.ok) {
+        const data = await response.json();
         setMyListings(data);
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        setLoading(false);
-      })
-      .catch(err => {
-        setError('Failed to load listings');
-        setLoading(false);
-      });
-    // Optionally, fetch market prices from another endpoint if needed
-    setMarketData([
-      { id: 1, name: 'Wheat', price: 245.50, change: +12.30, changePercent: +5.27, volume: '2.4K tons', high: 248.00, low: 232.10, emoji: '🌾' },
-      { id: 2, name: 'Rice', price: 189.75, change: -8.45, changePercent: -4.26, volume: '3.1K tons', high: 198.20, low: 185.30, emoji: '🍚' },
-      { id: 3, name: 'Corn', price: 156.20, change: +3.80, changePercent: +2.49, volume: '1.8K tons', high: 159.40, low: 152.60, emoji: '🌽' },
-    ]);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+    } catch (err) {
+      console.error("Failed to load listings:", err);
+    } finally {
+      setListingsLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchListings();
+    fetchMarketPrices();
+    fetchMyListings();
   }, []);
 
   return (
@@ -229,8 +249,41 @@ const MarketplaceScreen = ({ navigation }) => {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {selectedTab === 'market' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Today's Market Prices</Text><Text style={styles.lastUpdated}>Updated 5 min ago</Text></View>{marketData.map((item, index) => renderMarketItem(item, index))}</View>)}
-          {selectedTab === 'listings' && (<View style={styles.section}><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Your Listings ({myListings.length})</Text><TouchableOpacity style={styles.addButton} onPress={openAddModal}><Ionicons name="add" size={20} color="#10B981" /></TouchableOpacity></View>{myListings.map((item, index) => renderMyListing(item, index))}</View>)}
+          {selectedTab === 'market' && (
+            <View style={styles.section}>
+              <View style={styles.searchContainer}>
+                <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder="State (e.g., Maharashtra)" placeholderTextColor="#64748B" />
+                <TextInput style={styles.searchInput} value={searchDistrict} onChangeText={setSearchDistrict} placeholder="District (Optional)" placeholderTextColor="#64748B" />
+                <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity (e.g., Wheat)" placeholderTextColor="#64748B" />
+              </View>
+              <TouchableOpacity style={[styles.searchButton, searching && styles.disabledButton]} onPress={fetchMarketPrices} disabled={searching}>
+                {searching ? <ActivityIndicator color="#fff" /> : <Text style={styles.searchButtonText}>Search</Text>}
+              </TouchableOpacity>
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              {searching && marketData.length === 0 ? (
+                <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
+              ) : marketData.length > 0 ? (
+                marketData.map((item, index) => renderMarketItem(item, index))
+              ) : (
+                <Text style={{ color: '#9ca3af', textAlign: 'center', marginTop: 20 }}>
+                  No market data found for this selection.
+                </Text>
+              )}
+            </View>
+          )}
+          {selectedTab === 'listings' && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Your Listings ({myListings.length})</Text>
+                <TouchableOpacity style={styles.addButton} onPress={openAddModal}><Ionicons name="add" size={20} color="#10B981" /></TouchableOpacity>
+              </View>
+              {listingsLoading && myListings.length === 0 ? (
+                <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
+              ) : (
+                myListings.map((item, index) => renderMyListing(item, index))
+              )}
+            </View>
+          )}
         </ScrollView>
       )}
       {isModalVisible && (
@@ -272,6 +325,12 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
   lastUpdated: { fontSize: 12, color: '#64748B' },
+  searchContainer: { flexDirection: 'column', marginBottom: 16, gap: 12 },
+  searchInput: { backgroundColor: '#27272a', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: '#fff', borderWidth: 1, borderColor: '#475569' },
+  searchButton: { paddingVertical: 14, backgroundColor: '#3B82F6', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  searchButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  disabledButton: { backgroundColor: '#64748B' },
+  errorText: { color: '#EF4444', textAlign: 'center', marginBottom: 12 },
   addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#18181b', alignItems: 'center', justifyContent: 'center' },
   marketCard: { borderRadius: 16, marginBottom: 12, overflow: 'hidden' },
   marketCardGradient: { padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
