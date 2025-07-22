@@ -129,7 +129,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
   const insets = useSafeAreaInsets();
-  const API_BASE = 'http://192.168.0.111:8000'; // Make sure this IP is accessible from your device
+  const API_BASE = 'http://10.123.4.245:8000'; // Make sure this IP is accessible from your device
 
   const PROFILE_CACHE_KEY = `farmer-profile-cache-${farmerId}`;
 
