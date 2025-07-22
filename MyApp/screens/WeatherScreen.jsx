@@ -22,7 +22,7 @@ import Markdown from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://10.123.4.245:8000';
 const FARMER_ID = 'f001';
 
 const WEATHER_CACHE_KEY = 'weather-cache';
@@ -40,9 +40,6 @@ const WeatherScreen = ({ navigation }) => {
   const [airQuality, setAirQuality] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchValue, setSearchValue] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [isCustomLocation, setIsCustomLocation] = useState(false);
   const farmLocationRef = useRef(null);
   const farmProfileRef = useRef(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -151,7 +148,6 @@ const WeatherScreen = ({ navigation }) => {
         if (cachedWeather) setWeather(JSON.parse(cachedWeather));
         if (cachedForecast) setForecast(JSON.parse(cachedForecast));
         if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
-        setIsCustomLocation(false);
       } catch (e) {
         if (isMounted) setError(e.message || 'Failed to load weather');
       }
@@ -198,54 +194,6 @@ const WeatherScreen = ({ navigation }) => {
     return () => { isMounted = false; };
   }, []);
 
-  // --- Search Handler ---
-  const handleSearch = async () => {
-    setSearching(true);
-    setError(null);
-    let city = null, lat = null, lon = null;
-    const trimmed = searchValue.trim();
-    // Check if input is coordinates
-    if (/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(trimmed)) {
-      // Coordinates
-      [lat, lon] = trimmed.split(',').map(s => parseFloat(s.trim()));
-    } else {
-      city = trimmed;
-    }
-    try {
-      let w, f;
-      if (city) {
-        // By city
-        const [wRes, fRes] = await Promise.all([
-          fetch(`${API_BASE}/weather/city?city=${encodeURIComponent(city)}`),
-          fetch(`${API_BASE}/weather/forecast/city?city=${encodeURIComponent(city)}`),
-        ]);
-        w = await wRes.json();
-        f = await fRes.json();
-        // For air quality, need lat/lon from city result if available
-        if (w.coord && w.coord.lat && w.coord.lon) {
-          await fetchAirQuality(w.coord.lat, w.coord.lon);
-        }
-      } else if (lat !== null && lon !== null) {
-        // By coordinates
-        const [wRes, fRes] = await Promise.all([
-          fetch(`${API_BASE}/weather/coords?lat=${lat}&lon=${lon}`),
-          fetch(`${API_BASE}/weather/forecast/coords?lat=${lat}&lon=${lon}`),
-        ]);
-        w = await wRes.json();
-        f = await fRes.json();
-        await fetchAirQuality(lat, lon);
-      } else {
-        throw new Error('Enter a city or coordinates');
-      }
-      setWeather(w);
-      setForecast(f);
-      setIsCustomLocation(true);
-    } catch (e) {
-      setError(e.message || 'Failed to fetch weather for location');
-    }
-    setSearching(false);
-  };
-
   // --- Update Handler (fetches latest and updates cache) ---
   const handleUpdate = async () => {
     setLoading(true);
@@ -276,40 +224,6 @@ const WeatherScreen = ({ navigation }) => {
       await AsyncStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(f));
     } catch (e) {
       setError(e.message || 'Failed to update weather');
-      setProfileLoading(false);
-    }
-    setLoading(false);
-  };
-
-  // --- Back to Farm Handler (loads from cache only) ---
-  const handleBackToFarm = async () => {
-    setLoading(true);
-    setProfileLoading(true);
-    setError(null);
-    try {
-      // Load profile from cache
-      const cachedProfile = await AsyncStorage.getItem(FARMER_PROFILE_CACHE_KEY);
-      let prof = null;
-      if (cachedProfile) {
-        prof = JSON.parse(cachedProfile);
-        setProfile(prof);
-        farmProfileRef.current = prof;
-        const { farmLocation } = prof;
-        farmLocationRef.current = farmLocation;
-      }
-      setProfileLoading(false);
-      // Load from cache only
-      const [cachedWeather, cachedForecast, cachedAirQuality] = await Promise.all([
-        AsyncStorage.getItem(WEATHER_CACHE_KEY),
-        AsyncStorage.getItem(FORECAST_CACHE_KEY),
-        AsyncStorage.getItem(AIR_QUALITY_CACHE_KEY),
-      ]);
-      if (cachedWeather) setWeather(JSON.parse(cachedWeather));
-      if (cachedForecast) setForecast(JSON.parse(cachedForecast));
-      if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
-      setIsCustomLocation(false);
-    } catch (e) {
-      setError(e.message || 'Failed to load farm weather');
       setProfileLoading(false);
     }
     setLoading(false);

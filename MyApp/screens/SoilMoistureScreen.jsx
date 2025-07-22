@@ -29,23 +29,19 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://192.168.0.111:8000'; // Ensure this is your correct local IP
+const API_BASE = 'http://10.123.4.245:8000'; // Ensure this is your correct local IP
 const CACHE_KEY = 'soilMoistureDataCache';
 const FARMER_ID = 'f001';
 
 const SoilMoistureScreen = ({ navigation }) => {
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
-  const [state, setState] = useState('');
-  const [district, setDistrict] = useState('');
   const [loading, setLoading] = useState(false);
-  const [allStates, setAllStates] = useState([]);
-  const [allDistricts, setAllDistricts] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [summaryAnim] = useState(new Animated.Value(0));
   const [cardAnims, setCardAnims] = useState([]);
   const [masterStates, setMasterStates] = useState([]);
   const [masterDistricts, setMasterDistricts] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
   const [aiModalVisible, setAiModalVisible] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -77,8 +73,6 @@ const SoilMoistureScreen = ({ navigation }) => {
     try {
       let url = `${API_BASE}/soil-moisture?`;
       const params = [];
-      if (state && state.trim()) params.push(`state=${encodeURIComponent(state)}`);
-      if (district && district.trim()) params.push(`district=${encodeURIComponent(district)}`);
       url += params.join('&');
       const response = await fetch(url);
       if (!response.ok) {
@@ -104,13 +98,7 @@ const SoilMoistureScreen = ({ navigation }) => {
         const response = await fetch(`${API_BASE}/farmer/f001/profile`);
         if (!response.ok) return;
         const profile = await response.json();
-        if (profile && profile.state) {
-          setState(profile.state);
-        } else if (profile && profile.village) {
-          // Try to extract state from village string if possible
-          const parts = profile.village.split(',').map(s => s.trim());
-          if (parts.length > 1) setState(parts[1]);
-        }
+        // setState(profile.state); // Removed as per edit hint
       } catch (e) {}
     };
     fetchFarmerProfile();
@@ -134,8 +122,8 @@ const SoilMoistureScreen = ({ navigation }) => {
   // Extract unique filter options from data
   useEffect(() => {
     if (data && data.length > 0) {
-      setAllStates([...new Set(data.map(item => item.State).filter(Boolean))]);
-      setAllDistricts([...new Set(data.map(item => item.District).filter(Boolean))]);
+      // setAllStates([...new Set(data.map(item => item.State).filter(Boolean))]); // Removed as per edit hint
+      // setAllDistricts([...new Set(data.map(item => item.District).filter(Boolean))]); // Removed as per edit hint
     }
   }, [data]);
 
@@ -169,21 +157,17 @@ const SoilMoistureScreen = ({ navigation }) => {
 
   // Update filteredData whenever data or filters change
   useEffect(() => {
-    let filtered = data;
-    if (state && state.trim()) filtered = filtered.filter(item => item.State && item.State.toLowerCase().includes(state.toLowerCase()));
-    if (district && district.trim()) filtered = filtered.filter(item => item.District && item.District.toLowerCase().includes(district.toLowerCase()));
-    setFilteredData(filtered);
-  }, [data, state, district]);
+    setFilteredData(data);
+  }, [data]);
 
   const clearFilters = () => {
-    setState('');
-    setDistrict('');
+    // No filters to clear
   };
 
   // Handler for AI Assistant button
   const handleAIAssistant = async () => {
-    if (!district) {
-      Alert.alert('Select District', 'Please select a district first to get AI suggestions.');
+    if (!data.length) { // Changed from district to data
+      Alert.alert('No Data', 'No soil moisture data available to get AI suggestions.');
       return;
     }
     setAiModalVisible(true);
@@ -194,7 +178,7 @@ const SoilMoistureScreen = ({ navigation }) => {
       const response = await fetch(`${API_BASE}/soil-moisture/ai-suggestion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state, district, farmer_id: FARMER_ID }),
+        body: JSON.stringify({ commodity: 'All', farmer_id: FARMER_ID }), // Changed from state, district to commodity
       });
       const result = await response.json();
       if (result.suggestions) {
@@ -284,45 +268,9 @@ const SoilMoistureScreen = ({ navigation }) => {
             <Text style={styles.aiButtonText}>{t('soil.ai_assistant')}</Text>
           </TouchableOpacity>
           <View style={styles.searchContainer}>
-            {/* State Input with Suggestions */}
+            {/* Commodity Input with Suggestions */}
             <View style={{ marginBottom: 8 }}>
-              <TextInput
-                style={styles.searchInput}
-                value={state}
-                onChangeText={setState}
-                placeholder={t('soil.state')}
-                placeholderTextColor="#555"
-                autoCapitalize="words"
-              />
-              {state.length > 0 && masterStates.length > 0 && (
-                <View style={styles.suggestionList}>
-                  {masterStates.filter(s => s.toLowerCase().includes(state.toLowerCase()) && s !== state).slice(0, 5).map(item => (
-                    <TouchableWithoutFeedback key={item} onPress={() => setState(item)}>
-                      <View style={styles.suggestionItem}><Text style={styles.suggestionText}>{item}</Text></View>
-                    </TouchableWithoutFeedback>
-                  ))}
-                </View>
-              )}
-            </View>
-            {/* District Input with Suggestions */}
-            <View style={{ marginBottom: 8 }}>
-              <TextInput
-                style={styles.searchInput}
-                value={district}
-                onChangeText={setDistrict}
-                placeholder={t('soil.district')}
-                placeholderTextColor="#555"
-                autoCapitalize="words"
-              />
-              {district.length > 0 && masterDistricts.length > 0 && (
-                <View style={styles.suggestionList}>
-                  {masterDistricts.filter(d => d.toLowerCase().includes(district.toLowerCase()) && d !== district).slice(0, 5).map(item => (
-                    <TouchableWithoutFeedback key={item} onPress={() => setDistrict(item)}>
-                      <View style={styles.suggestionItem}><Text style={styles.suggestionText}>{item}</Text></View>
-                    </TouchableWithoutFeedback>
-                  ))}
-                </View>
-              )}
+              <Text style={styles.searchInput}>All Soil Moisture Data</Text>
             </View>
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
               <Text style={styles.clearButtonText}>{t('soil.clear_filters')}</Text>
@@ -353,7 +301,7 @@ const SoilMoistureScreen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('ai_suggestions_title', { district: district ? `${district}, ` : '', state: state })}</Text>
+            <Text style={styles.modalTitle}>AI Suggestions for All Soil Moisture Data</Text> {/* Changed from district to searchCommodity */}
             {aiLoading ? (
               <ActivityIndicator size="large" color="#FFD580" style={{ marginVertical: 20 }} />
             ) : aiError ? (
@@ -383,7 +331,7 @@ const styles = StyleSheet.create({
     scrollView: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
     section: { marginBottom: 24 },
     searchContainer: { flexDirection: 'column', marginBottom: 16, gap: 12 },
-    searchInput: { backgroundColor: '#1C1C1E', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: '#fff', borderWidth: 1, borderColor: '#3A3A3C' },
+    searchInput: { backgroundColor: '#1C1C1E', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: '#fff', borderWidth: 1, borderColor: '#3A3A3C', textAlign: 'center', fontWeight: 'bold' },
     searchButton: { paddingVertical: 14, backgroundColor: '#FFFFFF', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
     searchButtonText: { color: '#000000', fontSize: 16, fontWeight: 'bold' },
     disabledButton: { backgroundColor: '#3A3A3C' },
