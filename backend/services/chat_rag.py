@@ -196,22 +196,34 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
         ("human", "User question: {user_query}\n\nContext:\n{context_text}\n" + msw_prompt + "\nChat history (numbered list):\n{chat_history}\n"),
     ])
     memory = memory or ConversationBufferMemory(return_messages=True)
-    if multimodal_message:
-        # Use Gemini multimodal input
-        response = model.invoke([multimodal_message])
-        print("image output:",response)
-    else:
-        chain = prompt | model | StrOutputParser()
-        response = chain.invoke({
-            "user_query": user_query,
-            "context_text": context_text,
-            "chat_history": formatted_history,
-            "question_language": question_language
-        })
-        print("text output:",response)
-    memory.save_context({"input": user_query}, {"output": response})
-    return {
-        "response": extract_gemini_content(response),
-        "memory": memory.buffer,
-        "context": context
-    } 
+    try:
+        if multimodal_message:
+            response = model.invoke([multimodal_message])
+            print("image output:", response)
+        else:
+            chain = prompt | model | StrOutputParser()
+            response = chain.invoke({
+                "user_query": user_query,
+                "context_text": context_text,
+                "chat_history": formatted_history,
+                "question_language": question_language
+            })
+            print("text output:", response)
+        # Always extract content as string
+        content = extract_gemini_content(response)
+        try:
+            memory.save_context({"input": user_query}, {"output": content})
+        except Exception as e:
+            print("Memory save error:", e)
+        return {
+            "response": content,
+            "memory": memory.buffer,
+            "context": context
+        }
+    except Exception as e:
+        print("RAG error:", e)
+        return {
+            "response": f"Sorry, there was an error processing your request: {e}",
+            "memory": "",
+            "context": {}
+        } 
