@@ -27,7 +27,8 @@ const getKissanAIResponse = async (message, context) => {
     try {
         const response = await axios.post('http://192.168.0.111:8000/chat/rag', {
             user_query: message.content,
-            chat_history: context ? JSON.stringify(context) : ""
+            chat_history: context ? JSON.stringify(context) : "",
+            extra_context: allContext // Pass all context to backend
         });
         // Prefer bullet points and links if present
         if (response.data && response.data.response) {
@@ -131,31 +132,62 @@ const ThinkingIndicator = () => {
     );
 };
 
-// --- Features View Component ---
-const FeaturesView = ({ navigation }) => (
-    <View style={styles.featuresContainer}>
-        {/* Key Feature Box */}
-        <TouchableOpacity style={styles.keyFeatureBox} onPress={() => navigation.navigate('DocumentAgentScreen')} activeOpacity={0.85}>
-            <MaterialCommunityIcons name="file-document-multiple" size={44} color="#FFB07C" style={{marginBottom: 6}} />
-            <Text style={styles.keyFeatureTitle}>Document Agent</Text>
-            <Text style={styles.keyFeatureSubtitle}>Create & manage your documents</Text>
-        </TouchableOpacity>
-        <View style={styles.featuresRow}>
-            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CattleScreen')}><MaterialCommunityIcons name="cow" size={40} color="#10b981" /><Text style={styles.featureText}>Cattle Schedule</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CalenderScreen')}><MaterialCommunityIcons name="calendar-month-outline" size={40} color="#3b82f6" /><Text style={styles.featureText}>Calendar</Text></TouchableOpacity>
+const featureOptions = [
+    { icon: <MaterialCommunityIcons name="bank" size={20} color="#f59e0b" />, label: 'Marketplace', screen: 'MarketplaceScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#3b82f6" />, label: 'Calendar', screen: 'CalenderScreen', color: '#3b82f6' },
+    { icon: <MaterialCommunityIcons name="cow" size={20} color="#10b981" />, label: 'Cattle Schedule', screen: 'CattleScreen', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'Crop Cycle', screen: 'CropCycle', color: '#f59e0b' },
+    // More options
+    { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'Weather', screen: 'WeatherScreen', color: '#3b82f6' },
+    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'Soil', screen: 'SoilMoistureScreen', color: '#38bdf8' },
+    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'EduFinance', screen: 'EduFinanceScreen', color: '#a78bfa' },
+    { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'Document Builder', screen: 'DocumentAgentScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'Crop Doctor', screen: 'CropDoctor', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: 'Rental system', screen: 'RentalSystemScreen', color: '#f59e0b' },
+];
+
+const FeaturesView = ({ navigation }) => {
+    const [showAll, setShowAll] = useState(false);
+    const mainOptions = featureOptions.slice(0, 4);
+    const extraOptions = featureOptions.slice(4);
+    return (
+        <View style={styles.featuresPillContainer}>
+            <Text style={styles.featuresTitle}>What can I help with?</Text>
+            <View style={styles.pillRow}>
+                {mainOptions.map((opt) => (
+                    <TouchableOpacity
+                        key={opt.label}
+                        style={styles.pillButton}
+                        onPress={() => navigation.navigate(opt.screen)}
+                        activeOpacity={0.85}
+                    >
+                        {opt.icon}
+                        <Text style={styles.pillLabel}>{opt.label}</Text>
+                    </TouchableOpacity>
+                ))}
+                <TouchableOpacity style={styles.pillButton} onPress={() => setShowAll((v) => !v)}>
+                    <MaterialCommunityIcons name="dots-horizontal" size={20} color="#fff" />
+                    <Text style={[styles.pillLabel, { color: '#fff' }]}>More</Text>
+                </TouchableOpacity>
+            </View>
+            {showAll && (
+                <View style={styles.pillRowMore}>
+                    {extraOptions.map((opt) => (
+                        <TouchableOpacity
+                            key={opt.label}
+                            style={styles.pillButton}
+                            onPress={() => navigation.navigate(opt.screen)}
+                            activeOpacity={0.85}
+                        >
+                            {opt.icon}
+                            <Text style={styles.pillLabel}>{opt.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
         </View>
-        <View style={styles.featuresRow}>
-            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropCycle')}><MaterialCommunityIcons name="recycle-variant" size={40} color="#f59e0b" /><Text style={styles.featureText}>Crop Cycle</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropDoctor')}><MaterialCommunityIcons name="stethoscope" size={40} color="#a259f7" /><Text style={styles.featureText}>Crop Doctor</Text></TouchableOpacity>
-        </View>
-        <View style={styles.featuresRow}>
-            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('WeatherScreen')}>
-                <MaterialCommunityIcons name="weather-partly-cloudy" size={40} color="#3b82f6" />
-                <Text style={styles.featureText}>Weather</Text>
-            </TouchableOpacity>
-        </View>
-    </View>
-);
+    );
+};
 
 // --- Main Chat Screen Component ---
 export default function VoiceChatInputScreen({ navigation, route }) {
@@ -166,6 +198,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     const [isThinking, setIsThinking] = useState(false);
     const [currentContext, setCurrentContext] = useState(null);
     const flatListRef = useRef();
+    const [allContext, setAllContext] = useState({ weather: '', soil: '', market: '' });
 
     useEffect(() => {
         const context = route.params?.context;
@@ -194,6 +227,17 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             }, 1500);
         }
     }, [route.params?.context]);
+
+    useEffect(() => {
+        // Fetch all context on mount
+        const loadAllContext = async () => {
+            const weather = await fetchWeatherContext();
+            const soil = await fetchSoilContext();
+            const market = await fetchMarketContext();
+            setAllContext({ weather, soil, market });
+        };
+        loadAllContext();
+    }, []);
 
 
     const saveChatToHistory = async (title, messages) => {
@@ -274,6 +318,66 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         } catch (err) { Alert.alert('Error', 'Could not open the image picker.'); }
     };
 
+    const FARMER_ID = 'f001';
+    const API_BASE = 'http://192.168.0.111:8000';
+    const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
+    const MARKET_CACHE_KEY = 'market-prices-cache';
+
+    // Helper to fetch weather AI analysis
+    const fetchWeatherContext = async () => {
+        let weatherAnalysis = '';
+        try {
+            weatherAnalysis = await AsyncStorage.getItem(WEATHER_ANALYSIS_CACHE_KEY);
+            if (!weatherAnalysis) {
+                const res = await fetch(`${API_BASE}/weather/ai-analysis?farmer_id=${FARMER_ID}`);
+                const data = await res.json();
+                weatherAnalysis = data.analysis || '';
+                await AsyncStorage.setItem(WEATHER_ANALYSIS_CACHE_KEY, weatherAnalysis);
+            }
+        } catch (e) { weatherAnalysis = ''; }
+        return weatherAnalysis;
+    };
+
+    // Helper to fetch soil AI suggestions (default to Maharashtra, Pune if not set)
+    const fetchSoilContext = async (state = 'Maharashtra', district = 'Pune') => {
+        try {
+            const response = await fetch(`${API_BASE}/soil-moisture/ai-suggestion`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state, district, farmer_id: FARMER_ID }),
+            });
+            const result = await response.json();
+            if (result.suggestions) {
+                return result.suggestions.join('\n');
+            }
+        } catch (e) {}
+        return '';
+    };
+
+    // Helper to fetch market prices context (default to Maharashtra, Wheat if not set)
+    const fetchMarketContext = async (state = 'Maharashtra', commodity = 'Wheat', district = '') => {
+        let marketData = [];
+        try {
+            const cached = await AsyncStorage.getItem(MARKET_CACHE_KEY);
+            if (cached) {
+                marketData = JSON.parse(cached);
+            } else {
+                let url = `${API_BASE}/market/prices?state=${encodeURIComponent(state)}&commodity=${encodeURIComponent(commodity)}`;
+                if (district) url += `&district=${encodeURIComponent(district)}`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    marketData = await response.json();
+                    await AsyncStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(marketData));
+                }
+            }
+        } catch (e) { marketData = []; }
+        // Summarize market data for context
+        if (marketData.length > 0) {
+            return marketData.slice(0, 5).map(item => `${item.Commodity || item.name} in ${item.Market || item.market}: ₹${item.Modal_Price || item.price} per Quintal`).join('\n');
+        }
+        return '';
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={[styles.topBar, { paddingTop: insets.top }]}>
@@ -284,7 +388,11 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     <TouchableOpacity onPress={() => navigation.navigate('ChoiceScreen')}><Ionicons name="home-outline" size={28} color="white" /></TouchableOpacity>
                 </View>
             </View>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -500}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            >
                 <View style={{ flex: 1 }}>
                     {chatHistory.length === 0 ? (
                         <FeaturesView navigation={navigation} />
@@ -309,7 +417,32 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     ) : (
                         <TouchableOpacity onPress={() => handleSendMessage()}><MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" /></TouchableOpacity>
                     )}
-                    <TouchableOpacity style={styles.newChatButton} onPress={handleStartNewChat}><Ionicons name="add-circle" size={32} color="#10b981" /></TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.newChatButton}
+                        onPress={async () => {
+                            if (chatHistory.length > 0) {
+                                const newChat = {
+                                    id: Date.now().toString(),
+                                    title: chatTitle || 'Untitled Chat',
+                                    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                                    messages: chatHistory,
+                                    context: allContext // Save context with chat history
+                                };
+                                try {
+                                    await axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat);
+                                } catch (e) {
+                                    Alert.alert('Error', 'Failed to save chat to backend.');
+                                }
+                            }
+                            setChatHistory([]);
+                            setChatTitle('');
+                            setInputValue('');
+                            setCurrentContext(null);
+                            navigation.navigate('ChatHistory');
+                        }}
+                    >
+                        <Ionicons name="add-circle" size={32} color="#10b981" />
+                    </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -324,7 +457,7 @@ const styles = StyleSheet.create({
     topRightIcons: { flexDirection: 'row' },
     topRightIcon: { marginRight: 15 },
     chatList: { flex: 1 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 25, minHeight: 60, paddingVertical: 5 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 20, minHeight: 60, paddingVertical: 5 },
     plusButton: { marginRight: 10 },
     textInput: { flex: 1, color: 'white', fontSize: 18, marginRight: 10, maxHeight: 120 },
     voiceButton: { backgroundColor: '#333', borderRadius: 20, padding: 8 },
@@ -407,4 +540,19 @@ const styles = StyleSheet.create({
       marginTop: 2,
       textAlign: 'center',
     },
+    featuresGridContainer: { marginTop: 40, alignItems: 'center', justifyContent: 'center' },
+    featuresTitle: { color: 'white', fontSize: 22, fontWeight: 'bold', marginBottom: 24 },
+    featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, width: '100%' },
+    featureGridBox: {
+        width: 120, height: 60, backgroundColor: '#232323', borderRadius: 16, alignItems: 'center', justifyContent: 'center', margin: 8, elevation: 2,
+        flexDirection: 'column',
+    },
+    featureGridLabel: { color: '#fff', fontSize: 14, marginTop: 6, textAlign: 'center' },
+    featuresPillContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 0 },
+    pillRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24, flexWrap: 'wrap', gap: 10 },
+    pillRowMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16, flexWrap: 'wrap', gap: 10 },
+    pillButton: {
+        flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 8, marginHorizontal: 4, marginVertical: 4, backgroundColor: 'transparent', borderColor: '#bbb',
+    },
+    pillLabel: { fontSize: 15, fontWeight: '500', marginLeft: 6, color: '#bbb' },
 });
