@@ -129,6 +129,11 @@ const NewMarketPricesScreen = ({ navigation }) => {
   };
   
   const handleSearch = async () => {
+    if (!searchCommodity.trim()) {
+      // If no commodity is entered, fetch top commodities (like refresh)
+      await fetchTopCommodities(true);
+      return;
+    }
     setIsSearching(true);
     setError(null);
     try {
