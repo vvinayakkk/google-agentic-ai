@@ -624,11 +624,11 @@ export default function CropCycleScreen({ navigation }) {
         <View style={{ flex: 1 }}>
           {/* Single header bar for crop detail view */}
           <View style={[styles.topBar, { paddingTop: insets.top }]}> 
-            <TouchableOpacity onPress={handleBackPress} style={{ position: 'absolute', left: 20, zIndex: 2 }}>
+            <TouchableOpacity onPress={handleBackPress} style={{ position: 'absolute', left: 30, zIndex: 2,bottom:20 }}>
               <Ionicons name="arrow-back" size={28} color="white" />
             </TouchableOpacity>
             <Text style={styles.topBarTitle}>{CROP_DATA[selectedCropKey]?.name || ''}</Text>
-            <View style={{ position: 'absolute', right: 20, flexDirection: 'row', zIndex: 2 }}>
+            <View style={{ position: 'absolute', right: 20, flexDirection: 'row', zIndex: 2 ,top:60}}>
               <TouchableOpacity onPress={() => openEditModal(CROP_DATA[selectedCropKey])} style={{ backgroundColor: '#3B82F6', borderRadius: 20, padding: 8, marginRight: 8 }}>
                 <Ionicons name="create-outline" size={20} color="#fff" />
               </TouchableOpacity>
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#222',
   },
