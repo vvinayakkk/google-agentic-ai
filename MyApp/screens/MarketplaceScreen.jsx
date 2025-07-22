@@ -26,7 +26,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://192.168.0.111:8000'; // Use device IP for backend
+const API_BASE = 'http://10.123.4.245:8000'; // Use device IP for backend
 const FARMER_ID = 'f001';
 const STORAGE_KEY = 'market-listings-cache';
 
@@ -78,6 +78,8 @@ const MarketplaceScreen = ({ navigation }) => {
   const [searchCommodity, setSearchCommodity] = useState('');
   const [searching, setSearching] = useState(false);
   const [listingsLoading, setListingsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedMarkets, setExpandedMarkets] = useState({});
 
   // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -209,6 +211,63 @@ const MarketplaceScreen = ({ navigation }) => {
     // eslint-disable-next-line
   }, [myListings.length]);
 
+  // Combine and deduplicate marketData and myListings
+  const getCombinedData = () => {
+    // Normalize and mark source
+    const normalizedMarket = (marketData || []).map(item => ({
+      ...item,
+      source: 'market',
+      key: `${item.Commodity || item.commodity || ''}|${item.Market || item.market || ''}|${item.Variety || item.variety || ''}`,
+      date: new Date(item.Arrival_Date || item.arrival_date || 0)
+    }));
+    const normalizedMy = (myListings || []).map(item => ({
+      ...item,
+      source: 'my',
+      key: `${item.name || ''}|${item.quantity || ''}`,
+      date: new Date(item.createdAt || item.created_at || 0)
+    }));
+    // Merge
+    const all = [...normalizedMarket, ...normalizedMy];
+    // Deduplicate by key, keep latest by date
+    const deduped = Object.values(
+      all.reduce((acc, item) => {
+        if (!acc[item.key] || (item.date > acc[item.key].date)) {
+          acc[item.key] = item;
+        }
+        return acc;
+      }, {})
+    );
+    // Filter by search term (commodity or market name)
+    if (!searchTerm.trim()) return deduped;
+    const term = searchTerm.toLowerCase();
+    return deduped.filter(item => {
+      if (item.source === 'market') {
+        return (
+          (item.Commodity || item.commodity || '').toLowerCase().includes(term) ||
+          (item.Market || item.market || '').toLowerCase().includes(term)
+        );
+      } else {
+        return (
+          (item.name || '').toLowerCase().includes(term) ||
+          (item.quantity || '').toLowerCase().includes(term)
+        );
+      }
+    });
+  };
+  // Group by market name, then render crops/commodities under each market
+  const groupByMarket = (data) => {
+    const grouped = {};
+    data.forEach(item => {
+      // Use market name for grouping, fallback to 'My Listings (No Market)' if not present
+      const market = item.Market || item.market || (item.source === 'my' ? (item.market || 'My Listings (No Market)') : '-');
+      if (!grouped[market]) grouped[market] = [];
+      grouped[market].push(item);
+    });
+    return grouped;
+  };
+  const combinedData = getCombinedData();
+  const groupedData = groupByMarket(combinedData);
+
   const renderMarketItem = (item, index) => {
     const price = parseFloat(item.modal_price) || 0;
     // Use a more robust key to prevent errors from malformed API data
@@ -328,22 +387,97 @@ const MarketplaceScreen = ({ navigation }) => {
   // Filter by commodity if searchCommodity is set
   const filteredMarketData = !searchCommodity.trim() ? marketData : marketData.filter(item => (item.Commodity || item.commodity || '').toLowerCase().includes(searchCommodity.toLowerCase()));
 
+  const toggleMarket = (market) => {
+    setExpandedMarkets(prev => ({ ...prev, [market]: !prev[market] }));
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>{t('marketplace.title')}</Text><Text style={styles.headerSubtitle}>{t('marketplace.subtitle')}</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>{t('marketplace.live')}</Text></View></View>
-      <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>{t('marketplace.tab_market_prices')}</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>{t('marketplace.tab_my_listings')}</Text></TouchableOpacity></View>
+      <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>Marketplace</Text><Text style={styles.headerSubtitle}>Live market prices & listings</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View></View>
+      <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>Market Prices</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>My Listings</Text></TouchableOpacity></View>
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>{t('common.loading')}</Text></View>
       ) : error ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{t('marketplace.error_occurred')}</Text></View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Search Box */}
+          <View style={{ paddingHorizontal: 20, marginTop: 10, marginBottom: 10 }}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholder={t('marketplace.search_placeholder')}
+              placeholderTextColor="#64748B"
+            />
+          </View>
           {selectedTab === 'market' && (
-            // Render NewMarketPricesScreen instead of old market prices UI
-            <View style={{ flex: 1, minHeight: 400 }}>
-              <NewMarketPricesScreen navigation={navigation} embedded={true} />
-            </View>
+            Object.keys(groupedData).length === 0 ? (
+              <Text style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>{t('marketplace.no_results')}</Text>
+            ) : (
+              Object.entries(groupedData).map(([market, items]) => (
+                <View key={market} style={{ marginBottom: 28 }}>
+                  <TouchableOpacity
+                    onPress={() => toggleMarket(market)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 0,
+                      backgroundColor: '#23232a',
+                      borderRadius: 16,
+                      paddingVertical: 16,
+                      paddingHorizontal: 20,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.12,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="storefront" size={22} color="#FFD580" style={{ marginRight: 12 }} />
+                    <Text style={{ color: '#FFD580', fontWeight: 'bold', fontSize: 20, flex: 1, letterSpacing: 0.5 }}>{market}</Text>
+                    <Ionicons name={expandedMarkets[market] ? 'chevron-down' : 'chevron-forward'} size={24} color="#FFD580" />
+                  </TouchableOpacity>
+                  {expandedMarkets[market] && (
+                    <View style={{ marginTop: 8 }}>
+                      {items.map((item, index) => (
+                        <AnimatedListItem index={index} key={item.key}>
+                          <TouchableOpacity style={[styles.marketCard, { marginBottom: 12, backgroundColor: '#18181b', borderRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }]} activeOpacity={0.92}>
+                            <View style={[StyleSheet.absoluteFillObject, styles.cardGlow]}>
+                              <LinearGradient colors={['#3B82F6', 'transparent']} style={styles.glowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                            </View>
+                            <LinearGradient colors={['#18181b', '#23232a']} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                              <View style={styles.marketHeader}>
+                                <View style={styles.marketInfo}>
+                                  <Text style={styles.cropEmoji}>{item.emoji || '📍'}</Text>
+                                  <View>
+                                    <Text style={styles.cropName}>{item.Commodity || item.commodity || item.name}</Text>
+                                    <Text style={styles.volume}>{t('marketplace.variety')}: {item.Variety || item.variety || '-'}</Text>
+                                  </View>
+                                </View>
+                                <View style={styles.priceInfo}>
+                                  <Text style={styles.price}>
+                                    ₹{Number(item.Modal_Price || item.modal_price || item.myPrice || 0).toFixed(2)}
+                                  </Text>
+                                  <Text style={styles.volume}>{t('marketplace.per_quintal')}</Text>
+                                  <Text style={{ color: item.source === 'my' ? '#FFD580' : '#3B82F6', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>{item.source === 'my' ? t('marketplace.my_listing') : t('marketplace.market')}</Text>
+                                </View>
+                              </View>
+                              <View style={styles.marketStats}>
+                                <View style={styles.statItem}><Text style={styles.statLabel}>{t('marketplace.min_price')}</Text><Text style={styles.statValue}>₹{Number(item.Min_Price || item.min_price || 0).toFixed(2)}</Text></View>
+                                <View style={styles.statItem}><Text style={styles.statLabel}>{t('marketplace.max_price')}</Text><Text style={styles.statValue}>₹{Number(item.Max_Price || item.max_price || 0).toFixed(2)}</Text></View>
+                              </View>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        </AnimatedListItem>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+            )
           )}
           {selectedTab === 'listings' && (
             <View style={styles.section}>

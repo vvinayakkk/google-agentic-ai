@@ -29,7 +29,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://192.168.0.111:8000'; // Ensure this is your correct local IP
+const API_BASE = 'http://10.123.4.245:8000'; // Ensure this is your correct local IP
 const CACHE_KEY = 'soilMoistureDataCache';
 const FARMER_ID = 'f001';
 
@@ -166,7 +166,7 @@ const SoilMoistureScreen = ({ navigation }) => {
 
   // Handler for AI Assistant button
   const handleAIAssistant = async () => {
-    if (!data.length) { // Changed from district to data
+    if (!data.length) {
       Alert.alert('No Data', 'No soil moisture data available to get AI suggestions.');
       return;
     }
@@ -175,10 +175,14 @@ const SoilMoistureScreen = ({ navigation }) => {
     setAiError('');
     setAiSuggestions([]);
     try {
+      // Use state and district from the first data record
+      const first = data[0];
+      const state = first.State || first.state || '';
+      const district = first.District || first.district || '';
       const response = await fetch(`${API_BASE}/soil-moisture/ai-suggestion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commodity: 'All', farmer_id: FARMER_ID }), // Changed from state, district to commodity
+        body: JSON.stringify({ state, district }),
       });
       const result = await response.json();
       if (result.suggestions) {
@@ -262,24 +266,11 @@ const SoilMoistureScreen = ({ navigation }) => {
               </View>
             </LinearGradient>
           </Animated.View>
-          {/* AI Assistant Button */}
           <TouchableOpacity style={styles.aiButton} onPress={handleAIAssistant}>
             <Ionicons name="chatbubbles" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.aiButtonText}>{t('soil.ai_assistant')}</Text>
           </TouchableOpacity>
-          <View style={styles.searchContainer}>
-            {/* Commodity Input with Suggestions */}
-            <View style={{ marginBottom: 8 }}>
-              <Text style={styles.searchInput}>All Soil Moisture Data</Text>
-            </View>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>{t('soil.clear_filters')}</Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={[styles.searchButton, loading && styles.disabledButton]} onPress={fetchData} disabled={loading}>
-            {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>{t('common.search')}</Text>}
-          </TouchableOpacity>
-          {error && <Text style={styles.errorText}>{error.includes('AI') ? t('soil.error_ai') : t('soil.error')}</Text>}
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
         {/* Data Cards Rendered Below Filters */}
         {loading && filteredData.length === 0 ? (
