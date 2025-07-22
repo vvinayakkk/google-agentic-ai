@@ -1,38 +1,20 @@
 from fastapi import APIRouter, Query, HTTPException
-from services.soil_moisture import get_soil_moisture_data
-from services.gemini import GEMINI_API_KEY, GEMINI_API_URL
-import json
 from fastapi import Body
-import datetime
-
-def convert_timestamps(obj):
-    if isinstance(obj, dict):
-        return {k: convert_timestamps(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_timestamps(i) for i in obj]
-    elif hasattr(obj, 'isoformat'):
-        return obj.isoformat()
-    else:
-        return obj
+from services.firebase import db
 
 router = APIRouter()
 
 @router.get("/soil-moisture")
-def get_soil_data(
-    state: str = Query(..., description="State, e.g., 'Maharashtra'"),
-    district: str = Query(None, description="District, e.g., 'Pune'"),
-    year: str = Query(None, description="Year, e.g., '2022'"),
-    month: str = Query(None, description="Month, e.g., 'January'")
-):
+def get_soil_data():
     """
-    Endpoint to get daily soil moisture data.
+    Endpoint to get soil moisture data from Firestore (not API).
     """
     try:
-        data = get_soil_moisture_data(state, district, year, month)
-        print(data)
-        print(data)
-        if isinstance(data, dict) and "error" in data:
-            raise HTTPException(status_code=500, detail=data["error"])
+        doc_ref = db.collection('soil_data').document('latest')
+        doc = doc_ref.get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="No soil data found.")
+        data = doc.to_dict().get('data', [])
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

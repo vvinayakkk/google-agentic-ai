@@ -46,12 +46,9 @@ const AnimatedListItem = ({ children, index }) => {
 const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
   const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState(null);
-  const [searchState, setSearchState] = useState('Maharashtra');
-  const [searchDistrict, setSearchDistrict] = useState('Mumbai');
   const [searchCommodity, setSearchCommodity] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-
 
   // --- Data Processing ---
   const processAndFilterPrices = (records) => {
@@ -109,7 +106,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
     const topCommodities = ['Wheat', 'Paddy(Dhan)', 'Cotton', 'Soyabean', 'Gram', 'Maize'];
     try {
       const allPromises = topCommodities.map(commodity =>
-        fetchMarketPrices(searchState, commodity, searchDistrict)
+        fetchMarketPrices(null, commodity, null) // Fetch without state and district
       );
       const results = await Promise.allSettled(allPromises);
       const successfulResults = results
@@ -137,7 +134,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
     setIsSearching(true);
     setError(null);
     try {
-        const results = await fetchMarketPrices(searchState, searchCommodity, searchDistrict);
+        const results = await fetchMarketPrices(null, searchCommodity, null); // Fetch without state and district
         const processedData = processAndFilterPrices(results);
         setMarketData(processedData);
     } catch(e) {
@@ -148,9 +145,30 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
     }
   };
 
+  // Fetch all data on mount
   useEffect(() => {
-    fetchTopCommodities();
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE}/market/prices`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to fetch market prices.');
+        }
+        const result = await response.json();
+        setMarketData(result);
+      } catch (e) {
+        setError(e.message || 'An error occurred.');
+        setMarketData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
+  // Filter by commodity if searchCommodity is set
+  const filteredData = !searchCommodity.trim() ? marketData : marketData.filter(item => (item.Commodity || item.commodity || '').toLowerCase().includes(searchCommodity.toLowerCase()));
 
   const renderMarketItem = (item, index) => {
     const minPrice = parseFloat(item.Min_Price) || 0;
@@ -202,8 +220,6 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.searchContainer}>
-            <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder="State (e.g., Maharashtra)" placeholderTextColor="#555" />
-            <TextInput style={styles.searchInput} value={searchDistrict} onChangeText={setSearchDistrict} placeholder="District (Optional)" placeholderTextColor="#555" />
             <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity (e.g., Wheat)" placeholderTextColor="#555" />
           </View>
           <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
@@ -212,8 +228,8 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
           {error && <Text style={styles.errorText}>{error}</Text>}
           {loading ? (
              <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
-          ) : marketData.length > 0 ? (
-            marketData.map((item, index) => renderMarketItem(item, index))
+          ) : filteredData.length > 0 ? (
+            filteredData.map((item, index) => renderMarketItem(item, index))
           ) : (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>

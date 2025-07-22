@@ -182,7 +182,7 @@ export default function App() {
           }} 
         />
         <Stack.Screen 
-          name="SoilMoistureScreen" 
+          name="SoilMoisture" 
           component={SoilMoistureScreen} 
           options={{
             headerShown: false,

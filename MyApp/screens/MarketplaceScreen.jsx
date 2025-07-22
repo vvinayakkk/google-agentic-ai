@@ -73,8 +73,6 @@ const MarketplaceScreen = ({ navigation }) => {
   const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchState, setSearchState] = useState('Maharashtra');
-  const [searchDistrict, setSearchDistrict] = useState('Mumbai'); // Default to Mumbai
   const [searchCommodity, setSearchCommodity] = useState('');
   const [searching, setSearching] = useState(false);
   const [listingsLoading, setListingsLoading] = useState(true);
@@ -190,7 +188,7 @@ const MarketplaceScreen = ({ navigation }) => {
     setMyListings((prev) => prev.map(item => ({ ...item, marketPriceLoading: true })));
     const districtForPrice = 'Mumbai';
     const updatedListings = await Promise.all(myListings.map(async (item) => {
-      const realPrice = await fetchMarketPriceForCrop(searchState, item.name, districtForPrice);
+      const realPrice = await fetchMarketPriceForCrop(item.state, item.name, districtForPrice);
       return { ...item, marketPrice: realPrice, marketPriceLoading: false };
     }));
     // Remove duplicates by name + quantity
@@ -207,7 +205,7 @@ const MarketplaceScreen = ({ navigation }) => {
   useEffect(() => {
     updateListingsWithMarketPrices();
     // eslint-disable-next-line
-  }, [myListings.length, searchState, searchDistrict]);
+  }, [myListings.length]);
 
   const renderMarketItem = (item, index) => {
     const price = parseFloat(item.modal_price) || 0;
@@ -259,11 +257,7 @@ const MarketplaceScreen = ({ navigation }) => {
     setSearching(true);
     setError(null);
     try {
-      let url = `${API_BASE}/market/prices?state=${encodeURIComponent(searchState)}&commodity=${encodeURIComponent(searchCommodity)}`;
-      if (searchDistrict) {
-        url += `&district=${encodeURIComponent(searchDistrict)}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch(`${API_BASE}/market/prices`);
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.detail || 'Failed to fetch market prices.');
@@ -305,10 +299,32 @@ const MarketplaceScreen = ({ navigation }) => {
     }
   };
 
+  // Fetch all data on mount
   useEffect(() => {
+    const fetchMarketPrices = async () => {
+      setSearching(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE}/market/prices`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to fetch market prices.');
+        }
+        const data = await response.json();
+        setMarketData(data);
+      } catch (e) {
+        setError(e.message || 'An error occurred.');
+        setMarketData([]);
+      } finally {
+        setSearching(false);
+        setLoading(false);
+      }
+    };
     fetchMarketPrices();
     fetchMyListings();
   }, []);
+  // Filter by commodity if searchCommodity is set
+  const filteredMarketData = !searchCommodity.trim() ? marketData : marketData.filter(item => (item.Commodity || item.commodity || '').toLowerCase().includes(searchCommodity.toLowerCase()));
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>

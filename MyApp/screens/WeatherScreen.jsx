@@ -38,9 +38,6 @@ const WeatherScreen = ({ navigation }) => {
   const [airQuality, setAirQuality] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchValue, setSearchValue] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [isCustomLocation, setIsCustomLocation] = useState(false);
   const farmLocationRef = useRef(null);
   const farmProfileRef = useRef(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -149,7 +146,6 @@ const WeatherScreen = ({ navigation }) => {
         if (cachedWeather) setWeather(JSON.parse(cachedWeather));
         if (cachedForecast) setForecast(JSON.parse(cachedForecast));
         if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
-        setIsCustomLocation(false);
       } catch (e) {
         if (isMounted) setError(e.message || 'Failed to load weather');
       }
@@ -196,54 +192,6 @@ const WeatherScreen = ({ navigation }) => {
     return () => { isMounted = false; };
   }, []);
 
-  // --- Search Handler ---
-  const handleSearch = async () => {
-    setSearching(true);
-    setError(null);
-    let city = null, lat = null, lon = null;
-    const trimmed = searchValue.trim();
-    // Check if input is coordinates
-    if (/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(trimmed)) {
-      // Coordinates
-      [lat, lon] = trimmed.split(',').map(s => parseFloat(s.trim()));
-    } else {
-      city = trimmed;
-    }
-    try {
-      let w, f;
-      if (city) {
-        // By city
-        const [wRes, fRes] = await Promise.all([
-          fetch(`${API_BASE}/weather/city?city=${encodeURIComponent(city)}`),
-          fetch(`${API_BASE}/weather/forecast/city?city=${encodeURIComponent(city)}`),
-        ]);
-        w = await wRes.json();
-        f = await fRes.json();
-        // For air quality, need lat/lon from city result if available
-        if (w.coord && w.coord.lat && w.coord.lon) {
-          await fetchAirQuality(w.coord.lat, w.coord.lon);
-        }
-      } else if (lat !== null && lon !== null) {
-        // By coordinates
-        const [wRes, fRes] = await Promise.all([
-          fetch(`${API_BASE}/weather/coords?lat=${lat}&lon=${lon}`),
-          fetch(`${API_BASE}/weather/forecast/coords?lat=${lat}&lon=${lon}`),
-        ]);
-        w = await wRes.json();
-        f = await fRes.json();
-        await fetchAirQuality(lat, lon);
-      } else {
-        throw new Error('Enter a city or coordinates');
-      }
-      setWeather(w);
-      setForecast(f);
-      setIsCustomLocation(true);
-    } catch (e) {
-      setError(e.message || 'Failed to fetch weather for location');
-    }
-    setSearching(false);
-  };
-
   // --- Update Handler (fetches latest and updates cache) ---
   const handleUpdate = async () => {
     setLoading(true);
@@ -274,40 +222,6 @@ const WeatherScreen = ({ navigation }) => {
       await AsyncStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(f));
     } catch (e) {
       setError(e.message || 'Failed to update weather');
-      setProfileLoading(false);
-    }
-    setLoading(false);
-  };
-
-  // --- Back to Farm Handler (loads from cache only) ---
-  const handleBackToFarm = async () => {
-    setLoading(true);
-    setProfileLoading(true);
-    setError(null);
-    try {
-      // Load profile from cache
-      const cachedProfile = await AsyncStorage.getItem(FARMER_PROFILE_CACHE_KEY);
-      let prof = null;
-      if (cachedProfile) {
-        prof = JSON.parse(cachedProfile);
-        setProfile(prof);
-        farmProfileRef.current = prof;
-        const { farmLocation } = prof;
-        farmLocationRef.current = farmLocation;
-      }
-      setProfileLoading(false);
-      // Load from cache only
-      const [cachedWeather, cachedForecast, cachedAirQuality] = await Promise.all([
-        AsyncStorage.getItem(WEATHER_CACHE_KEY),
-        AsyncStorage.getItem(FORECAST_CACHE_KEY),
-        AsyncStorage.getItem(AIR_QUALITY_CACHE_KEY),
-      ]);
-      if (cachedWeather) setWeather(JSON.parse(cachedWeather));
-      if (cachedForecast) setForecast(JSON.parse(cachedForecast));
-      if (cachedAirQuality) setAirQuality(JSON.parse(cachedAirQuality));
-      setIsCustomLocation(false);
-    } catch (e) {
-      setError(e.message || 'Failed to load farm weather');
       setProfileLoading(false);
     }
     setLoading(false);
@@ -344,32 +258,6 @@ const WeatherScreen = ({ navigation }) => {
         style={StyleSheet.absoluteFillObject}
       />
       <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>  
-        {/* Search Bar */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 0 }}>
-          <TextInput
-            style={{ flex: 1, backgroundColor: '#23232a', borderRadius: 12, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginRight: 8 }}
-            placeholder="Enter city (Pune,IN) or lat,lon"
-            placeholderTextColor="#64748B"
-            value={searchValue}
-            onChangeText={setSearchValue}
-            editable={!searching && !loading}
-            returnKeyType="search"
-            onSubmitEditing={handleSearch}
-          />
-          <TouchableOpacity onPress={handleSearch} disabled={searching || loading} style={{ backgroundColor: '#3B82F6', borderRadius: 10, padding: 12, opacity: searching || loading ? 0.6 : 1 }}>
-            <Ionicons name="search" size={22} color="#fff" />
-          </TouchableOpacity>
-          {isCustomLocation && (
-            <TouchableOpacity onPress={handleBackToFarm} style={{ backgroundColor: '#10b981', borderRadius: 10, padding: 12, marginLeft: 8 }}>
-              <Ionicons name="home" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {!isCustomLocation && (
-            <TouchableOpacity onPress={handleUpdate} disabled={loading} style={{ backgroundColor: '#64748B', borderRadius: 10, padding: 12, marginLeft: 8, opacity: loading ? 0.6 : 1 }}>
-              <Ionicons name="refresh" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
         {/* Header */}
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>  
           <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
