@@ -92,6 +92,7 @@ class ChatHistory(BaseModel):
     title: str
     date: str
     messages: List[ChatMessage]
+    context: Optional[dict] = None
 
 class Document(BaseModel):
     id: str

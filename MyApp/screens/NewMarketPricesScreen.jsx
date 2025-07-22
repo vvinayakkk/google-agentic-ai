@@ -47,7 +47,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
   const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState(null);
   const [searchState, setSearchState] = useState('Maharashtra');
-  const [searchDistrict, setSearchDistrict] = useState('');
+  const [searchDistrict, setSearchDistrict] = useState('Mumbai');
   const [searchCommodity, setSearchCommodity] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);

@@ -7,12 +7,40 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Markdown from 'react-native-markdown-display';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 
 // --- Simulated API Configuration ---
 const getKissanAIResponse = async (message, context) => {
     // If not a text message, fallback to simulation
     if (message.type !== 'text') {
+        // If image has text, treat as text message to backend
+        if (message.type === 'image' && message.content && message.content.text) {
+            // Send to backend with text and image info
+            try {
+                const contextToSend = typeof allContext === 'object' && allContext !== null ? allContext : { weather: '', soil: '', market: '' };
+                const payload = {
+                    user_query: message.content.text,
+                    image: { name: message.content.name, uri: message.content.uri },
+                    chat_history: context ? JSON.stringify(context) : "",
+                    extra_context: contextToSend
+                };
+                console.log('Sending image+text to backend:', payload);
+                const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
+                if (response.data && response.data.response) {
+                    return response.data.response;
+                }
+                return "Sorry, I couldn't get a response from the server.";
+            } catch (error) {
+                if (error.response) {
+                    console.log('AI error response:', error.response.data);
+                } else {
+                    console.log('AI error:', error.message || error);
+                }
+                return "Sorry, there was an error connecting to the server.";
+            }
+        }
+        // Simulate for image without text
         console.log("Simulating AI response for:", message);
         if (message.type === 'image') {
             return new Promise(resolve => setTimeout(() => resolve(`Image \"${message.content.name}\" received!`), 1500));
@@ -25,17 +53,26 @@ const getKissanAIResponse = async (message, context) => {
     }
     // For text messages, call backend RAG endpoint
     try {
-        const response = await axios.post('http://192.168.0.111:8000/chat/rag', {
+        // Ensure allContext is up-to-date
+        const contextToSend = typeof allContext === 'object' && allContext !== null ? allContext : { weather: '', soil: '', market: '' };
+        const payload = {
             user_query: message.content,
             chat_history: context ? JSON.stringify(context) : "",
-            extra_context: allContext // Pass all context to backend
-        });
+            extra_context: contextToSend
+        };
+        console.log('Sending to backend:', payload);
+        const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
         // Prefer bullet points and links if present
         if (response.data && response.data.response) {
             return response.data.response;
         }
         return "Sorry, I couldn't get a response from the server.";
     } catch (error) {
+        if (error.response) {
+            console.log('AI error response:', error.response.data);
+        } else {
+            console.log('AI error:', error.message || error);
+        }
         return "Sorry, there was an error connecting to the server.";
     }
 };
@@ -95,9 +132,14 @@ const ChatMessage = ({ message, chatHistory }) => {
                         <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
                     </View>
                 ) : isImage ? (
-                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                        <Image source={{ uri: message.content.uri }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
-                        <Text style={styles.chatMessageText}>{message.content.name || 'Image attached'}</Text>
+                    <View style={{flexDirection: 'column', alignItems: 'flex-start'}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <Image source={{ uri: message.content.uri }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
+                            <Text style={styles.chatMessageText}>{message.content.name || 'Image attached'}</Text>
+                        </View>
+                        {message.content.text && (
+                            <Text style={[styles.chatMessageText, {marginTop: 6}]}>{message.content.text}</Text>
+                        )}
                     </View>
                 ) : isContext ? (
                     <Text style={styles.contextMessageText}>{message.content}</Text>
@@ -140,7 +182,7 @@ const featureOptions = [
     // More options
     { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'Weather', screen: 'WeatherScreen', color: '#3b82f6' },
     { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'Soil', screen: 'SoilMoistureScreen', color: '#38bdf8' },
-    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'EduFinance', screen: 'EduFinanceScreen', color: '#a78bfa' },
+    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'EduFinance', screen: 'UPI', color: '#a78bfa' },
     { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'Document Builder', screen: 'DocumentAgentScreen', color: '#f59e0b' },
     { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'Crop Doctor', screen: 'CropDoctor', color: '#10b981' },
     { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: 'Rental system', screen: 'RentalSystemScreen', color: '#f59e0b' },
@@ -199,45 +241,20 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     const [currentContext, setCurrentContext] = useState(null);
     const flatListRef = useRef();
     const [allContext, setAllContext] = useState({ weather: '', soil: '', market: '' });
+    const [attachedImage, setAttachedImage] = useState(null); // NEW: for image preview
 
     useEffect(() => {
         const context = route.params?.context;
         if (context) {
             setCurrentContext(context);
-            const title = `${context.diseaseName} Analysis`;
-            setChatTitle(title);
-
-            // The new sequence: User Context -> Thinking -> AI Response
-            const userContextMessage = {
-                sender: 'user',
-                type: 'context',
-                content: `Continuing conversation about "${context.diseaseName}"`
-            };
-            setChatHistory([userContextMessage]);
-            setIsThinking(true);
-
-            setTimeout(() => {
-                const aiIntroMessage = {
-                    sender: 'ai',
-                    type: 'text',
-                    content: `Alright, I have the details for **${context.diseaseName}**. Ask me anything specific about its symptoms or solutions.`
-                };
-                setChatHistory(prev => [...prev, aiIntroMessage]);
-                setIsThinking(false);
-            }, 1500);
+            setChatTitle('Kissan AI');
+            setChatHistory([]); // Start with empty chat
         }
     }, [route.params?.context]);
 
-    useEffect(() => {
-        // Fetch all context on mount
-        const loadAllContext = async () => {
-            const weather = await fetchWeatherContext();
-            const soil = await fetchSoilContext();
-            const market = await fetchMarketContext();
-            setAllContext({ weather, soil, market });
-        };
-        loadAllContext();
-    }, []);
+    // REMOVED: useEffect that fetches all context on mount
+
+    // If fetchWeatherContext, fetchSoilContext, fetchMarketContext are not used elsewhere, remove them too
 
 
     const saveChatToHistory = async (title, messages) => {
@@ -267,24 +284,37 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     }, [chatHistory]);
 
     const handleSendMessage = async (message) => {
-        if (!message) {
+        // NEW: Compose message with image and/or text
+        let msgToSend = null;
+        if (attachedImage && (inputValue.trim() || !inputValue)) {
+            msgToSend = {
+                type: 'image',
+                content: {
+                    name: attachedImage.name || 'Image',
+                    uri: attachedImage.uri,
+                    text: inputValue.trim() ? inputValue : undefined,
+                },
+            };
+        } else if (!message) {
             if (!inputValue.trim()) return;
-            message = { type: 'text', content: inputValue };
+            msgToSend = { type: 'text', content: inputValue };
+        } else {
+            msgToSend = message;
         }
-        
+        if (!msgToSend) return;
         if (chatHistory.length === 0 && !currentContext) {
-            const title = message.content.length > 25 ? `${message.content.substring(0, 22)}...` : message.content;
+            const title = msgToSend.content.text
+                ? (msgToSend.content.text.length > 25 ? `${msgToSend.content.text.substring(0, 22)}...` : msgToSend.content.text)
+                : (msgToSend.content.length > 25 ? `${msgToSend.content.substring(0, 22)}...` : msgToSend.content);
             setChatTitle(title);
         }
-
-        const userMessage = { sender: 'user', ...message };
+        const userMessage = { sender: 'user', ...msgToSend };
         setChatHistory(prev => [...prev, userMessage]);
         setInputValue('');
+        setAttachedImage(null); // Clear image after sending
         setIsThinking(true);
-
-        const aiResponseText = await getKissanAIResponse(message, currentContext);
+        const aiResponseText = await getKissanAIResponse(msgToSend, chatHistory);
         const aiMessage = { sender: 'ai', type: 'text', content: aiResponseText };
-
         setChatHistory(prev => [...prev, aiMessage]);
         setIsThinking(false);
     };
@@ -297,8 +327,14 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 // Check if the file is an image by mime type or extension
                 const isImage = (doc.mimeType && doc.mimeType.startsWith('image/')) || (doc.name && doc.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i));
                 if (isImage) {
-                    const message = { type: 'image', content: { name: doc.name, uri: doc.uri } };
-                    handleSendMessage(message);
+                    // Read file and encode as base64 data URL
+                    const fileUri = doc.uri;
+                    const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+                    // Guess mime type from extension
+                    const ext = doc.name.split('.').pop().toLowerCase();
+                    const mime = ext === 'jpg' || ext === 'jpeg' ? 'jpeg' : ext;
+                    const dataUrl = `data:image/${mime};base64,${base64}`;
+                    setAttachedImage({ name: doc.name, uri: dataUrl });
                 } else {
                     const message = { type: 'document', content: { name: doc.name, uri: doc.uri } };
                     handleSendMessage(message);
@@ -312,8 +348,17 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: [ImagePicker.MediaType.IMAGE], allowsEditing: true, quality: 1 });
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const img = result.assets[0];
-                const message = { type: 'image', content: { name: img.fileName || 'Image', uri: img.uri } };
-                handleSendMessage(message);
+                // Read file and encode as base64 data URL
+                const fileUri = img.uri;
+                const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+                // Guess mime type from extension
+                let ext = 'jpeg';
+                if (img.fileName && img.fileName.includes('.')) {
+                  ext = img.fileName.split('.').pop().toLowerCase();
+                }
+                const mime = ext === 'jpg' || ext === 'jpeg' ? 'jpeg' : ext;
+                const dataUrl = `data:image/${mime};base64,${base64}`;
+                setAttachedImage({ name: img.fileName || 'Image', uri: dataUrl });
             }
         } catch (err) { Alert.alert('Error', 'Could not open the image picker.'); }
     };
@@ -323,60 +368,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
     const MARKET_CACHE_KEY = 'market-prices-cache';
 
-    // Helper to fetch weather AI analysis
-    const fetchWeatherContext = async () => {
-        let weatherAnalysis = '';
-        try {
-            weatherAnalysis = await AsyncStorage.getItem(WEATHER_ANALYSIS_CACHE_KEY);
-            if (!weatherAnalysis) {
-                const res = await fetch(`${API_BASE}/weather/ai-analysis?farmer_id=${FARMER_ID}`);
-                const data = await res.json();
-                weatherAnalysis = data.analysis || '';
-                await AsyncStorage.setItem(WEATHER_ANALYSIS_CACHE_KEY, weatherAnalysis);
-            }
-        } catch (e) { weatherAnalysis = ''; }
-        return weatherAnalysis;
-    };
-
-    // Helper to fetch soil AI suggestions (default to Maharashtra, Pune if not set)
-    const fetchSoilContext = async (state = 'Maharashtra', district = 'Pune') => {
-        try {
-            const response = await fetch(`${API_BASE}/soil-moisture/ai-suggestion`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ state, district, farmer_id: FARMER_ID }),
-            });
-            const result = await response.json();
-            if (result.suggestions) {
-                return result.suggestions.join('\n');
-            }
-        } catch (e) {}
-        return '';
-    };
-
-    // Helper to fetch market prices context (default to Maharashtra, Wheat if not set)
-    const fetchMarketContext = async (state = 'Maharashtra', commodity = 'Wheat', district = '') => {
-        let marketData = [];
-        try {
-            const cached = await AsyncStorage.getItem(MARKET_CACHE_KEY);
-            if (cached) {
-                marketData = JSON.parse(cached);
-            } else {
-                let url = `${API_BASE}/market/prices?state=${encodeURIComponent(state)}&commodity=${encodeURIComponent(commodity)}`;
-                if (district) url += `&district=${encodeURIComponent(district)}`;
-                const response = await fetch(url);
-                if (response.ok) {
-                    marketData = await response.json();
-                    await AsyncStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(marketData));
-                }
-            }
-        } catch (e) { marketData = []; }
-        // Summarize market data for context
-        if (marketData.length > 0) {
-            return marketData.slice(0, 5).map(item => `${item.Commodity || item.name} in ${item.Market || item.market}: ₹${item.Modal_Price || item.price} per Quintal`).join('\n');
-        }
-        return '';
-    };
+    // REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext function definitions
 
     return (
         <SafeAreaView style={styles.container}>
@@ -411,8 +403,17 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}><Ionicons name="add" size={28} color="gray" /></TouchableOpacity>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachImage}><MaterialCommunityIcons name="image-plus" size={28} color="gray" /></TouchableOpacity>
+                    {/* Image preview above input */}
+                    {attachedImage && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
+                            <Image source={{ uri: attachedImage.uri }} style={{ width: 50, height: 50, borderRadius: 8, marginRight: 6 }} />
+                            <TouchableOpacity onPress={() => setAttachedImage(null)} style={{ marginLeft: 2 }}>
+                                <MaterialCommunityIcons name="close-circle" size={24} color="#f87171" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     <TextInput style={styles.textInput} placeholder="Ask Kissan AI" placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
-                    {inputValue.length === 0 ? (
+                    {(inputValue.length === 0 && !attachedImage) ? (
                         <TouchableOpacity style={styles.voiceButton} onPress={() => navigation.navigate('LiveVoiceScreen')}><MaterialCommunityIcons name="waveform" size={26} color="white" /></TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={() => handleSendMessage()}><MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" /></TouchableOpacity>
@@ -437,6 +438,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             setChatHistory([]);
                             setChatTitle('');
                             setInputValue('');
+                            setAttachedImage(null); // Clear image on new chat
                             setCurrentContext(null);
                             navigation.navigate('ChatHistory');
                         }}

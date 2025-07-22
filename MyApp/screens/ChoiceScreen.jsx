@@ -1,20 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- ASYNC STORAGE IMPORT ---
 // You need to install this library to store the user's mode choice
 // expo install @react-native-async-storage/async-storage
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import AnimatedLoading from '../components/AnimatedLoading';
+
+const API_BASE = 'http://192.168.0.111:8000';
+const FARMER_ID = 'f001';
+
+// REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect
 
 export default function ChoiceScreen({ navigation }) {
   const [showHelp, setShowHelp] = useState(false);
+  // REMOVED: loading state and timeoutRef
+
+  // Debug: log loading state changes
+  useEffect(() => {
+    console.log('ChoiceScreen mounted');
+    return () => {
+      console.log('ChoiceScreen unmounted');
+    };
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('ChoiceScreen focused');
+      return () => {
+        console.log('ChoiceScreen unfocused');
+      };
+    }, [])
+  );
 
   const handleModeSelection = async (mode, screen) => {
     try {
       await AsyncStorage.setItem('userMode', mode);
-      navigation.navigate(screen);
+      const newChat = {
+        id: Date.now().toString(),
+        title: 'New Chat',
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        messages: [],
+        context: { weather: '', soil: '', market: '' }
+      };
+      // Navigate immediately
+      navigation.navigate(screen, { context: { weather: '', soil: '', market: '' } });
+      // Fire and forget the API call
+      axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat)
+        .catch(() => {
+          // Optionally show a toast or log error, but don't block navigation
+        });
     } catch (e) {
-      Alert.alert("Error", "Could not save your mode selection.");
+      Alert.alert("Error", "Could not start chat session.");
     }
   };
 
@@ -28,6 +67,7 @@ export default function ChoiceScreen({ navigation }) {
         <TouchableOpacity 
           style={styles.optionButton} 
           onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
+          // REMOVED: disabled={loading}
         >
           <MaterialCommunityIcons name="microphone-outline" size={60} color="#fff" />
           <Text style={styles.optionText}>Voice Pilot</Text>
@@ -38,6 +78,7 @@ export default function ChoiceScreen({ navigation }) {
         <TouchableOpacity 
           style={styles.optionButton} 
           onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
+          // REMOVED: disabled={loading}
         >
           <Ionicons name="hand-right-outline" size={60} color="#fff" />
           <Text style={styles.optionText}>Manual Mode</Text>
@@ -47,6 +88,7 @@ export default function ChoiceScreen({ navigation }) {
       <TouchableOpacity 
         style={styles.featureButton} 
         onPress={() => navigation.navigate('MarketplaceScreen')}
+        // REMOVED: disabled={loading}
       >
         <Ionicons name="trending-up-outline" size={24} color="#10B981" />
         <Text style={styles.featureButtonText}>View Market Prices</Text>
@@ -55,6 +97,7 @@ export default function ChoiceScreen({ navigation }) {
       <TouchableOpacity 
         style={styles.featureButton} 
         onPress={() => navigation.navigate('SoilMoisture')}
+        // REMOVED: disabled={loading}
       >
         <Ionicons name="water-outline" size={24} color="#3B82F6" />
         <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>Check Soil Moisture</Text>
@@ -68,10 +111,11 @@ export default function ChoiceScreen({ navigation }) {
             </Text>
           </View>
         )}
-        <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)} disabled={false}>
           <MaterialCommunityIcons name="help-circle-outline" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
+      {/* REMOVED: AnimatedLoading visible={loading} */}
     </SafeAreaView>
   );
 }

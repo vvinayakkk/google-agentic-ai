@@ -40,6 +40,19 @@ const initialMyListings = [
     { id: 2, name: 'Fresh Milk', quantity: '200 liters/day', myPrice: 32.00, marketPrice: 28.75, status: 'active', views: 18, inquiries: 7, emoji: '🥛' },
 ];
 
+// Crop name mapping: app name -> API name
+const CROP_NAME_MAP = {
+  "Organic Wheat": "Wheat",
+    "Wheat": "Wheat",
+    "Tomatoes": "Tomato",
+    "Tomato": "Tomato",
+    "Onion": "Onion",
+    "Fresh Milk": "Milk",
+    "Fresh Onions":"Onion",
+    "Chickpeas":"Peas(Dry)"
+  // Add more mappings as needed
+};
+
 // --- Reusable Components ---
 const AnimatedListItem = ({ children, index }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,8 +74,8 @@ const MarketplaceScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchState, setSearchState] = useState('Maharashtra');
-  const [searchDistrict, setSearchDistrict] = useState(''); // New field
-  const [searchCommodity, setSearchCommodity] = useState('Wheat');
+  const [searchDistrict, setSearchDistrict] = useState('Mumbai'); // Default to Mumbai
+  const [searchCommodity, setSearchCommodity] = useState('');
   const [searching, setSearching] = useState(false);
   const [listingsLoading, setListingsLoading] = useState(true);
 
@@ -141,6 +154,60 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   };
 
+  // Helper to get mapped crop name
+  const getMappedCropName = (name) => {
+    return CROP_NAME_MAP[name] || name;
+  };
+
+  // Fetch real market price for a given crop
+  const fetchMarketPriceForCrop = async (state, crop, district = 'Mumbai') => {
+    const mappedCrop = getMappedCropName(crop);
+    let url = `${API_BASE}/market/prices?state=${encodeURIComponent(state)}&commodity=${encodeURIComponent(mappedCrop)}&district=${encodeURIComponent(district)}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return 0;
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        // Find the record with the latest arrival_date
+        const sorted = data.slice().sort((a, b) => {
+          const dateA = new Date(a.arrival_date || a.Arrival_Date || '');
+          const dateB = new Date(b.arrival_date || b.Arrival_Date || '');
+          return dateB - dateA;
+        });
+        const price = parseFloat(sorted[0].modal_price || sorted[0].Modal_Price || 0);
+        return price;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  // Update My Listings with real prices and loading state
+  const updateListingsWithMarketPrices = async () => {
+    if (!myListings || myListings.length === 0) return;
+    // Set loading true for all
+    setMyListings((prev) => prev.map(item => ({ ...item, marketPriceLoading: true })));
+    const districtForPrice = 'Mumbai';
+    const updatedListings = await Promise.all(myListings.map(async (item) => {
+      const realPrice = await fetchMarketPriceForCrop(searchState, item.name, districtForPrice);
+      return { ...item, marketPrice: realPrice, marketPriceLoading: false };
+    }));
+    // Remove duplicates by name + quantity
+    const seen = new Set();
+    const uniqueListings = updatedListings.filter(item => {
+      const key = item.name + item.quantity;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    setMyListings(uniqueListings);
+  };
+
+  useEffect(() => {
+    updateListingsWithMarketPrices();
+    // eslint-disable-next-line
+  }, [myListings.length, searchState, searchDistrict]);
 
   const renderMarketItem = (item, index) => {
     const price = parseFloat(item.modal_price) || 0;
@@ -177,7 +244,7 @@ const MarketplaceScreen = ({ navigation }) => {
             <View style={styles.listingCard}>
                 <LinearGradient colors={['#18181b', '#27272a']} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <View style={styles.listingHeader}><View style={styles.listingInfo}><Text style={styles.cropEmoji}>{item.emoji}</Text><View><Text style={styles.cropName}>{item.name}</Text><Text style={styles.quantity}>{item.quantity}</Text></View></View><View style={[styles.statusBadge, { backgroundColor: item.status === 'active' ? '#10B981' : '#F59E0B' }]}><Text style={styles.statusText}>{item.status.toUpperCase()}</Text></View></View>
-                    <View style={styles.priceComparison}><View style={styles.priceRow}><Text style={styles.priceLabel}>Your Price:</Text><Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text></View><View style={styles.priceRow}><Text style={styles.priceLabel}>Market Price:</Text><Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text></View><View style={styles.priceRow}><Text style={styles.priceLabel}>Difference:</Text><Text style={[styles.priceDiff, { color: priceCompColor }]}>{isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}</Text></View></View>
+                    <View style={styles.priceComparison}><View style={styles.priceRow}><Text style={styles.priceLabel}>Your Price:</Text><Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text></View><View style={styles.priceRow}><Text style={styles.priceLabel}>Market Price:</Text>{item.marketPriceLoading ? <ActivityIndicator color="#fff" size="small" style={{ marginLeft: 8 }} /> : <Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text>}</View><View style={styles.priceRow}><Text style={styles.priceLabel}>Difference:</Text><Text style={[styles.priceDiff, { color: priceCompColor }]}>{isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}</Text></View></View>
                     <View style={styles.listingStats}>
                         <View style={styles.statsGroup}><View style={styles.statBox}><Ionicons name="eye-outline" size={16} color="#64748B" /><Text style={styles.statNumber}>{item.views}</Text><Text style={styles.statText}>Views</Text></View><View style={styles.statBox}><Ionicons name="chatbubble-ellipses-outline" size={16} color="#64748B" /><Text style={styles.statNumber}>{item.inquiries}</Text><Text style={styles.statText}>Inquiries</Text></View></View>
                         <View style={styles.actionsContainer}><TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}><Ionicons name="create-outline" size={16} color="#3B82F6" /><Text style={styles.editText}>Edit</Text></TouchableOpacity><TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}><Ionicons name="trash-outline" size={20} color="#EF4444" /></TouchableOpacity></View>

@@ -7,6 +7,9 @@ from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from utils.firestore_vector_search import search_farmers_by_vector
 import langdetect
+from langchain_core.messages import HumanMessage
+import base64
+import re
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyC-OmyX48OcwbNLR7GcplTKKiAEPSZXHzc")
 model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
@@ -73,7 +76,60 @@ def context_to_prompt(context):
                     prompt_parts.append(f"Documents:\n{doc_lines}")
     return '\n\n'.join(prompt_parts)
 
-def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, memory=None):
+def extract_gemini_content(response):
+    # Handles both string and list content from Gemini, including AIMessage objects
+    # If response is an AIMessage, extract its 'content' attribute
+    if hasattr(response, "content"):
+        content = response.content
+    else:
+        content = response
+    # If content is an AIMessage (from Gemini), extract its 'content' attribute
+    if hasattr(content, "content"):
+        content = content.content
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        result = []
+        for c in content:
+            if isinstance(c, str):
+                result.append(c)
+            elif isinstance(c, dict) and "text" in c and isinstance(c["text"], str):
+                result.append(c["text"])
+            elif (
+                isinstance(c, tuple)
+                and len(c) == 2
+                and c[0] == "content"
+                and isinstance(c[1], str)
+            ):
+                result.append(c[1])
+        return "".join(result)
+    return str(content)
+
+def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, memory=None, image=None):
+    multimodal_message = None
+    if image:
+        # Determine if image['uri'] is a data URL or a file path
+        uri = image.get('uri')
+        if uri and uri.startswith('data:image/'):
+            image_url = uri
+        elif uri and re.match(r'^file:/+', uri):
+            # Convert file URI to local path
+            local_path = re.sub(r'^file:/+', '/', uri)
+            with open(local_path, 'rb') as f:
+                encoded = base64.b64encode(f.read()).decode('utf-8')
+            # Guess mime type from extension
+            ext = local_path.split('.')[-1].lower()
+            mime = 'jpeg' if ext in ['jpg', 'jpeg'] else ext
+            image_url = f"data:image/{mime};base64,{encoded}"
+        else:
+            image_url = None
+        if image_url:
+            multimodal_message = HumanMessage(
+                content=[
+                    {"type": "text", "text": user_query},
+                    {"type": "image_url", "image_url": image_url},
+                ]
+            )
     context = build_rich_context(user_query, top_k=top_k)
     context_text = context_to_prompt(context)
     # Detect question language
@@ -120,16 +176,22 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
         ("human", "User question: {user_query}\n\nContext:\n{context_text}\n\nChat history (numbered list):\n{chat_history}\n"),
     ])
     memory = memory or ConversationBufferMemory(return_messages=True)
-    chain = prompt | model | StrOutputParser()
-    response = chain.invoke({
-        "user_query": user_query,
-        "context_text": context_text,
-        "chat_history": formatted_history,
-        "question_language": question_language
-    })
+    if multimodal_message:
+        # Use Gemini multimodal input
+        response = model.invoke([multimodal_message])
+        print("image output:",response)
+    else:
+        chain = prompt | model | StrOutputParser()
+        response = chain.invoke({
+            "user_query": user_query,
+            "context_text": context_text,
+            "chat_history": formatted_history,
+            "question_language": question_language
+        })
+        print("text output:",response)
     memory.save_context({"input": user_query}, {"output": response})
     return {
-        "response": response,
+        "response": extract_gemini_content(response),
         "memory": memory.buffer,
         "context": context
     } 
