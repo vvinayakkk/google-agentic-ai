@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setLanguage } from '../i18n';
+import { Picker } from '@react-native-picker/picker';
 
 // Theme for consistent styling
 const theme = {
@@ -32,6 +34,17 @@ const theme = {
 };
 
 const DEFAULT_PROFILE_IMAGE = 'https://placehold.co/100x100/EFEFEF/333?text=F';
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'bn', label: 'Bengali' },
+  { code: 'gu', label: 'Gujarati' },
+  { code: 'mr', label: 'Marathi' },
+  { code: 'ta', label: 'Tamil' },
+  { code: 'te', label: 'Telugu' },
+  { code: 'kn', label: 'Kannada' },
+];
 
 // Reusable component for displaying static profile fields
 const ProfileField = ({ label, value }) => (
@@ -455,7 +468,31 @@ const FarmerProfileScreen = ({ route, navigation }) => {
         {/* Profile Info Section */}
         <Section title="Profile Information" onEdit={handleOpenEditProfile}>
           <ProfileField label="Phone Number" value={profile.phoneNumber} />
-          <ProfileField label="Language" value={profile.language} />
+          <View style={{ marginBottom: 22 }}>
+            <Text style={styles.fieldLabel}>Language</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={profile.language}
+                style={styles.languagePicker}
+                dropdownIconColor={theme.primaryGreen}
+                onValueChange={async (lang) => {
+                  // Optimistically update UI
+                  const updated = { ...profile, language: lang };
+                  setProfile(updated);
+                  setEditProfileData((d) => ({ ...d, language: lang }));
+                  await setLanguage(lang);
+                  await axios.put(`${API_BASE}/farmer/${farmerId}`, updated);
+                  await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(updated));
+                }}
+                itemStyle={{ color: theme.white }} // For iOS
+                mode="dropdown"
+              >
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <Picker.Item key={opt.code} label={opt.label} value={opt.code} color={theme.black} /> // For Android
+                ))}
+              </Picker>
+            </View>
+          </View>
           <ProfileField label="Farm Size" value={profile.farmSize} />
           <ProfileField label="Preferred Mode" value={profile.preferredInteractionMode} />
           <ProfileField label="Onboarding Status" value={profile.onboardingStatus} />
@@ -901,6 +938,8 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
+  pickerWrapper: { backgroundColor: theme.mediumGray, borderRadius: 8, marginTop: 4 },
+  languagePicker: { color: theme.white, height: 54, width: '100%' },
 });
 
 export default FarmerProfileScreen;
