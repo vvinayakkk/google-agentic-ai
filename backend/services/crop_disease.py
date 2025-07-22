@@ -71,13 +71,15 @@ prompt = ChatPromptTemplate.from_messages([
         f"You are an expert crop disease detection assistant. Given a crop image that has been resized to exactly {FIXED_WIDTH}x{FIXED_HEIGHT} pixels, return a JSON object with these fields: "
         "diseaseName (precise, most likely disease), "
         "confidence (as percent, float), "
-        "boundingBoxes (always a list of objects, each with x, y, width, height as floats, all in percent, 0-100, relative to the fixed image size, covering only the affected/visible diseased area. You must cover every visible diseased region, even small or ambiguous spots, with a bounding box. If only one region, return a single box in a list. If healthy, return a single box covering the whole image [{{x:0, y:0, width:100, height:100}}]. Never return empty or null.), "
+        "boundingBoxes (always a list of objects, each with x, y, width, height as floats, all in percent, 0-100, relative to the fixed image size, covering only the affected/visible diseased area. You must cover every visible diseased region, even small or ambiguous spots, with a bounding box. If only one region, return a single box in a list. If healthy, return a single box covering the whole image [{{{{x:0, y:0, width:100, height:100}}}}]. Never return empty or null.), "
         "boundingBoxExplanation (short, how you determined the boxes), "
         "description (detailed, include ambiguity if multiple diseases possible, and provide a thorough explanation of the visual symptoms, affected areas, and reasoning for each bounding box. Be as detailed as possible.), "
         "symptoms (list), "
         "solutions (list of dicts: title, details, actionable). "
         "If ambiguous, mention this in description and pick the most likely. "
-        "Be as accurate and exhaustive as possible. Always follow this output format.\n\n"
+        "Be as accurate and exhaustive as possible. Always follow this output format. "
+        "You must return a bounding box for every visible diseased region, even the smallest or faintest spots. Err on the side of over-detection, and do not miss any possible diseased area, even if it is ambiguous or very small."
+        "\n\n"
         + FEW_SHOT_EXAMPLES +
         "\n\n{format_instructions}"
     )),

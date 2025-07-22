@@ -43,7 +43,7 @@ const AnimatedListItem = ({ children, index }) => {
   );
 };
 
-const NewMarketPricesScreen = ({ navigation }) => {
+const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
   const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState(null);
   const [searchState, setSearchState] = useState('Maharashtra');
@@ -187,18 +187,19 @@ const NewMarketPricesScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Market Prices</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={() => fetchTopCommodities(true)} disabled={loading}>
-            <Ionicons name="refresh" size={24} color={loading ? '#555' : '#FFFFFF'} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
+      {!embedded && <StatusBar barStyle="light-content" backgroundColor="#000" />}
+      {!embedded && (
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Live Market Prices</Text>
+          <TouchableOpacity style={styles.refreshButton} onPress={() => fetchTopCommodities(true)} disabled={loading}>
+              <Ionicons name="refresh" size={24} color={loading ? '#555' : '#FFFFFF'} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.searchContainer}>
             <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder="State (e.g., Maharashtra)" placeholderTextColor="#555" />
@@ -209,7 +210,6 @@ const NewMarketPricesScreen = ({ navigation }) => {
             {isSearching ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>Search Prices</Text>}
           </TouchableOpacity>
           {error && <Text style={styles.errorText}>{error}</Text>}
-          
           {loading ? (
              <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
           ) : marketData.length > 0 ? (

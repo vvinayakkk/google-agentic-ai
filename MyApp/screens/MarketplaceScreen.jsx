@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NewMarketPricesScreen from './NewMarketPricesScreen';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -201,12 +202,14 @@ const MarketplaceScreen = ({ navigation }) => {
         throw new Error(errData.detail || 'Failed to fetch market prices.');
       }
       const data = await response.json();
+      console.log('Market data from backend:', data); // Debug: log backend data
       setMarketData(data);
     } catch (e) {
       setError(e.message || 'An error occurred.');
       setMarketData([]); // Clear old data on error
     } finally {
       setSearching(false);
+      setLoading(false); // Fix: ensure loading is set to false
     }
   };
 
@@ -223,6 +226,7 @@ const MarketplaceScreen = ({ navigation }) => {
       const response = await fetch(`${API_BASE}/farmer/${FARMER_ID}/market`);
       if (response.ok) {
         const data = await response.json();
+        console.log('My listings from backend:', data); // Debug: log backend data
         setMyListings(data);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
@@ -230,6 +234,7 @@ const MarketplaceScreen = ({ navigation }) => {
       console.error("Failed to load listings:", err);
     } finally {
       setListingsLoading(false);
+      setLoading(false); // Fix: ensure loading is set to false
     }
   };
 
@@ -250,25 +255,9 @@ const MarketplaceScreen = ({ navigation }) => {
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {selectedTab === 'market' && (
-            <View style={styles.section}>
-              <View style={styles.searchContainer}>
-                <TextInput style={styles.searchInput} value={searchState} onChangeText={setSearchState} placeholder="State (e.g., Maharashtra)" placeholderTextColor="#64748B" />
-                <TextInput style={styles.searchInput} value={searchDistrict} onChangeText={setSearchDistrict} placeholder="District (Optional)" placeholderTextColor="#64748B" />
-                <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity (e.g., Wheat)" placeholderTextColor="#64748B" />
-              </View>
-              <TouchableOpacity style={[styles.searchButton, searching && styles.disabledButton]} onPress={fetchMarketPrices} disabled={searching}>
-                {searching ? <ActivityIndicator color="#fff" /> : <Text style={styles.searchButtonText}>Search</Text>}
-              </TouchableOpacity>
-              {error && <Text style={styles.errorText}>{error}</Text>}
-              {searching && marketData.length === 0 ? (
-                <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />
-              ) : marketData.length > 0 ? (
-                marketData.map((item, index) => renderMarketItem(item, index))
-              ) : (
-                <Text style={{ color: '#9ca3af', textAlign: 'center', marginTop: 20 }}>
-                  No market data found for this selection.
-                </Text>
-              )}
+            // Render NewMarketPricesScreen instead of old market prices UI
+            <View style={{ flex: 1, minHeight: 400 }}>
+              <NewMarketPricesScreen navigation={navigation} embedded={true} />
             </View>
           )}
           {selectedTab === 'listings' && (

@@ -1,21 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  Easing,
-  ImageBackground,
+    StyleSheet,
+    Text,
+    View,
+    SafeAreaView,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    Animated,
+    Easing,
+    ImageBackground,
+    LayoutAnimation, // Import LayoutAnimation
+    Platform, // Import Platform for LayoutAnimation
+    UIManager, // Import UIManager for LayoutAnimation
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android') {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+}
 
 // --- THEME (Updated to Black Background) ---
 const theme = {
@@ -75,21 +85,61 @@ const LoadingAnimator = () => {
     );
 };
 
-const imageDisplayWidth = 300;
-const imageDisplayHeight = 300;
+// --- Accordion Component ---
+const Accordion = ({ title, children, initialExpanded = false }) => {
+    const [expanded, setExpanded] = useState(initialExpanded);
+    const animatedHeight = useRef(new Animated.Value(initialExpanded ? 1 : 0)).current;
+
+    const toggleExpansion = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpanded(!expanded);
+        Animated.timing(animatedHeight, {
+            toValue: expanded ? 0 : 1,
+            duration: 300,
+            useNativeDriver: false, // Must be false for height animations
+        }).start();
+    };
+
+    // Use a large max height for interpolation
+    const maxContentHeight = 1000;
+    const heightInterpolate = animatedHeight.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, maxContentHeight],
+    });
+
+    return (
+        <View style={styles.accordionContainer}>
+            <TouchableOpacity onPress={toggleExpansion} style={styles.accordionHeader}>
+                <Text style={styles.sectionTitle}>{title}</Text>
+                <Feather name={expanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+            <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
+                {expanded && (
+                    <View style={styles.accordionContent}>
+                        {children}
+                    </View>
+                )}
+            </Animated.View>
+        </View>
+    );
+};
+
+const imageDisplayWidth = 300; // Reduced width
+const imageDisplayHeight = 300; // Reduced height
+
 const getBoxStyle = (box) => {
-  if (!box) return {};
-  // Ensure all values are numbers
-  const x = typeof box.x === 'string' ? parseFloat(box.x) : box.x;
-  const y = typeof box.y === 'string' ? parseFloat(box.y) : box.y;
-  const width = typeof box.width === 'string' ? parseFloat(box.width) : box.width;
-  const height = typeof box.height === 'string' ? parseFloat(box.height) : box.height;
-  return {
-    top: (y / 100) * imageDisplayHeight,
-    left: (x / 100) * imageDisplayWidth,
-    width: (width / 100) * imageDisplayWidth,
-    height: (height / 100) * imageDisplayHeight,
-  };
+    if (!box) return {};
+    // Ensure all values are numbers
+    const x = typeof box.x === 'string' ? parseFloat(box.x) : box.x;
+    const y = typeof box.y === 'string' ? parseFloat(box.y) : box.y;
+    const width = typeof box.width === 'string' ? parseFloat(box.width) : box.width;
+    const height = typeof box.height === 'string' ? parseFloat(box.height) : box.height;
+    return {
+        top: (y / 100) * imageDisplayHeight,
+        left: (x / 100) * imageDisplayWidth,
+        width: (width / 100) * imageDisplayWidth,
+        height: (height / 100) * imageDisplayHeight,
+    };
 };
 
 
@@ -175,25 +225,49 @@ export default function CropDoctorScreen({ navigation }) {
                 return <LoadingAnimator />; // Using the new spinning loader
             case 'result':
                 return (
-                    <AnimatedView style={{ flex: 1 }}>
-                        <ScrollView>
-                            <View style={styles.resultImageContainer}>
+                    <View style={{ flex: 1 }}> {/* Changed to View to allow sticky footer */}
+                        <ScrollView style={{ flex: 1 }}>
+                            <AnimatedView delay={0} style={styles.resultImageContainer}>
                                 <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
                                     {Array.isArray(analysis.boundingBoxes) && analysis.boundingBoxes.map((box, idx) => (
-                                      <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
+                                        <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
                                     ))}
                                 </ImageBackground>
-                            </View>
+                            </AnimatedView>
                             <View style={styles.analysisContainer}>
                                 <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
                                 <Text style={styles.confidenceText}>Confidence: {analysis.confidence}</Text>
-                                <View style={styles.section}><Text style={styles.sectionTitle}>Description</Text><Text style={theme.typography.body}>{analysis.description}</Text></View>
-                                <View style={styles.section}><Text style={styles.sectionTitle}>Symptoms</Text>{analysis.symptoms.map((symptom, index) => (<View key={index} style={styles.listItem}><Text style={styles.bullet}>•</Text><Text style={styles.listItemText}>{symptom}</Text></View>))}</View>
-                                <View style={styles.section}><Text style={styles.sectionTitle}>Solutions</Text>{analysis.solutions.map((solution, index) => (<View key={index} style={styles.solutionCard}><Text style={styles.solutionTitle}>{solution.title}</Text><Text style={theme.typography.body}>{solution.details}</Text></View>))}</View>
+
+                                <Accordion title="Description" initialExpanded={true}>
+                                    <Text style={theme.typography.body}>{analysis.description}</Text>
+                                </Accordion>
+
+                                <Accordion title="Symptoms">
+                                    {analysis.symptoms.map((symptom, index) => (
+                                        <View key={index} style={styles.listItem}>
+                                            <Text style={styles.bullet}>•</Text>
+                                            <Text style={styles.listItemText}>{symptom}</Text>
+                                        </View>
+                                    ))}
+                                </Accordion>
+
+                                <Accordion title="Solutions">
+                                    {analysis.solutions.map((solution, index) => (
+                                        <View key={index} style={styles.solutionCard}>
+                                            <Text style={styles.solutionTitle}>{solution.title}</Text>
+                                            <Text style={theme.typography.body}>{solution.details}</Text>
+                                        </View>
+                                    ))}
+                                </Accordion>
                             </View>
                         </ScrollView>
-                        <View style={styles.chatInputContainer}><TouchableOpacity style={styles.chatButton} onPress={promptFollowUp}><Feather name="mic" size={24} color={theme.colors.background} /><Text style={styles.chatButtonText}>Ask a follow-up question</Text></TouchableOpacity></View>
-                    </AnimatedView>
+                        <View style={styles.chatInputContainer}>
+                            <TouchableOpacity style={styles.chatButton} onPress={promptFollowUp}>
+                                <Feather name="mic" size={24} color={theme.colors.background} />
+                                <Text style={styles.chatButtonText}>Ask a follow-up question</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 );
             default:
                 return (
@@ -210,7 +284,7 @@ export default function CropDoctorScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={[styles.header, { paddingTop: insets.top }]}> 
+            <View style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={{ width: 40, alignItems: 'flex-start' }}>
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Feather name="arrow-left" size={34} color={theme.colors.textSecondary} />
@@ -243,20 +317,61 @@ const styles = StyleSheet.create({
     uploadSubtitle: { ...theme.typography.body, textAlign: 'center', marginVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium },
     button: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30, marginTop: theme.spacing.medium },
     buttonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
-    resultImageContainer: { height: 300 },
+    resultImageContainer: {
+        height: imageDisplayHeight, // Use new reduced height
+        width: imageDisplayWidth,   // Use new reduced width
+        alignSelf: 'center',
+        marginVertical: theme.spacing.medium, // Added margin for spacing
+        borderRadius: 12, // Rounded corners for the image container
+        overflow: 'hidden', // Ensure image respects border radius
+    },
     resultImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-    boundingBox: { position: 'absolute', borderWidth: 2, borderColor: theme.colors.error, backgroundColor: 'rgba(248, 113, 113, 0.2)', borderRadius: 4 },
+    boundingBox: {
+        position: 'absolute',
+        borderWidth: 3,
+        borderColor: '#39FF14', // Neon green
+        backgroundColor: 'rgba(57,255,20,0.18)', // Neon green with higher opacity
+        borderRadius: 6,
+        shadowColor: '#39FF14',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 6,
+        elevation: 8,
+    },
     analysisContainer: { padding: theme.spacing.medium },
     diseaseTitle: { ...theme.typography.h1, color: theme.colors.primary },
     confidenceText: { ...theme.typography.body, color: theme.colors.textSecondary, marginBottom: theme.spacing.large },
-    section: { marginBottom: theme.spacing.large },
-    sectionTitle: { ...theme.typography.h2, marginBottom: theme.spacing.small, borderBottomWidth: 1, borderBottomColor: theme.colors.surface, paddingBottom: theme.spacing.small },
+    // Removed direct section styles as they are now part of accordion
     listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.small },
     bullet: { fontSize: 16, color: theme.colors.primary, marginRight: theme.spacing.small, lineHeight: 24 },
     listItemText: { ...theme.typography.body, flex: 1 },
-    solutionCard: { backgroundColor: theme.colors.surface, padding: theme.spacing.medium, borderRadius: 12, marginBottom: theme.spacing.medium },
+    solutionCard: { backgroundColor: theme.colors.surface, padding: theme.spacing.medium, borderRadius: 12, marginBottom: theme.spacing.small }, // Reduced marginBottom
     solutionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text, marginBottom: theme.spacing.small },
     chatInputContainer: { padding: theme.spacing.medium, backgroundColor: theme.colors.background, borderTopWidth: 1, borderColor: theme.colors.surface },
     chatButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primary, padding: theme.spacing.medium, borderRadius: 12 },
     chatButtonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
+
+    // Accordion Styles
+    accordionContainer: {
+        marginBottom: theme.spacing.medium,
+        borderWidth: 1,
+        borderColor: theme.colors.surface,
+        borderRadius: 12,
+        overflow: 'hidden', // Crucial for animation
+    },
+    accordionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: theme.spacing.medium,
+        backgroundColor: theme.colors.surface,
+    },
+    accordionContent: {
+        padding: theme.spacing.medium,
+        backgroundColor: theme.colors.background,
+    },
+    sectionTitle: { // Re-used for accordion header
+        ...theme.typography.h2,
+        color: theme.colors.text,
+    },
 });

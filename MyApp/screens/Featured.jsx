@@ -4,11 +4,11 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const tools = [
-  {
-    id: 'crop-cycle',
-    icon: <MaterialCommunityIcons name="progress-clock" size={24} color="#a78bfa" />, bg: '#4c1d95',
-    title: 'Crop Cycle', subtitle: 'Track growth from seed to harvest.', screen: 'CropCycle',
-  },
+  // {
+  //   id: 'crop-cycle',
+  //   icon: <MaterialCommunityIcons name="progress-clock" size={24} color="#a78bfa" />, bg: '#4c1d95',
+  //   title: 'Crop Cycle', subtitle: 'Track growth from seed to harvest.', screen: 'CropCycle',
+  // },
   {
     id: 'cattle-care',
     icon: <MaterialCommunityIcons name="paw" size={24} color="#f59e42" />, bg: '#78350f',

@@ -46,7 +46,7 @@ export default function ChoiceScreen({ navigation }) {
 
       <TouchableOpacity 
         style={styles.featureButton} 
-        onPress={() => navigation.navigate('NewMarketPrices')}
+        onPress={() => navigation.navigate('MarketplaceScreen')}
       >
         <Ionicons name="trending-up-outline" size={24} color="#10B981" />
         <Text style={styles.featureButtonText}>View Market Prices</Text>
