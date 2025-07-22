@@ -10,6 +10,7 @@ import langdetect
 from langchain_core.messages import HumanMessage
 import base64
 import re
+from services.firebase import db
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyC-OmyX48OcwbNLR7GcplTKKiAEPSZXHzc")
 model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
@@ -76,6 +77,19 @@ def context_to_prompt(context):
                     prompt_parts.append(f"Documents:\n{doc_lines}")
     return '\n\n'.join(prompt_parts)
 
+def get_market_soil_weather_context(query_embedding):
+    context = {}
+    for collection in ['market_data', 'soil_data', 'weather_data']:
+        doc = db.collection(collection).document('latest').get()
+        if doc.exists:
+            doc_data = doc.to_dict()
+            embedding = doc_data.get('embedding')
+            data = doc_data.get('data')
+            if embedding:
+                sim = np.dot(query_embedding, embedding) / (np.linalg.norm(query_embedding) * np.linalg.norm(embedding))
+                context[collection] = {'similarity': sim, 'data': data}
+    return context
+
 def extract_gemini_content(response):
     # Handles both string and list content from Gemini, including AIMessage objects
     # If response is an AIMessage, extract its 'content' attribute
@@ -130,8 +144,14 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
                     {"type": "image_url", "image_url": image_url},
                 ]
             )
+    query_embedding = embed_query(user_query)
     context = build_rich_context(user_query, top_k=top_k)
     context_text = context_to_prompt(context)
+    msw_context = get_market_soil_weather_context(query_embedding)
+    msw_prompt = ''
+    for k, v in msw_context.items():
+        safe_data = str(v['data']).replace('{', '{{').replace('}', '}}')
+        msw_prompt += f"\n[{k.upper()} CONTEXT] (similarity: {v['similarity']:.2f}):\n{safe_data[:2000]}\n"  # limit to 2000 chars for brevity
     # Detect question language
     try:
         question_language = langdetect.detect(user_query)
@@ -173,7 +193,7 @@ def generate_rag_response(user_query, chat_history=None, section=None, top_k=2, 
     )
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "User question: {user_query}\n\nContext:\n{context_text}\n\nChat history (numbered list):\n{chat_history}\n"),
+        ("human", "User question: {user_query}\n\nContext:\n{context_text}\n" + msw_prompt + "\nChat history (numbered list):\n{chat_history}\n"),
     ])
     memory = memory or ConversationBufferMemory(return_messages=True)
     if multimodal_message:
