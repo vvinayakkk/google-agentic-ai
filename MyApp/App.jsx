@@ -33,6 +33,7 @@ import DocumentAgentScreen from './screens/DocumentAgentScreen';
 import WeatherScreen from './screens/WeatherScreen';
 import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
 import SoilMoistureScreen from './screens/SoilMoistureScreen';
+import FarmerProfileScreen from './screens/FarmerProfileScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -200,6 +201,11 @@ export default function App() {
               options={{
                 headerShown: false,
               }} 
+            />
+            <Stack.Screen 
+              name="FarmerProfile" 
+              component={FarmerProfileScreen} 
+              options={{ headerShown: false }} 
             />
           </Stack.Navigator>
         </NavigationContainer>

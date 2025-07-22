@@ -375,13 +375,50 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={[styles.topBar, { paddingTop: insets.top }]}>
+            {/* Profile Icon at Top Right */}
+            <TouchableOpacity
+                style={{ position: 'absolute', top: 65, right: 18, zIndex: 20 }}
+                onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
+                activeOpacity={0.8}
+            >
+                <Ionicons name="person-circle-outline" size={50} color="#10B981" />
+            </TouchableOpacity>
+            <View style={[styles.topBar, { paddingTop: insets.top }]}> 
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}><Ionicons name="time-outline" size={28} color="white" /></TouchableOpacity>
                 <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || t('voicechat.title')}</Text>
                 <View style={styles.topRightIcons}>
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}><Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('ChoiceScreen')}><Ionicons name="home-outline" size={28} color="white" /></TouchableOpacity>
                 </View>
+            </View>
+            {/* New Chat Button Centered Below Title */}
+            <View style={styles.centeredNewChatRow}>
+                <TouchableOpacity
+                    style={styles.centeredNewChatButton}
+                    onPress={async () => {
+                        if (chatHistory.length > 0) {
+                            const newChat = {
+                                id: Date.now().toString(),
+                                title: chatTitle || t('voicechat.new_chat'),
+                                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                                messages: chatHistory,
+                                context: allContext // Save context with chat history
+                            };
+                            try {
+                                await axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat);
+                            } catch (e) {
+                                Alert.alert(t('common.error'), t('voicechat.failed_to_save_chat_backend'));
+                            }
+                        }
+                        setChatHistory([]);
+                        setChatTitle('');
+                        setInputValue('');
+                        setAttachedImage(null); // Clear image on new chat
+                        setCurrentContext(null);
+                        navigation.navigate('ChatHistory');
+                    }}
+                >
+                    <Ionicons name="add-circle" size={38} color="#10b981" />
+                </TouchableOpacity>
             </View>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
@@ -403,7 +440,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                         />
                     )}
                 </View>
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { marginRight: 70, marginBottom: 10 }]}> {/* Add marginRight to avoid overlap with home button */}
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}><Ionicons name="add" size={28} color="gray" /></TouchableOpacity>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachImage}><MaterialCommunityIcons name="image-plus" size={28} color="gray" /></TouchableOpacity>
                     {/* Image preview above input */}
@@ -421,34 +458,15 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     ) : (
                         <TouchableOpacity onPress={() => handleSendMessage()}><MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" /></TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                        style={styles.newChatButton}
-                        onPress={async () => {
-                            if (chatHistory.length > 0) {
-                                const newChat = {
-                                    id: Date.now().toString(),
-                                    title: chatTitle || t('voicechat.new_chat'),
-                                    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                                    messages: chatHistory,
-                                    context: allContext // Save context with chat history
-                                };
-                                try {
-                                    await axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat);
-                                } catch (e) {
-                                    Alert.alert(t('common.error'), t('voicechat.failed_to_save_chat_backend'));
-                                }
-                            }
-                            setChatHistory([]);
-                            setChatTitle('');
-                            setInputValue('');
-                            setAttachedImage(null); // Clear image on new chat
-                            setCurrentContext(null);
-                            navigation.navigate('ChatHistory');
-                        }}
-                    >
-                        <Ionicons name="add-circle" size={32} color="#10b981" />
-                    </TouchableOpacity>
                 </View>
+                {/* Floating Home Button at Bottom Right */}
+                <TouchableOpacity
+                    style={{ position: 'absolute', bottom: 10, right: 10, zIndex: 20, backgroundColor: '#18181b', borderRadius: 32, padding: 10, elevation: 8 }}
+                    onPress={() => navigation.navigate('ChoiceScreen')}
+                    activeOpacity={0.85}
+                >
+                    <Ionicons name="home-outline" size={38} color="#10B981" />
+                </TouchableOpacity>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -457,10 +475,10 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#121212' },
-    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, paddingTop:10,paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
-    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 10,marginTop:10 },
+    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop:10,paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 50,marginTop:10 },
     topRightIcons: { flexDirection: 'row' },
-    topRightIcon: { marginRight: 15 },
+    topRightIcon: { marginRight: 60,marginTop:10 },
     chatList: { flex: 1 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 20, minHeight: 60, paddingVertical: 5 },
     plusButton: { marginRight: 10 },
@@ -560,4 +578,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 8, marginHorizontal: 4, marginVertical: 4, backgroundColor: 'transparent', borderColor: '#bbb',
     },
     pillLabel: { fontSize: 15, fontWeight: '500', marginLeft: 6, color: '#bbb' },
+    centeredNewChatRow: { alignItems: 'center', marginTop: -20, marginBottom: 10 },
+    centeredNewChatButton: { backgroundColor: 'transparent', borderRadius: 24, padding: 2 },
 });

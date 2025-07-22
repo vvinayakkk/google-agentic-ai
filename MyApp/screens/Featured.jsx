@@ -4,6 +4,8 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+const FARMER_ID = 'f001';
+
 const tools = [
   {
     id: 'cattle-care',
@@ -39,6 +41,9 @@ export default function Featured({ navigation }) {
           <Ionicons name="arrow-back" size={26} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('featured.title')}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })} style={{ marginLeft: 'auto', marginRight: 2 }}>
+          <Ionicons name="person-circle-outline" size={45} color="#10B981" />
+        </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {/* Crop Doctor Card */}

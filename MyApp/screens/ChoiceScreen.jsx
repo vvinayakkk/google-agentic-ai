@@ -62,6 +62,15 @@ export default function ChoiceScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
+      {/* Profile Icon at Top Right */}
+      <TouchableOpacity
+        style={{ position: 'absolute', top: 80, right: 28, zIndex: 10 }}
+        onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="person-circle-outline" size={50} color="#10B981" />
+      </TouchableOpacity>
+      {/* Title and Subtitle */}
       <Text style={styles.title}>{t('choice.title')}</Text>
       <Text style={styles.subtitle}>{t('choice.subtitle')}</Text>
       
