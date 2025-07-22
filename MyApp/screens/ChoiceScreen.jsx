@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://10.123.4.245:8000';
 const FARMER_ID = 'f001';
 
 // REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect

@@ -82,7 +82,7 @@ const ChatScreen = () => {
       
       console.log('📡 Making request to server...');
       
-      const response = await fetch('http://192.168.0.111:3000/api/chat', {
+      const response = await fetch('http://10.123.4.245:3000/api/chat', {
         method: 'POST',
         body: formData,
         headers: {

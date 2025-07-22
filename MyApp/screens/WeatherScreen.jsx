@@ -21,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://10.123.4.245:8000';
 const FARMER_ID = 'f001';
 
 const WEATHER_CACHE_KEY = 'weather-cache';
