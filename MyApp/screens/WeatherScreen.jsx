@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Markdown from 'react-native-markdown-display';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = 'http://192.168.0.111:8000';
@@ -27,6 +28,7 @@ const WEATHER_CACHE_KEY = 'weather-cache';
 const FORECAST_CACHE_KEY = 'forecast-cache';
 const FARMER_PROFILE_CACHE_KEY = 'farmer-profile-cache';
 const AIR_QUALITY_CACHE_KEY = 'air-quality-cache';
+const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
 
 const WeatherScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -42,6 +44,9 @@ const WeatherScreen = ({ navigation }) => {
   const farmLocationRef = useRef(null);
   const farmProfileRef = useRef(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [weatherAnalysis, setWeatherAnalysis] = useState('');
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,6 +78,46 @@ const WeatherScreen = ({ navigation }) => {
       // ignore
     }
   };
+
+  // Fetch or load cached AI weather analysis
+  const loadWeatherAnalysis = async () => {
+    setAnalysisLoading(true);
+    try {
+      const cached = await AsyncStorage.getItem(WEATHER_ANALYSIS_CACHE_KEY);
+      if (cached) {
+        setWeatherAnalysis(cached);
+        setAnalysisLoading(false);
+        return;
+      }
+      // If not cached, fetch from backend
+      const res = await fetch(`${API_BASE}/weather/ai-analysis?farmer_id=${FARMER_ID}`);
+      const data = await res.json();
+      setWeatherAnalysis(data.analysis);
+      await AsyncStorage.setItem(WEATHER_ANALYSIS_CACHE_KEY, data.analysis);
+      setAnalysisLoading(false);
+    } catch (e) {
+      setWeatherAnalysis('Failed to load AI analysis.');
+      setAnalysisLoading(false);
+    }
+  };
+
+  const updateWeatherAnalysis = async () => {
+    setAnalysisLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/weather/ai-analysis?farmer_id=${FARMER_ID}`);
+      const data = await res.json();
+      setWeatherAnalysis(data.analysis);
+      await AsyncStorage.setItem(WEATHER_ANALYSIS_CACHE_KEY, data.analysis);
+      setAnalysisLoading(false);
+    } catch (e) {
+      setWeatherAnalysis('Failed to update AI analysis.');
+      setAnalysisLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWeatherAnalysis();
+  }, []);
 
   // Only fetch from cache on mount and farm restore
   useEffect(() => {
@@ -351,6 +396,49 @@ const WeatherScreen = ({ navigation }) => {
             </View>
           </BlurView>
         </Animated.View>
+        {/* AI Weather Analysis Section (above weather card) */}
+        <View style={{
+          backgroundColor: '#18181b',
+          borderRadius: 16,
+          padding: 16,
+          marginHorizontal: 16,
+          marginTop: 4,
+          marginBottom: 0,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)',
+          elevation: 10,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>AI Weather Insights</Text>
+            <TouchableOpacity onPress={updateWeatherAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Update</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={{ maxHeight: 250 }}>
+            {analysisLoading ? (
+              <Text style={{ color: '#fff' }}>Loading analysis...</Text>
+            ) : (
+              (() => {
+                const lines = weatherAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
+                const previewLines = lines.slice(0, 4);
+                const isLong = lines.length > 4;
+                return (
+                  <>
+                    <Markdown style={{ body: { color: '#fff', fontSize: 15} }}>
+                      {showFullAnalysis ? weatherAnalysis : previewLines.join('\n')}
+                    </Markdown>
+                    {isLong && (
+                      <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? 'Show Less' : 'Show More'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()
+            )}
+          </ScrollView>
+        </View>
         {/* Main Content */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {(loading && !weather && !forecast) ? (
