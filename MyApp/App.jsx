@@ -27,6 +27,7 @@ import BankTransferScreen from './UPI/BankTransferScreen';
 import MobileRechargeScreen from './UPI/MobileRechargeScreen';
 import LanguageSelectScreen from './screens/LanguageSelectScreen';
 import DocumentAgentScreen from './screens/DocumentAgentScreen';
+import WeatherScreen from './screens/WeatherScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -160,6 +161,13 @@ export default function App() {
          <Stack.Screen 
           name="DocumentAgentScreen" 
           component={DocumentAgentScreen} 
+          options={{
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="WeatherScreen" 
+          component={WeatherScreen} 
           options={{
             headerShown: false,
           }} 

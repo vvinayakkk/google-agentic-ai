@@ -148,6 +148,12 @@ const FeaturesView = ({ navigation }) => (
             <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropCycle')}><MaterialCommunityIcons name="recycle-variant" size={40} color="#f59e0b" /><Text style={styles.featureText}>Crop Cycle</Text></TouchableOpacity>
             <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('CropDoctor')}><MaterialCommunityIcons name="stethoscope" size={40} color="#a259f7" /><Text style={styles.featureText}>Crop Doctor</Text></TouchableOpacity>
         </View>
+        <View style={styles.featuresRow}>
+            <TouchableOpacity style={styles.featureBox} onPress={() => navigation.navigate('WeatherScreen')}>
+                <MaterialCommunityIcons name="weather-partly-cloudy" size={40} color="#3b82f6" />
+                <Text style={styles.featureText}>Weather</Text>
+            </TouchableOpacity>
+        </View>
     </View>
 );
 
@@ -365,4 +371,40 @@ const styles = StyleSheet.create({
     featureBox: { backgroundColor: '#1e1e1e', borderRadius: 15, padding: 20, alignItems: 'center', justifyContent: 'center', width: '45%', height: 120, borderWidth: 1, borderColor: '#333' },
     featureText: { color: 'white', marginTop: 10, fontSize: 14, fontWeight: '600' },
     newChatButton: { marginLeft: 10, padding: 4 },
+    cropDoctorCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#1e1e1e',
+      borderRadius: 18,
+      paddingVertical: 22,
+      paddingHorizontal: 18,
+      marginBottom: 22,
+      alignSelf: 'center',
+      width: '90%',
+      borderWidth: 2,
+      borderColor: '#888',
+      elevation: 8,
+    },
+    cropDoctorIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: '#3b82f6',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 15,
+    },
+    cropDoctorTitle: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 20,
+      marginBottom: 2,
+      letterSpacing: 0.2,
+    },
+    cropDoctorSubtitle: {
+      color: '#fff',
+      fontSize: 14,
+      marginTop: 2,
+      textAlign: 'center',
+    },
 });

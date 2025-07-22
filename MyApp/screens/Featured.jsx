@@ -53,6 +53,24 @@ export default function Featured({ navigation }) {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#64748B" />
         </TouchableOpacity>
+        {/* Crop Cycle Card */}
+        <TouchableOpacity style={styles.cropDoctorCard} activeOpacity={0.9} onPress={() => navigation.navigate('CropCycle')}>
+          <View style={styles.cropDoctorIcon}><MaterialCommunityIcons name="progress-clock" size={32} color="#a78bfa" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cropDoctorTitle}>Crop Cycle</Text>
+            <Text style={styles.cropDoctorSubtitle}>Track growth from seed to harvest.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#64748B" />
+        </TouchableOpacity>
+        {/* Weather Card */}
+        <TouchableOpacity style={styles.cropDoctorCard} activeOpacity={0.9} onPress={() => navigation.navigate('WeatherScreen')}>
+          <View style={styles.cropDoctorIcon}><MaterialCommunityIcons name="weather-partly-cloudy" size={32} color="#3b82f6" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cropDoctorTitle}>Weather</Text>
+            <Text style={styles.cropDoctorSubtitle}>See live weather & forecast</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#64748B" />
+        </TouchableOpacity>
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActionsRow}>
