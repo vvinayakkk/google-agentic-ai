@@ -22,7 +22,7 @@ import Markdown from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://10.123.4.245:8000';
+const API_BASE = 'http://192.168.0.111:8000';
 const FARMER_ID = 'f001';
 
 const WEATHER_CACHE_KEY = 'weather-cache';
@@ -46,6 +46,10 @@ const WeatherScreen = ({ navigation }) => {
   const [weatherAnalysis, setWeatherAnalysis] = useState('');
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  const isCustomLocation = !!searchValue.trim();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -227,6 +231,19 @@ const WeatherScreen = ({ navigation }) => {
       setProfileLoading(false);
     }
     setLoading(false);
+  };
+
+  const handleSearch = async () => {
+    if (!searchValue.trim()) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`${API_BASE}/weather/city?city=${encodeURIComponent(searchValue)}`);
+      const data = await res.json();
+      setWeather(data);
+    } catch (e) {
+      setError('Failed to fetch weather for the searched city.');
+    }
+    setSearching(false);
   };
 
   // Helper: get weather icon url

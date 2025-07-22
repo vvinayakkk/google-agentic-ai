@@ -446,7 +446,7 @@ export default function CropCycleScreen({ navigation }) {
   const [micModal, setMicModal] = useState(false);
   const micAnim = useRef(new Animated.Value(1)).current;
 
-  const API_BASE = 'http://10.123.4.245:8000';
+  const API_BASE = 'http://192.168.0.111:8000';
   const FARMER_ID = 'f001';
   const STORAGE_KEY = 'crops-cache';
 
