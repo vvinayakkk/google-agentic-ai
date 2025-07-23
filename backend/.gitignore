@@ -2,3 +2,5 @@ myenv/
 .env
 __pycache__/
 *pyc
+creds_gcp.json
+

@@ -39,6 +39,7 @@ import RentalScreen from './screens/RentalScreen';
 import MyBookings from './screens/MyBookings';
 import Earnings from './screens/Earnings';
 import ListingDetails from './screens/ListingDetails';
+import SpeechToTextScreen from './screens/SpeechToTextScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -54,7 +55,7 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="RentalSystemScreen"
+          <Stack.Navigator initialRouteName="SpeechToTextScreen"
             screenOptions={{
               headerShown: false,
             }}
@@ -237,6 +238,11 @@ export default function App() {
             <Stack.Screen 
               name="Earnings" 
               component={Earnings} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="SpeechToTextScreen" 
+              component={SpeechToTextScreen} 
               options={{ headerShown: false }} 
             />
           </Stack.Navigator>
