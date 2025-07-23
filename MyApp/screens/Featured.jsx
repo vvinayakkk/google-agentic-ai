@@ -89,7 +89,7 @@ export default function Featured({ navigation }) {
         <Text style={styles.sectionTitle}>{t('featured.all_tools')}</Text>
         <View style={styles.toolsList}>
           {tools.map(tool => (
-            <TouchableOpacity key={tool.id} style={styles.toolCard} onPress={() => navigation.navigate(tool.screen)}>
+            <TouchableOpacity key={tool.id} style={styles.toolCard} onPress={() => navigation.navigate(tool.id === 'rental-system' ? 'Rental' : tool.screen)}>
               <View style={[styles.toolIcon, { backgroundColor: tool.bg }]}>{tool.icon}</View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.toolTitle}>{t(tool.titleKey)}</Text>

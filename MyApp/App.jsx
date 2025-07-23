@@ -35,6 +35,10 @@ import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
 import SoilMoistureScreen from './screens/SoilMoistureScreen';
 import FarmerProfileScreen from './screens/FarmerProfileScreen';
 import LoginScreen from './screens/LoginScreen';
+import RentalScreen from './screens/RentalScreen';
+import MyBookings from './screens/MyBookings';
+import Earnings from './screens/Earnings';
+import ListingDetails from './screens/ListingDetails';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -50,7 +54,7 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="LanguageSelectScreen"
+          <Stack.Navigator initialRouteName="RentalSystemScreen"
             screenOptions={{
               headerShown: false,
             }}
@@ -213,6 +217,26 @@ export default function App() {
             <Stack.Screen 
               name="FarmerProfile" 
               component={FarmerProfileScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="RentalSystemScreen" 
+              component={RentalScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="ListingDetails" 
+              component={ListingDetails} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="MyBookings" 
+              component={MyBookings} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Earnings" 
+              component={Earnings} 
               options={{ headerShown: false }} 
             />
           </Stack.Navigator>

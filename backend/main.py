@@ -10,6 +10,7 @@ from routers import crop_disease
 from routers import chat_rag
 from routers import market
 from routers import soil_moisture
+from routers import rental
 
 app = FastAPI()
 
@@ -30,6 +31,7 @@ app.include_router(crop_disease.router)
 app.include_router(chat_rag.router)
 app.include_router(market.router)
 app.include_router(soil_moisture.router)
+app.include_router(rental.router)
 
 
 @app.get("/")
