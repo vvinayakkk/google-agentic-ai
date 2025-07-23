@@ -5,3 +5,7 @@ python-dotenv
 langchain
 google-generativeai
 langchain-google-genai 
+pillow
+pytesseract
+fpdf
+requests 

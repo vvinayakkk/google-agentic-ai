@@ -1,5 +1,7 @@
 import requests
 import os
+import json
+import re
 
 GEMINI_API_KEY = "AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs"
 if not GEMINI_API_KEY:
@@ -56,4 +58,32 @@ def analyze_image_with_context(images, context):
         print('Parsed suggestions:', suggestions)
     except Exception as e:
         raise Exception(f"Failed to parse Gemini response: {e}")
-    return suggestions 
+    return suggestions
+
+def ask_gemini(prompt: str) -> dict:
+    """
+    Sends a prompt to Gemini 2.5 Flash and returns the parsed JSON response.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + api_key
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    try:
+        response = requests.post(endpoint, headers=headers, json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        # Extract the text from the response
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
+        # Try to parse as JSON
+        try:
+            return json.loads(text)
+        except Exception:
+            # Try to extract JSON substring if Gemini returns extra text
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return {"error": "Could not parse Gemini response as JSON", "raw": text}
+    except Exception as e:
+        return {"error": str(e)} 

@@ -1,117 +1,181 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-const { width } = Dimensions.get('window');
-
-function VoiceWaveform({ isActive }) {
-  const barCount = 24;
-  const animatedValues = useRef(
-    Array.from({ length: barCount }, () => new Animated.Value(0.5))
-  ).current;
-
-  React.useEffect(() => {
-    let animations = [];
-    if (isActive) {
-      animations = animatedValues.map((val, i) =>
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(val, {
-              toValue: Math.random() * 1.5 + 0.5,
-              duration: 120 + Math.random() * 80,
-              useNativeDriver: true,
-            }),
-            Animated.timing(val, {
-              toValue: 0.5,
-              duration: 120 + Math.random() * 80,
-              useNativeDriver: true,
-            }),
-          ])
-        )
-      );
-      Animated.stagger(30, animations).start();
-    } else {
-      animatedValues.forEach((val) => val.setValue(0.5));
-    }
-    return () => {
-      animatedValues.forEach((val) => val.stopAnimation());
-    };
-  }, [isActive]);
-
-  return (
-    <View style={styles.waveformContainer}>
-      {animatedValues.map((val, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.waveBar,
-            {
-              transform: [
-                { scaleY: val },
-                { translateY: val.interpolate({ inputRange: [0, 2], outputRange: [0, -10] }) },
-              ],
-              backgroundColor: i % 2 === 0 ? '#22c55e' : '#bbf7d0',
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-const conversationFlow = [
-  { agent: "Hello! I'm here to help you with any documentation needs. What can I assist you with today?", state: 'greeting' },
-  { agent: "Perfect! I'll help you complete that form step by step. Do you have the form with you, or should I create a new one?", state: 'clarifying' },
-  { agent: "Great. Let me start by getting your full name. Take your time.", state: 'collecting' },
-  { agent: "Thank you. Now, what's your current address or village name?", state: 'collecting' },
-  { agent: "Excellent. I'm now processing your information and preparing the document...", state: 'processing' }
-];
+// Update this to your backend device IP (same as other screens)
+const API_BASE = 'http://192.168.0.111:8000/document-builder';
 
 export default function DocumentAgentScreen({ navigation }) {
   const { t } = useTranslation();
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [agentState, setAgentState] = useState('ready');
-  const [conversationStage, setConversationStage] = useState(0);
-  const [showInfo, setShowInfo] = useState(false);
-  const [showDocs, setShowDocs] = useState(false);
-  const [showAllDocs, setShowAllDocs] = useState(false);
-  // Example doc data
-  const docHistory = [
-    { id: 1, title: 'Land Ownership Affidavit', time: 'Today, 10:24 AM' },
-    { id: 2, title: 'Crop Insurance Form', time: 'Yesterday, 4:12 PM' },
-    { id: 3, title: 'Fertilizer Purchase Receipt', time: '2 days ago, 11:03 AM' },
-    { id: 4, title: 'Water Usage Log', time: '3 days ago, 9:45 AM' },
-    { id: 5, title: 'Soil Test Report', time: 'Last week, 2:30 PM' },
-  ];
+  const [sessionId, setSessionId] = useState(null);
+  const [chat, setChat] = useState([
+    { role: 'assistant', message: '🧑‍🌾 Namaste farmer 🙏, I’m here to help you make an official document required for any government scheme.\nPlease tell me the scheme name or upload a sample/photo of the document you saw.' }
+  ]);
+  const [schemeName, setSchemeName] = useState('');
+  const [file, setFile] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [documentUrl, setDocumentUrl] = useState(null);
+  const [documentReady, setDocumentReady] = useState(false);
 
-  const handleMic = () => {
-    if (isListening) {
-      setIsListening(false);
-      setAgentState('ready');
-      return;
+  // File/image picker
+  const pickFile = async () => {
+    let result = await DocumentPicker.getDocumentAsync({ type: '*/*' });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      setFile(result.assets[0]);
     }
-    setIsListening(true);
-    setAgentState('listening');
-    setTimeout(() => {
-      setIsListening(false);
-      setAgentState('processing');
-      setTimeout(() => {
-        setIsSpeaking(true);
-        setAgentState('speaking');
-        setTimeout(() => {
-          setIsSpeaking(false);
-          if (conversationStage < conversationFlow.length - 1) {
-            setConversationStage(prev => prev + 1);
-          }
-          setAgentState('ready');
-        }, 2000);
-      }, 1000);
-    }, 2500);
+  };
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      setFile(result.assets[0]);
+    }
   };
 
-  const currentAgentMessage = conversationFlow[conversationStage]?.agent || '';
+  // Start session
+  const startSession = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let formData = new FormData();
+      if (schemeName) formData.append('scheme_name', schemeName);
+      if (file) {
+        formData.append('file', {
+          uri: file.uri,
+          name: file.name || 'upload.jpg',
+          type: file.mimeType || 'image/jpeg',
+        });
+      }
+      const res = await fetch(`${API_BASE}/start`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Failed to start session');
+      const data = await res.json();
+      setSessionId(data.session_id);
+      setQuestions(data.questions);
+      setAnswers(data.present_fields || {});
+      setChat(prev => [...prev, { role: 'user', message: schemeName || (file ? 'Uploaded a file/image.' : '') }, { role: 'assistant', message: data.questions.map(q => q.question).join('\n') }]);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  // Answer questions
+  const submitAnswers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, answers }),
+      });
+      if (!res.ok) throw new Error('Failed to submit answers');
+      const data = await res.json();
+      setQuestions(data.questions);
+      setAnswers(data.all_fields || {});
+      setDocumentReady(data.document_ready);
+      setDocumentUrl(data.document_url);
+      setChat(prev => [
+        ...prev,
+        { role: 'user', message: Object.values(answers).join(', ') },
+        { role: 'assistant', message: data.questions.length ? data.questions.map(q => q.question).join('\n') : (data.document_ready ? 'Your document is ready! You can download it below.' : '') }
+      ]);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  // Reset session
+  const resetSession = async () => {
+    if (sessionId) {
+      await fetch(`${API_BASE}/reset/${sessionId}`, { method: 'POST' });
+    }
+    setSessionId(null);
+    setQuestions([]);
+    setAnswers({});
+    setFile(null);
+    setSchemeName('');
+    setDocumentUrl(null);
+    setDocumentReady(false);
+    setChat([
+      { role: 'assistant', message: '🧑‍🌾 Namaste farmer 🙏, I’m here to help you make an official document required for any government scheme.\nPlease tell me the scheme name or upload a sample/photo of the document you saw.' }
+    ]);
+    setError(null);
+  };
+
+  // UI for chat bubbles
+  const renderChat = () => (
+    <ScrollView style={styles.chatArea} contentContainerStyle={{ paddingBottom: 20 }}>
+      {chat.map((msg, idx) => (
+        <View key={idx} style={[styles.chatBubble, msg.role === 'user' ? styles.userBubble : styles.assistantBubble]}>
+          <Text style={styles.chatText}>{msg.message}</Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+
+  // UI for questions/answers
+  const renderQuestions = () => (
+    <View style={{ marginTop: 10 }}>
+      {questions.map((q, idx) => (
+        <View key={q.field} style={{ marginBottom: 12 }}>
+          <Text style={styles.questionText}>{q.question}</Text>
+          <TextInput
+            style={styles.input}
+            value={answers[q.field] || ''}
+            onChangeText={text => setAnswers(a => ({ ...a, [q.field]: text }))}
+            placeholder={q.field}
+            placeholderTextColor="#aaa"
+          />
+        </View>
+      ))}
+      {questions.length > 0 && (
+        <TouchableOpacity style={styles.submitBtn} onPress={submitAnswers} disabled={loading}>
+          <Text style={styles.submitBtnText}>{loading ? 'Submitting...' : 'Submit Answers'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // UI for file/image upload
+  const renderUpload = () => (
+    <View style={styles.uploadRow}>
+      <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
+        <Feather name="file-text" size={28} color="#22c55e" />
+        <Text style={styles.uploadLabel}>Upload Document</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+        <Feather name="image" size={28} color="#3b82f6" />
+        <Text style={styles.uploadLabel}>Upload Image</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // UI for document download
+  const renderDownload = () => (
+    documentReady && documentUrl ? (
+      <TouchableOpacity style={styles.downloadBtn} onPress={() => {
+        // Open in browser or download
+        Alert.alert('Download', 'Open document in browser?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open', onPress: () => { window.open(`${API_BASE}${documentUrl}`, '_blank'); } }
+        ]);
+      }}>
+        <Feather name="download" size={24} color="#fff" />
+        <Text style={styles.downloadBtnText}>Download Document</Text>
+      </TouchableOpacity>
+    ) : null
+  );
 
   return (
     <View style={styles.container}>
@@ -120,397 +184,59 @@ export default function DocumentAgentScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.headerRightRow}>
-          <View style={styles.headerStatus}>
-            <View style={styles.statusDot} />
-            <Text style={styles.headerText}>Agent Connected</Text>
-          </View>
-          <View style={styles.headerLive}>
-            <Text style={styles.liveText}>LIVE</Text>
-            <View style={styles.liveDot} />
-          </View>
-          {/* Info Icon */}
-          <TouchableOpacity onPress={() => setShowInfo(true)} style={styles.infoIconBtn}>
-            <Ionicons name="information-circle-outline" size={36} color="#facc15" />
+        <Text style={styles.headerText}>Document Builder</Text>
+        <TouchableOpacity onPress={resetSession} style={styles.resetBtn}>
+          <Ionicons name="refresh" size={24} color="#facc15" />
+        </TouchableOpacity>
+      </View>
+      {/* Chat Area */}
+      {renderChat()}
+      {/* Upload and Scheme Name Input (if not started) */}
+      {!sessionId && (
+        <View style={{ padding: 16 }}>
+          <TextInput
+            style={styles.input}
+            value={schemeName}
+            onChangeText={setSchemeName}
+            placeholder="Enter scheme name (optional)"
+            placeholderTextColor="#aaa"
+          />
+          {renderUpload()}
+          <TouchableOpacity style={styles.submitBtn} onPress={startSession} disabled={loading}>
+            <Text style={styles.submitBtnText}>{loading ? 'Starting...' : 'Start'}</Text>
           </TouchableOpacity>
         </View>
-      </View>
-      {/* History icon below Agent Connected */}
-      <TouchableOpacity onPress={() => setShowDocs(true)} style={styles.historyIconBtn}>
-        <Ionicons name="time-outline" size={28} color="#2563eb" />
-      </TouchableOpacity>
-      {/* History Card */}
-      {showDocs && (
-        <View style={styles.docsCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="time-outline" size={20} color="#2563eb" style={{ marginRight: 6 }} />
-            <Text style={styles.docsCardTitle}>History</Text>
-            <TouchableOpacity onPress={() => { setShowDocs(false); setShowAllDocs(false); }} style={{ marginLeft: 'auto' }}>
-              <Ionicons name="close-circle" size={20} color="#f87171" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.docsHistoryList}>
-            {(showAllDocs ? docHistory : docHistory.slice(0,3)).map((doc) => (
-              <TouchableOpacity key={doc.id} style={styles.docHistoryRow}>
-                <Ionicons name="document" size={22} color="#2563eb" style={{marginRight: 10}} />
-                <View style={{flex:1}}>
-                  <Text style={styles.docHistoryTitle}>{doc.title}</Text>
-                  <Text style={styles.docHistoryTime}>{doc.time}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {!showAllDocs && (
-            <TouchableOpacity style={styles.showAllBtn} onPress={() => setShowAllDocs(true)}>
-              <Text style={styles.showAllBtnText}>Show All</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       )}
-      {/* Info Card */}
-      {showInfo && (
-        <View style={styles.infoCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <Ionicons name="information-circle" size={22} color="#2563eb" style={{ marginRight: 6 }} />
-            <Text style={styles.infoCardTitle}>{t('documentagent.title')}</Text>
-            <TouchableOpacity onPress={() => setShowInfo(false)} style={{ marginLeft: 'auto' }}>
-              <Ionicons name="close-circle" size={22} color="#f87171" />
-            </TouchableOpacity>
-          </View>
-          <View style={{marginTop: 2}}>
-            <Text style={styles.infoCardText}>{'• Tap the mic to start speaking your document request.'}</Text>
-            <Text style={styles.infoCardText}>{'• The agent will guide you step by step.'}</Text>
-            <Text style={styles.infoCardText}>{'• Upload files or images if needed.'}</Text>
-            <Text style={styles.infoCardText}>{'• Follow the prompts to complete your document.'}</Text>
-          </View>
-        </View>
-      )}
-      {/* Main Voice Circle */}
-      <View style={styles.centerArea}>
-        {/* Move VoiceWaveform outside the circle */}
-        <VoiceWaveform isActive={isListening || isSpeaking} />
-        <View style={[styles.bigVoiceCircle, isListening ? { borderColor: '#22c55e' } : isSpeaking ? { borderColor: '#3b82f6' } : agentState === 'processing' ? { borderColor: '#facc15' } : { borderColor: '#6b7280' }]}> 
-          <View style={styles.avatarCircleBig}>
-            <Feather name="user" size={64} color={isListening ? '#22c55e' : isSpeaking ? '#3b82f6' : agentState === 'processing' ? '#facc15' : '#d1d5db'} />
-          </View>
-          {/* Remove VoiceWaveform from here */}
-          <TouchableOpacity
-            style={[styles.micButtonBig, isListening && { backgroundColor: '#22c55e' }]}
-            onPress={handleMic}
-            activeOpacity={0.8}
-          >
-            <Ionicons name={isListening ? 'mic-off' : 'mic'} size={38} color={isListening ? 'white' : 'black'} />
-          </TouchableOpacity>
-        </View>
-        <Text style={[styles.statusText, isListening ? { color: '#22c55e' } : isSpeaking ? { color: '#3b82f6' } : agentState === 'processing' ? { color: '#facc15' } : { color: '#d1d5db' }]}> 
-          {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : agentState === 'processing' ? 'Processing...' : 'Ready to Help'}
-        </Text>
-        {currentAgentMessage && !isListening && (
-          <View style={styles.agentMessageBox}>
-            <Text style={styles.agentMessageText}>{currentAgentMessage}</Text>
-          </View>
-        )}
-      </View>
-      {/* Upload Options */}
-      <View style={styles.uploadRow}>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Feather name="file-text" size={28} color="#22c55e" />
-          <Text style={styles.uploadLabel}>Upload Document</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Feather name="image" size={28} color="#3b82f6" />
-          <Text style={styles.uploadLabel}>Upload Image</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Feather name="camera" size={28} color="#facc15" />
-          <Text style={styles.uploadLabel}>Camera</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Questions/Answers (if session started) */}
+      {sessionId && !documentReady && renderQuestions()}
+      {/* Download (if ready) */}
+      {renderDownload()}
+      {/* Error */}
+      {error && <Text style={styles.errorText}>{error}</Text>}
+      {loading && <ActivityIndicator style={{ marginTop: 10 }} color="#22c55e" />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-    paddingTop: 34,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#18181b',
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#27272a',
-  },
-  headerStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    // marginLeft: 10, // shift right to avoid overlap with back arrow
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22c55e',
-  },
-  headerText: {
-    color: '#e5e7eb',
-    fontWeight: '600',
-    fontSize: 18,
-    marginRight: 100,
-  },
-  headerLive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  liveText: {
-    color: '#f87171',
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginRight: 4,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#f87171',
-  },
-  centerArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bigVoiceCircle: {
-    width: width * 0.7,
-    height: width * 0.7,
-    borderRadius: width * 0.35,
-    borderWidth: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#18181b',
-    marginBottom: 18,
-    position: 'relative',
-  },
-  avatarCircleBig: {
-    width: width * 0.32,
-    height: width * 0.32,
-    borderRadius: width * 0.16,
-    backgroundColor: '#232323',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  micButtonBig: {
-    position: 'absolute',
-    bottom: 24,
-    alignSelf: 'center',
-    backgroundColor: 'white',
-    borderRadius: 32,
-    width: 64,
-    height: 64,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  statusText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  agentMessageBox: {
-    backgroundColor: '#18181b',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#27272a',
-    marginTop: 6,
-    maxWidth: width * 0.85,
-    alignSelf: 'center',
-  },
-  agentMessageText: {
-    color: '#d1d5db',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    width: width * 0.5,
-    height: 36,
-    marginTop: 8,
-    marginBottom: 2,
-    alignSelf: 'center',
-  },
-  waveBar: {
-    width: 7,
-    height: 28,
-    borderRadius: 3,
-    marginHorizontal: 1,
-    backgroundColor: '#22c55e',
-  },
-  uploadRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 10,
-    paddingHorizontal: 10,
-  },
-  uploadButton: {
-    backgroundColor: '#18181b',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    width: width * 0.26,
-  },
-  uploadLabel: {
-    color: '#d1d5db',
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  infoIconBtn: {
-    position: 'absolute',
-    right: 26,
-    top: 72,
-    padding: 4,
-    zIndex: 10,
-  },
-  infoCard: {
-    position: 'absolute',
-    top: 120,
-    alignSelf: 'center',
-    width: '70%',
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderWidth: 2,
-    borderColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 10,
-    zIndex: 20,
-  },
-  infoCardTitle: {
-    color: '#2563eb',
-    fontWeight: 'bold',
-    fontSize: 17,
-    marginRight: 8,
-    letterSpacing: 0.2,
-  },
-  infoCardText: {
-    color: '#22223b',
-    fontSize: 15,
-    marginTop: 4,
-    lineHeight: 22,
-    paddingLeft: 4,
-  },
-  historyIconBtn: {
-    position: 'absolute',
-    left: 18,
-    top: 122,
-    backgroundColor: '#e0e7ff',
-    borderRadius: 16,
-    padding: 7,
-    elevation: 2,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    zIndex: 12,
-  },
-  docsCard: {
-    position: 'absolute',
-    left: 18,
-    top: 150,
-    width: 240,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 10,
-    zIndex: 30,
-  },
-  docsCardTitle: {
-    color: '#2563eb',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginRight: 8,
-    letterSpacing: 0.2,
-  },
-  docsHistoryList: {
-    marginTop: 2,
-  },
-  docHistoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-    marginBottom: 2,
-    backgroundColor: '#f1f5fd',
-    marginTop: 2,
-  },
-  docHistoryTitle: {
-    color: '#22223b',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  docHistoryTime: {
-    color: '#64748b',
-    fontSize: 12,
-  },
-  showAllBtn: {
-    marginTop: 8,
-    alignSelf: 'center',
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-  },
-  showAllBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 8,
-    top: 8,
-    padding: 6,
-    zIndex: 20,
-  },
-  headerRightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 'auto',
-  },
+  container: { flex: 1, backgroundColor: 'black', paddingTop: 34 },
+  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#18181b', paddingHorizontal: 18, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#27272a', justifyContent: 'space-between' },
+  headerText: { color: '#e5e7eb', fontWeight: '600', fontSize: 18 },
+  resetBtn: { marginLeft: 10 },
+  chatArea: { flex: 1, paddingHorizontal: 16, marginTop: 10 },
+  chatBubble: { borderRadius: 12, padding: 12, marginBottom: 8, maxWidth: '85%' },
+  userBubble: { backgroundColor: '#2563eb', alignSelf: 'flex-end' },
+  assistantBubble: { backgroundColor: '#18181b', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#27272a' },
+  chatText: { color: '#fff', fontSize: 15, lineHeight: 22 },
+  questionText: { color: '#facc15', fontSize: 15, marginBottom: 4 },
+  input: { backgroundColor: '#232323', color: '#fff', borderRadius: 8, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: '#333' },
+  submitBtn: { backgroundColor: '#22c55e', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 8 },
+  submitBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  uploadRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 12, marginTop: 10 },
+  uploadButton: { backgroundColor: '#18181b', borderRadius: 16, paddingVertical: 18, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, width: 110 },
+  uploadLabel: { color: '#d1d5db', fontSize: 13, marginTop: 8, textAlign: 'center', fontWeight: '500' },
+  downloadBtn: { backgroundColor: '#2563eb', borderRadius: 8, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
+  downloadBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
+  errorText: { color: '#f87171', textAlign: 'center', marginTop: 10 },
+  backButton: { padding: 6 },
 });

@@ -12,6 +12,7 @@ from routers import market
 from routers import soil_moisture
 from routers import rental
 from routers.speech_to_text import router as speech_to_text_router
+from routers.document_builder import router as document_builder_router
 
 app = FastAPI()
 
@@ -34,6 +35,7 @@ app.include_router(market.router)
 app.include_router(soil_moisture.router)
 app.include_router(rental.router)
 app.include_router(speech_to_text_router)
+app.include_router(document_builder_router)
 
 
 @app.get("/")
