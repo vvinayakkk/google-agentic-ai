@@ -12,6 +12,7 @@ const API_BASE = 'http://192.168.0.111:8000';
 const ACTION_BUTTONS = {
   weather: { icon: 'cloud', label: 'Weather', color: '#4FC3F7' },
   soil_moisture: { icon: 'water', label: 'Soil Check', color: '#8BC34A' },
+  crop_intelligence: { icon: 'leaf', label: 'Crop Intelligence', color: '#4CAF50' },
   cattle_management: { icon: 'paw', label: 'Livestock', color: '#FF9800' },
   profile: { icon: 'person', label: 'Profile', color: '#9C27B0' },
   capture_image: { icon: 'camera', label: 'Camera', color: '#FF5722' },
@@ -82,7 +83,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
     switch (step.target) {
       case 'voiceButton':
         return {
-          bottom: step.position === 'bottom' ? 120 : undefined,
+          bottom: step.position === 'bottom' ? 150 : undefined,
           top: step.position === 'top' ? 120 : undefined,
           alignSelf: 'center',
         };
@@ -360,6 +361,9 @@ export default function LiveVoiceScreen({ navigation }) {
       case 'soil_moisture':
         navigation.navigate('SoilMoistureScreen');
         break;
+      case 'crop_intelligence':
+        navigation.navigate('CropIntelligenceScreen');
+        break;
       case 'cattle_management':
         navigation.navigate('CattleScreen');
         break;
@@ -557,8 +561,8 @@ export default function LiveVoiceScreen({ navigation }) {
                 <Text style={styles.welcomeSubtext}>
                   Tap the microphone and ask about:
                   {'\n'}• Weather & farming conditions
+                  {'\n'}• Crop recommendations & techniques
                   {'\n'}• Livestock management
-                  {'\n'}• Crop information
                   {'\n'}• Soil moisture levels
                   {'\n'}• Your farm profile
                 </Text>
@@ -658,9 +662,9 @@ export default function LiveVoiceScreen({ navigation }) {
                 <View style={styles.guideSection}>
                   <Text style={styles.guideSectionTitle}>💬 Sample Questions:</Text>
                   <Text style={styles.guideExample}>"What's the weather today?"</Text>
-                  <Text style={styles.guideExample}>"Show me my market listings"</Text>
+                  <Text style={styles.guideExample}>"What crops should I grow now?"</Text>
+                  <Text style={styles.guideExample}>"Show me modern farming techniques"</Text>
                   <Text style={styles.guideExample}>"Check soil moisture levels"</Text>
-                  <Text style={styles.guideExample}>"What crops should I plant?"</Text>
                   <Text style={styles.guideExample}>"Find equipment for rent"</Text>
                 </View>
                 
@@ -676,6 +680,10 @@ export default function LiveVoiceScreen({ navigation }) {
                     <View style={styles.actionExample}>
                       <Ionicons name="cloud" size={20} color="#4FC3F7" />
                       <Text style={styles.actionExampleText}>Weather</Text>
+                    </View>
+                    <View style={styles.actionExample}>
+                      <Ionicons name="leaf" size={20} color="#4CAF50" />
+                      <Text style={styles.actionExampleText}>Crop Intelligence</Text>
                     </View>
                     <View style={styles.actionExample}>
                       <Ionicons name="water" size={20} color="#8BC34A" />

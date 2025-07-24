@@ -182,7 +182,7 @@ const featureOptions = [
     { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'cropcycle', screen: 'CropCycle', color: '#f59e0b' },
     // More options
     { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'weather', screen: 'WeatherScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'soil', screen: 'SoilMoisture', color: '#38bdf8' },
+    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'soil', screen: 'CropIntelligenceScreen', color: '#38bdf8' },
     { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'edufinance', screen: 'UPI', color: '#a78bfa' },
     { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'document', screen: 'DocumentAgentScreen', color: '#f59e0b' },
     { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'cropdoctor', screen: 'CropDoctor', color: '#10b981' },

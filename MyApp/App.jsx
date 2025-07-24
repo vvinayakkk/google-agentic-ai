@@ -40,6 +40,7 @@ import MyBookings from './screens/MyBookings';
 import Earnings from './screens/Earnings';
 import ListingDetails from './screens/ListingDetails';
 import SpeechToTextScreen from './screens/SpeechToTextScreen';
+import CropIntelligenceScreen from './screens/CropIntelligenceScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -244,6 +245,11 @@ export default function App() {
               name="SpeechToTextScreen" 
               component={SpeechToTextScreen} 
               options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CropIntelligenceScreen" 
+              component={CropIntelligenceScreen} 
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>

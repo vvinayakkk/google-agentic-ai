@@ -11,6 +11,7 @@ from routers import chat_rag
 from routers import market
 from routers import soil_moisture
 from routers import rental
+from routers import crop_intelligence
 from routers.speech_to_text import router as speech_to_text_router
 from routers.document_builder import router as document_builder_router
 
