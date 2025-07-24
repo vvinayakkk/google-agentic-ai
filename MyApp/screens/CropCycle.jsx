@@ -234,7 +234,6 @@ const MOCK_DB = {
 };
 
 // --- HELPER COMPONENTS ---
-import AnimatedCard from '../components/AnimatedCard';
 import Icon from '../components/Icon';
 import MetricCard from '../components/MetricCard';
 import DetailCard from '../components/DetailCard';
@@ -341,7 +340,7 @@ const CropSelectionScreen = ({ onContinue, onCropToggle, selectedCrops, farmerNa
             {MOCK_DB.CROP_DATA.map((crop, index) => {
                 const isSelected = selectedCrops.includes(crop.id);
                 return (
-                    <AnimatedCard key={crop.id} delay={index * 100}>
+                    <View key={crop.id}>
                         <TouchableOpacity 
                             style={[styles.cropCard, isSelected && styles.cropCardSelected]} 
                             onPress={() => onCropToggle(crop.id)}
@@ -355,7 +354,7 @@ const CropSelectionScreen = ({ onContinue, onCropToggle, selectedCrops, farmerNa
                             </View>
                             {isSelected && <View style={styles.checkIcon}><Text style={{color: '#1A1A1A'}}>✓</Text></View>}
                         </TouchableOpacity>
-                    </AnimatedCard>
+                    </View>
                 );
             })}
         </ScrollView>
@@ -531,7 +530,7 @@ const DashboardScreen = ({ onNavigate, farmerName, primaryCrop, farmResources })
                 <View style={{height: 10}} />
 
                 {/* AI Insights Carousel */}
-                <AnimatedCard delay={150}>
+                <View>
                     <View style={styles.aiInsightCard}>
                         <View style={styles.aiInsightHeader}>
                             <Icon name="🤖" style={{fontSize: 24, color: '#58D68D'}}/>
@@ -547,13 +546,13 @@ const DashboardScreen = ({ onNavigate, farmerName, primaryCrop, farmResources })
                             ))}
                         </View>
                     </View>
-                </AnimatedCard>
+                </View>
 
                 {/* Divider */}
                 <View style={{height: 10}} />
 
                 {/* Quick Actions */}
-                <AnimatedCard delay={300}>
+                <View>
                     <View style={[styles.quickActions, {backgroundColor: '#232323', borderRadius: 16, padding: 16, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8}]}> 
                         <Text style={styles.sectionTitle}>Quick Actions</Text>
                         <View style={styles.quickActionGrid}>
@@ -575,7 +574,7 @@ const DashboardScreen = ({ onNavigate, farmerName, primaryCrop, farmResources })
                             </TouchableOpacity>
                         </View>
                     </View>
-                </AnimatedCard>
+                </View>
 
                 {/* Divider */}
                 <View style={{height: 10}} />
@@ -583,9 +582,6 @@ const DashboardScreen = ({ onNavigate, farmerName, primaryCrop, farmResources })
                 {/* Analysis Modules */}
                 <View>
                     <Text style={styles.sectionTitle}>Comprehensive Analysis</Text>
-                    <Text style={{color: '#58D68D', fontSize: 16, textAlign: 'center', marginBottom: 10}}>
-                        DEBUG: Tiles should appear below (Total: {MOCK_DB.DASHBOARD_TILES.length})
-                    </Text>
                     <View style={styles.dashboardGrid}>
                         {MOCK_DB.DASHBOARD_TILES.map((tile, index) => (
                             <TouchableOpacity 
@@ -765,20 +761,20 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                 );
 
             case 'market':
-                const marketData = MOCK_DB.MARKET_ANALYSIS[primaryCrop?.id || 'sugarcane'];
+                const marketData = MOCK_DB.MARKET_ANALYSIS[primaryCrop?.id || 'sugarcane'] || MOCK_DB.MARKET_ANALYSIS.sugarcane;
                 return (
                     <>
                         <AnalysisCard 
                             icon="📊" 
                             title="Market Intelligence Summary" 
-                            value={marketData.recommendation}
-                            details={marketData.reason}
+                            value={marketData?.recommendation || 'Analysis pending'}
+                            details={marketData?.reason || 'Market analysis data is being updated.'}
                             color="#F39C12"
                             metrics={[
-                                { label: 'Current Price', value: marketData.currentPrice, color: '#F39C12' },
-                                { label: 'Trend', value: marketData.trend, color: '#58D68D' },
-                                { label: 'Volatility', value: marketData.volatilityRisk, color: '#3498DB' },
-                                { label: 'Liquidity', value: `${marketData.liquidityScore}/10`, color: '#58D68D' }
+                                { label: 'Current Price', value: marketData?.currentPrice || 'N/A', color: '#F39C12' },
+                                { label: 'Trend', value: marketData?.trend || 'N/A', color: '#58D68D' },
+                                { label: 'Volatility', value: marketData?.volatilityRisk || 'N/A', color: '#3498DB' },
+                                { label: 'Liquidity', value: `${marketData?.liquidityScore || 0}/10`, color: '#58D68D' }
                             ]}
                         />
 
@@ -823,7 +819,7 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                             confidence={88}
                             impact="Very High"
                         >
-                            Based on seasonal patterns and market intelligence, the optimal selling window is identified. Storage costs vs. price appreciation analysis suggests {marketData.recommendation.toLowerCase()}. Expected price realization: ₹{(parseFloat(marketData.currentPrice.replace(/[^\d.]/g, '')) * 1.05).toFixed(0)} per quintal.
+                            Based on seasonal patterns and market intelligence, the optimal selling window is identified. Storage costs vs. price appreciation analysis suggests {marketData?.recommendation?.toLowerCase() || 'immediate selling'}. Expected price realization: ₹{(parseFloat((marketData?.currentPrice || '0').replace(/[^\d.]/g, '')) * 1.05).toFixed(0)} per quintal.
                         </ReasonCard>
                     </>
                 );
@@ -1012,7 +1008,7 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                             confidence={94}
                             impact="High"
                         >
-                            {weather.recommendations.map((rec, index) => (
+                            {(weather?.recommendations || []).map((rec, index) => (
                                 <Text key={index} style={styles.recommendationText}>• {rec}</Text>
                             ))}
                         </ReasonCard>
@@ -1020,7 +1016,7 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                 );
 
             case 'soil':
-                const soil = MOCK_DB.SOIL_ANALYSIS.defaultProfile;
+                const soil = MOCK_DB.SOIL_ANALYSIS?.defaultProfile || {};
                 return (
                     <>
                         <AnalysisCard 
@@ -1029,10 +1025,10 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                             value="Good with Improvements Needed"
                             details="Your soil analysis shows good overall health with specific areas for optimization. Targeted interventions can increase yield by 15-20%."
                             metrics={[
-                                { label: 'pH Level', value: soil.ph.toString(), color: '#58D68D' },
-                                { label: 'Nitrogen', value: soil.nitrogen, color: '#F39C12' },
-                                { label: 'Phosphorus', value: soil.phosphorus, color: '#E74C3C' },
-                                { label: 'Potassium', value: soil.potassium, color: '#58D68D' }
+                                { label: 'pH Level', value: (soil.ph || 7.0).toString(), color: '#58D68D' },
+                                { label: 'Nitrogen', value: soil.nitrogen || 'Medium', color: '#F39C12' },
+                                { label: 'Phosphorus', value: soil.phosphorus || 'Medium', color: '#E74C3C' },
+                                { label: 'Potassium', value: soil.potassium || 'Medium', color: '#58D68D' }
                             ]}
                         />
 
@@ -1043,15 +1039,15 @@ const AnalysisScreen = ({ analysisId, onBack, onGeneratePlan, farmResources, pri
                             confidence={92}
                             impact="High"
                         >
-                            pH level of {soil.ph} is optimal for {primaryCrop?.name}. Nitrogen levels are {soil.nitrogen.toLowerCase()}, requiring balanced fertilization. Phosphorus deficiency needs immediate attention through DAP application. High potassium levels provide good root development support.
+                            pH level of {soil.ph || 7.0} is optimal for {primaryCrop?.name || 'your crop'}. Nitrogen levels are {(soil.nitrogen || 'medium').toLowerCase()}, requiring balanced fertilization. Phosphorus deficiency needs immediate attention through DAP application. High potassium levels provide good root development support.
                         </ReasonCard>
 
                         <DetailCard title="Fertilizer Recommendation Plan" color="#2ECC71">
                             <View style={styles.fertilizerPlan}>
-                                {soil.recommendations.map((rec, index) => (
+                                {(soil.recommendations || ['Balanced NPK fertilizer - 50 kg/acre']).map((rec, index) => (
                                     <View key={index} style={styles.fertilizerItem}>
                                         <Icon name="🧪" style={styles.fertilizerIcon} />
-                                        <Text style={styles.fertilizerText}>{rec}</Text>
+                                        <Text style={styles.fertilizerText}>{rec || 'Fertilizer recommendation'}</Text>
                                     </View>
                                 ))}
                             </View>

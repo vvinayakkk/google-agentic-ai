@@ -1,26 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import AnimatedCard from './AnimatedCard';
 
 const ReasonCard = ({ title, children, confidence = null, impact = null }) => (
-  <AnimatedCard>
-    <View style={styles.reasonCard}>
-      <View style={styles.reasonHeader}>
-        <Text style={styles.reasonCardTitle}>{title}</Text>
-        {confidence && (
-          <View style={styles.confidenceBadge}>
-            <Text style={styles.confidenceText}>{confidence}% confidence</Text>
-          </View>
-        )}
-      </View>
-      <Text style={styles.reasonCardContent}>{children}</Text>
-      {impact && (
-        <View style={styles.impactIndicator}>
-          <Text style={styles.impactText}>Impact: {impact}</Text>
+  <View style={styles.reasonCard}>
+    <View style={styles.reasonHeader}>
+      <Text style={styles.reasonCardTitle}>{title}</Text>
+      {confidence && (
+        <View style={styles.confidenceBadge}>
+          <Text style={styles.confidenceText}>{confidence}% confidence</Text>
         </View>
       )}
     </View>
-  </AnimatedCard>
+    <Text style={styles.reasonCardContent}>{children}</Text>
+    {impact && (
+      <View style={styles.impactIndicator}>
+        <Text style={styles.impactText}>Impact: {impact}</Text>
+      </View>
+    )}
+  </View>
 );
 
 const styles = StyleSheet.create({
