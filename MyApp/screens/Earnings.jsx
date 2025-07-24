@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_BASE_URL = 'http://192.168.0.111:8000';
+const API_BASE_URL = 'http://192.168.1.13:8000';
 const FARMER_ID = 'f001'; // Replace with dynamic value if needed
 
 export default function Earnings({ navigation }) {

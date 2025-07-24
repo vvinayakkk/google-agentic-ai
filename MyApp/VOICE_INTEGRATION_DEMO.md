@@ -193,4 +193,4 @@ Your LiveVoiceScreen is now fully integrated with the backend! The app can:
 ✅ Navigate to relevant features
 ✅ Maintain conversation history
 
-**Just make sure your backend server is running on `http://192.168.0.111:8000` and test away!** 🎉
+**Just make sure your backend server is running on `http://192.168.1.13:8000` and test away!** 🎉

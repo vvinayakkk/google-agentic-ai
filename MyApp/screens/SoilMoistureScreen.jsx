@@ -29,7 +29,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://192.168.0.111:8000'; // Ensure this is your correct local IP
+const API_BASE = 'http://192.168.1.13:8000'; // Ensure this is your correct local IP
 const CACHE_KEY = 'soilMoistureDataCache';
 const FARMER_ID = 'f001';
 

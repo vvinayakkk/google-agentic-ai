@@ -6,7 +6,7 @@ import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 
 // Action button mapping for different AI actions
 const ACTION_BUTTONS = {
@@ -158,7 +158,7 @@ export default function LiveVoiceScreen({ navigation }) {
         setNetworkStatus('error');
         Alert.alert(
           'Connection Error',
-          'Cannot connect to server. Please check:\n• Backend server is running\n• Device is on same WiFi network\n• IP address is correct (192.168.0.111:8000)',
+          'Cannot connect to server. Please check:\n• Backend server is running\n• Device is on same WiFi network\n• IP address is correct (192.168.1.13:8000)',
           [
             { text: 'Retry', onPress: testNetworkConnection },
             { text: 'Cancel', style: 'cancel' }

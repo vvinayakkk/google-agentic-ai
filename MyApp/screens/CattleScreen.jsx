@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 const FARMER_ID = 'f001';
 const LIVESTOCK_CACHE_KEY = 'livestock-cache';
 const CALENDAR_CACHE_KEY = 'cattle-calendar-cache';

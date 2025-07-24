@@ -30,14 +30,14 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ipconfig | findstr "IPv4"
 
 # Expected output:
-# IPv4 Address. . . . . . . . . . . : 192.168.0.111
+# IPv4 Address. . . . . . . . . . . : 192.168.1.13
 ```
 
 #### Update React Native Code:
 Make sure your React Native app uses the correct IP address:
 ```javascript
 // In your React Native screens, use your computer's IP:
-const API_BASE = 'http://192.168.0.111:8000'; // ✅ Use your actual IP
+const API_BASE = 'http://192.168.1.13:8000'; // ✅ Use your actual IP
 // NOT localhost or 127.0.0.1 - those won't work from mobile device
 ```
 
@@ -75,11 +75,11 @@ const API_BASE = 'http://localhost:8000';
 ### 6. **Test Backend Accessibility**
 
 #### From Computer Browser:
-Visit: `http://192.168.0.111:8000`
+Visit: `http://192.168.1.13:8000`
 Should show: `{"message": "FastAPI backend for Farmer App is running!"}`
 
 #### From Phone Browser:
-Visit: `http://192.168.0.111:8000` (same URL)
+Visit: `http://192.168.1.13:8000` (same URL)
 Should show the same message
 
 ### 7. **Enhanced Network Configuration** (Already implemented)
@@ -98,7 +98,7 @@ The updated `LiveVoiceScreen.jsx` now includes:
 // Test if you can reach the server
 const testConnection = async () => {
   try {
-    const response = await fetch('http://192.168.0.111:8000/', {
+    const response = await fetch('http://192.168.1.13:8000/', {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
@@ -121,7 +121,7 @@ const testConnection = async () => {
 ### Backend Health Check:
 ```bash
 # Test from command line
-curl http://192.168.0.111:8000/
+curl http://192.168.1.13:8000/
 
 # Expected response:
 # {"message":"FastAPI backend for Farmer App is running!"}
@@ -150,7 +150,7 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 const API_BASE = 'http://mycomputer.local:8000';
 
 // ✅ Use actual IP
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 ```
 
 ### Issue 4: Works in browser but not in React Native
@@ -163,7 +163,7 @@ const API_BASE = 'http://192.168.0.111:8000';
 
 ### Android (Physical Device):
 ```javascript
-const API_BASE = 'http://192.168.0.111:8000'; // Use computer's IP
+const API_BASE = 'http://192.168.1.13:8000'; // Use computer's IP
 ```
 
 ### Android (Emulator):
@@ -182,7 +182,7 @@ const API_BASE = 'http://localhost:8000'; // Can use localhost
 {
   "expo": {
     "extra": {
-      "apiUrl": "http://192.168.0.111:8000"
+      "apiUrl": "http://192.168.1.13:8000"
     }
   }
 }

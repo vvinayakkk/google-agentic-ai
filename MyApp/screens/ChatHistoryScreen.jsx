@@ -14,7 +14,7 @@ const HistoryItem = ({ title, date, onPress }) => (
   </TouchableOpacity>
 );
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 const FARMER_ID = 'f001';
 const CHAT_CACHE_KEY = 'chat-history-cache';
 

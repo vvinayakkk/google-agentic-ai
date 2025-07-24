@@ -22,7 +22,7 @@ import Markdown from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 const FARMER_ID = 'f001';
 
 const WEATHER_CACHE_KEY = 'weather-cache';

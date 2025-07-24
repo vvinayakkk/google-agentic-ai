@@ -21,7 +21,7 @@ const theme = {
 };
 
 const FARMER_ID = 'f001';
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 const OTP_LENGTH = 6;
 
 const LoginScreen = ({ navigation }) => {

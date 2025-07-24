@@ -10,7 +10,7 @@ import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 const FARMER_ID = 'f001';
 
 // REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect

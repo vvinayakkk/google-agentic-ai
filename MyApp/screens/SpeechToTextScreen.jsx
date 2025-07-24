@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import axios from 'axios';
 
-const API_BASE = 'http://192.168.0.111:8000'; // Change if needed
+const API_BASE = 'http://192.168.1.13:8000'; // Change if needed
 
 export default function SpeechToTextScreen({ navigation }) {
   const [recording, setRecording] = useState(null);

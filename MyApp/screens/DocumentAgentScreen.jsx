@@ -6,7 +6,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 // Update this to your backend device IP (same as other screens)
-const API_BASE = 'http://192.168.0.111:8000/document-builder';
+const API_BASE = 'http://192.168.1.13:8000/document-builder';
 
 export default function DocumentAgentScreen({ navigation }) {
   const { t } = useTranslation();

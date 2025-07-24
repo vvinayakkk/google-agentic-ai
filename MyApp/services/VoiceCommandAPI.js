@@ -1,5 +1,5 @@
 // API service for Voice Command integration
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = 'http://192.168.1.13:8000';
 
 export const VoiceCommandAPI = {
   // Process voice command with audio file

@@ -28,7 +28,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration
 const API_CONFIG = {
-  BASE_URL: 'http://192.168.0.111:8000',
+  BASE_URL: 'http://192.168.1.13:8000',
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3
 };
