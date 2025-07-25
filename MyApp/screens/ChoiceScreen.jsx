@@ -115,13 +115,13 @@ export default function ChoiceScreen({ navigation }) {
         <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>{t('choice.check_soil_moisture')}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={[styles.optionButton, { marginTop: 32, backgroundColor: '#10B981' }]}
         onPress={() => navigation.navigate('SpeechToTextScreen')}
       >
         <Ionicons name="mic" size={32} color="#fff" />
         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18, marginLeft: 12 }}>Try Speech-to-Text Demo</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <View style={styles.helpCardContainer}>
         {showHelp && (

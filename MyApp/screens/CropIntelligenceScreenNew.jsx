@@ -49,8 +49,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
   const [aiRecommendations, setAiRecommendations] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [cropCombos, setCropCombos] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
 
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -191,7 +189,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
       if (healthResponse && healthResponse.ok) {
         const health = await healthResponse.json();
-        console.log('Crop Intelligence Backend Health:', health);
       } else {
         console.warn('Failed to fetch backend health or response not OK.');
       }
@@ -241,10 +238,11 @@ const CropIntelligenceScreen = ({ navigation }) => {
         setCropCombos(JSON.parse(cachedCombos));
         hasCachedData = true;
       }
-      if (cachedAIRecommendations) {
-        setAiRecommendations(JSON.parse(cachedAIRecommendations));
-        hasCachedData = true;
-      }
+      // Remove AI recommendations caching - user should click generate
+      // if (cachedAIRecommendations) {
+      //   setAiRecommendations(JSON.parse(cachedAIRecommendations));
+      //   hasCachedData = true;
+      // }
     } catch (error) {
       console.error('Error loading cached data:', error);
     }
@@ -310,31 +308,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
       }
     } finally {
       setAiLoading(false);
-    }
-  };
-
-  const searchCropData = async (query) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/crop-intelligence/search?query=${encodeURIComponent(query)}&collections=crop_combos,farming_techniques,crop_recommendations`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSearchResults(data.results || []);
-      }
-    } catch (error) {
-      console.error('Error searching:', error);
-      Alert.alert('Search Error', 'Failed to perform search. Please try again.');
-      setSearchResults([]);
     }
   };
 
@@ -556,23 +529,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
             AI Insights
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'search' && styles.activeTab]}
-          onPress={() => setActiveTab('search')}
-        >
-          <MaterialCommunityIcons
-            name="magnify"
-            size={22}
-            color={activeTab === 'search' ? '#00C853' : '#757575'}
-          />
-          <Text style={[
-            styles.tabText,
-            activeTab === 'search' && styles.activeTabText
-          ]}>
-            Search
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -692,8 +648,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
   const renderAIRecommendations = () => (
     <View style={styles.aiSection}>
-      <View style={styles.aiHeader}>
-        <Text style={styles.sectionTitle}>AI-Powered Recommendations</Text>
+      <Text style={styles.sectionTitle}>AI-Powered Recommendations</Text>
+      
+      <View style={styles.aiButtonContainer}>
         <TouchableOpacity
           style={[styles.aiButton, aiLoading && styles.aiButtonDisabled]}
           onPress={getAIRecommendations}
@@ -726,7 +683,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {aiRecommendations.recommendations?.map((rec, index) => (
+          {(aiRecommendations.recommendations && Array.isArray(aiRecommendations.recommendations) ? aiRecommendations.recommendations : []).map((rec, index) => (
             <View key={index} style={styles.aiRecommendationCard}>
               <View style={styles.aiRecHeader}>
                 <Text style={styles.aiRecTitle}>{rec.combo_name}</Text>
@@ -735,7 +692,15 @@ const CropIntelligenceScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              <Text style={styles.aiRecJustification}>{rec.justification}</Text>
+              {/* Key Points in bullet format */}
+              <View style={styles.keyPointsSection}>
+                {(rec.key_points && Array.isArray(rec.key_points) ? rec.key_points : []).map((point, idx) => (
+                  <View key={idx} style={styles.bulletPoint}>
+                    <MaterialCommunityIcons name="circle" size={6} color="#00C853" />
+                    <Text style={styles.bulletText}>{point}</Text>
+                  </View>
+                ))}
+              </View>
 
               <View style={styles.aiRecDetails}>
                 <View style={styles.aiRecDetail}>
@@ -756,36 +721,34 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   <Text style={styles.aiRecDetailValue}>{rec.timeline}</Text>
                 </View>
               </View>
-
-              {rec.key_advantages && (
-                <View style={styles.advantagesSection}>
-                  <Text style={styles.advantagesTitle}>Key Advantages:</Text>
-                  {rec.key_advantages.map((advantage, idx) => (
-                    <View key={idx} style={styles.advantageItem}>
-                      <MaterialCommunityIcons name="check" size={14} color="#00C853" />
-                      <Text style={styles.advantageText}>{advantage}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
             </View>
           ))}
 
-          {aiRecommendations.weather_analysis && (
-            <View style={styles.analysisCard}>
-              <Text style={styles.analysisTitle}>Weather Analysis</Text>
-              <Text style={styles.analysisText}>{aiRecommendations.weather_analysis}</Text>
+          {/* Weather & Market Insights in bullet format */}
+          {((aiRecommendations.weather_insights && Array.isArray(aiRecommendations.weather_insights) && aiRecommendations.weather_insights.length > 0) || 
+            (aiRecommendations.market_insights && Array.isArray(aiRecommendations.market_insights) && aiRecommendations.market_insights.length > 0)) && (
+            <View style={styles.insightsCard}>
+              <Text style={styles.analysisTitle}>Key Insights</Text>
+              {aiRecommendations.weather_insights && Array.isArray(aiRecommendations.weather_insights) && 
+                aiRecommendations.weather_insights.map((insight, index) => (
+                  <View key={`weather-${index}`} style={styles.bulletPoint}>
+                    <MaterialCommunityIcons name="weather-partly-cloudy" size={14} color="#82B1FF" />
+                    <Text style={styles.bulletText}>{insight}</Text>
+                  </View>
+                ))
+              }
+              {aiRecommendations.market_insights && Array.isArray(aiRecommendations.market_insights) && 
+                aiRecommendations.market_insights.map((insight, index) => (
+                  <View key={`market-${index}`} style={styles.bulletPoint}>
+                    <MaterialCommunityIcons name="trending-up" size={14} color="#00C853" />
+                    <Text style={styles.bulletText}>{insight}</Text>
+                  </View>
+                ))
+              }
             </View>
           )}
 
-          {aiRecommendations.market_insights && (
-            <View style={styles.analysisCard}>
-              <Text style={styles.analysisTitle}>Market Insights</Text>
-              <Text style={styles.analysisText}>{aiRecommendations.market_insights}</Text>
-            </View>
-          )}
-
-          {aiRecommendations.action_plan?.length > 0 && (
+          {aiRecommendations.action_plan && Array.isArray(aiRecommendations.action_plan) && aiRecommendations.action_plan.length > 0 && (
             <View style={styles.actionPlanCard}>
               <Text style={styles.actionPlanTitle}>Recommended Action Plan</Text>
               {aiRecommendations.action_plan.map((action, index) => (
@@ -803,63 +766,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="robot-happy-outline" size={64} color="#ccc" />
           <Text style={styles.emptyStateText}>Tap "Generate Master Plan" to get AI insights.</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderSearchSection = () => (
-    <View style={styles.searchSection}>
-      <Text style={styles.sectionTitle}>Search Crop Data</Text>
-      <View style={styles.searchContainer}>
-        <MaterialCommunityIcons name="magnify" size={24} color="#757575" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search crops, techniques, or conditions..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuery(text);
-            searchCropData(text);
-          }}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
-            <Ionicons name="close-circle" size={20} color="#757575" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {searchResults.length > 0 ? (
-        <View style={styles.searchResults}>
-          {searchResults.map((result, index) => (
-            <View key={index} style={styles.searchResultCard}>
-              <View style={styles.searchResultHeader}>
-                <Text style={styles.searchResultType}>{result.collection?.replace(/_/g, ' ')}</Text>
-                <Text style={styles.searchResultScore}>
-                  {Math.round(result.similarity_score * 100)}% match
-                </Text>
-              </View>
-              <Text style={styles.searchResultTitle}>
-                {result.content.name || result.content.crop_name || result.document_id}
-              </Text>
-              <Text style={styles.searchResultDescription}>
-                {result.content.description ||
-                  result.content.justification ||
-                  (typeof result.content === 'object' ? JSON.stringify(result.content).substring(0, 100) + '...' : result.content)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : searchQuery.length > 0 && !loading ? (
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="text-box-search-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No results found for "{searchQuery}".</Text>
-        </View>
-      ) : (
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="text-box-search-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>Start typing to search for crop data, techniques, and recommendations.</Text>
         </View>
       )}
     </View>
@@ -921,8 +827,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
           )}
 
           {activeTab === 'ai' && renderAIRecommendations()}
-
-          {activeTab === 'search' && renderSearchSection()}
         </ScrollView>
       </Animated.View>
 
@@ -1024,14 +928,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C1C1C', // Dark background for the entire screen
-    paddingTop: 30, // Added top padding
+    paddingTop: 10, // Added top padding
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1C1C1C',
-    paddingTop: 20, // Added top padding to loading container as well
+    paddingTop: 10, // Added top padding to loading container as well
   },
   loadingText: {
     marginTop: 15,
@@ -1055,7 +959,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 60,
   },
   backButton: {
     padding: 8,
@@ -1388,25 +1292,25 @@ const styles = StyleSheet.create({
   aiSection: {
     paddingVertical: 20,
   },
-  aiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  aiButtonContainer: {
     paddingHorizontal: 20,
     marginBottom: 25,
+    alignItems: 'center',
   },
   aiButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#00C853', // Vibrant green for AI button
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
+    minWidth: 200,
+    justifyContent: 'center',
   },
   aiButtonDisabled: {
     backgroundColor: '#666',
@@ -1489,6 +1393,22 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 18,
   },
+  keyPointsSection: {
+    marginBottom: 18,
+  },
+  bulletPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingLeft: 5,
+  },
+  bulletText: {
+    fontSize: 14,
+    color: '#B0B0B0',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
   aiRecDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1536,6 +1456,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   analysisCard: {
+    backgroundColor: '#2A2A2A',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  insightsCard: {
     backgroundColor: '#2A2A2A',
     marginHorizontal: 20,
     marginBottom: 15,
@@ -1605,77 +1539,6 @@ const styles = StyleSheet.create({
     color: '#B0B0B0',
     flex: 1,
     lineHeight: 22,
-  },
-  searchSection: {
-    paddingVertical: 20,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A2A2A', // Dark search bar background
-    marginHorizontal: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#E0E0E0',
-    marginLeft: 12,
-    paddingVertical: 0, // Remove default Android padding
-  },
-  searchResults: {
-    paddingHorizontal: 20,
-  },
-  searchResultCard: {
-    backgroundColor: '#2A2A2A',
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  searchResultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  searchResultType: {
-    fontSize: 13,
-    color: '#00C853', // Green accent for type
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  searchResultScore: {
-    fontSize: 13,
-    color: '#8BC34A', // Lighter green for score
-    fontWeight: '600',
-  },
-  searchResultTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 8,
-  },
-  searchResultDescription: {
-    fontSize: 14,
-    color: '#B0B0B0',
-    lineHeight: 20,
   },
   emptyState: {
     alignItems: 'center',

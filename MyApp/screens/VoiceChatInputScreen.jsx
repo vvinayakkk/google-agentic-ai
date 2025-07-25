@@ -81,13 +81,16 @@ const getKissanAIResponse = async (message, context) => {
 
 // --- Helper to render bold text ---
 const FormattedText = ({ text }) => {
+    if (!text || typeof text !== 'string') {
+        return <Text style={styles.chatMessageText}></Text>;
+    }
     const parts = text.split(/\*\*(.*?)\*\*/g);
     return (
         <Text style={styles.chatMessageText}>
             {parts.map((part, index) => 
                 index % 2 === 1 
                     ? <Text key={index} style={{ fontWeight: 'bold' }}>{part}</Text> 
-                    : part
+                    : <Text key={index}>{part}</Text>
             )}
         </Text>
     );
@@ -108,13 +111,13 @@ const ChatMessage = ({ message, chatHistory }) => {
 
     const handleShare = async () => {
         try {
-            let shareText = 'Kissan AI Chat:\n\n';
+            let shareText = 'Kisaan Sahayak Chat:\n\n';
             chatHistory.forEach(msg => {
-                const sender = msg.sender === 'user' ? 'You' : 'Kissan AI';
-                const content = msg.type === 'document' ? `[Document: ${msg.content.name}]` : msg.content;
+                const sender = msg.sender === 'user' ? 'You' : 'Kisaan Sahayak';
+                const content = msg.type === 'document' ? `[Document: ${msg.content?.name || 'Unknown'}]` : (msg.content || '');
                 shareText += `${sender}: ${content}\n\n`;
             });
-            await Share.share({ message: shareText, title: 'Kissan AI Chat' });
+            await Share.share({ message: shareText, title: 'Kisaan Sahayak Chat' });
         } catch (error) {
             console.log('Error sharing:', error);
         }
@@ -131,22 +134,22 @@ const ChatMessage = ({ message, chatHistory }) => {
                 {isDocument ? (
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                         <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
-                        <Text style={styles.chatMessageText}>Attached: {message.content.name}</Text>
+                        <Text style={styles.chatMessageText}>Attached: {message.content?.name || 'Unknown file'}</Text>
                     </View>
                 ) : isImage ? (
                     <View style={{flexDirection: 'column', alignItems: 'flex-start'}}>
                         <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                            <Image source={{ uri: message.content.uri }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
-                            <Text style={styles.chatMessageText}>{message.content.name || 'Image attached'}</Text>
+                            <Image source={{ uri: message.content?.uri || '' }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
+                            <Text style={styles.chatMessageText}>{message.content?.name || 'Image attached'}</Text>
                         </View>
-                        {message.content.text && (
+                        {message.content?.text && (
                             <Text style={[styles.chatMessageText, {marginTop: 6}]}>{message.content.text}</Text>
                         )}
                     </View>
                 ) : isContext ? (
-                    <Text style={styles.contextMessageText}>{message.content}</Text>
+                    <Text style={styles.contextMessageText}>{message.content || ''}</Text>
                 ) : (
-                    isUser ? <FormattedText text={message.content} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content}</Markdown>
+                    isUser ? <FormattedText text={message.content || ''} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content || ''}</Markdown>
                 )}
                 {!isUser && !isDocument && !isImage && (
                     <View style={styles.actionIconContainer}>
@@ -207,7 +210,7 @@ const FeaturesView = ({ navigation }) => {
                         activeOpacity={0.85}
                     >
                         {opt.icon}
-                        <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`)}</Text>
+                        <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`) || opt.label}</Text>
                     </TouchableOpacity>
                 ))}
                 <TouchableOpacity style={styles.pillButton} onPress={() => setShowAll((v) => !v)}>
@@ -225,7 +228,7 @@ const FeaturesView = ({ navigation }) => {
                             activeOpacity={0.85}
                         >
                             {opt.icon}
-                            <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`)}</Text>
+                            <Text style={styles.pillLabel}>{t(`voicechat.feature.${opt.label}`) || opt.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -378,11 +381,11 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         <SafeAreaView style={styles.container}>
             {/* Profile Icon at Top Right */}
             <TouchableOpacity
-                style={{ position: 'absolute', top: 65, right: 18, zIndex: 20 }}
+                style={{ position: 'absolute', top: 68, right: 2, zIndex: 10 }}
                 onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
-                activeOpacity={0.8}
+                activeOpacity={0.5}
             >
-                <Ionicons name="person-circle-outline" size={50} color="#10B981" />
+                <Ionicons name="person-circle-outline" size={44} color="#10B981" />
             </TouchableOpacity>
             <View style={[styles.topBar, { paddingTop: insets.top }]}> 
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}><Ionicons name="time-outline" size={28} color="white" /></TouchableOpacity>
@@ -476,10 +479,10 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#121212' },
-    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop:10,paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
-    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 50,marginTop:10 },
+    topBar: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 30, paddingTop:10,paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+    topBarTitle: { color: 'white', fontSize: 30, fontWeight: 'bold', flex: 1, textAlign: 'center', marginHorizontal: 30,marginTop:10,paddingHorizontal:30 },
     topRightIcons: { flexDirection: 'row' },
-    topRightIcon: { marginRight: 60,marginTop:10 },
+    topRightIcon: { marginRight: 20,marginTop:10 },
     chatList: { flex: 1 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e', borderRadius: 35, paddingHorizontal: 20, marginHorizontal: '5%', marginVertical: 20, minHeight: 60, paddingVertical: 5 },
     plusButton: { marginRight: 10 },
