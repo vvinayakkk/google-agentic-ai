@@ -1,11 +1,11 @@
 // Network configuration and debugging utilities for React Native
 export const NetworkConfig = {
   // Primary API base URL
-  API_BASE: 'http://192.168.0.111:8000',
+  API_BASE: 'http://192.168.1.13:8000',
   
   // Alternative URLs to try
   FALLBACK_URLS: [
-    'http://192.168.0.111:8000',
+    'http://192.168.1.13:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://10.0.2.2:8000', // Android emulator
