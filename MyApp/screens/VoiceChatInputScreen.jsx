@@ -9,6 +9,7 @@ import Markdown from 'react-native-markdown-display';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useTranslation } from 'react-i18next';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 
 // --- Simulated API Configuration ---
@@ -27,7 +28,7 @@ const getKissanAIResponse = async (message, context) => {
                     extra_context: contextToSend
                 };
                 console.log('Sending image+text to backend:', payload);
-                const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
+                const response = await axios.post(`${NetworkConfig.API_BASE}/chat/rag`, payload);
                 if (response.data && response.data.response) {
                     return response.data.response;
                 }
@@ -62,7 +63,7 @@ const getKissanAIResponse = async (message, context) => {
             extra_context: contextToSend
         };
         console.log('Sending to backend:', payload);
-        const response = await axios.post('http://192.168.0.111:8000/chat/rag', payload);
+        const response = await axios.post(`${NetworkConfig.API_BASE}/chat/rag`, payload);
         // Prefer bullet points and links if present
         if (response.data && response.data.response) {
             return response.data.response;
@@ -182,7 +183,7 @@ const featureOptions = [
     { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'cropcycle', screen: 'CropCycle', color: '#f59e0b' },
     // More options
     { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'weather', screen: 'WeatherScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'soil', screen: 'CropIntelligenceScreen', color: '#38bdf8' },
+    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'soil', screen: 'CropIntelligenceScreenNew', color: '#38bdf8' },
     { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'edufinance', screen: 'UPI', color: '#a78bfa' },
     { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'document', screen: 'DocumentAgentScreen', color: '#f59e0b' },
     { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'cropdoctor', screen: 'CropDoctor', color: '#10b981' },
@@ -367,7 +368,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     };
 
     const FARMER_ID = 'f001';
-    const API_BASE = 'http://192.168.0.111:8000';
+    const API_BASE = NetworkConfig.API_BASE;
     const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
     const MARKET_CACHE_KEY = 'market-prices-cache';
 

@@ -19,8 +19,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const LIVESTOCK_CACHE_KEY = 'livestock-cache';
 const CALENDAR_CACHE_KEY = 'cattle-calendar-cache';

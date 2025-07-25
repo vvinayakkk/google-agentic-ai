@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const HistoryItem = ({ title, date, onPress }) => (
   <TouchableOpacity style={styles.historyItem} onPress={onPress}>
@@ -14,7 +15,7 @@ const HistoryItem = ({ title, date, onPress }) => (
   </TouchableOpacity>
 );
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const CHAT_CACHE_KEY = 'chat-history-cache';
 

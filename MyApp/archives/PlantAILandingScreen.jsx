@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Modal, Animated, Easing, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const { height, width } = Dimensions.get('window');
 
@@ -162,7 +163,7 @@ export default function PlantAILandingScreen() {
       for (let pair of formData.entries()) {
         console.log('FormData:', pair[0], pair[1]);
       }
-      const url = 'http://192.168.0.111:3000/api/crop-doctor';
+      const url = `${NetworkConfig.API_BASE.replace(':8000', ':3000')}/api/crop-doctor`;
       console.log('FETCH URL:', url);
       const response = await fetch(url, {
         method: 'POST',

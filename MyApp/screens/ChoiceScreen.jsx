@@ -9,8 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
 import { useTranslation } from 'react-i18next';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 
 // REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect

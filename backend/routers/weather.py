@@ -100,7 +100,8 @@ def weather_ai_analysis(farmer_id: str = Query(..., description="Farmer ID")):
     context = f"Weather for {village} ({lat:.3f}, {lon:.3f}):\n" + str(weather)
     # Build prompt for Gemini
     prompt = (
-        "You are an expert agricultural assistant. Given the following latest weather data for a farmer's location, provide 2-3 actionable, practical, and easy-to-understand suggestions for a farmer in that location. Use simple language.\n\n" + context
+        "You are a friendly voice assistant for farmers. Give 1-2 SHORT, conversational suggestions based on this weather. "
+        "Speak naturally like you're talking to a friend. Keep it simple and under 30 words total.\n\n" + context
     )
     data = {
         "contents": [

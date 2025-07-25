@@ -23,10 +23,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
 import { PanResponder } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const { width, height } = Dimensions.get('window');
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const CALENDAR_CACHE_KEY = 'calendar-events-cache';
 const CALENDAR_ANALYSIS_CACHE_KEY = 'calendar-ai-analysis-f001';

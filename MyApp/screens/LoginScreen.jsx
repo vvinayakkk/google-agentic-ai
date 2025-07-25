@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Modal, ActivityIndicator, Dimensions, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ const theme = {
 };
 
 const FARMER_ID = 'f001';
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 const OTP_LENGTH = 6;
 
 const LoginScreen = ({ navigation }) => {

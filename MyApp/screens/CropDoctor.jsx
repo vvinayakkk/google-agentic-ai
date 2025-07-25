@@ -19,6 +19,7 @@ import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android') {
@@ -171,7 +172,7 @@ export default function CropDoctorScreen({ navigation }) {
                 });
                 // Call backend
                 const response = await axios.post(
-                    'http://192.168.0.111:8000/crop-disease/detect',
+                    `${NetworkConfig.API_BASE}/crop-disease/detect`,
                     formData,
                     {
                         headers: {

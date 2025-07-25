@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScrollView as RNScrollView } from 'react-native';
 import * as Speech from 'expo-speech';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -446,7 +447,7 @@ export default function CropCycleScreen({ navigation }) {
   const [micModal, setMicModal] = useState(false);
   const micAnim = useRef(new Animated.Value(1)).current;
 
-  const API_BASE = 'http://192.168.0.111:8000';
+  const API_BASE = NetworkConfig.API_BASE;
   const FARMER_ID = 'f001';
   const STORAGE_KEY = 'crops-cache';
 

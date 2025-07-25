@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -82,7 +83,7 @@ const ChatScreen = () => {
       
       console.log('📡 Making request to server...');
       
-      const response = await fetch('http://192.168.0.111:3000/api/chat', {
+      const response = await fetch(`${NetworkConfig.API_BASE.replace(':8000', ':3000')}/api/chat`, {
         method: 'POST',
         body: formData,
         headers: {

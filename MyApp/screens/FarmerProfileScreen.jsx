@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setLanguage } from '../i18n';
 import { Picker } from '@react-native-picker/picker';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 // Theme for consistent styling
 const theme = {
@@ -129,7 +130,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
   const insets = useSafeAreaInsets();
-  const API_BASE = 'http://192.168.0.111:8000'; // Make sure this IP is accessible from your device
+  const API_BASE = NetworkConfig.API_BASE;
 
   const PROFILE_CACHE_KEY = `farmer-profile-cache-${farmerId}`;
 

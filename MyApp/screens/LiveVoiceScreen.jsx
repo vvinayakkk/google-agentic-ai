@@ -5,8 +5,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
-const API_BASE = 'http://192.168.0.111:8000';
+const API_BASE = NetworkConfig.API_BASE;
 
 // Action button mapping for different AI actions
 const ACTION_BUTTONS = {
@@ -140,6 +141,12 @@ export default function LiveVoiceScreen({ navigation }) {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [hasAskedFirstQuestion, setHasAskedFirstQuestion] = useState(false);
+  
+  // Audio playback states
+  const [currentAudio, setCurrentAudio] = useState(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioBase64, setAudioBase64] = useState('');
+  const [isMuted, setIsMuted] = useState(false); // Global mute state
 
   // Test network connection on component mount
   useEffect(() => {
@@ -158,7 +165,7 @@ export default function LiveVoiceScreen({ navigation }) {
         setNetworkStatus('error');
         Alert.alert(
           'Connection Error',
-          'Cannot connect to server. Please check:\n• Backend server is running\n• Device is on same WiFi network\n• IP address is correct (192.168.0.111:8000)',
+          'Cannot connect to server. Please check:\n• Backend server is running\n• Device is on same WiFi network\n• IP address is correct in NetworkConfig',
           [
             { text: 'Retry', onPress: testNetworkConnection },
             { text: 'Cancel', style: 'cancel' }
@@ -313,6 +320,21 @@ export default function LiveVoiceScreen({ navigation }) {
       setCurrentResponse(result.summary || 'No response received');
       setCurrentAction(result.action || 'do_nothing');
       
+      // Store audio data for playback
+      if (result.audioSummary) {
+        setAudioBase64(result.audioSummary);
+        console.log('🎵 Audio response received, ready for playback');
+        
+        // Auto-play the audio response only if not muted
+        if (!isMuted) {
+          setTimeout(() => {
+            playAudioResponse(result.audioSummary);
+          }, 500); // Small delay to let UI update first
+        } else {
+          console.log('🔇 Audio auto-play skipped - muted');
+        }
+      }
+      
       // Trigger follow-up onboarding after first question
       if (!hasAskedFirstQuestion) {
         setHasAskedFirstQuestion(true);
@@ -330,6 +352,7 @@ export default function LiveVoiceScreen({ navigation }) {
         action: result.action || 'do_nothing',
         summary: result.summary || 'No response',
         transcribed: result.transcribed_text || '',
+        audioData: result.audioSummary || '', // Store audio data
         timestamp: new Date().toLocaleTimeString()
       }]);
 
@@ -398,12 +421,87 @@ export default function LiveVoiceScreen({ navigation }) {
     }
   };
 
+  // Audio playback functions
+  const playAudioResponse = async (audioBase64Data) => {
+    try {
+      // Check if muted
+      if (isMuted) {
+        console.log('🔇 Audio playback blocked - muted');
+        return;
+      }
+
+      if (!audioBase64Data) {
+        console.log('No audio data to play');
+        return;
+      }
+
+      // Stop any currently playing audio
+      if (currentAudio) {
+        await currentAudio.unloadAsync();
+        setCurrentAudio(null);
+      }
+
+      console.log('🔊 Playing audio response...');
+      setIsPlayingAudio(true);
+
+      // Create data URI from base64
+      const audioUri = `data:audio/mp3;base64,${audioBase64Data}`;
+      
+      // Configure audio mode for playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        staysActiveInBackground: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Create and load the sound
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true }
+      );
+
+      setCurrentAudio(sound);
+
+      // Set up completion callback
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlayingAudio(false);
+          sound.unloadAsync();
+          setCurrentAudio(null);
+          console.log('✅ Audio playback completed');
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Audio playback error:', error);
+      setIsPlayingAudio(false);
+      Alert.alert('Audio Error', 'Failed to play audio response');
+    }
+  };
+
+  const stopAudioPlayback = async () => {
+    try {
+      if (currentAudio) {
+        await currentAudio.unloadAsync();
+        setCurrentAudio(null);
+        setIsPlayingAudio(false);
+        console.log('🔇 Audio playback stopped');
+      }
+    } catch (error) {
+      console.error('❌ Error stopping audio:', error);
+    }
+  };
+
   // Button handlers
   const handleEndSession = () => {
     if (recording) {
       recording.stopAndUnloadAsync();
       setRecording(null);
     }
+    // Stop any playing audio
+    stopAudioPlayback();
     setSessionActive(false);
   };
   
@@ -422,6 +520,8 @@ export default function LiveVoiceScreen({ navigation }) {
       recording.stopAndUnloadAsync();
       setRecording(null);
     }
+    // Stop any playing audio
+    stopAudioPlayback();
     if (navigation && navigation.navigate) {
       navigation.navigate('VoiceChatInputScreen');
     }
@@ -518,6 +618,40 @@ export default function LiveVoiceScreen({ navigation }) {
                     <Text style={styles.responseTitle}>🤖 AI Response:</Text>
                     <Text style={styles.responseText}>{currentResponse}</Text>
                     
+                    {/* Audio controls */}
+                    {audioBase64 && (
+                      <View style={styles.audioControlsContainer}>
+                        <TouchableOpacity 
+                          style={[styles.audioButton, isPlayingAudio && styles.audioButtonActive]}
+                          onPress={() => isPlayingAudio ? stopAudioPlayback() : playAudioResponse(audioBase64)}
+                        >
+                          <Ionicons 
+                            name={isPlayingAudio ? "stop" : "play"} 
+                            size={20} 
+                            color={isPlayingAudio ? "#FF5722" : "#03DAC6"} 
+                          />
+                          <Text style={[styles.audioButtonText, isPlayingAudio && styles.audioButtonTextActive]}>
+                            {isPlayingAudio ? "Stop Audio" : "🔊 Play Response"}
+                          </Text>
+                        </TouchableOpacity>
+                        
+                        {/* Mute toggle button */}
+                        <TouchableOpacity 
+                          style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+                          onPress={() => setIsMuted(!isMuted)}
+                        >
+                          <Ionicons 
+                            name={isMuted ? "volume-mute" : "volume-high"} 
+                            size={20} 
+                            color={isMuted ? "#FF5722" : "#03DAC6"} 
+                          />
+                          <Text style={[styles.muteButtonText, isMuted && styles.muteButtonTextActive]}>
+                            {isMuted ? "Unmute" : "Mute"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
                     {currentAction && currentAction !== 'do_nothing' && (
                       <TouchableOpacity 
                         style={[styles.actionButton, { backgroundColor: ACTION_BUTTONS[currentAction]?.color || '#03DAC6' }]}
@@ -550,6 +684,15 @@ export default function LiveVoiceScreen({ navigation }) {
                     <Text style={styles.historyAction}>
                       {ACTION_BUTTONS[item.action]?.label || item.action}
                     </Text>
+                    {item.audioData && (
+                      <TouchableOpacity 
+                        style={styles.historyAudioButton}
+                        onPress={() => playAudioResponse(item.audioData)}
+                      >
+                        <Ionicons name="play" size={16} color="#03DAC6" />
+                        <Text style={styles.historyAudioText}>Replay</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
               </View>
@@ -1216,5 +1359,79 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  
+  // Audio control styles
+  audioControlsContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  audioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3, 218, 198, 0.1)',
+    borderColor: '#03DAC6',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    flex: 1,
+  },
+  audioButtonActive: {
+    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+    borderColor: '#FF5722',
+  },
+  audioButtonText: {
+    color: '#03DAC6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  audioButtonTextActive: {
+    color: '#FF5722',
+  },
+  muteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3, 218, 198, 0.1)',
+    borderColor: '#03DAC6',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    flex: 1,
+  },
+  muteButtonActive: {
+    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+    borderColor: '#FF5722',
+  },
+  muteButtonText: {
+    color: '#03DAC6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  muteButtonTextActive: {
+    color: '#FF5722',
+  },
+  historyAudioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(3, 218, 198, 0.1)',
+    borderRadius: 12,
+  },
+  historyAudioText: {
+    color: '#03DAC6',
+    fontSize: 12,
+    marginLeft: 4,
   },
 });

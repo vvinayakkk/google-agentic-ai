@@ -25,10 +25,11 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 // Configuration
 const API_CONFIG = {
-  BASE_URL: 'http://192.168.0.111:8000',
+  BASE_URL: NetworkConfig.API_BASE,
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3
 };

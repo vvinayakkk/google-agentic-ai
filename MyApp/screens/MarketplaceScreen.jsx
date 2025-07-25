@@ -20,13 +20,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewMarketPricesScreen from './NewMarketPricesScreen';
 import { useTranslation } from 'react-i18next';
+import { NetworkConfig } from '../utils/NetworkConfig';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const API_BASE = 'http://192.168.0.111:8000'; // Use device IP for backend
+const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const STORAGE_KEY = 'market-listings-cache';
 

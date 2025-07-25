@@ -52,9 +52,8 @@ def soil_moisture_ai_suggestion(
         latest_serializable = convert_timestamps(latest)
         context = f"Soil moisture data for {district}, {state}:\n" + json.dumps(latest_serializable, indent=2)
         prompt = (
-            "You are an expert agricultural assistant. Given the following latest soil moisture data for a district, "
-            "provide 2-3 actionable, practical, and easy-to-understand suggestions for a farmer in that district. "
-            "Use simple language.\n\n" + context
+            "You are a friendly voice assistant for farmers. Give 1-2 SHORT suggestions based on this soil data. "
+            "Keep it conversational and under 25 words total.\n\n" + context
         )
         # Use Gemini 2.5 Flash model
         model = genai.GenerativeModel("gemini-2.5-flash")

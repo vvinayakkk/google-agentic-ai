@@ -1,5 +1,7 @@
 // API service for Voice Command integration
-const API_BASE = 'http://192.168.0.111:8000';
+import { NetworkConfig } from '../utils/NetworkConfig';
+
+const API_BASE = NetworkConfig.API_BASE;
 
 export const VoiceCommandAPI = {
   // Process voice command with audio file
