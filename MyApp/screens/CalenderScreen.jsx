@@ -436,7 +436,6 @@ const SmartCalendar = ({ navigation }) => {
           </View>
           
           <View style={styles.headerRight}>
-            <View style={styles.statusDot} />
           </View>
         </Animated.View>
 
@@ -787,12 +786,6 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40,
     alignItems: 'flex-end',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
   },
   scrollView: {
     flex: 1,
