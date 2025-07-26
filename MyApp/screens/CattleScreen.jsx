@@ -978,39 +978,22 @@ const CattleScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Debug Buttons for Testing (remove in production) */}
+      {/* Onboarding debug buttons for testing */}
       {__DEV__ && (
-        <View style={{
-          position: 'absolute',
-          top: 100,
-          left: 10,
-          zIndex: 999,
-          flexDirection: 'row'
-        }}>
-          <TouchableOpacity
+        <View style={styles.tourButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.restartTourButton} 
             onPress={startOnboardingTour}
-            style={{
-              backgroundColor: '#10B981',
-              padding: 8,
-              borderRadius: 4,
-              marginRight: 16,
-              marginTop: 610
-            }}
           >
-            <Text style={{ color: 'white', fontSize: 10 }}>Tour</Text>
+            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
+            <Text style={styles.restartTourText}>Tour</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={resetOnboarding} 
-            style={{
-              backgroundColor: '#EF4444',
-              padding: 10,
-              borderRadius: 4,
-              marginTop:610
-            
-            }}
+          <TouchableOpacity 
+            style={styles.resetTourButton} 
+            onPress={resetOnboarding}
           >
-            <Text style={{ color: 'white', fontSize: 10 }}>Reset</Text>
+            <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
+            <Text style={styles.resetTourText}>Reset</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1501,6 +1484,63 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 17,
+  },
+
+  // Onboarding Tour Buttons
+  tourButtonsContainer: {
+    position: 'absolute',
+    bottom: 85,
+    left: 15,
+    flexDirection: 'row',
+    gap: 10,
+    zIndex: 15,
+  },
+  restartTourButton: {
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginLeft:140,
+    marginBottom:60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  restartTourText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
+  },
+  resetTourButton: {
+    backgroundColor: 'rgba(255,87,34,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#FF5722',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom:60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#FF5722',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  resetTourText: {
+    color: '#FF5722',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
   },
 });
 
