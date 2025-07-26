@@ -23,6 +23,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android') {
@@ -655,6 +656,16 @@ export default function CropDoctorScreen({ navigation }) {
                     </TouchableOpacity>
                 </View>
             )}
+            
+            {/* Mic Overlay - UI only for now */}
+            <MicOverlay 
+                onPress={() => {
+                    // For now, just navigate to LiveVoiceScreen
+                    navigation.navigate('LiveVoiceScreen');
+                }}
+                isVisible={true}
+                isActive={false}
+            />
         </SafeAreaView>
     );
 }

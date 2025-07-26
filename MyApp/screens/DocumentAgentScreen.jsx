@@ -15,6 +15,7 @@ import {
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 // Use the main backend API base URL
 const API_BASE = NetworkConfig.API_BASE;
@@ -1318,6 +1319,16 @@ export default function DocumentAgentScreen({ navigation }) {
       {renderFilterSort()}
       {/* Scheme Detail Modal */}
       {renderSchemeModal()}
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </View>
   );
 }

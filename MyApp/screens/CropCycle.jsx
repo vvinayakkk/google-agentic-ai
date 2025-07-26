@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import CropCycleService from '../services/CropCycleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MicOverlay from '../components/MicOverlay';
 
 const { width, height } = Dimensions.get('window');
 
@@ -892,6 +893,16 @@ const FarmingAssistant = () => {
           })}
         </View>
       </ScrollView>
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </SafeAreaView>
   );
 };

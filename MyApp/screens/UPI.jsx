@@ -19,6 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import MicOverlay from '../components/MicOverlay';
 
 const UPIScreen = () => {
   const { t } = useTranslation();
@@ -718,6 +719,16 @@ const PayAnyoneScreen = ({ navigation }) => {
           )
         ))}
       </ScrollView>
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </SafeAreaView>
   );
 };

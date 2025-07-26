@@ -481,11 +481,11 @@ const styles = StyleSheet.create({
   // Onboarding Tour Button
   tourButtonsContainer: {
     position: 'absolute',
-    bottom: 45,
+    bottom: 20,
     left: -60,
-    right: 10,
+    right: 20,
     flexDirection: 'row',
-    gap: 4,
+    gap: 4
   },
   restartTourButton: {
     zIndex: 2,
@@ -514,6 +514,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight:10
   },
   resetTourText: {
     color: '#FF5722',

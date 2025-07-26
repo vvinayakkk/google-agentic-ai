@@ -26,6 +26,7 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 // Configuration
 const API_CONFIG = {
@@ -759,6 +760,16 @@ export default function RentalScreen() {
       <View style={styles.content}>
         {searchQuery.trim() ? renderSearchResults() : renderDefaultContent()}
       </View>
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </SafeAreaView>
   );
 }

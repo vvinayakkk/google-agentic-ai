@@ -24,6 +24,7 @@ import Markdown from 'react-native-markdown-display';
 import { PanResponder } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 const { width, height } = Dimensions.get('window');
 
@@ -852,6 +853,17 @@ const SmartCalendar = ({ navigation }) => {
             <Ionicons name="add" size={36} color="#fff" />
           </TouchableOpacity>
         </View>
+        
+        {/* Mic Overlay - UI only for now */}
+        <MicOverlay 
+          onPress={() => {
+            // For now, just navigate to LiveVoiceScreen
+            navigation.navigate('LiveVoiceScreen');
+          }}
+          isVisible={true}
+          isActive={false}
+          position="bottomLeft"
+        />
       </SafeAreaView>
     </View>
   );

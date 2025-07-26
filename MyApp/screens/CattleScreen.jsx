@@ -993,18 +993,21 @@ const CattleScreen = ({ navigation }) => {
               backgroundColor: '#10B981',
               padding: 8,
               borderRadius: 4,
-              marginRight: 8
+              marginRight: 16,
+              marginTop: 610
             }}
           >
             <Text style={{ color: 'white', fontSize: 10 }}>Tour</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            onPress={resetOnboarding}
+            onPress={resetOnboarding} 
             style={{
               backgroundColor: '#EF4444',
-              padding: 8,
-              borderRadius: 4
+              padding: 10,
+              borderRadius: 4,
+              marginTop:610
+            
             }}
           >
             <Text style={{ color: 'white', fontSize: 10 }}>Reset</Text>
