@@ -31,7 +31,7 @@ const LanguageSelectScreen = () => {
     await setLanguage(selectedLanguage);
     navigation.reset({
       index: 0,
-      routes: [{ name: 'FetchingLocationScreen' }],
+      routes: [{ name: 'LoginScreen' }],
     });
   };
 

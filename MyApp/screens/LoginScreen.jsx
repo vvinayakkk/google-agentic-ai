@@ -133,7 +133,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleNext = async () => {
     setLoading(true);
-    navigation.reset({ index: 0, routes: [{ name: 'ChoiceScreen' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'FetchingLocationScreen' }] });
     // Run the profile update in the background
     (async () => {
       try {

@@ -259,7 +259,7 @@ const FetchingLocationScreen = ({ navigation }) => {
         // If this is the last step, navigate after completion
         if (index === analysisSteps.length - 1) {
           setTimeout(() => {
-            navigation.replace('LoginScreen');
+            navigation.replace('ChoiceScreen');
           }, 2000);
         }
       }, (index + 1) * 1500); // 1.5 seconds per step
