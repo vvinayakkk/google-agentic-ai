@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/cli": "^19.1.0",
@@ -28,6 +29,7 @@
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-localization": "~16.1.6",
+    "expo-location": "~18.1.6",
     "expo-speech": "~13.1.7",
     "expo-status-bar": "~2.2.3",
     "i18n-js": "^4.5.1",
@@ -37,8 +39,10 @@
     "lucide-react-native": "^0.525.0",
     "markdown-it": "^14.1.0",
     "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-i18next": "^13.5.0",
     "react-native": "0.79.5",
+    "react-native-animatable": "^1.4.0",
     "react-native-document-picker": "^9.3.1",
     "react-native-localize": "^3.5.1",
     "react-native-markdown-display": "^7.0.2",
@@ -47,10 +51,7 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-toast-message": "^2.3.3",
-    "expo-location": "~18.1.6",
-    "react-dom": "19.0.0",
-    "react-native-web": "~0.20.0",
-    "@expo/metro-runtime": "~5.0.4"
+    "react-native-web": "~0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
