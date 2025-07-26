@@ -699,6 +699,10 @@ const FarmingAssistant = () => {
                 tile={tile}
                 onPress={() => {
                   if (screenName) {
+                    console.log('Navigating to', screenName, 'with params:', {
+                      selectedCrop,
+                      landSize: farmDetails.landSize,
+                    });
                     navigation.navigate(screenName, {
                       selectedCrop,
                       landSize: farmDetails.landSize,
