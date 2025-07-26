@@ -458,7 +458,7 @@ const MarketplaceScreen = ({ navigation }) => {
     setShowStrategicPlans(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!productName || !productQuantity || !productPrice) {
       Alert.alert(t('marketplace.missing_info'), t('marketplace.fill_all_fields'));
       return;
