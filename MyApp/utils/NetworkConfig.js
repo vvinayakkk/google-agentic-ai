@@ -3,11 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const NetworkConfig = {
   // Primary API base URL
-  API_BASE: 'http://10.215.221.37:8000',
+  API_BASE: 'http://10.123.4.245:8000',
+  MODE: 'online', // 'online' or 'offline'
   
   // Alternative URLs to try
   FALLBACK_URLS: [
     'http://10.123.4.245:8000',  // Primary
+    'http://10.215.221.37:8000', // Alternative backend
     'http://192.168.0.111:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
@@ -128,11 +130,11 @@ export const NetworkConfig = {
 
   setMode: async (mode) => {
     if (mode === 'offline') {
-      NetworkConfig.API_BASE = 'http://10.215.221.37:8000/hybrid'; // or your offline/hybrid endpoint
+      NetworkConfig.API_BASE = 'http://10.123.4.245:8000/hybrid'; // or your offline/hybrid endpoint
       NetworkConfig.MODE = 'offline';
       await AsyncStorage.setItem('api_mode', 'offline');
     } else {
-      NetworkConfig.API_BASE = 'http://10.215.221.37:8000';
+      NetworkConfig.API_BASE = 'http://10.123.4.245:8000';
       NetworkConfig.MODE = 'online';
       await AsyncStorage.setItem('api_mode', 'online');
     }

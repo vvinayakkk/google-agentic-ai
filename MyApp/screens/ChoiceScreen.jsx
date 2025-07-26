@@ -34,11 +34,11 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
           top: 140, // Below the profile icon (top right)
           right: 10, // Align with profile icon position
         };
-      case 'marketButton':
-        return {
-          bottom: 200, // Above the market prices button
-          alignSelf: 'center',
-        };
+      // case 'marketButton':
+      //   return {
+      //     bottom: 200, // Above the market prices button
+      //     alignSelf: 'center',
+      //   };
       case 'soilButton':
         return {
           bottom: 140, // Above the soil moisture button (different from market)
@@ -129,13 +129,6 @@ export default function ChoiceScreen({ navigation }) {
       title: 'Market Prices 📈',
       message: 'Check current market prices for your crops to make informed selling decisions.',
       target: 'marketButton',
-      position: 'bottom'
-    },
-    {
-      id: 'soil_moisture',
-      title: 'Soil Monitoring 💧',
-      message: 'Monitor your soil moisture levels to optimize irrigation and crop health.',
-      target: 'soilButton',
       position: 'bottom'
     },
     {
@@ -296,7 +289,7 @@ export default function ChoiceScreen({ navigation }) {
           <Text style={styles.optionText}>{t('choice.manual_mode')}</Text>
         </TouchableOpacity>
       </View>
-
+{/* 
       <TouchableOpacity 
         style={styles.featureButton} 
         onPress={() => navigation.navigate('MarketplaceScreen')}
@@ -305,15 +298,15 @@ export default function ChoiceScreen({ navigation }) {
         <Ionicons name="trending-up-outline" size={24} color="#10B981" />
         <Text style={styles.featureButtonText}>{t('choice.view_market_prices')}</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+       */}
+      {/* <TouchableOpacity 
         style={styles.featureButton} 
         onPress={() => navigation.navigate('SoilMoisture')}
         // REMOVED: disabled={loading}
       >
         <Ionicons name="water-outline" size={24} color="#3B82F6" />
         <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>{t('choice.check_soil_moisture')}</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {/* <TouchableOpacity 
         style={[styles.optionButton, { marginTop: 32, backgroundColor: '#10B981' }]}
@@ -322,6 +315,26 @@ export default function ChoiceScreen({ navigation }) {
         <Ionicons name="mic" size={32} color="#fff" />
         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18, marginLeft: 12 }}>Try Speech-to-Text Demo</Text>
       </TouchableOpacity> */}
+
+      {/* Tour Buttons */}
+      {hasSeenOnboarding && (
+        <View style={styles.tourButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.restartTourButton} 
+            onPress={startInteractiveGuide}
+          >
+            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
+            <Text style={styles.restartTourText}>Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.resetTourButton} 
+            onPress={resetOnboarding}
+          >
+            <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
+            <Text style={styles.resetTourText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.helpCardContainer}>
         {showHelp && (
@@ -332,26 +345,6 @@ export default function ChoiceScreen({ navigation }) {
         <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)} disabled={false}>
           <MaterialCommunityIcons name="help-circle-outline" size={28} color="#fff" />
         </TouchableOpacity>
-        
-        {/* Onboarding restart button for testing/debugging */}
-        {hasSeenOnboarding && (
-          <View style={styles.tourButtonsContainer}>
-            <TouchableOpacity 
-              style={styles.restartTourButton} 
-              onPress={startInteractiveGuide}
-            >
-              <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-              <Text style={styles.restartTourText}>Tour</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.resetTourButton} 
-              onPress={resetOnboarding}
-            >
-              <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
-              <Text style={styles.resetTourText}>Reset</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
 
       {/* Interactive Guide Overlay */}
@@ -381,20 +374,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundImage: 'linear-gradient(to bottom, #0f172a, #121212)',
   },
   title: {
-    fontSize: 48,
+    fontSize: 52,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#10B981',
     marginBottom: 10,
-    textShadowColor: 'rgba(255,255,255,0.25)',
+    textShadowColor: 'rgba(16,185,129,0.6)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 32,
+    textShadowRadius: 20,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    opacity: 0.9,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(16,185,129,0.3)',
   },
   subtitle: {
     fontSize: 20,
-    color: 'gray',
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: 60,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    maxWidth: '80%',
+    lineHeight: 28,
   },
   optionsContainer: {
     alignItems: 'center',
@@ -440,9 +445,17 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   orText: {
-    color: 'gray',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: 2,
+    marginVertical: 25,
+    textTransform: 'uppercase',
+    position: 'relative',
+    paddingHorizontal: 20,
+    textShadowColor: 'rgba(255,255,255,0.1)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   helpButton: {
     position: 'absolute',
@@ -480,47 +493,58 @@ const styles = StyleSheet.create({
 
   // Onboarding Tour Button
   tourButtonsContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: -60,
-    right: 20,
     flexDirection: 'row',
-    gap: 4
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 10
   },
   restartTourButton: {
     zIndex: 2,
-    backgroundColor: '#27272a',
-    borderRadius: 16,
-    borderWidth: 1,
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: '#10B981',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   restartTourText: {
     color: '#10B981',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
   },
   resetTourButton: {
     zIndex: 2,
-    backgroundColor: '#27272a',
-    borderRadius: 16,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,87,34,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: '#FF5722',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight:10
+    marginRight: 10,
+    shadowColor: '#FF5722',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   resetTourText: {
     color: '#FF5722',
-    fontSize: 10,
-    fontWeight: '600',
-    marginLeft: 2,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
   },
 
   // Interactive Guide Styles
