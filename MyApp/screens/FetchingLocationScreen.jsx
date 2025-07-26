@@ -32,6 +32,7 @@ const FetchingLocationScreen = ({ navigation }) => {
   const loadingAnim = useRef(new Animated.Value(0)).current;
   const stepAnim = useRef(new Animated.Value(0)).current;
   const messageAnim = useRef(new Animated.Value(0)).current;
+  const areaAnim = useRef(new Animated.Value(0)).current;
 
   // Analysis steps
   const analysisSteps = [
@@ -220,6 +221,15 @@ const FetchingLocationScreen = ({ navigation }) => {
       useNativeDriver: true,
     }).start();
 
+    // Animate area display
+    setTimeout(() => {
+      Animated.timing(areaAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    }, 500);
+
     // Start analysis after 3 seconds
     setTimeout(() => {
       startAnalysis();
@@ -314,21 +324,41 @@ const FetchingLocationScreen = ({ navigation }) => {
             strokeWidth={4}
           />
         )}
-
-        {/* Farm Area Display in Center */}
-        {boundingBox && farmArea && (
-          <Marker
-            coordinate={{
-              latitude: (boundingBox[0].latitude + boundingBox[2].latitude) / 2,
-              longitude: (boundingBox[0].longitude + boundingBox[2].longitude) / 2,
-            }}
-          >
-            <View style={styles.areaDisplay}>
-              <Text style={styles.areaText}>{farmArea} acres</Text>
-            </View>
-          </Marker>
-        )}
       </MapView>
+
+      {/* Farm Area Overlay */}
+      {boundingBox && farmArea && (
+        <Animated.View
+          style={[
+            styles.areaOverlay,
+            {
+              opacity: areaAnim,
+              transform: [
+                { scale: areaAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                })},
+              ],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
+            style={styles.areaGradient}
+          >
+            <View style={styles.areaIconContainer}>
+              <Ionicons name="calculator" size={24} color="#FFFFFF" />
+            </View>
+            <View style={styles.areaTextContainer}>
+              <Text style={styles.areaValue}>{farmArea}</Text>
+              <Text style={styles.areaUnit}>acres</Text>
+            </View>
+            <View style={styles.areaLabelContainer}>
+              <Text style={styles.areaLabel}>Farm Area</Text>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      )}
 
       {/* Selection Message Overlay */}
       {showSelectionMessage && (
@@ -504,17 +534,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  areaDisplay: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  areaOverlay: {
+    position: 'absolute',
+    top: height * 0.15,
+    right: 20,
+    zIndex: 1000,
   },
-  areaText: {
+  areaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  areaIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 6,
+    marginRight: 10,
+  },
+  areaTextContainer: {
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  areaValue: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    lineHeight: 28,
+  },
+  areaUnit: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.9,
+  },
+  areaLabelContainer: {
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+    paddingLeft: 8,
+  },
+  areaLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.8,
   },
   selectionMessage: {
     position: 'absolute',
