@@ -41,6 +41,12 @@ import Earnings from './screens/Earnings';
 import ListingDetails from './screens/ListingDetails';
 import SpeechToTextScreen from './screens/SpeechToTextScreen';
 import CropIntelligenceScreenNew from './screens/CropIntelligenceScreenNew';
+import MarketStrategyScreen from './screens/cropcycle/MarketStrategyScreen';
+import PowerSupplyScreen from './screens/cropcycle/PowerSupplyScreen';
+import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
+import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
+import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
+import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -250,6 +256,36 @@ export default function App() {
               name="CropIntelligenceScreenNew" 
               component={CropIntelligenceScreenNew} 
               options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="MarketStrategyScreen" 
+              component={MarketStrategyScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="PowerSupplyScreen" 
+              component={PowerSupplyScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="ContractFarmingScreen" 
+              component={ContractFarmingScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CropInsuranceScreen" 
+              component={CropInsuranceScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="CreditSourcesScreen" 
+              component={CreditSourcesScreen} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="SoilHealthScreen" 
+              component={SoilHealthScreen} 
+              options={{ headerShown: false }} 
             />
           </Stack.Navigator>
         </NavigationContainer>
