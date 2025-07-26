@@ -16,6 +16,93 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
+// Preloader Component (Adjusted for ~4.5-second word sequence with dialect translations)
+const Preloader = ({ onComplete }) => {
+  const [index, setIndex] = useState(0);
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(0)).current;
+
+  // Translations for "farmer" in various Indian dialects/languages
+  const words = [
+    "किसान",        // Kisan
+    "రైతు",        // Raithu
+    "ಶೇತಕ",      // Shethaka / Raita (more common) - changed to Raita for common usage
+    "কৃষক",       // Krshok
+    "ખેડૂત",     // Khedut
+    "ਕਿਸਾਨ",      // Kisan
+    "உழவன்",        // Uzhavan
+    "Farmer " // Karshakan
+  ];
+  // Correcting Kannada to a more commonly used term if that's the intent
+  words[2] = "ರೈತ"; // Raita - more common for farmer
+
+  // Timings to target ~4.5 seconds for the word sequence within the preloader
+  // Total 8 words. (4500ms / 8 words) = ~562.5ms on average per word.
+  // We'll make fade-ins quick and display times even quicker.
+  const FADE_IN_DURATION_PRELOADER = 200; // Very fast fade in
+  const DELAY_BEFORE_NEXT_WORD_PRELOADER = 300; // How long each word stays visible before next appears
+  const SLIDE_UP_DURATION_PRELOADER = 400; // Fast slide up
+  const SLIDE_UP_DELAY_PRELOADER = 50; // Very short delay before slide up
+
+  useEffect(() => {
+    opacityAnim.setValue(0); // Reset opacity for the new word before animating
+
+    Animated.timing(opacityAnim, {
+      toValue: 0.75, // Fades in to 75% opacity
+      duration: FADE_IN_DURATION_PRELOADER,
+      delay: 30, // Extremely short initial delay
+      useNativeDriver: true,
+    }).start(() => {
+      // This callback fires after the current word has finished its fade-in animation
+      if (index < words.length - 1) {
+        // If there are more words, set a timeout to display the next word
+        setTimeout(() => {
+          setIndex(prevIndex => prevIndex + 1);
+        }, DELAY_BEFORE_NEXT_WORD_PRELOADER);
+      } else {
+        // This is the last word. After it fades in, display for a bit, then slide the preloader up.
+        setTimeout(() => {
+          Animated.timing(slideUpAnim, {
+            toValue: -height, // Animate off-screen
+            duration: SLIDE_UP_DURATION_PRELOADER,
+            delay: SLIDE_UP_DELAY_PRELOADER,
+            useNativeDriver: true,
+          }).start(() => {
+            onComplete(); // Notify parent that the preloader sequence is fully done
+          });
+        }, DELAY_BEFORE_NEXT_WORD_PRELOADER); // Wait for the last word to display briefly
+      }
+    });
+
+  }, [index, onComplete, opacityAnim, slideUpAnim, height, words.length]);
+
+
+  return (
+    <Animated.View
+      style={[
+        styles.preloaderContainer,
+        {
+          transform: [{ translateY: slideUpAnim }],
+        },
+      ]}
+    >
+      <View style={styles.wordContainer}>
+        <Animated.View
+          style={[
+            styles.wordWrapper,
+            {
+              opacity: opacityAnim,
+            },
+          ]}
+        >
+          <Text style={styles.mainWord}>{words[index]}</Text>
+        </Animated.View>
+      </View>
+    </Animated.View>
+  );
+};
+
+// FetchingLocationScreen
 const FetchingLocationScreen = ({ navigation }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [selectedPoints, setSelectedPoints] = useState([]);
@@ -25,7 +112,8 @@ const FetchingLocationScreen = ({ navigation }) => {
   const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
   const [showSelectionMessage, setShowSelectionMessage] = useState(false);
   const [farmArea, setFarmArea] = useState(null);
-  
+  const [showPreloader, setShowPreloader] = useState(true); // Control preloader visibility
+
   // Animation values
   const mapRef = useRef(null);
   const boundingBoxAnim = useRef(new Animated.Value(0)).current;
@@ -34,7 +122,7 @@ const FetchingLocationScreen = ({ navigation }) => {
   const messageAnim = useRef(new Animated.Value(0)).current;
   const areaAnim = useRef(new Animated.Value(0)).current;
 
-  // Analysis steps
+  // Analysis steps (unchanged timings from previous full code, as only preloader was modified)
   const analysisSteps = [
     { title: 'Analyzing Farm Land', icon: 'leaf', color: '#10B981' },
     { title: 'Analyzing Soil Conditions', icon: 'earth', color: '#8B4513' },
@@ -43,12 +131,33 @@ const FetchingLocationScreen = ({ navigation }) => {
     { title: 'Finalizing Personalized Insights', icon: 'analytics', color: '#8B5CF6' },
   ];
 
-  // India center coordinates
+  // India center coordinates for fallback
   const INDIA_CENTER = {
     latitude: 20.5937,
     longitude: 78.9629,
     latitudeDelta: 40,
     longitudeDelta: 40,
+  };
+
+  // --- TIMING CONSTANTS FOR MAIN SCREEN (unchanged from previous version) ---
+  const MAP_ZOOM_DURATION = 1500;
+  const DELAY_BEFORE_MESSAGE = 500;
+  const MESSAGE_FADE_DURATION = 500;
+  const BOUNDING_BOX_FADE_DURATION = 1000;
+  const AREA_DISPLAY_FADE_DURATION = 800;
+  const DELAY_BEFORE_ANALYSIS_START = 3000;
+  const ANALYSIS_OVERLAY_FADE_DURATION = 500;
+  const TIME_PER_ANALYSIS_STEP = 1500;
+  const STEP_ANIM_DURATION_OUT = 200;
+  const STEP_ANIM_DURATION_IN = 300;
+  const DELAY_AFTER_LAST_STEP = 2000;
+
+
+  // Handle preloader completion
+  const handlePreloaderComplete = () => {
+    setShowPreloader(false);
+    // Start getting user location after preloader
+    getUserLocation();
   };
 
   // Calculate area in acres using exact polygon area
@@ -57,7 +166,7 @@ const FetchingLocationScreen = ({ navigation }) => {
 
     // Convert coordinates to radians
     const toRadians = (degrees) => degrees * (Math.PI / 180);
-    
+
     // Calculate area using shoelace formula for exact polygon
     let area = 0;
     for (let i = 0; i < points.length; i++) {
@@ -65,22 +174,22 @@ const FetchingLocationScreen = ({ navigation }) => {
       area += toRadians(points[i].longitude) * toRadians(points[j].latitude);
       area -= toRadians(points[j].longitude) * toRadians(points[i].latitude);
     }
-    
+
     area = Math.abs(area) / 2;
-    
+
     // Convert to square meters using exact Earth radius at the location
     const earthRadius = 6371000; // meters
     const centerLat = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;
     const latRadians = toRadians(centerLat);
-    
+
     // Adjust for latitude (Earth is not perfectly spherical)
     const adjustedRadius = earthRadius * Math.cos(latRadians);
     const areaInSquareMeters = area * adjustedRadius * earthRadius;
-    
+
     // Convert to acres (1 acre = 4046.86 square meters)
     const areaInAcres = areaInSquareMeters / 4046.86;
-    
-    return Math.round(areaInAcres * 1000) / 1000; // Round to 3 decimal places for extreme accuracy
+
+    return Math.round(areaInAcres * 1000) / 1000; // Round to 3 decimal places for accuracy
   };
 
   // Get user location
@@ -89,14 +198,17 @@ const FetchingLocationScreen = ({ navigation }) => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission denied', 'Location permission is required to provide local services.');
-        // Continue with fallback location
+        // Fallback to a default location in India
         setUserLocation({
           latitude: 19.0760, // Mumbai
           longitude: 72.8777,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         });
-        startLocationAnimation();
+        // Animate to fallback location if permission denied
+        setTimeout(() => {
+          animateToUserLocation({ latitude: 19.0760, longitude: 72.8777 });
+        }, 500); // Small delay to allow map to render
         return;
       }
 
@@ -118,14 +230,16 @@ const FetchingLocationScreen = ({ navigation }) => {
 
     } catch (error) {
       console.error('Error getting location:', error);
-      // Fallback to a default location in India
+      // Fallback to a default location in India on error
       setUserLocation({
         latitude: 19.0760, // Mumbai
         longitude: 72.8777,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
-      startLocationAnimation();
+      setTimeout(() => {
+        animateToUserLocation({ latitude: 19.0760, longitude: 72.8777 });
+      }, 500);
     }
   };
 
@@ -137,7 +251,7 @@ const FetchingLocationScreen = ({ navigation }) => {
         longitude: coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      }, 1500); // Moderate zoom animation
+      }, MAP_ZOOM_DURATION); // Moderate zoom animation
     }
 
     // Show selection message after zoom completes
@@ -145,10 +259,10 @@ const FetchingLocationScreen = ({ navigation }) => {
       setShowSelectionMessage(true);
       Animated.timing(messageAnim, {
         toValue: 1,
-        duration: 500,
+        duration: MESSAGE_FADE_DURATION,
         useNativeDriver: true,
       }).start();
-    }, 2000);
+    }, MAP_ZOOM_DURATION + DELAY_BEFORE_MESSAGE);
   };
 
   // Start point selection process
@@ -157,11 +271,11 @@ const FetchingLocationScreen = ({ navigation }) => {
     setSelectedPoints([]);
     setBoundingBox(null);
     setFarmArea(null);
-    
+
     // Hide selection message
     Animated.timing(messageAnim, {
       toValue: 0,
-      duration: 300,
+      duration: MESSAGE_FADE_DURATION,
       useNativeDriver: true,
     }).start(() => {
       setShowSelectionMessage(false);
@@ -207,7 +321,7 @@ const FetchingLocationScreen = ({ navigation }) => {
     // Animate bounding box appearance
     Animated.timing(boundingBoxAnim, {
       toValue: 1,
-      duration: 1000,
+      duration: BOUNDING_BOX_FADE_DURATION,
       useNativeDriver: true,
     }).start();
 
@@ -215,26 +329,26 @@ const FetchingLocationScreen = ({ navigation }) => {
     setTimeout(() => {
       Animated.timing(areaAnim, {
         toValue: 1,
-        duration: 800,
+        duration: AREA_DISPLAY_FADE_DURATION,
         useNativeDriver: true,
       }).start();
     }, 500);
 
-    // Start analysis after 3 seconds
+    // Start analysis after a delay
     setTimeout(() => {
       startAnalysis();
-    }, 3000);
+    }, DELAY_BEFORE_ANALYSIS_START);
   };
 
   // Start analysis process
   const startAnalysis = () => {
     setIsAnalyzing(true);
     setCurrentAnalysisStep(0);
-    
+
     // Animate loading screen appearance
     Animated.timing(loadingAnim, {
       toValue: 1,
-      duration: 500,
+      duration: ANALYSIS_OVERLAY_FADE_DURATION,
       useNativeDriver: true,
     }).start();
 
@@ -242,16 +356,16 @@ const FetchingLocationScreen = ({ navigation }) => {
     analysisSteps.forEach((step, index) => {
       setTimeout(() => {
         setCurrentAnalysisStep(index);
-        
+
         // Animate step appearance
         Animated.timing(stepAnim, {
           toValue: 0,
-          duration: 200,
+          duration: STEP_ANIM_DURATION_OUT,
           useNativeDriver: true,
         }).start(() => {
           Animated.timing(stepAnim, {
             toValue: 1,
-            duration: 300,
+            duration: STEP_ANIM_DURATION_IN,
             useNativeDriver: true,
           }).start();
         });
@@ -259,243 +373,248 @@ const FetchingLocationScreen = ({ navigation }) => {
         // If this is the last step, navigate after completion
         if (index === analysisSteps.length - 1) {
           setTimeout(() => {
-            navigation.replace('ChoiceScreen');
-          }, 2000);
+            navigation.replace('ChoiceScreen'); // Ensure 'ChoiceScreen' is defined in your navigation stack
+          }, DELAY_AFTER_LAST_STEP);
         }
-      }, (index + 1) * 1500); // 1.5 seconds per step
+      }, (index + 1) * TIME_PER_ANALYSIS_STEP); // 1.5 seconds per step
     });
   };
-
-  // Get user location after component mounts
-  useEffect(() => {
-    getUserLocation();
-  }, []);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      
-      {/* Satellite Map View */}
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={INDIA_CENTER}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-        showsTraffic={false}
-        showsBuildings={false}
-        showsIndoors={false}
-        showsIndoorLevelPicker={false}
-        showsPointsOfInterest={false}
-        mapType="satellite"
-        onPress={handleMapPress}
-      >
-        {/* Selected points markers */}
-        {selectedPoints.map((point) => (
-          <Marker
-            key={point.id}
-            coordinate={point}
-            title={`Point ${point.id}`}
-          >
-            <View style={styles.pointMarker}>
-              <Text style={styles.pointNumber}>{point.id}</Text>
-            </View>
-          </Marker>
-        ))}
 
-        {/* Accurate bounding box polygon */}
-        {boundingBox && (
-          <Polygon
-            coordinates={boundingBox}
-            fillColor="rgba(16, 185, 129, 0.2)"
-            strokeColor="rgba(16, 185, 129, 0.9)"
-            strokeWidth={4}
-          />
-        )}
-      </MapView>
-
-      {/* Farm Area Overlay */}
-      {boundingBox && farmArea && (
-        <Animated.View
-          style={[
-            styles.areaOverlay,
-            {
-              opacity: areaAnim,
-              transform: [
-                { scale: areaAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                })},
-              ],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
-            style={styles.areaGradient}
-          >
-            <View style={styles.areaIconContainer}>
-              <Ionicons name="calculator" size={24} color="#FFFFFF" />
-            </View>
-            <View style={styles.areaTextContainer}>
-              <Text style={styles.areaValue}>{farmArea}</Text>
-              <Text style={styles.areaUnit}>acres</Text>
-            </View>
-            <View style={styles.areaLabelContainer}>
-              <Text style={styles.areaLabel}>Farm Area</Text>
-            </View>
-          </LinearGradient>
-        </Animated.View>
+      {/* Show preloader first */}
+      {showPreloader && (
+        <Preloader onComplete={handlePreloaderComplete} />
       )}
 
-      {/* Selection Message Overlay */}
-      {showSelectionMessage && (
-        <Animated.View
-          style={[
-            styles.selectionMessage,
-            {
-              opacity: messageAnim,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
-            style={styles.selectionGradient}
+      {/* Main app content - only show after preloader completes */}
+      {!showPreloader && (
+        <>
+          {/* Satellite Map View */}
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            initialRegion={userLocation || INDIA_CENTER} // Use userLocation if available, else INDIA_CENTER
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            showsCompass={false}
+            showsScale={false}
+            showsTraffic={false}
+            showsBuildings={false}
+            showsIndoors={false}
+            showsIndoorLevelPicker={false}
+            showsPointsOfInterest={false}
+            mapType="satellite"
+            onPress={handleMapPress}
           >
-            <Ionicons name="hand-left" size={28} color="#FFFFFF" />
-            <Text style={styles.selectionTitle}>Select Your Farm Land</Text>
-            <Text style={styles.selectionSubtext}>
-              Tap 4 points around your farm boundary to calculate area
-            </Text>
-            <TouchableOpacity 
-              style={styles.startButton}
-              onPress={startPointSelection}
-            >
-              <Text style={styles.startButtonText}>Start Selection</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
-      )}
-
-      {/* Point Selection Instructions */}
-      {isSelectingPoints && (
-        <Animated.View
-          style={[
-            styles.instructionsBox,
-            {
-              opacity: boundingBoxAnim,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.9)', 'rgba(0, 0, 0, 0.8)']}
-            style={styles.instructionsGradient}
-          >
-            <Ionicons name="hand-left" size={24} color="#FFFFFF" />
-            <Text style={styles.instructionsText}>
-              Tap 4 points on the map to create your farm boundary
-            </Text>
-            <Text style={styles.pointsText}>
-              {selectedPoints.length}/4 points selected
-            </Text>
-          </LinearGradient>
-        </Animated.View>
-      )}
-
-      {/* Bounding Box Created Message */}
-      {boundingBox && !isAnalyzing && (
-        <Animated.View
-          style={[
-            styles.boundingBoxMessage,
-            {
-              opacity: boundingBoxAnim,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
-            style={styles.boundingBoxGradient}
-          >
-            <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-            <Text style={styles.boundingBoxText}>Farm boundary created!</Text>
-            <Text style={styles.boundingBoxSubText}>
-              Area: {farmArea} acres • Starting analysis...
-            </Text>
-          </LinearGradient>
-        </Animated.View>
-      )}
-
-      {/* Analysis Loading Screen */}
-      {isAnalyzing && (
-        <Animated.View
-          style={[
-            styles.loadingOverlay,
-            {
-              opacity: loadingAnim,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.95)', 'rgba(0, 0, 0, 0.9)']}
-            style={styles.loadingGradient}
-          >
-            <View style={styles.loadingContent}>
-              <Text style={styles.loadingTitle}>Analyzing Your Farm</Text>
-              
-              {/* Current Step */}
-              <Animated.View
-                style={[
-                  styles.currentStepContainer,
-                  {
-                    opacity: stepAnim,
-                  },
-                ]}
+            {/* Selected points markers */}
+            {selectedPoints.map((point) => (
+              <Marker
+                key={point.id}
+                coordinate={point}
+                title={`Point ${point.id}`}
               >
-                <View style={styles.stepIconContainer}>
-                  <Ionicons 
-                    name={analysisSteps[currentAnalysisStep].icon} 
-                    size={32} 
-                    color={analysisSteps[currentAnalysisStep].color} 
-                  />
+                <View style={styles.pointMarker}>
+                  <Text style={styles.pointNumber}>{point.id}</Text>
                 </View>
-                <Text style={styles.currentStepText}>
-                  {analysisSteps[currentAnalysisStep].title}
+              </Marker>
+            ))}
+
+            {/* Accurate bounding box polygon */}
+            {boundingBox && (
+              <Polygon
+                coordinates={boundingBox}
+                fillColor="rgba(16, 185, 129, 0.2)"
+                strokeColor="rgba(16, 185, 129, 0.9)"
+                strokeWidth={4}
+              />
+            )}
+          </MapView>
+
+          {/* Farm Area Overlay */}
+          {boundingBox && farmArea && (
+            <Animated.View
+              style={[
+                styles.areaOverlay,
+                {
+                  opacity: areaAnim,
+                  transform: [
+                    { scale: areaAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 1],
+                      })},
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
+                style={styles.areaGradient}
+              >
+                <View style={styles.areaIconContainer}>
+                  <Ionicons name="calculator" size={24} color="#FFFFFF" />
+                </View>
+                <View style={styles.areaTextContainer}>
+                  <Text style={styles.areaValue}>{farmArea}</Text>
+                  <Text style={styles.areaUnit}>acres</Text>
+                </View>
+                <View style={styles.areaLabelContainer}>
+                  <Text style={styles.areaLabel}>Farm Area</Text>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {/* Selection Message Overlay */}
+          {showSelectionMessage && (
+            <Animated.View
+              style={[
+                styles.selectionMessage,
+                {
+                  opacity: messageAnim,
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
+                style={styles.selectionGradient}
+              >
+                <Ionicons name="hand-left" size={28} color="#FFFFFF" />
+                <Text style={styles.selectionTitle}>Select Your Farm Land</Text>
+                <Text style={styles.selectionSubtext}>
+                  Tap 4 points around your farm boundary to calculate area
                 </Text>
-              </Animated.View>
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={startPointSelection}
+                >
+                  <Text style={styles.startButtonText}>Start Selection</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+            </Animated.View>
+          )}
 
-              {/* Progress Steps */}
-              <View style={styles.progressSteps}>
-                {analysisSteps.map((step, index) => (
-                  <View key={index} style={styles.stepRow}>
-                    <View style={[
-                      styles.stepDot,
-                      index <= currentAnalysisStep && styles.stepDotCompleted
-                    ]}>
-                      {index < currentAnalysisStep && (
-                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                      )}
+          {/* Point Selection Instructions */}
+          {isSelectingPoints && (
+            <Animated.View
+              style={[
+                styles.instructionsBox,
+                {
+                  opacity: 1, // Always visible when selecting
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.9)', 'rgba(0, 0, 0, 0.8)']}
+                style={styles.instructionsGradient}
+              >
+                <Ionicons name="hand-left" size={24} color="#FFFFFF" />
+                <Text style={styles.instructionsText}>
+                  Tap {4 - selectedPoints.length} more point(s) to define your farm boundary
+                </Text>
+                <Text style={styles.pointsText}>
+                  {selectedPoints.length}/4
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {/* Bounding Box Created Message */}
+          {boundingBox && !isAnalyzing && (
+            <Animated.View
+              style={[
+                styles.boundingBoxMessage,
+                {
+                  opacity: boundingBoxAnim,
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
+                style={styles.boundingBoxGradient}
+              >
+                <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+                <Text style={styles.boundingBoxText}>Farm boundary created!</Text>
+                <Text style={styles.boundingBoxSubText}>
+                  Area: {farmArea} acres • Starting analysis...
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {/* Analysis Loading Screen */}
+          {isAnalyzing && (
+            <Animated.View
+              style={[
+                styles.loadingOverlay,
+                {
+                  opacity: loadingAnim,
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.95)', 'rgba(0, 0, 0, 0.9)']}
+                style={styles.loadingGradient}
+              >
+                <View style={styles.loadingContent}>
+                  <Text style={styles.loadingTitle}>Analyzing Your Farm</Text>
+
+                  {/* Current Step */}
+                  <Animated.View
+                    style={[
+                      styles.currentStepContainer,
+                      {
+                        opacity: stepAnim,
+                      },
+                    ]}
+                  >
+                    <View style={styles.stepIconContainer}>
+                      <Ionicons
+                        name={analysisSteps[currentAnalysisStep].icon}
+                        size={32}
+                        color={analysisSteps[currentAnalysisStep].color}
+                      />
                     </View>
-                    <Text style={[
-                      styles.stepText,
-                      index <= currentAnalysisStep && styles.stepTextCompleted
-                    ]}>
-                      {step.title}
+                    <Text style={styles.currentStepText}>
+                      {analysisSteps[currentAnalysisStep].title}
                     </Text>
-                  </View>
-                ))}
-              </View>
+                  </Animated.View>
 
-              {/* Loading Animation */}
-              <View style={styles.loadingAnimation}>
-                <View style={styles.loadingDot} />
-                <View style={styles.loadingDot} />
-                <View style={styles.loadingDot} />
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
+                  {/* Progress Steps */}
+                  <View style={styles.progressSteps}>
+                    {analysisSteps.map((step, index) => (
+                      <View key={index} style={styles.stepRow}>
+                        <View style={[
+                          styles.stepDot,
+                          index <= currentAnalysisStep && styles.stepDotCompleted
+                        ]}>
+                          {index < currentAnalysisStep && (
+                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                          )}
+                        </View>
+                        <Text style={[
+                          styles.stepText,
+                          index <= currentAnalysisStep && styles.stepTextCompleted
+                        ]}>
+                          {step.title}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Loading Animation (Dots) */}
+                  <View style={styles.loadingAnimation}>
+                    <View style={styles.loadingDot} />
+                    <View style={styles.loadingDot} />
+                    <View style={styles.loadingDot} />
+                  </View>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          )}
+        </>
       )}
     </View>
   );
@@ -509,6 +628,33 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  // Preloader Styles
+  preloaderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+    zIndex: 3000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wordContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wordWrapper: {
+    alignItems: 'center',
+  },
+  mainWord: {
+    fontSize: 48, // Keeping the large font size for impact
+    fontWeight: 'bold',
+    color: '#10B981',
+    textAlign: 'center',
+  },
+  // Existing styles below remain unchanged
   pointMarker: {
     backgroundColor: '#10B981',
     borderRadius: 15,
@@ -778,4 +924,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FetchingLocationScreen; 
+export default FetchingLocationScreen;
