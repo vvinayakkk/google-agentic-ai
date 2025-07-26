@@ -24,8 +24,6 @@ const FetchingLocationScreen = ({ navigation }) => {
   
   // Animation values
   const mapRef = useRef(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const locationBoxAnim = useRef(new Animated.Value(0)).current;
   const boundingBoxAnim = useRef(new Animated.Value(0)).current;
 
   // India center coordinates
@@ -93,15 +91,6 @@ const FetchingLocationScreen = ({ navigation }) => {
       }, 1500); // Moderate zoom animation
     }
 
-    // Start location box animation
-    setTimeout(() => {
-      Animated.timing(locationBoxAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 1000);
-
     // Start point selection after showing location
     setTimeout(() => {
       startPointSelection();
@@ -167,25 +156,6 @@ const FetchingLocationScreen = ({ navigation }) => {
     }, 5000);
   };
 
-  // Pulse animation for location box
-  useEffect(() => {
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseAnimation.start();
-  }, []);
-
   // Get user location after component mounts
   useEffect(() => {
     getUserLocation();
@@ -212,22 +182,6 @@ const FetchingLocationScreen = ({ navigation }) => {
         mapType="satellite"
         onPress={handleMapPress}
       >
-        {/* User location marker */}
-        {userLocation && (
-          <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
-            title="Your Location"
-            description="Approximate location"
-          >
-            <View style={styles.customMarker}>
-              <Ionicons name="location" size={24} color="#10B981" />
-            </View>
-          </Marker>
-        )}
-
         {/* Selected points markers */}
         {selectedPoints.map((point) => (
           <Marker
@@ -251,37 +205,6 @@ const FetchingLocationScreen = ({ navigation }) => {
           />
         )}
       </MapView>
-
-      {/* Location Box Overlay */}
-      {userLocation && (
-        <Animated.View
-          style={[
-            styles.locationBox,
-            {
-              opacity: locationBoxAnim,
-              transform: [
-                { scale: pulseAnim },
-              ],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
-            style={styles.locationBoxGradient}
-          >
-            <View style={styles.locationIconContainer}>
-              <Ionicons name="location" size={22} color="#FFFFFF" />
-            </View>
-            <View style={styles.locationTextContainer}>
-              <Text style={styles.locationBoxText}>Your Location</Text>
-              <Text style={styles.locationSubText}>GPS coordinates detected</Text>
-            </View>
-            <View style={styles.locationStatus}>
-              <View style={styles.statusDot} />
-            </View>
-          </LinearGradient>
-        </Animated.View>
-      )}
 
       {/* Point Selection Instructions */}
       {isSelectingPoints && (
@@ -340,18 +263,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  customMarker: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 8,
-    borderWidth: 3,
-    borderColor: '#10B981',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   pointMarker: {
     backgroundColor: '#10B981',
     borderRadius: 15,
@@ -366,59 +277,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
-  },
-  locationBox: {
-    position: 'absolute',
-    top: height * 0.35,
-    left: width * 0.5 - 80,
-    zIndex: 1000,
-  },
-  locationBoxGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  locationIconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 15,
-    padding: 8,
-    marginRight: 12,
-  },
-  locationTextContainer: {
-    flex: 1,
-  },
-  locationBoxText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  locationSubText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  locationStatus: {
-    marginLeft: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
   },
   instructionsBox: {
     position: 'absolute',
