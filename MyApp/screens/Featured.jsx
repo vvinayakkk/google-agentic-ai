@@ -346,14 +346,14 @@ export default function Featured({ navigation }) {
             style={styles.restartTourButton} 
             onPress={startInteractiveGuide}
           >
-            <MaterialCommunityIcons name="replay" size={16} color="#10B981" />
+            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
             <Text style={styles.restartTourText}>Tour</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.resetTourButton} 
             onPress={resetOnboarding}
           >
-            <MaterialCommunityIcons name="refresh" size={14} color="#FF5722" />
+            <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
             <Text style={styles.resetTourText}>Reset</Text>
           </TouchableOpacity>
         </View>
@@ -508,43 +508,58 @@ const styles = StyleSheet.create({
   // Onboarding Tour Buttons
   tourButtonsContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
+    bottom: 85,
+    left: 15,
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     zIndex: 15,
   },
   restartTourButton: {
-    backgroundColor: '#18181b',
-    borderRadius: 12,
-    borderWidth: 1,
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginLeft:140,
+    marginBottom:20,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   restartTourText: {
     color: '#10B981',
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
   },
   resetTourButton: {
-    backgroundColor: '#18181b',
-    borderRadius: 12,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,87,34,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: '#FF5722',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom:20,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#FF5722',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   resetTourText: {
     color: '#FF5722',
-    fontSize: 10,
-    fontWeight: '600',
-    marginLeft: 2,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
   },
 
   // Interactive Guide Styles
