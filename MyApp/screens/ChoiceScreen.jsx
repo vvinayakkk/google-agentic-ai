@@ -289,16 +289,25 @@ export default function ChoiceScreen({ navigation }) {
           <Text style={styles.optionText}>{t('choice.manual_mode')}</Text>
         </TouchableOpacity>
       </View>
-{/* 
-      <TouchableOpacity 
-        style={styles.featureButton} 
-        onPress={() => navigation.navigate('MarketplaceScreen')}
-        // REMOVED: disabled={loading}
-      >
-        <Ionicons name="trending-up-outline" size={24} color="#10B981" />
-        <Text style={styles.featureButtonText}>{t('choice.view_market_prices')}</Text>
-      </TouchableOpacity>
-       */}
+
+      {/* Feature Buttons */}
+      <View style={styles.featureButtonsContainer}>
+        <TouchableOpacity 
+          style={styles.featureButton} 
+          onPress={() => navigation.navigate('BestOutOfWasteScreen')}
+        >
+          <Ionicons name="reload-circle-outline" size={24} color="#10B981" />
+          <Text style={styles.featureButtonText}>♻️ Best Out of Waste</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.featureButton} 
+          onPress={() => navigation.navigate('MarketplaceScreen')}
+        >
+          <Ionicons name="trending-up-outline" size={24} color="#10B981" />
+          <Text style={styles.featureButtonText}>{t('choice.view_market_prices')}</Text>
+        </TouchableOpacity>
+      </View>
       {/* <TouchableOpacity 
         style={styles.featureButton} 
         onPress={() => navigation.navigate('SoilMoisture')}
@@ -427,6 +436,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },
+  featureButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+    gap: 15,
+    flexWrap: 'wrap',
+  },
   featureButton: {
     flexDirection: 'row',
     backgroundColor: '#27272a',
@@ -434,7 +451,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 40,
     borderWidth: 1,
     borderColor: '#3f3f46',
   },

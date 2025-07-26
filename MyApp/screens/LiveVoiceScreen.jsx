@@ -172,7 +172,7 @@ export default function LiveVoiceScreen({ navigation }) {
       setNetworkStatus('checking');
       
       // First, test if the server is reachable
-      console.log(`🔍 Testing connection to: http://10.123.4.245:8001`);
+      console.log(`🔍 Testing connection to: http://10.215.221.37:8001`);
       
       // Test a simple endpoint that exists - we'll try the /agent endpoint with a basic request
       const testPayload = {
@@ -182,7 +182,7 @@ export default function LiveVoiceScreen({ navigation }) {
         session_id: 'test_session'
       };
       
-      const response = await axios.post(`http://10.123.4.245:8001/agent`, testPayload, { 
+      const response = await axios.post(`http://10.215.221.37:8001/agent`, testPayload, { 
         timeout: 5000,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -377,10 +377,10 @@ export default function LiveVoiceScreen({ navigation }) {
       console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
 
       // Use axios like other working screens
-      console.log(`🎤 Making request to: http://10.123.4.245:8001/audio_agent`);
+      console.log(`🎤 Making request to: http://10.215.221.37:8001/audio_agent`);
       console.log(`📋 Form data keys:`, Array.from(formData.keys()));
       
-      const response = await axios.post(`http://10.123.4.245:8001/audio_agent`, formData, {
+      const response = await axios.post(`http://10.215.221.37:8001/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000, // 30 seconds timeout
       });
@@ -479,7 +479,7 @@ export default function LiveVoiceScreen({ navigation }) {
             session_id: Date.now().toString()
           };
           
-          const fallbackResponse = await axios.post(`http://10.123.4.245:8001/agent`, fallbackPayload, {
+          const fallbackResponse = await axios.post(`http://10.215.221.37:8001/agent`, fallbackPayload, {
             headers: { 'Content-Type': 'application/json' },
             timeout: 30000,
           });

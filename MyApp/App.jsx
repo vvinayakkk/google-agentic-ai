@@ -48,6 +48,7 @@ import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
 import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
+import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
 import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
@@ -66,7 +67,7 @@ export default function App() {
       <Suspense fallback={null}>
         <View style={{ flex: 1 }}>
           <NavigationContainer>
-            <Stack.Navigator initialRouteName="VoiceChatInputScreen"
+            <Stack.Navigator initialRouteName="LanguageSelectScreen"
               screenOptions={{
                 headerShown: false,
               }}
@@ -296,6 +297,11 @@ export default function App() {
               <Stack.Screen 
                 name="SoilHealthScreen" 
                 component={SoilHealthScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="BestOutOfWasteScreen" 
+                component={BestOutOfWasteScreen} 
                 options={{ headerShown: false }} 
               />
             </Stack.Navigator>
