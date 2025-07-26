@@ -22,6 +22,7 @@ import NewMarketPricesScreen from './NewMarketPricesScreen';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
+import CropMarketplaceService from '../services/CropMarketplaceService';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -91,6 +92,98 @@ const MarketplaceScreen = ({ navigation }) => {
   const [productPrice, setProductPrice] = useState('');
   const [productEmoji, setProductEmoji] = useState('');
 
+  // ===== NEW MARKETPLACE FUNCTIONALITY =====
+  const [marketplaceItems, setMarketplaceItems] = useState([]);
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('relevance');
+  const [myOrders, setMyOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedMarketplaceItem, setSelectedMarketplaceItem] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
+  // Fetch comprehensive marketplace data
+  const fetchMarketplaceData = async () => {
+    try {
+      setMarketplaceLoading(true);
+      const response = await CropMarketplaceService.searchItems({
+        query: searchTerm,
+        category: categoryFilter !== 'all' ? categoryFilter : undefined,
+        location: locationFilter !== 'all' ? locationFilter : undefined,
+        sort_by: sortBy,
+        limit: 50
+      });
+      
+      if (response.success) {
+        setMarketplaceItems(response.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching marketplace data:', error);
+      Alert.alert('Error', 'Failed to load marketplace items');
+    } finally {
+      setMarketplaceLoading(false);
+    }
+  };
+
+  // Fetch farmer's orders
+  const fetchMyOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const response = await CropMarketplaceService.getFarmerOrders(FARMER_ID);
+      
+      if (response.success) {
+        setMyOrders(response.orders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // Create order for marketplace item
+  const createOrder = async (item, quantity, notes = '') => {
+    try {
+      const orderData = {
+        seller_id: item.farmer_id,
+        item_id: item.id,
+        quantity: parseFloat(quantity),
+        price_per_unit: item.price_per_unit,
+        total_amount: parseFloat(quantity) * item.price_per_unit,
+        delivery_location: 'Current Location', // Should be dynamic
+        notes: notes
+      };
+
+      const response = await CropMarketplaceService.createOrder(FARMER_ID, orderData);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Order created successfully!');
+        setShowOrderModal(false);
+        fetchMyOrders(); // Refresh orders
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      Alert.alert('Error', 'Failed to create order');
+    }
+  };
+
+  // Add item to marketplace
+  const addToMarketplace = async (itemData) => {
+    try {
+      const response = await CropMarketplaceService.addItem(FARMER_ID, itemData);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Item added to marketplace successfully!');
+        fetchMarketplaceData(); // Refresh marketplace
+        setIsModalVisible(false);
+      }
+    } catch (error) {
+      console.error('Error adding item to marketplace:', error);
+      Alert.alert('Error', 'Failed to add item to marketplace');
+    }
+  };
+
   const openAddModal = () => {
     setEditingItem(null);
     setProductName('');
@@ -109,13 +202,16 @@ const MarketplaceScreen = ({ navigation }) => {
     setIsModalVisible(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!productName || !productQuantity || !productPrice) {
       Alert.alert(t('marketplace.missing_info'), t('marketplace.fill_all_fields'));
       return;
     }
+    
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    
     if (editingItem) {
+      // Update existing listing
       setMyListings(myListings.map(item =>
         item.id === editingItem.id
           ? { ...item, name: productName, quantity: productQuantity, myPrice: parseFloat(productPrice), emoji: productEmoji || '📦' }
@@ -123,6 +219,7 @@ const MarketplaceScreen = ({ navigation }) => {
       ));
       Alert.alert(t('marketplace.success_updated', { name: productName }));
     } else {
+      // Create new listing
       const newListing = {
         id: Date.now(),
         name: productName,
@@ -135,8 +232,33 @@ const MarketplaceScreen = ({ navigation }) => {
         emoji: productEmoji || '📦',
       };
       setMyListings([newListing, ...myListings]);
+      
+      // Also add to comprehensive marketplace
+      const marketplaceData = {
+        name: productName,
+        category: 'crops', // Default category
+        quantity_available: parseFloat(productQuantity.replace(/[^\d.]/g, '')), // Extract numeric value
+        unit: 'kg', // Default unit
+        price_per_unit: parseFloat(productPrice),
+        quality_grade: 'A',
+        harvest_date: new Date().toISOString().split('T')[0],
+        location: {
+          state: 'Maharashtra',
+          district: 'Mumbai',
+          village: 'Default Village'
+        },
+        contact_info: {
+          phone: '9876543210',
+          whatsapp: '9876543210'
+        },
+        description: `Fresh ${productName} available for sale`,
+        images: []
+      };
+      
+      await addToMarketplace(marketplaceData);
       Alert.alert(t('marketplace.success_added', { name: productName }));
     }
+    
     setIsModalVisible(false);
   };
 
@@ -385,7 +507,16 @@ const MarketplaceScreen = ({ navigation }) => {
     };
     fetchMarketPrices();
     fetchMyListings();
+    fetchMarketplaceData(); // Load comprehensive marketplace data
+    fetchMyOrders(); // Load farmer's orders
   }, []);
+  // Add useEffect to refresh marketplace data when filters change
+  useEffect(() => {
+    if (selectedTab === 'marketplace') {
+      fetchMarketplaceData();
+    }
+  }, [searchTerm, categoryFilter, locationFilter, sortBy, selectedTab]);
+
   // Filter by commodity if searchCommodity is set
   const filteredMarketData = !searchCommodity.trim() ? marketData : marketData.filter(item => (item.Commodity || item.commodity || '').toLowerCase().includes(searchCommodity.toLowerCase()));
 
@@ -397,7 +528,24 @@ const MarketplaceScreen = ({ navigation }) => {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFFFFF" /></TouchableOpacity><View style={styles.headerContent}><Text style={styles.headerTitle}>Marketplace</Text><Text style={styles.headerSubtitle}>Live market prices & listings</Text></View><View style={styles.liveIndicator}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View></View>
-      <View style={styles.tabContainer}><TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}><Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>Market Prices</Text></TouchableOpacity><TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}><Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} /><Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>My Listings</Text></TouchableOpacity></View>
+      <View style={styles.tabContainer}>
+        <TouchableOpacity style={[styles.tab, selectedTab === 'market' && styles.activeTab]} onPress={() => setSelectedTab('market')}>
+          <Ionicons name="stats-chart" size={20} color={selectedTab === 'market' ? '#10B981' : '#64748B'} />
+          <Text style={[styles.tabText, selectedTab === 'market' && styles.activeTabText]}>Market Prices</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, selectedTab === 'marketplace' && styles.activeTab]} onPress={() => setSelectedTab('marketplace')}>
+          <Ionicons name="storefront" size={20} color={selectedTab === 'marketplace' ? '#10B981' : '#64748B'} />
+          <Text style={[styles.tabText, selectedTab === 'marketplace' && styles.activeTabText]}>Marketplace</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, selectedTab === 'listings' && styles.activeTab]} onPress={() => setSelectedTab('listings')}>
+          <Ionicons name="list" size={20} color={selectedTab === 'listings' ? '#10B981' : '#64748B'} />
+          <Text style={[styles.tabText, selectedTab === 'listings' && styles.activeTabText]}>My Listings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, selectedTab === 'orders' && styles.activeTab]} onPress={() => setSelectedTab('orders')}>
+          <Ionicons name="receipt" size={20} color={selectedTab === 'orders' ? '#10B981' : '#64748B'} />
+          <Text style={[styles.tabText, selectedTab === 'orders' && styles.activeTabText]}>Orders</Text>
+        </TouchableOpacity>
+      </View>
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>{t('common.loading')}</Text></View>
       ) : error ? (
