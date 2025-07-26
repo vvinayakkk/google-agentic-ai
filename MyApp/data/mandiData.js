@@ -250,6 +250,7 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Diversified Crop Plan',
     description: 'A balanced plan with a mix of high-demand crops for stable returns.',
     targetFarmer: 'Small to medium farmers',
+    defaultMandi: 'yeshwanthpur_bangalore', // Preselected mandi
     crops: [
       { name: 'Coffee', mandi: 'yeshwanthpur_bangalore', expectedProfit: 25000, riskLevel: 'Low' },
       { name: 'Banana', mandi: 'bangalore_kr_market', expectedProfit: 18000, riskLevel: 'Medium' }
@@ -275,6 +276,7 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Traditional Crop Plan',
     description: 'Low risk, consistent returns with traditional crops.',
     targetFarmer: 'Risk-averse farmers',
+    defaultMandi: 'tumkur_apmc', // Preselected mandi
     crops: [
       { name: 'Coconut', mandi: 'tumkur_apmc', expectedProfit: 15000, riskLevel: 'Very Low' },
       { name: 'Ragi', mandi: 'tumkur_apmc', expectedProfit: 12000, riskLevel: 'Low' }
@@ -300,6 +302,7 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Short-Term Crop Plan',
     description: 'Crops with shorter cycles for faster returns.',
     targetFarmer: 'Farmers needing quick returns',
+    defaultMandi: 'kolar_apmc', // Preselected mandi
     crops: [
       { name: 'Tomato', mandi: 'kolar_apmc', expectedProfit: 8000, riskLevel: 'Medium' },
       { name: 'Onion', mandi: 'kolar_apmc', expectedProfit: 6000, riskLevel: 'Medium' }
