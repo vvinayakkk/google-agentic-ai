@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
 
@@ -11,6 +12,19 @@ const API_BASE = NetworkConfig.API_BASE;
 
 // Action button mapping for different AI actions
 const ACTION_BUTTONS = {
+  get_current_temperature: { icon: 'thermometer', label: 'Temperature', color: '#4FC3F7' },
+  get_forecast: { icon: 'cloud', label: 'Weather', color: '#4FC3F7' },
+  get_agri_price: { icon: 'trending-up', label: 'Prices', color: '#FF9800' },
+  get_farmer: { icon: 'person', label: 'Profile', color: '#9C27B0' },
+  get_farmer_profile: { icon: 'person-circle', label: 'Farmer Info', color: '#9C27B0' },
+  get_farmer_livestock: { icon: 'paw', label: 'Livestock', color: '#FF9800' },
+  get_farmer_crops: { icon: 'leaf', label: 'Crops', color: '#4CAF50' },
+  get_farmer_calendar: { icon: 'calendar', label: 'Calendar', color: '#2196F3' },
+  get_farmer_market: { icon: 'storefront', label: 'Market', color: '#FFC107' },
+  add_livestock: { icon: 'add-circle', label: 'Add Livestock', color: '#FF9800' },
+  add_crop: { icon: 'add', label: 'Add Crop', color: '#4CAF50' },
+  add_calendar_event: { icon: 'calendar-outline', label: 'Add Event', color: '#2196F3' },
+  generate_response: { icon: 'chatbubble', label: 'Chat', color: '#03DAC6' },
   weather: { icon: 'cloud', label: 'Weather', color: '#4FC3F7' },
   soil_moisture: { icon: 'water', label: 'Soil Check', color: '#8BC34A' },
   crop_intelligence: { icon: 'leaf', label: 'Crop Intelligence', color: '#4CAF50' },
@@ -142,11 +156,8 @@ export default function LiveVoiceScreen({ navigation }) {
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [hasAskedFirstQuestion, setHasAskedFirstQuestion] = useState(false);
   
-  // Audio playback states
-  const [currentAudio, setCurrentAudio] = useState(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  // Audio response state (even though backend doesn't support TTS yet)
   const [audioBase64, setAudioBase64] = useState('');
-  const [isMuted, setIsMuted] = useState(false); // Global mute state
 
   // Test network connection on component mount
   useEffect(() => {
@@ -156,16 +167,27 @@ export default function LiveVoiceScreen({ navigation }) {
     const testNetworkConnection = async () => {
     try {
       setNetworkStatus('checking');
-      const response = await axios.get(`${API_BASE}/`, { timeout: 5000 });
+      // Test a simple endpoint that exists - we'll try the /agent endpoint with a basic request
+      const testPayload = {
+        user_prompt: "test connection",
+        metadata: { farmer_id: 'f001' },
+        user_id: 'f001',
+        session_id: 'test_session'
+      };
+      
+      const response = await axios.post('http://10.215.221.37:8000/agent', testPayload, { 
+        timeout: 5000,
+        headers: { 'Content-Type': 'application/json' }
+      });
       
       if (response.status === 200) {
-        console.log('✅ Network connection established');
+        console.log('✅ Network connection established to KisanKiAwaaz-Backend-V2');
         setNetworkStatus('connected');
       } else {
         setNetworkStatus('error');
         Alert.alert(
           'Connection Error',
-          'Cannot connect to server. Please check:\n• Backend server is running\n• Device is on same WiFi network\n• IP address is correct in NetworkConfig',
+          'Cannot connect to KisanKiAwaaz-Backend-V2 server. Please check:\n• Backend server is running on port 8000\n• Device is on same WiFi network\n• IP address is correct',
           [
             { text: 'Retry', onPress: testNetworkConnection },
             { text: 'Cancel', style: 'cancel' }
@@ -175,6 +197,7 @@ export default function LiveVoiceScreen({ navigation }) {
     } catch (error) {
       console.error('❌ Network test failed:', error.message);
       setNetworkStatus('error');
+      // Don't show alert immediately on app start, just log the error
     }
   };
 
@@ -293,46 +316,83 @@ export default function LiveVoiceScreen({ navigation }) {
     try {
       console.log('Processing voice command with audio URI:', audioUri);
       
-      // Determine file type from URI
+      // Determine file type from URI and ensure it's compatible
       const fileExtension = audioUri.split('.').pop() || '3gp';
       const fileName = `recording.${fileExtension}`;
       
       const formData = new FormData();
-      formData.append('file', {
+      formData.append('audio_file', {
         uri: audioUri,
         name: fileName,
         type: fileExtension === '3gp' ? 'audio/3gpp' : 
               fileExtension === 'wav' ? 'audio/wav' : 
+              fileExtension === 'm4a' ? 'audio/m4a' :
               fileExtension === 'mp3' ? 'audio/mpeg' : 
-              'audio/3gpp', // default for mobile recordings
+              'audio/3gpp', // Default for mobile recordings - backend can handle .3gp
       });
 
-      // Use axios like other working screens
-      const response = await axios.post(`${API_BASE}/voice-command/`, formData, {
+      // Add required form fields for audio_agent endpoint
+      const user_id = 'f001'; // Farmer ID
+      let session_id = await AsyncStorage.getItem('audio_session_id');
+      if (!session_id) {
+        session_id = Date.now().toString();
+        await AsyncStorage.setItem('audio_session_id', session_id);
+      }
+
+      formData.append('user_id', user_id);
+      formData.append('session_id', session_id);
+      formData.append('metadata', JSON.stringify({ 
+        farmer_id: user_id,
+        extra_context: [] 
+      }));
+
+      console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
+
+      // Call the KisanKiAwaaz-Backend-V2 audio_agent endpoint
+      const response = await axios.post('http://10.215.221.37:8000/audio_agent', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000, // 30 seconds timeout
       });
 
       const result = response.data;
-      console.log('✅ Voice command response:', result);
+      console.log('✅ Audio agent response:', result);
+      
+      // Handle transcription errors
+      if (result.error) {
+        console.error('❌ Backend transcription error:', result.error);
+        
+        if (result.error === "Could not transcribe audio") {
+          Alert.alert(
+            'Audio Processing Error', 
+            'Could not understand the audio. Please try:\n• Speaking more clearly\n• Getting closer to the microphone\n• Reducing background noise\n• Checking if audio was recorded properly',
+            [
+              { text: 'Try Again', onPress: () => {} },
+              { text: 'OK', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+        
+        throw new Error(result.error);
+      }
+      
+      // Extract response data from the agent response structure
+      const transcribedText = result.user_prompt || '';
+      const responseText = result.response_text || 'No response received';
+      const invokedTool = result.invoked_tool || 'do_nothing';
+      const toolResult = result.tool_result || null;
       
       // Update state with AI response and question
-      setCurrentQuestion(result.transcribed_text || '');
-      setCurrentResponse(result.summary || 'No response received');
-      setCurrentAction(result.action || 'do_nothing');
+      setCurrentQuestion(transcribedText);
+      setCurrentResponse(responseText);
+      setCurrentAction(invokedTool);
       
-      // Store audio data for playback
-      if (result.audioSummary) {
-        setAudioBase64(result.audioSummary);
-        console.log('🎵 Audio response received, ready for playback');
-        
-        // Auto-play the audio response only if not muted
-        if (!isMuted) {
-          setTimeout(() => {
-            playAudioResponse(result.audioSummary);
-          }, 500); // Small delay to let UI update first
-        } else {
-          console.log('🔇 Audio auto-play skipped - muted');
-        }
+      // Note: KisanKiAwaaz-Backend-V2 doesn't have TTS, so no audio response
+      setAudioBase64('');
+      
+      console.log(`🤖 Invoked tool: ${invokedTool}`);
+      if (toolResult) {
+        console.log(`� Tool result:`, toolResult);
       }
       
       // Trigger follow-up onboarding after first question
@@ -349,10 +409,11 @@ export default function LiveVoiceScreen({ navigation }) {
       setConversationHistory(prev => [...prev, {
         id: Date.now(),
         type: 'ai_response',
-        action: result.action || 'do_nothing',
-        summary: result.summary || 'No response',
-        transcribed: result.transcribed_text || '',
-        audioData: result.audioSummary || '', // Store audio data
+        action: invokedTool,
+        summary: responseText,
+        transcribed: transcribedText,
+        audioData: '', // No audio from this backend
+        toolResult: toolResult,
         timestamp: new Date().toLocaleTimeString()
       }]);
 
@@ -361,11 +422,14 @@ export default function LiveVoiceScreen({ navigation }) {
       
       let errorMessage = 'Failed to process voice command';
       if (error.response) {
-        errorMessage = `Server error: ${error.response.status} - ${error.response.data?.detail || error.response.statusText}`;
+        console.error('Server response:', error.response.data);
+        errorMessage = `Server error: ${error.response.status} - ${error.response.data?.detail || error.response.data?.error || error.response.statusText}`;
       } else if (error.message.includes('timeout')) {
-        errorMessage = 'Request timed out. Server may be slow.';
-      } else if (error.message.includes('network')) {
-        errorMessage = 'Network connection failed. Check your connection.';
+        errorMessage = 'Request timed out. Server may be slow or busy.';
+      } else if (error.message.includes('network') || error.message.includes('Network Error')) {
+        errorMessage = 'Network connection failed. Please check your internet connection.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       Alert.alert('Processing Error', errorMessage, [
@@ -378,6 +442,37 @@ export default function LiveVoiceScreen({ navigation }) {
   // Handle action button press
   const handleActionPress = (action) => {
     switch (action) {
+      // Tool-based actions from the agent
+      case 'get_current_temperature':
+      case 'get_forecast':
+        navigation.navigate('WeatherScreen');
+        break;
+      case 'get_agri_price':
+        Alert.alert('Price Data', 'Agricultural price information has been retrieved.');
+        break;
+      case 'get_farmer':
+      case 'get_farmer_profile':
+        navigation.navigate('FarmerProfileScreen');
+        break;
+      case 'get_farmer_livestock':
+      case 'add_livestock':
+        navigation.navigate('CattleScreen');
+        break;
+      case 'get_farmer_crops':
+      case 'add_crop':
+        navigation.navigate('CropIntelligenceScreen');
+        break;
+      case 'get_farmer_calendar':
+      case 'add_calendar_event':
+        Alert.alert('Calendar', 'Calendar functionality is available in the main app.');
+        break;
+      case 'get_farmer_market':
+        Alert.alert('Market', 'Market information has been retrieved.');
+        break;
+      case 'generate_response':
+        navigation.navigate('VoiceChatInputScreen');
+        break;
+      // Legacy actions for backward compatibility
       case 'weather':
         navigation.navigate('WeatherScreen');
         break;
@@ -401,7 +496,9 @@ export default function LiveVoiceScreen({ navigation }) {
         navigation.navigate('VoiceChatInputScreen');
         break;
       default:
-        Alert.alert('Action', `${action} feature coming soon!`);
+        if (action !== 'do_nothing') {
+          Alert.alert('Tool Result', `The AI used "${action}" tool to process your request.`);
+        }
     }
   };
 
@@ -421,87 +518,12 @@ export default function LiveVoiceScreen({ navigation }) {
     }
   };
 
-  // Audio playback functions
-  const playAudioResponse = async (audioBase64Data) => {
-    try {
-      // Check if muted
-      if (isMuted) {
-        console.log('🔇 Audio playback blocked - muted');
-        return;
-      }
-
-      if (!audioBase64Data) {
-        console.log('No audio data to play');
-        return;
-      }
-
-      // Stop any currently playing audio
-      if (currentAudio) {
-        await currentAudio.unloadAsync();
-        setCurrentAudio(null);
-      }
-
-      console.log('🔊 Playing audio response...');
-      setIsPlayingAudio(true);
-
-      // Create data URI from base64
-      const audioUri = `data:audio/mp3;base64,${audioBase64Data}`;
-      
-      // Configure audio mode for playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
-
-      // Create and load the sound
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { shouldPlay: true }
-      );
-
-      setCurrentAudio(sound);
-
-      // Set up completion callback
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          setIsPlayingAudio(false);
-          sound.unloadAsync();
-          setCurrentAudio(null);
-          console.log('✅ Audio playback completed');
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Audio playback error:', error);
-      setIsPlayingAudio(false);
-      Alert.alert('Audio Error', 'Failed to play audio response');
-    }
-  };
-
-  const stopAudioPlayback = async () => {
-    try {
-      if (currentAudio) {
-        await currentAudio.unloadAsync();
-        setCurrentAudio(null);
-        setIsPlayingAudio(false);
-        console.log('🔇 Audio playback stopped');
-      }
-    } catch (error) {
-      console.error('❌ Error stopping audio:', error);
-    }
-  };
-
   // Button handlers
   const handleEndSession = () => {
     if (recording) {
       recording.stopAndUnloadAsync();
       setRecording(null);
     }
-    // Stop any playing audio
-    stopAudioPlayback();
     setSessionActive(false);
   };
   
@@ -520,8 +542,6 @@ export default function LiveVoiceScreen({ navigation }) {
       recording.stopAndUnloadAsync();
       setRecording(null);
     }
-    // Stop any playing audio
-    stopAudioPlayback();
     if (navigation && navigation.navigate) {
       navigation.navigate('VoiceChatInputScreen');
     }
@@ -618,40 +638,7 @@ export default function LiveVoiceScreen({ navigation }) {
                     <Text style={styles.responseTitle}>🤖 AI Response:</Text>
                     <Text style={styles.responseText}>{currentResponse}</Text>
                     
-                    {/* Audio controls */}
-                    {audioBase64 && (
-                      <View style={styles.audioControlsContainer}>
-                        <TouchableOpacity 
-                          style={[styles.audioButton, isPlayingAudio && styles.audioButtonActive]}
-                          onPress={() => isPlayingAudio ? stopAudioPlayback() : playAudioResponse(audioBase64)}
-                        >
-                          <Ionicons 
-                            name={isPlayingAudio ? "stop" : "play"} 
-                            size={20} 
-                            color={isPlayingAudio ? "#FF5722" : "#03DAC6"} 
-                          />
-                          <Text style={[styles.audioButtonText, isPlayingAudio && styles.audioButtonTextActive]}>
-                            {isPlayingAudio ? "Stop Audio" : "🔊 Play Response"}
-                          </Text>
-                        </TouchableOpacity>
-                        
-                        {/* Mute toggle button */}
-                        <TouchableOpacity 
-                          style={[styles.muteButton, isMuted && styles.muteButtonActive]}
-                          onPress={() => setIsMuted(!isMuted)}
-                        >
-                          <Ionicons 
-                            name={isMuted ? "volume-mute" : "volume-high"} 
-                            size={20} 
-                            color={isMuted ? "#FF5722" : "#03DAC6"} 
-                          />
-                          <Text style={[styles.muteButtonText, isMuted && styles.muteButtonTextActive]}>
-                            {isMuted ? "Unmute" : "Mute"}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    
+                    {/* Note: Audio playback not available with current backend */}
                     {currentAction && currentAction !== 'do_nothing' && (
                       <TouchableOpacity 
                         style={[styles.actionButton, { backgroundColor: ACTION_BUTTONS[currentAction]?.color || '#03DAC6' }]}
@@ -682,16 +669,12 @@ export default function LiveVoiceScreen({ navigation }) {
                       <Text style={styles.historyQuestion}>🎤 "{item.transcribed}"</Text>
                     )}
                     <Text style={styles.historyAction}>
-                      {ACTION_BUTTONS[item.action]?.label || item.action}
+                      🔧 Tool: {ACTION_BUTTONS[item.action]?.label || item.action}
                     </Text>
-                    {item.audioData && (
-                      <TouchableOpacity 
-                        style={styles.historyAudioButton}
-                        onPress={() => playAudioResponse(item.audioData)}
-                      >
-                        <Ionicons name="play" size={16} color="#03DAC6" />
-                        <Text style={styles.historyAudioText}>Replay</Text>
-                      </TouchableOpacity>
+                    {item.toolResult && (
+                      <Text style={styles.historyToolResult}>
+                        📊 Result: {typeof item.toolResult === 'string' ? item.toolResult.substring(0, 100) : JSON.stringify(item.toolResult).substring(0, 100)}...
+                      </Text>
                     )}
                   </View>
                 ))}
@@ -703,11 +686,12 @@ export default function LiveVoiceScreen({ navigation }) {
                 <Text style={styles.welcomeText}>🎤 Ready to Listen</Text>
                 <Text style={styles.welcomeSubtext}>
                   Tap the microphone and ask about:
-                  {'\n'}• Weather & farming conditions
-                  {'\n'}• Crop recommendations & techniques
-                  {'\n'}• Livestock management
-                  {'\n'}• Soil moisture levels
-                  {'\n'}• Your farm profile
+                  {'\n'}• Weather forecasts & temperatures
+                  {'\n'}• Agricultural commodity prices
+                  {'\n'}• Your farm profile & livestock
+                  {'\n'}• Crop management & calendar
+                  {'\n'}• Market information
+                  {'\n'}• Farming tips & advice
                 </Text>
                 <TouchableOpacity 
                   style={styles.quickHelpButton}
@@ -1433,5 +1417,12 @@ const styles = StyleSheet.create({
     color: '#03DAC6',
     fontSize: 12,
     marginLeft: 4,
+  },
+  historyToolResult: {
+    color: '#81C784',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

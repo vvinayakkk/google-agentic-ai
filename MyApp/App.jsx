@@ -48,9 +48,27 @@ import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
 import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import NetworkConfig from './utils/NetworkConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
 
 export default function App() {
+  const [mode, setMode] = React.useState('online');
+
+  React.useEffect(() => {
+    NetworkConfig.getMode().then((savedMode) => {
+      setMode(savedMode);
+      NetworkConfig.setMode(savedMode);
+    });
+  }, []);
+
+  const handleToggle = async () => {
+    const newMode = mode === 'online' ? 'offline' : 'online';
+    await NetworkConfig.setMode(newMode);
+    setMode(newMode);
+  };
+
   useEffect(() => {
     getStoredLanguage().then((lang) => {
       if (i18n.language !== lang) {
@@ -62,243 +80,277 @@ export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName="LanguageSelectScreen"
-            screenOptions={{
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen 
-              name="LanguageSelectScreen" 
-              component={LanguageSelectScreen} 
-              options={{
+        <View style={{ flex: 1 }}>
+          {/* Toggle Button - always visible top right */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity onPress={handleToggle} style={[styles.toggleButton, mode === 'offline' && styles.toggleButtonOffline]}>
+              <Text style={styles.toggleText}>{mode === 'online' ? 'Online' : 'Offline'}</Text>
+            </TouchableOpacity>
+          </View>
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName="LanguageSelectScreen"
+              screenOptions={{
                 headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="FetchingLocationScreen" 
-              component={FetchingLocationScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="LoginScreen" 
-              component={LoginScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="ChoiceScreen" 
-              component={ChoiceScreen} 
-              options={{
-                headerShown: false,
-                animationEnabled: true,
-                cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-              }} 
-            />
-            <Stack.Screen 
-              name="VoiceChatInputScreen" 
-              component={VoiceChatInputScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="LiveVoiceScreen" 
-              component={LiveVoiceScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="Featured" 
-              component={FeaturedScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="ChatHistory" 
-              component={ChatHistoryScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CropCycle" 
-              component={CropCycleScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CalenderScreen" 
-              component={SmartCalendar} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CattleScreen" 
-              component={CattleScreen} 
-              options={{ headerShown: false }} 
-            />
-             <Stack.Screen 
-              name="MarketplaceScreen" 
-              component={MarketplaceScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="UPI" 
-              component={UPIScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CropDoctor" 
-              component={CropDoctorScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="FollowUpScreen" 
-              component={FollowUpScreen} 
-              options={{
-                headerShown: false,
-                presentation: 'transparentModal', 
-                animationEnabled: true,
               }}
-            />
-            <Stack.Screen 
-              name="PayAnyone" 
-              component={PayAnyoneScreen} 
-              options={{ headerShown: false }} 
-            />
-             <Stack.Screen 
-              name="ContactUPIDetail" 
-              component={ContactUPIDetailScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="PaymentAmountScreen" 
-              component={PaymentAmountScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="BankSelectScreen" 
-              component={BankSelectScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="EnterPinScreen" 
-              component={EnterPinScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="PaymentSuccessScreen" 
-              component={PaymentSuccessScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="PaymentProcessingScreen" 
-              component={PaymentProcessingScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="BankTransferScreen" 
-              component={BankTransferScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="MobileRechargeScreen" 
-              component={MobileRechargeScreen} 
-              options={{ headerShown: false }} 
-            />
-             <Stack.Screen 
-              name="DocumentAgentScreen" 
-              component={DocumentAgentScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="WeatherScreen" 
-              component={WeatherScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="NewMarketPrices" 
-              component={NewMarketPricesScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="SoilMoisture" 
-              component={SoilMoistureScreen} 
-              options={{
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="FarmerProfile" 
-              component={FarmerProfileScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="RentalSystemScreen" 
-              component={RentalScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="ListingDetails" 
-              component={ListingDetails} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="MyBookings" 
-              component={MyBookings} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="Earnings" 
-              component={Earnings} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="SpeechToTextScreen" 
-              component={SpeechToTextScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CropIntelligenceScreenNew" 
-              component={CropIntelligenceScreenNew} 
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="MarketStrategyScreen" 
-              component={MarketStrategyScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="PowerSupplyScreen" 
-              component={PowerSupplyScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="ContractFarmingScreen" 
-              component={ContractFarmingScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CropInsuranceScreen" 
-              component={CropInsuranceScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="CreditSourcesScreen" 
-              component={CreditSourcesScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="SoilHealthScreen" 
-              component={SoilHealthScreen} 
-              options={{ headerShown: false }} 
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <Toast />
+            >
+              <Stack.Screen 
+                name="LanguageSelectScreen" 
+                component={LanguageSelectScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="FetchingLocationScreen" 
+                component={FetchingLocationScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="LoginScreen" 
+                component={LoginScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="ChoiceScreen" 
+                component={ChoiceScreen} 
+                options={{
+                  headerShown: false,
+                  animationEnabled: true,
+                  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+                }} 
+              />
+              <Stack.Screen 
+                name="VoiceChatInputScreen" 
+                component={VoiceChatInputScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="LiveVoiceScreen" 
+                component={LiveVoiceScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="Featured" 
+                component={FeaturedScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="ChatHistory" 
+                component={ChatHistoryScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CropCycle" 
+                component={CropCycleScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CalenderScreen" 
+                component={SmartCalendar} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CattleScreen" 
+                component={CattleScreen} 
+                options={{ headerShown: false }} 
+              />
+               <Stack.Screen 
+                name="MarketplaceScreen" 
+                component={MarketplaceScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="UPI" 
+                component={UPIScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CropDoctor" 
+                component={CropDoctorScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="FollowUpScreen" 
+                component={FollowUpScreen} 
+                options={{
+                  headerShown: false,
+                  presentation: 'transparentModal', 
+                  animationEnabled: true,
+                }}
+              />
+              <Stack.Screen 
+                name="PayAnyone" 
+                component={PayAnyoneScreen} 
+                options={{ headerShown: false }} 
+              />
+               <Stack.Screen 
+                name="ContactUPIDetail" 
+                component={ContactUPIDetailScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="PaymentAmountScreen" 
+                component={PaymentAmountScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="BankSelectScreen" 
+                component={BankSelectScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="EnterPinScreen" 
+                component={EnterPinScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="PaymentSuccessScreen" 
+                component={PaymentSuccessScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="PaymentProcessingScreen" 
+                component={PaymentProcessingScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="BankTransferScreen" 
+                component={BankTransferScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="MobileRechargeScreen" 
+                component={MobileRechargeScreen} 
+                options={{ headerShown: false }} 
+              />
+               <Stack.Screen 
+                name="DocumentAgentScreen" 
+                component={DocumentAgentScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="WeatherScreen" 
+                component={WeatherScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="NewMarketPrices" 
+                component={NewMarketPricesScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="SoilMoisture" 
+                component={SoilMoistureScreen} 
+                options={{
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="FarmerProfile" 
+                component={FarmerProfileScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="RentalSystemScreen" 
+                component={RentalScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="ListingDetails" 
+                component={ListingDetails} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="MyBookings" 
+                component={MyBookings} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="Earnings" 
+                component={Earnings} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="SpeechToTextScreen" 
+                component={SpeechToTextScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CropIntelligenceScreenNew" 
+                component={CropIntelligenceScreenNew} 
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="MarketStrategyScreen" 
+                component={MarketStrategyScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="PowerSupplyScreen" 
+                component={PowerSupplyScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="ContractFarmingScreen" 
+                component={ContractFarmingScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CropInsuranceScreen" 
+                component={CropInsuranceScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="CreditSourcesScreen" 
+                component={CreditSourcesScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="SoilHealthScreen" 
+                component={SoilHealthScreen} 
+                options={{ headerShown: false }} 
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+          <Toast />
+        </View>
       </Suspense>
     </I18nextProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  toggleContainer: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    elevation: 4,
+  },
+  toggleButtonOffline: {
+    backgroundColor: '#FF9800',
+  },
+  toggleText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

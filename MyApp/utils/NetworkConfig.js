@@ -1,4 +1,6 @@
 // Network configuration and debugging utilities for React Native
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export const NetworkConfig = {
   // Primary API base URL
   API_BASE: 'http://10.123.4.76:8000',
@@ -122,6 +124,21 @@ export const NetworkConfig = {
       console.error(`Network request failed for ${url}:`, error);
       throw error;
     }
+  },
+
+  setMode: async (mode) => {
+    if (mode === 'offline') {
+      NetworkConfig.API_BASE = 'http://10.215.221.37:8000/hybrid'; // or your offline/hybrid endpoint
+      NetworkConfig.MODE = 'offline';
+      await AsyncStorage.setItem('api_mode', 'offline');
+    } else {
+      NetworkConfig.API_BASE = 'http://10.215.221.37:8000';
+      NetworkConfig.MODE = 'online';
+      await AsyncStorage.setItem('api_mode', 'online');
+    }
+  },
+  getMode: async () => {
+    return (await AsyncStorage.getItem('api_mode')) || 'online';
   }
 };
 
