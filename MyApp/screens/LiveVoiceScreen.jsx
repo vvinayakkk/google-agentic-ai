@@ -156,8 +156,11 @@ export default function LiveVoiceScreen({ navigation }) {
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [hasAskedFirstQuestion, setHasAskedFirstQuestion] = useState(false);
   
-  // Audio response state (even though backend doesn't support TTS yet)
+  // Audio response state
   const [audioBase64, setAudioBase64] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [sound, setSound] = useState(null);
 
   // Test network connection on component mount
   useEffect(() => {
@@ -167,6 +170,10 @@ export default function LiveVoiceScreen({ navigation }) {
     const testNetworkConnection = async () => {
     try {
       setNetworkStatus('checking');
+      
+      // First, test if the server is reachable
+      console.log(`🔍 Testing connection to: ${API_BASE}`);
+      
       // Test a simple endpoint that exists - we'll try the /agent endpoint with a basic request
       const testPayload = {
         user_prompt: "test connection",
@@ -175,7 +182,7 @@ export default function LiveVoiceScreen({ navigation }) {
         session_id: 'test_session'
       };
       
-      const response = await axios.post('http://10.215.221.37:8000/agent', testPayload, { 
+      const response = await axios.post(`${API_BASE}/agent`, testPayload, { 
         timeout: 5000,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -183,6 +190,27 @@ export default function LiveVoiceScreen({ navigation }) {
       if (response.status === 200) {
         console.log('✅ Network connection established to KisanKiAwaaz-Backend-V2');
         setNetworkStatus('connected');
+        
+        // Also test if audio_agent endpoint is available by trying a POST with minimal data
+        try {
+          const testFormData = new FormData();
+          testFormData.append('audio_file', {
+            uri: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT',
+            name: 'test.wav',
+            type: 'audio/wav'
+          });
+          testFormData.append('user_id', 'test');
+          testFormData.append('session_id', 'test');
+          testFormData.append('metadata', JSON.stringify({ farmer_id: 'test' }));
+          
+          const audioTestResponse = await axios.post(`${API_BASE}/audio_agent`, testFormData, { 
+            timeout: 5000,
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          console.log('✅ Audio agent endpoint is available and working');
+        } catch (audioError) {
+          console.log('⚠️ Audio agent endpoint test failed:', audioError.message);
+        }
       } else {
         setNetworkStatus('error');
         Alert.alert(
@@ -349,6 +377,9 @@ export default function LiveVoiceScreen({ navigation }) {
       console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
 
       // Use axios like other working screens
+      console.log(`🎤 Making request to: ${API_BASE}/audio_agent`);
+      console.log(`📋 Form data keys:`, Array.from(formData.keys()));
+      
       const response = await axios.post(`${API_BASE}/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000, // 30 seconds timeout
@@ -356,6 +387,8 @@ export default function LiveVoiceScreen({ navigation }) {
 
       const result = response.data;
       console.log('✅ Audio agent response:', result);
+      console.log('🎵 Audio field present:', !!result.audio);
+      console.log('🎵 Audio length:', result.audio ? result.audio.length : 0);
       
       // Handle transcription errors
       if (result.error) {
@@ -376,16 +409,16 @@ export default function LiveVoiceScreen({ navigation }) {
         throw new Error(result.error);
       }
       
-      // Extract response data from the agent response structure
-      const transcribedText = result.user_prompt || '';
+      // Extract response data from the audio_agent response structure
+      const transcribedText = result.transcribed_text || '';
       const responseText = result.response_text || 'No response received';
       const invokedTool = result.invoked_tool || 'do_nothing';
       const toolResult = result.tool_result || null;
       
       // Update state with AI response and question
-      setCurrentQuestion(result.transcribed_text || '');
-      setCurrentResponse(result.response_text || 'No response received');
-      setCurrentAction(result.invoked_tool || 'do_nothing');
+      setCurrentQuestion(transcribedText);
+      setCurrentResponse(responseText);
+      setCurrentAction(invokedTool);
       
       // Store audio data for playback
       if (result.audio) {
@@ -400,6 +433,9 @@ export default function LiveVoiceScreen({ navigation }) {
         } else {
           console.log('🔇 Audio auto-play skipped - muted');
         }
+      } else {
+        console.log('🔇 No audio response received from backend');
+        setAudioBase64('');
       }
       
       // Trigger follow-up onboarding after first question
@@ -416,15 +452,64 @@ export default function LiveVoiceScreen({ navigation }) {
       setConversationHistory(prev => [...prev, {
         id: Date.now(),
         type: 'ai_response',
-        action: result.invoked_tool || 'do_nothing',
-        summary: result.response_text || 'No response',
-        transcribed: result.transcribed_text || '',
+        action: invokedTool,
+        summary: responseText,
+        transcribed: transcribedText,
         audioData: result.audio || '', // Store audio data
+        toolResult: toolResult,
         timestamp: new Date().toLocaleTimeString()
       }]);
 
     } catch (error) {
       console.error('Voice command processing error:', error);
+      
+      // If it's a 404 error, try the regular /agent endpoint as fallback
+      if (error.response && error.response.status === 404) {
+        console.log('🔄 Audio agent endpoint not found, trying regular agent endpoint...');
+        try {
+          // Try with regular agent endpoint
+          const fallbackPayload = {
+            user_prompt: "Voice command received but transcription failed",
+            metadata: { 
+              farmer_id: 'f001',
+              voice_command: true,
+              audio_uri: audioUri 
+            },
+            user_id: 'f001',
+            session_id: Date.now().toString()
+          };
+          
+          const fallbackResponse = await axios.post(`${API_BASE}/agent`, fallbackPayload, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 30000,
+          });
+          
+          const fallbackResult = fallbackResponse.data;
+          console.log('✅ Fallback agent response:', fallbackResult);
+          
+          // Process the fallback response
+          setCurrentQuestion("Voice command (transcription unavailable)");
+          setCurrentResponse(fallbackResult.response_text || 'No response received');
+          setCurrentAction(fallbackResult.invoked_tool || 'do_nothing');
+          setAudioBase64('');
+          
+          // Add to conversation history
+          setConversationHistory(prev => [...prev, {
+            id: Date.now(),
+            type: 'ai_response',
+            action: fallbackResult.invoked_tool || 'do_nothing',
+            summary: fallbackResult.response_text || 'No response',
+            transcribed: "Voice command (transcription unavailable)",
+            audioData: '',
+            toolResult: fallbackResult.tool_result,
+            timestamp: new Date().toLocaleTimeString()
+          }]);
+          
+          return;
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+        }
+      }
       
       let errorMessage = 'Failed to process voice command';
       if (error.response) {
@@ -523,6 +608,78 @@ export default function LiveVoiceScreen({ navigation }) {
       console.error('Image selection error:', error);
     }
   };
+
+  // Audio playback functions
+  const playAudioResponse = async (audioBase64Data) => {
+    if (!audioBase64Data || isMuted) {
+      console.log('🔇 Audio playback skipped - no audio data or muted');
+      return;
+    }
+
+    try {
+      setIsPlayingAudio(true);
+      
+      // Stop any currently playing audio
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      // Convert base64 to audio URI
+      const audioUri = `data:audio/mp3;base64,${audioBase64Data}`;
+      
+      // Load and play the audio
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true }
+      );
+      
+      setSound(newSound);
+      
+      // Set up event listeners
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
+      
+      console.log('🎵 Audio playback started');
+      
+    } catch (error) {
+      console.error('❌ Audio playback error:', error);
+      setIsPlayingAudio(false);
+      Alert.alert('Audio Error', 'Failed to play audio response');
+    }
+  };
+
+  const stopAudioPlayback = async () => {
+    try {
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+      }
+      setIsPlayingAudio(false);
+      console.log('🔇 Audio playback stopped');
+    } catch (error) {
+      console.error('❌ Error stopping audio:', error);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (isPlayingAudio) {
+      stopAudioPlayback();
+    }
+  };
+
+  // Cleanup audio on component unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   // Button handlers
   const handleEndSession = () => {
@@ -644,7 +801,70 @@ export default function LiveVoiceScreen({ navigation }) {
                     <Text style={styles.responseTitle}>🤖 AI Response:</Text>
                     <Text style={styles.responseText}>{currentResponse}</Text>
                     
-                    {/* Note: Audio playback not available with current backend */}
+                    {/* Audio Controls */}
+                    {audioBase64 && (
+                      <View style={styles.audioControlsContainer}>
+                        <TouchableOpacity 
+                          style={[styles.audioButton, isPlayingAudio && styles.audioButtonActive]}
+                          onPress={() => isPlayingAudio ? stopAudioPlayback() : playAudioResponse(audioBase64)}
+                        >
+                          <Ionicons 
+                            name={isPlayingAudio ? "stop" : "play"} 
+                            size={20} 
+                            color={isPlayingAudio ? "#FF5722" : "#03DAC6"} 
+                          />
+                          <Text style={[styles.audioButtonText, isPlayingAudio && styles.audioButtonTextActive]}>
+                            {isPlayingAudio ? "Stop Audio" : "Play Audio"}
+                          </Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                          style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+                          onPress={toggleMute}
+                        >
+                          <Ionicons 
+                            name={isMuted ? "volume-mute" : "volume-high"} 
+                            size={20} 
+                            color={isMuted ? "#FF5722" : "#03DAC6"} 
+                          />
+                          <Text style={[styles.muteButtonText, isMuted && styles.muteButtonTextActive]}>
+                            {isMuted ? "Unmute" : "Mute"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
+                    {!audioBase64 && currentResponse && (
+                      <View style={styles.noAudioContainer}>
+                        <Ionicons name="volume-mute" size={20} color="#757575" />
+                        <Text style={styles.noAudioText}>Audio response not available</Text>
+                        <TouchableOpacity 
+                          style={styles.generateAudioButton}
+                          onPress={async () => {
+                            try {
+                              console.log('🎵 Manually generating audio for response...');
+                              const response = await axios.post(`${API_BASE}/generate_audio`, {
+                                text: currentResponse,
+                                language: 'en'
+                              });
+                              
+                              if (response.data.success && response.data.audio) {
+                                setAudioBase64(response.data.audio);
+                                console.log('✅ Manual audio generation successful');
+                              } else {
+                                console.log('❌ Manual audio generation failed:', response.data.error);
+                              }
+                            } catch (error) {
+                              console.error('❌ Manual audio generation error:', error);
+                            }
+                          }}
+                        >
+                          <Ionicons name="refresh" size={16} color="#03DAC6" />
+                          <Text style={styles.generateAudioText}>Generate Audio</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
                     {currentAction && currentAction !== 'do_nothing' && (
                       <TouchableOpacity 
                         style={[styles.actionButton, { backgroundColor: ACTION_BUTTONS[currentAction]?.color || '#03DAC6' }]}
@@ -681,6 +901,15 @@ export default function LiveVoiceScreen({ navigation }) {
                       <Text style={styles.historyToolResult}>
                         📊 Result: {typeof item.toolResult === 'string' ? item.toolResult.substring(0, 100) : JSON.stringify(item.toolResult).substring(0, 100)}...
                       </Text>
+                    )}
+                    {item.audioData && (
+                      <TouchableOpacity 
+                        style={styles.historyAudioButton}
+                        onPress={() => playAudioResponse(item.audioData)}
+                      >
+                        <Ionicons name="play" size={16} color="#03DAC6" />
+                        <Text style={styles.historyAudioText}>Replay Audio</Text>
+                      </TouchableOpacity>
                     )}
                   </View>
                 ))}
@@ -1430,5 +1659,39 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 2,
     opacity: 0.8,
+  },
+  noAudioContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+  },
+  noAudioText: {
+    color: '#FF5722',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 10,
+  },
+  generateAudioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3, 218, 198, 0.1)',
+    borderColor: '#03DAC6',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  generateAudioText: {
+    color: '#03DAC6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
