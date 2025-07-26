@@ -46,8 +46,13 @@
     "voicechat.send": "पाठवा",
     "voicechat.attach_document": "दस्तऐवज संलग्न करा",
     "voicechat.attach_image": "प्रतिमा संलग्न करा",
+    "voicechat.image": "प्रतिमा",
+    "voicechat.could_not_open_document_picker": "दस्तऐवज पिकर उघडता आला नाही.",
+    "voicechat.could_not_open_image_picker": "प्रतिमा पिकर उघडता आला नाही.",
+    "voicechat.failed_to_save_chat_backend": "चॅट बॅकएंडमध्ये सेव्ह करण्यात अपयशी.",
     "voicechat.error_document": "दस्तऐवज पिकर उघडता आला नाही.",
     "voicechat.error_image": "प्रतिमा पिकर उघडता आला नाही.",
+    "voicechat.save_chat_error": "चॅट बॅकएंडमध्ये सेव्ह करण्यात अपयशी.",
     "voicechat.save_chat_error": "चॅट बॅकएंडमध्ये सेव्ह करण्यात अयशस्वी.",
   
     "choice.title": "किसान एआय",

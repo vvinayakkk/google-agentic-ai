@@ -46,8 +46,13 @@
     "voicechat.send": "મોકલો",
     "voicechat.attach_document": "દસ્તાવેજ જોડો",
     "voicechat.attach_image": "છબી જોડો",
+    "voicechat.image": "છબી",
+    "voicechat.could_not_open_document_picker": "દસ્તાવેજ પીકર ખોલી શકાયો નથી.",
+    "voicechat.could_not_open_image_picker": "છબી પીકર ખોલી શકાયો નથી.",
+    "voicechat.failed_to_save_chat_backend": "ચેટને બેકએન્ડમાં સેવ કરવામાં નિષ્ફળ.",
     "voicechat.error_document": "દસ્તાવેજ પીકર ખોલી શકાયો નથી.",
     "voicechat.error_image": "છબી પીકર ખોલી શકાયો નથી.",
+    "voicechat.save_chat_error": "ચેટને બેકએન્ડમાં સેવ કરવામાં નિષ્ફળ.",
     "voicechat.save_chat_error": "ચેટને બેકએન્ડમાં સાચવવામાં નિષ્ફળ.",
   
     "choice.title": "કિસાન AI",

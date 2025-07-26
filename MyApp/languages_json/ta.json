@@ -46,8 +46,13 @@
     "voicechat.send": "அனுப்பு",
     "voicechat.attach_document": "ஆவணத்தை இணைக்கவும்",
     "voicechat.attach_image": "படத்தை இணைக்கவும்",
+    "voicechat.image": "படம்",
+    "voicechat.could_not_open_document_picker": "ஆவணத்தைத் தேர்ந்தெடுப்பவரைத் திறக்க முடியவில்லை.",
+    "voicechat.could_not_open_image_picker": "படத்தைத் தேர்ந்தெடுப்பவரைத் திறக்க முடியவில்லை.",
+    "voicechat.failed_to_save_chat_backend": "உரையாடலை பின்தளத்தில் சேமிக்க முடியவில்லை.",
     "voicechat.error_document": "ஆவணத்தைத் தேர்ந்தெடுப்பவரைத் திறக்க முடியவில்லை.",
     "voicechat.error_image": "படத்தைத் தேர்ந்தெடுப்பவரைத் திறக்க முடியவில்லை.",
+    "voicechat.save_chat_error": "உரையாடலை பின்தளத்தில் சேமிக்க முடியவில்லை.",
     "voicechat.save_chat_error": "உரையாடலை பேக்கெண்டில் சேமிக்கத் தவறிவிட்டது.",
   
     "choice.title": "கிசான் ஏஐ",

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const NetworkConfig = {
   // Primary API base URL
-  API_BASE: 'http://10.123.4.76:8000',
+  API_BASE: 'http://10.215.221.37:8000',
   
   // Alternative URLs to try
   FALLBACK_URLS: [

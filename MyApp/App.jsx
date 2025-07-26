@@ -48,27 +48,11 @@ import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
 import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import NetworkConfig from './utils/NetworkConfig';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
 
 export default function App() {
-  const [mode, setMode] = React.useState('online');
-
-  React.useEffect(() => {
-    NetworkConfig.getMode().then((savedMode) => {
-      setMode(savedMode);
-      NetworkConfig.setMode(savedMode);
-    });
-  }, []);
-
-  const handleToggle = async () => {
-    const newMode = mode === 'online' ? 'offline' : 'online';
-    await NetworkConfig.setMode(newMode);
-    setMode(newMode);
-  };
-
   useEffect(() => {
     getStoredLanguage().then((lang) => {
       if (i18n.language !== lang) {
@@ -81,14 +65,8 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
         <View style={{ flex: 1 }}>
-          {/* Toggle Button - always visible top right */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity onPress={handleToggle} style={[styles.toggleButton, mode === 'offline' && styles.toggleButtonOffline]}>
-              <Text style={styles.toggleText}>{mode === 'online' ? 'Online' : 'Offline'}</Text>
-            </TouchableOpacity>
-          </View>
           <NavigationContainer>
-            <Stack.Navigator initialRouteName="LanguageSelectScreen"
+            <Stack.Navigator initialRouteName="VoiceChatInputScreen"
               screenOptions={{
                 headerShown: false,
               }}
@@ -329,28 +307,4 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  toggleContainer: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 9999,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  toggleButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    elevation: 4,
-  },
-  toggleButtonOffline: {
-    backgroundColor: '#FF9800',
-  },
-  toggleText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
+// Remove the styles since they're no longer needed

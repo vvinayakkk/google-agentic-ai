@@ -46,8 +46,13 @@
     "voicechat.send": "ಕಳುಹಿಸು",
     "voicechat.attach_document": "ದಾಖಲೆ ಲಗತ್ತಿಸಿ",
     "voicechat.attach_image": "ಚಿತ್ರ ಲಗತ್ತಿಸಿ",
+    "voicechat.image": "ಚಿತ್ರ",
+    "voicechat.could_not_open_document_picker": "ದಾಖಲೆ ಪಿಕ್ಕರ್ ತೆರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    "voicechat.could_not_open_image_picker": "ಚಿತ್ರ ಪಿಕ್ಕರ್ ತೆರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    "voicechat.failed_to_save_chat_backend": "ಚಾಟ್ ಅನ್ನು ಬ್ಯಾಕೆಂಡ್‌ನಲ್ಲಿ ಉಳಿಸಲು ವಿಫಲವಾಯಿತು.",
     "voicechat.error_document": "ದಾಖಲೆ ಪಿಕ್ಕರ್ ತೆರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
     "voicechat.error_image": "ಚಿತ್ರ ಪಿಕ್ಕರ್ ತೆರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    "voicechat.save_chat_error": "ಚಾಟ್ ಅನ್ನು ಬ್ಯಾಕೆಂಡ್‌ನಲ್ಲಿ ಉಳಿಸಲು ವಿಫಲವಾಯಿತು.",
     "voicechat.save_chat_error": "ಬ್ಯಾಕೆಂಡ್‌ಗೆ ಚಾಟ್ ಉಳಿಸುವಲ್ಲಿ ವಿಫಲವಾಗಿದೆ.",
   
     "choice.title": "ಕಿಸಾನ್ AI",

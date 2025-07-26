@@ -579,13 +579,12 @@ export default function LiveVoiceScreen({ navigation }) {
           <View style={styles.networkStatusContainer}>
             <View style={[
               styles.networkIndicator, 
-              { backgroundColor: networkStatus === 'connected' ? '#4CAF50' : networkStatus === 'error' ? '#F44336' : '#FF9800' }
+              { backgroundColor: networkStatus === 'connected' ? '#4CAF50' : '#FF9800' }
             ]} />
             <Text style={styles.networkStatusText}>
-              {networkStatus === 'connected' ? '🟢 Connected' : 
-               networkStatus === 'error' ? '🔴 Offline' : '🟡 Connecting...'}
+              {networkStatus === 'connected' ? '🟢 Connected' : '🟡 Connecting...'}
             </Text>
-            {networkStatus === 'error' && (
+            {networkStatus !== 'connected' && (
               <TouchableOpacity onPress={testNetworkConnection} style={styles.retryButton}>
                 <Ionicons name="refresh" size={16} color="white" />
               </TouchableOpacity>

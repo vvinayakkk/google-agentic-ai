@@ -46,8 +46,13 @@
     "voicechat.send": "పంపు",
     "voicechat.attach_document": "డాక్యుమెంట్ జతచేయండి",
     "voicechat.attach_image": "చిత్రాన్ని జతచేయండి",
+    "voicechat.image": "చిత్రం",
+    "voicechat.could_not_open_document_picker": "డాక్యుమెంట్ పికర్‌ను తెరవలేకపోయింది.",
+    "voicechat.could_not_open_image_picker": "చిత్ర పికర్‌ను తెరవలేకపోయింది.",
+    "voicechat.failed_to_save_chat_backend": "చాట్‌ను బ్యాకెండ్‌లో సేవ్ చేయడంలో విఫలమైంది.",
     "voicechat.error_document": "డాక్యుమెంట్ పికర్‌ను తెరవలేకపోయింది.",
     "voicechat.error_image": "చిత్ర పికర్‌ను తెరవలేకపోయింది.",
+    "voicechat.save_chat_error": "చాట్‌ను బ్యాకెండ్‌లో సేవ్ చేయడంలో విఫలమైంది.",
     "voicechat.save_chat_error": "బ్యాకెండ్‌కు చాట్ సేవ్ చేయడంలో విఫలమైంది.",
   
     "choice.title": "కిసాన్ AI",

@@ -118,10 +118,26 @@ const getKissanAIResponse = async (message, context) => {
         if (response.data && response.data.response_text) {
             return response.data.response_text;
         }
+        // Check if there's an error in the response
+        if (response.data && response.data.error) {
+            console.log('Server returned error:', response.data.error);
+            return `Sorry, there was an issue processing your request: ${response.data.error}`;
+        }
         return "Sorry, I couldn't get a response from the server.";
     } catch (error) {
         if (error.response) {
             console.log('AI error response:', error.response.data);
+            console.log('AI error status:', error.response.status);
+            // Try to extract more detailed error information
+            if (error.response.data && error.response.data.detail) {
+                return `Sorry, there was an error: ${error.response.data.detail}`;
+            } else if (error.response.data && error.response.data.error) {
+                return `Sorry, there was an error: ${error.response.data.error}`;
+            } else if (error.response.status === 500) {
+                return "Sorry, there was a server error. Please try again or contact support.";
+            } else if (error.response.status === 404) {
+                return "Sorry, the service is not available. Please check your connection.";
+            }
         } else {
             console.log('AI error:', error.message || error);
         }
