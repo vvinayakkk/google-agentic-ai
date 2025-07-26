@@ -46,6 +46,114 @@ const FarmingAssistant = () => {
   // Add a new state for cache loading
   const [cacheLoaded, setCacheLoaded] = useState(false);
 
+  // ===== ENHANCED CROP CYCLE FUNCTIONALITY =====
+  const FARMER_ID = 'f001';
+  const [availableCrops, setAvailableCrops] = useState([]);
+  const [myCropCycles, setMyCropCycles] = useState([]);
+  const [cropRecommendations, setCropRecommendations] = useState([]);
+  const [cropAnalytics, setCropAnalytics] = useState(null);
+  const [showAddCropModal, setShowAddCropModal] = useState(false);
+  const [showCycleModal, setShowCycleModal] = useState(false);
+  const [newCropForm, setNewCropForm] = useState({
+    name: '',
+    category: 'cereals',
+    season: 'kharif',
+    duration_days: '',
+    description: ''
+  });
+  const [newCycleForm, setNewCycleForm] = useState({
+    crop_id: '',
+    area_acres: '',
+    expected_yield: '',
+    planting_date: '',
+    notes: ''
+  });
+
+  // Load enhanced crop data
+  const loadEnhancedCropData = async () => {
+    try {
+      // Load available crops
+      const cropsResponse = await CropCycleService.getAllCrops();
+      if (cropsResponse.success) {
+        setAvailableCrops(cropsResponse.crops || []);
+      }
+
+      // Load farmer's crop cycles
+      const cyclesResponse = await CropCycleService.getFarmerCropCycles(FARMER_ID);
+      if (cyclesResponse.success) {
+        setMyCropCycles(cyclesResponse.cycles || []);
+      }
+
+      // Load crop recommendations
+      const recommendationsResponse = await CropCycleService.getFarmerCropRecommendations(FARMER_ID);
+      if (recommendationsResponse.success) {
+        setCropRecommendations(recommendationsResponse.recommendations || []);
+      }
+
+      // Load crop analytics
+      const analyticsResponse = await CropCycleService.getFarmerCropAnalytics(FARMER_ID);
+      if (analyticsResponse.success) {
+        setCropAnalytics(analyticsResponse.analytics);
+      }
+    } catch (error) {
+      console.error('Error loading enhanced crop data:', error);
+    }
+  };
+
+  // Add new crop to system
+  const addNewCrop = async () => {
+    if (!newCropForm.name.trim()) {
+      Alert.alert('Error', 'Please enter crop name');
+      return;
+    }
+
+    try {
+      const response = await CropCycleService.addNewCrop(newCropForm);
+      if (response.success) {
+        Alert.alert('Success', 'Crop added successfully!');
+        setShowAddCropModal(false);
+        setNewCropForm({
+          name: '',
+          category: 'cereals',
+          season: 'kharif',
+          duration_days: '',
+          description: ''
+        });
+        loadEnhancedCropData(); // Refresh crops
+      }
+    } catch (error) {
+      console.error('Error adding crop:', error);
+      Alert.alert('Error', 'Failed to add crop');
+    }
+  };
+
+  // Start new crop cycle
+  const startNewCropCycle = async () => {
+    if (!newCycleForm.crop_id || !newCycleForm.area_acres) {
+      Alert.alert('Error', 'Please fill required fields');
+      return;
+    }
+
+    try {
+      const response = await CropCycleService.startCropCycle(FARMER_ID, newCycleForm);
+      if (response.success) {
+        Alert.alert('Success', 'Crop cycle started successfully!');
+        setShowCycleModal(false);
+        setNewCycleForm({
+          crop_id: '',
+          area_acres: '',
+          expected_yield: '',
+          planting_date: '',
+          notes: ''
+        });
+        loadEnhancedCropData(); // Refresh cycles
+      }
+    } catch (error) {
+      console.error('Error starting crop cycle:', error);
+      Alert.alert('Error', 'Failed to start crop cycle');
+    }
+  };
+
   // Helper: Save to AsyncStorage
   const saveToCache = async (data) => {
     try {
@@ -127,6 +235,8 @@ const FarmingAssistant = () => {
         if (!found) fetchAllDashboardData();
       });
     }
+    // Load enhanced crop data on mount
+    loadEnhancedCropData();
   }, [currentScreen, selectedCrop, farmDetails.landSize, farmDetails.irrigation]);
 
   const crops = [

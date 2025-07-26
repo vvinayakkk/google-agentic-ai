@@ -29,6 +29,7 @@ import PaymentProcessingScreen from './UPI/PaymentProcessingScreen';
 import BankTransferScreen from './UPI/BankTransferScreen';
 import MobileRechargeScreen from './UPI/MobileRechargeScreen';
 import LanguageSelectScreen from './screens/LanguageSelectScreen';
+import FetchingLocationScreen from './screens/FetchingLocationScreen';
 import DocumentAgentScreen from './screens/DocumentAgentScreen';
 import WeatherScreen from './screens/WeatherScreen';
 import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
@@ -70,6 +71,13 @@ export default function App() {
             <Stack.Screen 
               name="LanguageSelectScreen" 
               component={LanguageSelectScreen} 
+              options={{
+                headerShown: false,
+              }} 
+            />
+            <Stack.Screen 
+              name="FetchingLocationScreen" 
+              component={FetchingLocationScreen} 
               options={{
                 headerShown: false,
               }} 

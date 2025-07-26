@@ -26,6 +26,7 @@ import NewMarketPricesScreen from './NewMarketPricesScreen';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
+import CropMarketplaceService from '../services/CropMarketplaceService';
 import { REAL_MANDI_DATA, AI_STRATEGIC_PLANS, findMandisByCrop, findMandisByLocation, getMandiById, getCropPriceInMandi, formatPhoneNumber, getMandisByDistance, calculateDistance } from '../data/mandiData';
 
 // Enable LayoutAnimation for Android
@@ -171,6 +172,98 @@ const MarketplaceScreen = ({ navigation }) => {
   const [productQuantity, setProductQuantity] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productEmoji, setProductEmoji] = useState('');
+
+  // ===== NEW MARKETPLACE FUNCTIONALITY =====
+  const [marketplaceItems, setMarketplaceItems] = useState([]);
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('relevance');
+  const [myOrders, setMyOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedMarketplaceItem, setSelectedMarketplaceItem] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
+  // Fetch comprehensive marketplace data
+  const fetchMarketplaceData = async () => {
+    try {
+      setMarketplaceLoading(true);
+      const response = await CropMarketplaceService.searchItems({
+        query: searchTerm,
+        category: categoryFilter !== 'all' ? categoryFilter : undefined,
+        location: locationFilter !== 'all' ? locationFilter : undefined,
+        sort_by: sortBy,
+        limit: 50
+      });
+      
+      if (response.success) {
+        setMarketplaceItems(response.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching marketplace data:', error);
+      Alert.alert('Error', 'Failed to load marketplace items');
+    } finally {
+      setMarketplaceLoading(false);
+    }
+  };
+
+  // Fetch farmer's orders
+  const fetchMyOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const response = await CropMarketplaceService.getFarmerOrders(FARMER_ID);
+      
+      if (response.success) {
+        setMyOrders(response.orders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // Create order for marketplace item
+  const createOrder = async (item, quantity, notes = '') => {
+    try {
+      const orderData = {
+        seller_id: item.farmer_id,
+        item_id: item.id,
+        quantity: parseFloat(quantity),
+        price_per_unit: item.price_per_unit,
+        total_amount: parseFloat(quantity) * item.price_per_unit,
+        delivery_location: 'Current Location', // Should be dynamic
+        notes: notes
+      };
+
+      const response = await CropMarketplaceService.createOrder(FARMER_ID, orderData);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Order created successfully!');
+        setShowOrderModal(false);
+        fetchMyOrders(); // Refresh orders
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      Alert.alert('Error', 'Failed to create order');
+    }
+  };
+
+  // Add item to marketplace
+  const addToMarketplace = async (itemData) => {
+    try {
+      const response = await CropMarketplaceService.addItem(FARMER_ID, itemData);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Item added to marketplace successfully!');
+        fetchMarketplaceData(); // Refresh marketplace
+        setIsModalVisible(false);
+      }
+    } catch (error) {
+      console.error('Error adding item to marketplace:', error);
+      Alert.alert('Error', 'Failed to add item to marketplace');
+    }
+  };
 
   // Add state for preselectedMandi in MarketplaceScreen
   const [preselectedMandi, setPreselectedMandi] = useState(null);
@@ -365,13 +458,16 @@ const MarketplaceScreen = ({ navigation }) => {
     setShowStrategicPlans(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!productName || !productQuantity || !productPrice) {
       Alert.alert(t('marketplace.missing_info'), t('marketplace.fill_all_fields'));
       return;
     }
+    
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    
     if (editingItem) {
+      // Update existing listing
       setMyListings(myListings.map(item =>
         item.id === editingItem.id
           ? { ...item, name: productName, quantity: productQuantity, myPrice: parseFloat(productPrice), emoji: productEmoji || '📦' }
@@ -379,6 +475,7 @@ const MarketplaceScreen = ({ navigation }) => {
       ));
       Alert.alert(t('marketplace.success_updated', { name: productName }));
     } else {
+      // Create new listing
       const newListing = {
         id: Date.now(),
         name: productName,
@@ -391,8 +488,33 @@ const MarketplaceScreen = ({ navigation }) => {
         emoji: productEmoji || '📦',
       };
       setMyListings([newListing, ...myListings]);
+      
+      // Also add to comprehensive marketplace
+      const marketplaceData = {
+        name: productName,
+        category: 'crops', // Default category
+        quantity_available: parseFloat(productQuantity.replace(/[^\d.]/g, '')), // Extract numeric value
+        unit: 'kg', // Default unit
+        price_per_unit: parseFloat(productPrice),
+        quality_grade: 'A',
+        harvest_date: new Date().toISOString().split('T')[0],
+        location: {
+          state: 'Maharashtra',
+          district: 'Mumbai',
+          village: 'Default Village'
+        },
+        contact_info: {
+          phone: '9876543210',
+          whatsapp: '9876543210'
+        },
+        description: `Fresh ${productName} available for sale`,
+        images: []
+      };
+      
+      await addToMarketplace(marketplaceData);
       Alert.alert(t('marketplace.success_added', { name: productName }));
     }
+    
     setIsModalVisible(false);
   };
 
@@ -1223,7 +1345,16 @@ const MarketplaceScreen = ({ navigation }) => {
     };
     fetchMarketPrices();
     fetchMyListings();
+    fetchMarketplaceData(); // Load comprehensive marketplace data
+    fetchMyOrders(); // Load farmer's orders
   }, []);
+  // Add useEffect to refresh marketplace data when filters change
+  useEffect(() => {
+    if (selectedTab === 'marketplace') {
+      fetchMarketplaceData();
+    }
+  }, [searchTerm, categoryFilter, locationFilter, sortBy, selectedTab]);
+
   // Filter by commodity if searchCommodity is set
   const filteredMarketData = !searchCommodity.trim() ? marketData : marketData.filter(item => (item.Commodity || item.commodity || '').toLowerCase().includes(searchCommodity.toLowerCase()));
 

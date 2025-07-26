@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
+import EnhancedRentalService from '../services/EnhancedRentalService';
 
 // Configuration
 const API_CONFIG = {
@@ -340,12 +341,143 @@ export default function RentalScreen() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
+  // ===== ENHANCED RENTAL FUNCTIONALITY =====
+  const [myBookings, setMyBookings] = useState([]);
+  const [equipmentCategories, setEquipmentCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState('available');
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
+  const [locationFilter, setLocationFilter] = useState('');
+  const [sortBy, setSortBy] = useState('price_asc');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewItem, setReviewItem] = useState(null);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+
+  // Load enhanced rental data
+  const loadEnhancedRentalData = async () => {
+    try {
+      // Load farmer's bookings
+      const bookingsResponse = await EnhancedRentalService.getFarmerBookings(FARMER_PROFILE.id);
+      if (bookingsResponse.success) {
+        setMyBookings(bookingsResponse.bookings || []);
+      }
+
+      // Load equipment categories
+      const categoriesResponse = await EnhancedRentalService.getEquipmentCategories();
+      if (categoriesResponse.success) {
+        setEquipmentCategories(categoriesResponse.categories || []);
+      }
+    } catch (error) {
+      console.error('Error loading enhanced rental data:', error);
+    }
+  };
+
+  // Enhanced search with filters
+  const performEnhancedSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    setError(null);
+    
+    try {
+      const response = await EnhancedRentalService.searchEquipment({
+        query: searchQuery,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        location: locationFilter || undefined,
+        availability: availabilityFilter,
+        min_price: priceRange.min,
+        max_price: priceRange.max,
+        sort_by: sortBy,
+        limit: 20
+      });
+
+      if (response.success) {
+        setSearchResults(prev => ({
+          ...prev,
+          matches: response.equipment || []
+        }));
+      }
+    } catch (error) {
+      console.error('Error performing enhanced search:', error);
+      setError('Failed to search equipment');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Create booking with enhanced service
+  const createEnhancedBooking = async (equipment, bookingData) => {
+    setBookingLoading(true);
+    setBookingError('');
+    
+    try {
+      const response = await EnhancedRentalService.createBooking(FARMER_PROFILE.id, {
+        equipment_id: equipment.id,
+        ...bookingData
+      });
+
+      if (response.success) {
+        Alert.alert('Success', 'Booking created successfully!');
+        setShowBookingModal(false);
+        loadEnhancedRentalData(); // Refresh bookings
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      setBookingError('Failed to create booking');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  // Add equipment to rental
+  const addEquipmentToRental = async (equipmentData) => {
+    setListLoading(true);
+    setListError('');
+    
+    try {
+      const response = await EnhancedRentalService.addEquipment(FARMER_PROFILE.id, equipmentData);
+
+      if (response.success) {
+        Alert.alert('Success', 'Equipment added successfully!');
+        setShowListModal(false);
+        loadInitialData(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error adding equipment:', error);
+      setListError('Failed to add equipment');
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  // Submit review
+  const submitReview = async () => {
+    if (!reviewItem || reviewForm.rating < 1) return;
+    
+    try {
+      const response = await EnhancedRentalService.addReview(FARMER_PROFILE.id, reviewItem.id, {
+        rating: reviewForm.rating,
+        comment: reviewForm.comment
+      });
+
+      if (response.success) {
+        Alert.alert('Success', 'Review submitted successfully!');
+        setShowReviewModal(false);
+        setReviewForm({ rating: 5, comment: '' });
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      Alert.alert('Error', 'Failed to submit review');
+    }
+  };
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const searchTimeoutRef = useRef(null);
 
   // Load initial data
   useEffect(() => {
     loadInitialData();
+    loadEnhancedRentalData(); // Load enhanced rental data
   }, []);
 
   const loadInitialData = async () => {
