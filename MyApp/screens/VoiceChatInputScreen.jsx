@@ -114,7 +114,7 @@ const getKissanAIResponse = async (message, context) => {
         session_id,
     };
     try {
-        const response = await axios.post('http://10.215.221.37:8000/agent', payload); // Update to your backend URL
+        const response = await axios.post('http://10.123.4.245:8001/agent', payload); // Update to your backend URL
         if (response.data && response.data.response_text) {
             return response.data.response_text;
         }

@@ -172,7 +172,7 @@ export default function LiveVoiceScreen({ navigation }) {
       setNetworkStatus('checking');
       
       // First, test if the server is reachable
-      console.log(`🔍 Testing connection to: ${API_BASE}`);
+      console.log(`🔍 Testing connection to: http://10.123.4.245:8001`);
       
       // Test a simple endpoint that exists - we'll try the /agent endpoint with a basic request
       const testPayload = {
@@ -182,7 +182,7 @@ export default function LiveVoiceScreen({ navigation }) {
         session_id: 'test_session'
       };
       
-      const response = await axios.post(`${API_BASE}/agent`, testPayload, { 
+      const response = await axios.post(`http://10.123.4.245:8001/agent`, testPayload, { 
         timeout: 5000,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -203,7 +203,7 @@ export default function LiveVoiceScreen({ navigation }) {
           testFormData.append('session_id', 'test');
           testFormData.append('metadata', JSON.stringify({ farmer_id: 'test' }));
           
-          const audioTestResponse = await axios.post(`${API_BASE}/audio_agent`, testFormData, { 
+          const audioTestResponse = await axios.post(`http://10.123.4.245:8001/audio_agent`, testFormData, { 
             timeout: 5000,
             headers: { 'Content-Type': 'multipart/form-data' }
           });
@@ -377,10 +377,10 @@ export default function LiveVoiceScreen({ navigation }) {
       console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
 
       // Use axios like other working screens
-      console.log(`🎤 Making request to: ${API_BASE}/audio_agent`);
+      console.log(`🎤 Making request to: http://10.123.4.245:8001/audio_agent`);
       console.log(`📋 Form data keys:`, Array.from(formData.keys()));
       
-      const response = await axios.post(`${API_BASE}/audio_agent`, formData, {
+      const response = await axios.post(`http://10.123.4.245:8001/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000, // 30 seconds timeout
       });
@@ -479,7 +479,7 @@ export default function LiveVoiceScreen({ navigation }) {
             session_id: Date.now().toString()
           };
           
-          const fallbackResponse = await axios.post(`${API_BASE}/agent`, fallbackPayload, {
+          const fallbackResponse = await axios.post(`http://10.123.4.245:8001/agent`, fallbackPayload, {
             headers: { 'Content-Type': 'application/json' },
             timeout: 30000,
           });
@@ -843,7 +843,7 @@ export default function LiveVoiceScreen({ navigation }) {
                           onPress={async () => {
                             try {
                               console.log('🎵 Manually generating audio for response...');
-                              const response = await axios.post(`${API_BASE}/generate_audio`, {
+                              const response = await axios.post(`http://10.123.4.245:8001/generate_audio`, {
                                 text: currentResponse,
                                 language: 'en'
                               });
