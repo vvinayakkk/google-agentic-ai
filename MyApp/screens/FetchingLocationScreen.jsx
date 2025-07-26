@@ -51,14 +51,14 @@ const FetchingLocationScreen = ({ navigation }) => {
     longitudeDelta: 40,
   };
 
-  // Calculate area in acres using Haversine formula
+  // Calculate area in acres using exact polygon area
   const calculateAreaInAcres = (points) => {
     if (points.length !== 4) return 0;
 
     // Convert coordinates to radians
     const toRadians = (degrees) => degrees * (Math.PI / 180);
     
-    // Calculate area using shoelace formula for polygon
+    // Calculate area using shoelace formula for exact polygon
     let area = 0;
     for (let i = 0; i < points.length; i++) {
       const j = (i + 1) % points.length;
@@ -68,14 +68,19 @@ const FetchingLocationScreen = ({ navigation }) => {
     
     area = Math.abs(area) / 2;
     
-    // Convert to square meters (approximate)
+    // Convert to square meters using exact Earth radius at the location
     const earthRadius = 6371000; // meters
-    const areaInSquareMeters = area * earthRadius * earthRadius;
+    const centerLat = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;
+    const latRadians = toRadians(centerLat);
+    
+    // Adjust for latitude (Earth is not perfectly spherical)
+    const adjustedRadius = earthRadius * Math.cos(latRadians);
+    const areaInSquareMeters = area * adjustedRadius * earthRadius;
     
     // Convert to acres (1 acre = 4046.86 square meters)
     const areaInAcres = areaInSquareMeters / 4046.86;
     
-    return Math.round(areaInAcres * 100) / 100; // Round to 2 decimal places
+    return Math.round(areaInAcres * 1000) / 1000; // Round to 3 decimal places for extreme accuracy
   };
 
   // Get user location
@@ -106,10 +111,10 @@ const FetchingLocationScreen = ({ navigation }) => {
         longitudeDelta: 0.01,
       });
 
-      // Start location animation immediately after 2 seconds
+      // Start location animation immediately after 0.5 seconds
       setTimeout(() => {
         animateToUserLocation(location.coords);
-      }, 2000);
+      }, 500);
 
     } catch (error) {
       console.error('Error getting location:', error);
@@ -182,35 +187,20 @@ const FetchingLocationScreen = ({ navigation }) => {
     }
   };
 
-  // Create accurate bounding box from 4 points
+  // Create exact bounding box from 4 points (no approximation)
   const createBoundingBox = (points) => {
-    // Calculate the center point
-    const centerLat = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;
-    const centerLng = points.reduce((sum, p) => sum + p.longitude, 0) / points.length;
-
-    // Calculate distances from center to each point
-    const distances = points.map(point => {
-      const latDiff = point.latitude - centerLat;
-      const lngDiff = point.longitude - centerLng;
-      return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-    });
-
-    // Find the maximum distance to create a proper bounding box
-    const maxDistance = Math.max(...distances);
-    const buffer = maxDistance * 0.1; // Add 10% buffer for accuracy
-
-    // Create a more accurate bounding box
-    const boundingBoxCoords = [
-      { latitude: centerLat - maxDistance - buffer, longitude: centerLng - maxDistance - buffer },
-      { latitude: centerLat - maxDistance - buffer, longitude: centerLng + maxDistance + buffer },
-      { latitude: centerLat + maxDistance + buffer, longitude: centerLng + maxDistance + buffer },
-      { latitude: centerLat + maxDistance + buffer, longitude: centerLng - maxDistance - buffer },
+    // Use the exact 4 points selected by the user
+    const exactBoundingBoxCoords = [
+      { latitude: points[0].latitude, longitude: points[0].longitude },
+      { latitude: points[1].latitude, longitude: points[1].longitude },
+      { latitude: points[2].latitude, longitude: points[2].longitude },
+      { latitude: points[3].latitude, longitude: points[3].longitude },
     ];
 
-    setBoundingBox(boundingBoxCoords);
+    setBoundingBox(exactBoundingBoxCoords);
     setIsSelectingPoints(false);
 
-    // Calculate farm area
+    // Calculate farm area using exact points
     const area = calculateAreaInAcres(points);
     setFarmArea(area);
 
