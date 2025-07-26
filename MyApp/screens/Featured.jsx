@@ -1,10 +1,96 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Dimensions, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FARMER_ID = 'f001';
+const { width } = Dimensions.get('window');
+
+// Interactive Guide Tooltip Component for FeaturedScreen
+function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+  const getTooltipPosition = () => {
+    switch (step.target) {
+      case 'backButton':
+        return {
+          top: 110, // Below the back button
+          left: 20,
+        };
+      case 'profileIcon':
+        return {
+          top: 110, // Below the profile icon
+          right: 20,
+        };
+      case 'cropDoctor':
+        return {
+          top: 200, // Below the crop doctor card
+          alignSelf: 'center',
+        };
+      case 'cropCycle':
+        return {
+          top: 280, // Below the crop cycle card
+          alignSelf: 'center',
+        };
+      case 'weather':
+        return {
+          top: 360, // Below the weather card
+          alignSelf: 'center',
+        };
+      case 'quickActions':
+        return {
+          top: '55%', // Above the quick actions section
+          alignSelf: 'center',
+        };
+      case 'marketCard':
+        return {
+          top: '65%', // Above the market card
+          left: 30,
+        };
+      case 'calendarCard':
+        return {
+          top: '65%', // Above the calendar card
+          right: 30,
+        };
+      case 'toolsList':
+        return {
+          bottom: 150, // Above the tools list
+          alignSelf: 'center',
+        };
+      case 'screen':
+      default:
+        return {
+          top: '35%', // Center of screen for welcome message
+          alignSelf: 'center',
+        };
+    }
+  };
+
+  return (
+    <View style={[styles.tooltip, getTooltipPosition()]}>
+      {/* Pointer Arrow */}
+      {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
+      {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
+      {/* No arrow for center position */}
+      
+      <View style={styles.tooltipContent}>
+        <Text style={styles.tooltipTitle}>{step.title}</Text>
+        <Text style={styles.tooltipMessage}>{step.message}</Text>
+        
+        <View style={styles.tooltipButtons}>
+          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+            <Text style={styles.skipButtonText}>Skip Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.nextButton} onPress={onNext}>
+            <Text style={styles.nextButtonText}>
+              {step.id === 'tools_exploration' ? 'Got it!' : 'Next'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 const tools = [
   {
@@ -32,6 +118,158 @@ const tools = [
 export default function Featured({ navigation }) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  
+  // Onboarding states
+  const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+  // Interactive onboarding steps for FeaturedScreen
+  const ONBOARDING_STEPS = [
+    {
+      id: 'welcome',
+      title: 'Welcome to Featured Tools! ⭐',
+      message: 'Discover all the powerful farming tools and features available to help you succeed in agriculture.',
+      target: 'screen',
+      position: 'center'
+    },
+    {
+      id: 'navigation',
+      title: 'Easy Navigation 🔙',
+      message: 'Use this back button to return to the previous screen anytime.',
+      target: 'backButton',
+      position: 'bottom'
+    },
+    {
+      id: 'profile_access',
+      title: 'Your Profile 👤',
+      message: 'Access your farmer profile and personal settings from here.',
+      target: 'profileIcon',
+      position: 'bottom'
+    },
+    {
+      id: 'crop_doctor',
+      title: 'Crop Doctor 🌱',
+      message: 'Get AI-powered diagnosis for crop diseases and health issues. Upload photos for instant analysis.',
+      target: 'cropDoctor',
+      position: 'bottom'
+    },
+    {
+      id: 'crop_cycle',
+      title: 'Crop Cycle Management 🔄',
+      message: 'Track your crop growth cycles, planting schedules, and harvest planning.',
+      target: 'cropCycle',
+      position: 'bottom'
+    },
+    {
+      id: 'weather_info',
+      title: 'Weather Insights 🌤️',
+      message: 'Get detailed weather forecasts and agricultural weather advisories for your location.',
+      target: 'weather',
+      position: 'bottom'
+    },
+    {
+      id: 'quick_actions',
+      title: 'Quick Actions ⚡',
+      message: 'Access frequently used features quickly from these convenient shortcuts.',
+      target: 'quickActions',
+      position: 'top'
+    },
+    {
+      id: 'market_prices',
+      title: 'Market Prices 📈',
+      message: 'Check current market rates for your crops to make informed selling decisions.',
+      target: 'marketCard',
+      position: 'bottom'
+    },
+    {
+      id: 'farming_calendar',
+      title: 'Farming Calendar 📅',
+      message: 'Plan your farming activities with seasonal calendars and important agricultural dates.',
+      target: 'calendarCard',
+      position: 'bottom'
+    },
+    {
+      id: 'tools_exploration',
+      title: 'Explore All Tools 🛠️',
+      message: 'Browse through all available farming tools including finance, rentals, document builder, and cattle management.',
+      target: 'toolsList',
+      position: 'bottom'
+    }
+  ];
+
+  // Check if user has seen onboarding before
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const hasSeenGuide = await AsyncStorage.getItem('featuredScreenOnboardingCompleted');
+      console.log('FeaturedScreen onboarding status:', hasSeenGuide);
+      
+      if (!hasSeenGuide) {
+        console.log('First-time user detected, starting onboarding...');
+        // Start onboarding after a short delay
+        setTimeout(() => {
+          setShowInteractiveGuide(true);
+          setOnboardingStep(0);
+        }, 1500); // Delay to ensure UI is ready
+      } else {
+        console.log('Returning user, onboarding already completed');
+      }
+      setHasSeenOnboarding(!!hasSeenGuide);
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      // If there's an error, show onboarding anyway for first-time experience
+      setTimeout(() => {
+        setShowInteractiveGuide(true);
+        setOnboardingStep(0);
+      }, 1500);
+    }
+  };
+
+  const startInteractiveGuide = () => {
+    console.log('Starting FeaturedScreen interactive guide manually...');
+    setShowInteractiveGuide(true);
+    setOnboardingStep(0);
+  };
+
+  const nextOnboardingStep = () => {
+    if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      completeOnboarding();
+    }
+  };
+
+  const skipOnboarding = async () => {
+    completeOnboarding();
+  };
+
+  const completeOnboarding = async () => {
+    setShowInteractiveGuide(false);
+    setOnboardingStep(0);
+    setHasSeenOnboarding(true);
+    
+    try {
+      await AsyncStorage.setItem('featuredScreenOnboardingCompleted', 'true');
+    } catch (error) {
+      console.error('Error saving onboarding completion:', error);
+    }
+  };
+
+  // Debug function to reset onboarding (for testing)
+  const resetOnboarding = async () => {
+    try {
+      await AsyncStorage.removeItem('featuredScreenOnboardingCompleted');
+      setHasSeenOnboarding(false);
+      console.log('FeaturedScreen onboarding reset - will show on next app start');
+      Alert.alert('Debug', 'Onboarding reset! Restart the app to see it again.');
+    } catch (error) {
+      console.error('Error resetting onboarding:', error);
+    }
+  };
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}> 
       <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -100,6 +338,42 @@ export default function Featured({ navigation }) {
           ))}
         </View>
       </ScrollView>
+
+      {/* Onboarding debug buttons for testing */}
+      {hasSeenOnboarding && (
+        <View style={styles.tourButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.restartTourButton} 
+            onPress={startInteractiveGuide}
+          >
+            <MaterialCommunityIcons name="replay" size={16} color="#10B981" />
+            <Text style={styles.restartTourText}>Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.resetTourButton} 
+            onPress={resetOnboarding}
+          >
+            <MaterialCommunityIcons name="refresh" size={14} color="#FF5722" />
+            <Text style={styles.resetTourText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Interactive Guide Overlay */}
+      {showInteractiveGuide && (
+        <View style={styles.guideOverlay}>
+          <TouchableOpacity 
+            style={styles.guideOverlayBackground}
+            onPress={nextOnboardingStep}
+            activeOpacity={1}
+          />
+          <InteractiveGuideTooltip 
+            step={ONBOARDING_STEPS[onboardingStep]}
+            onNext={nextOnboardingStep}
+            onSkip={skipOnboarding}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -229,5 +503,148 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     fontSize: 13,
     marginTop: 2,
+  },
+
+  // Onboarding Tour Buttons
+  tourButtonsContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    flexDirection: 'row',
+    gap: 8,
+    zIndex: 15,
+  },
+  restartTourButton: {
+    backgroundColor: '#18181b',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  restartTourText: {
+    color: '#10B981',
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  resetTourButton: {
+    backgroundColor: '#18181b',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resetTourText: {
+    color: '#FF5722',
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 2,
+  },
+
+  // Interactive Guide Styles
+  guideOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2000,
+  },
+  guideOverlayBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    maxWidth: width - 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tooltipArrowDown: {
+    position: 'absolute',
+    bottom: -8,
+    alignSelf: 'center',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'white',
+  },
+  tooltipArrowUp: {
+    position: 'absolute',
+    top: -8,
+    alignSelf: 'center',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'white',
+  },
+  tooltipContent: {
+    alignItems: 'center',
+  },
+  tooltipTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  tooltipMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  tooltipButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  skipButton: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  skipButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  nextButton: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
+    marginLeft: 8,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
+  },
+  nextButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

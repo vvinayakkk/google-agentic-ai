@@ -13,7 +13,10 @@ import {
     LayoutAnimation, // Import LayoutAnimation
     Platform, // Import Platform for LayoutAnimation
     UIManager, // Import UIManager for LayoutAnimation
+    Dimensions,
+    Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -150,7 +153,275 @@ export default function CropDoctorScreen({ navigation }) {
     const [status, setStatus] = useState('upload');
     const [analysis, setAnalysis] = useState(null);
 
+    // Onboarding states
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
+
+    const screenDimensions = Dimensions.get('window');
+
+    // Onboarding steps configuration
+    const ONBOARDING_STEPS = [
+        {
+            id: 'back_button',
+            title: 'Navigation',
+            content: 'Tap here to go back to the previous screen anytime.',
+            targetElement: 'back-button',
+            position: { top: 60, left: 20 },
+            arrowPosition: 'top'
+        },
+        {
+            id: 'refresh_button',
+            title: 'Reset Analysis',
+            content: 'After analyzing, tap here to start over with a new image.',
+            targetElement: 'refresh-button',
+            position: { top: 60, right: 20 },
+            arrowPosition: 'top',
+            showOnlyInState: 'result'
+        },
+        {
+            id: 'upload_area',
+            title: 'Upload Your Crop Image',
+            content: 'This is where you start! Upload an image of your crop to get instant disease diagnosis.',
+            targetElement: 'upload-area',
+            position: { top: 200, alignSelf: 'center' },
+            arrowPosition: 'top'
+        },
+        {
+            id: 'take_photo',
+            title: 'Take Photo',
+            content: 'Use your camera to capture a photo of your crop directly.',
+            targetElement: 'take-photo-button',
+            position: { bottom: 180, alignSelf: 'center' },
+            arrowPosition: 'bottom'
+        },
+        {
+            id: 'gallery_photo',
+            title: 'Choose from Gallery',
+            content: 'Select an existing photo of your crop from your device gallery.',
+            targetElement: 'gallery-button',
+            position: { bottom: 120, alignSelf: 'center' },
+            arrowPosition: 'bottom'
+        },
+        {
+            id: 'result_image',
+            title: 'Analysis Results',
+            content: 'Your crop image with detected disease areas highlighted.',
+            targetElement: 'result-image',
+            position: { top: 400, alignSelf: 'center' },
+            arrowPosition: 'top',
+            showOnlyInState: 'result'
+        },
+        {
+            id: 'disease_info',
+            title: 'Disease Information',
+            content: 'Detailed information about the detected disease with confidence level.',
+            targetElement: 'disease-info',
+            position: { top: 500, left: 20 },
+            arrowPosition: 'top',
+            showOnlyInState: 'result'
+        },
+        {
+            id: 'accordions',
+            title: 'Detailed Analysis',
+            content: 'Expand these sections to see symptoms, solutions, and more details.',
+            targetElement: 'accordion-sections',
+            position: { top: 600, left: 20 },
+            arrowPosition: 'top',
+            showOnlyInState: 'result'
+        },
+        {
+            id: 'followup_chat',
+            title: 'Ask Follow-up Questions',
+            content: 'Tap here to ask additional questions about your crop diagnosis.',
+            targetElement: 'followup-button',
+            position: { bottom: 100, alignSelf: 'center' },
+            arrowPosition: 'bottom',
+            showOnlyInState: 'result'
+        }
+    ];
+
     useEffect(() => { return () => Speech.stop(); }, []);
+
+    // Onboarding functions
+    const checkOnboardingStatus = async () => {
+        try {
+            const completed = await AsyncStorage.getItem('cropDoctorOnboardingCompleted');
+            if (!completed) {
+                setTimeout(() => {
+                    setShowOnboarding(true);
+                    setCurrentOnboardingStep(0);
+                }, 1000);
+            }
+        } catch (error) {
+            console.log('Error checking onboarding status:', error);
+            // Show onboarding anyway if there's an error
+            setTimeout(() => {
+                setShowOnboarding(true);
+                setCurrentOnboardingStep(0);
+            }, 1000);
+        }
+    };
+
+    const nextOnboardingStep = () => {
+        const availableSteps = getAvailableSteps();
+        const currentIndex = availableSteps.findIndex(step => step.id === ONBOARDING_STEPS[currentOnboardingStep].id);
+        
+        if (currentIndex < availableSteps.length - 1) {
+            const nextStep = availableSteps[currentIndex + 1];
+            const nextStepIndex = ONBOARDING_STEPS.findIndex(step => step.id === nextStep.id);
+            setCurrentOnboardingStep(nextStepIndex);
+        } else {
+            completeOnboarding();
+        }
+    };
+
+    const completeOnboarding = async () => {
+        setShowOnboarding(false);
+        try {
+            await AsyncStorage.setItem('cropDoctorOnboardingCompleted', 'true');
+        } catch (error) {
+            console.log('Error saving onboarding completion:', error);
+        }
+    };
+
+    const startOnboardingTour = () => {
+        setCurrentOnboardingStep(0);
+        setShowOnboarding(true);
+    };
+
+    const resetOnboarding = async () => {
+        try {
+            await AsyncStorage.removeItem('cropDoctorOnboardingCompleted');
+            Alert.alert('Reset Complete', 'Onboarding has been reset. Restart the app to see the tour again.');
+        } catch (error) {
+            console.log('Error resetting onboarding:', error);
+        }
+    };
+
+    const getAvailableSteps = () => {
+        return ONBOARDING_STEPS.filter(step => {
+            if (!step.showOnlyInState) return true;
+            return step.showOnlyInState === status;
+        });
+    };
+
+    // Check onboarding status on mount
+    useEffect(() => {
+        checkOnboardingStatus();
+    }, []);
+
+    // Interactive Guide Tooltip Component
+    const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
+        const getTooltipStyle = () => {
+            const style = {
+                position: 'absolute',
+                backgroundColor: '#1E293B',
+                borderRadius: 12,
+                padding: 16,
+                maxWidth: 280,
+                zIndex: 1000,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+            };
+
+            if (step.position.top !== undefined) style.top = step.position.top;
+            if (step.position.bottom !== undefined) style.bottom = step.position.bottom;
+            if (step.position.left !== undefined) style.left = step.position.left;
+            if (step.position.right !== undefined) style.right = step.position.right;
+            if (step.position.alignSelf) style.alignSelf = step.position.alignSelf;
+
+            return style;
+        };
+
+        const getArrowStyle = () => {
+            const arrowStyle = {
+                position: 'absolute',
+                width: 0,
+                height: 0,
+                backgroundColor: 'transparent',
+                borderStyle: 'solid',
+            };
+
+            switch (step.arrowPosition) {
+                case 'top':
+                    arrowStyle.top = -8;
+                    arrowStyle.left = 20;
+                    arrowStyle.borderLeftWidth = 8;
+                    arrowStyle.borderRightWidth = 8;
+                    arrowStyle.borderBottomWidth = 8;
+                    arrowStyle.borderLeftColor = 'transparent';
+                    arrowStyle.borderRightColor = 'transparent';
+                    arrowStyle.borderBottomColor = '#1E293B';
+                    break;
+                case 'bottom':
+                    arrowStyle.bottom = -8;
+                    arrowStyle.left = 20;
+                    arrowStyle.borderLeftWidth = 8;
+                    arrowStyle.borderRightWidth = 8;
+                    arrowStyle.borderTopWidth = 8;
+                    arrowStyle.borderLeftColor = 'transparent';
+                    arrowStyle.borderRightColor = 'transparent';
+                    arrowStyle.borderTopColor = '#1E293B';
+                    break;
+                default:
+                    break;
+            }
+
+            return arrowStyle;
+        };
+
+        const availableSteps = getAvailableSteps();
+        const currentIndex = availableSteps.findIndex(s => s.id === step.id);
+
+        return (
+            <>
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    zIndex: 999,
+                }} />
+                <View style={getTooltipStyle()}>
+                    <View style={getArrowStyle()} />
+                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
+                        {step.title}
+                    </Text>
+                    <Text style={{ color: '#CBD5E1', fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
+                        {step.content}
+                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                            {currentIndex + 1} of {availableSteps.length}
+                        </Text>
+                        <View style={{ flexDirection: 'row' }}>
+                            <TouchableOpacity onPress={onClose} style={{ marginRight: 16 }}>
+                                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Skip</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={onNext}
+                                style={{
+                                    backgroundColor: '#34D399',
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 8,
+                                    borderRadius: 8,
+                                }}
+                            >
+                                <Text style={{ color: '#000000', fontSize: 14, fontWeight: '600' }}>
+                                    {currentIndex === availableSteps.length - 1 ? 'Finish' : 'Next'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </>
+        );
+    };
 
     const speakAnalysis = (analysisData) => {
         const summary = `Analysis complete. The detected disease is ${analysisData.diseaseName} with a confidence of ${analysisData.confidence}.`;
@@ -228,42 +499,57 @@ export default function CropDoctorScreen({ navigation }) {
                 return (
                     <View style={{ flex: 1 }}> {/* Changed to View to allow sticky footer */}
                         <ScrollView style={{ flex: 1 }}>
-                            <AnimatedView delay={0} style={styles.resultImageContainer}>
+                            <AnimatedView 
+                                delay={0} 
+                                ref={ref => ref && (ref._reactInternalInstance = 'result-image')}
+                                style={styles.resultImageContainer}
+                            >
                                 <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
                                     {Array.isArray(analysis.boundingBoxes) && analysis.boundingBoxes.map((box, idx) => (
                                         <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
                                     ))}
                                 </ImageBackground>
                             </AnimatedView>
-                            <View style={styles.analysisContainer}>
+                            <View 
+                                ref={ref => ref && (ref._reactInternalInstance = 'disease-info')}
+                                style={styles.analysisContainer}
+                            >
                                 <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
                                 <Text style={styles.confidenceText}>Confidence: {analysis.confidence}</Text>
 
-                                <Accordion title="Description" initialExpanded={true}>
-                                    <Text style={theme.typography.body}>{analysis.description}</Text>
-                                </Accordion>
+                                <View 
+                                    ref={ref => ref && (ref._reactInternalInstance = 'accordion-sections')}
+                                >
+                                    <Accordion title="Description" initialExpanded={true}>
+                                        <Text style={theme.typography.body}>{analysis.description}</Text>
+                                    </Accordion>
 
-                                <Accordion title="Symptoms">
-                                    {analysis.symptoms.map((symptom, index) => (
-                                        <View key={index} style={styles.listItem}>
-                                            <Text style={styles.bullet}>•</Text>
-                                            <Text style={styles.listItemText}>{symptom}</Text>
-                                        </View>
-                                    ))}
-                                </Accordion>
+                                    <Accordion title="Symptoms">
+                                        {analysis.symptoms.map((symptom, index) => (
+                                            <View key={index} style={styles.listItem}>
+                                                <Text style={styles.bullet}>•</Text>
+                                                <Text style={styles.listItemText}>{symptom}</Text>
+                                            </View>
+                                        ))}
+                                    </Accordion>
 
-                                <Accordion title="Solutions">
-                                    {analysis.solutions.map((solution, index) => (
-                                        <View key={index} style={styles.solutionCard}>
-                                            <Text style={styles.solutionTitle}>{solution.title}</Text>
-                                            <Text style={theme.typography.body}>{solution.details}</Text>
-                                        </View>
-                                    ))}
-                                </Accordion>
+                                    <Accordion title="Solutions">
+                                        {analysis.solutions.map((solution, index) => (
+                                            <View key={index} style={styles.solutionCard}>
+                                                <Text style={styles.solutionTitle}>{solution.title}</Text>
+                                                <Text style={theme.typography.body}>{solution.details}</Text>
+                                            </View>
+                                        ))}
+                                    </Accordion>
+                                </View>
                             </View>
                         </ScrollView>
                         <View style={styles.chatInputContainer}>
-                            <TouchableOpacity style={styles.chatButton} onPress={promptFollowUp}>
+                            <TouchableOpacity 
+                                ref={ref => ref && (ref._reactInternalInstance = 'followup-button')}
+                                style={styles.chatButton} 
+                                onPress={promptFollowUp}
+                            >
                                 <Feather name="mic" size={24} color={theme.colors.background} />
                                 <Text style={styles.chatButtonText}>Ask a follow-up question</Text>
                             </TouchableOpacity>
@@ -272,12 +558,29 @@ export default function CropDoctorScreen({ navigation }) {
                 );
             default:
                 return (
-                    <View style={styles.centered}>
+                    <View 
+                        ref={ref => ref && (ref._reactInternalInstance = 'upload-area')}
+                        style={styles.centered}
+                    >
                         <Feather name="upload-cloud" size={80} color={theme.colors.textSecondary} />
                         <Text style={styles.uploadTitle}>Upload a Crop Image</Text>
                         <Text style={styles.uploadSubtitle}>Get an instant diagnosis of any potential diseases.</Text>
-                        <TouchableOpacity style={styles.button} onPress={takePhoto}><Feather name="camera" size={20} color={theme.colors.background} /><Text style={styles.buttonText}>Take Photo</Text></TouchableOpacity>
-                        <TouchableOpacity style={styles.button} onPress={pickFromGallery}><Feather name="image" size={20} color={theme.colors.background} /><Text style={styles.buttonText}>Choose from Gallery</Text></TouchableOpacity>
+                        <TouchableOpacity 
+                            ref={ref => ref && (ref._reactInternalInstance = 'take-photo-button')}
+                            style={styles.button} 
+                            onPress={takePhoto}
+                        >
+                            <Feather name="camera" size={20} color={theme.colors.background} />
+                            <Text style={styles.buttonText}>Take Photo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            ref={ref => ref && (ref._reactInternalInstance = 'gallery-button')}
+                            style={styles.button} 
+                            onPress={pickFromGallery}
+                        >
+                            <Feather name="image" size={20} color={theme.colors.background} />
+                            <Text style={styles.buttonText}>Choose from Gallery</Text>
+                        </TouchableOpacity>
                     </View>
                 );
         }
@@ -287,7 +590,10 @@ export default function CropDoctorScreen({ navigation }) {
         <SafeAreaView style={styles.safeArea}>
             <View style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={{ width: 40, alignItems: 'flex-start' }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <TouchableOpacity 
+                        ref={ref => ref && (ref._reactInternalInstance = 'back-button')}
+                        onPress={() => navigation.goBack()}
+                    >
                         <Feather name="arrow-left" size={34} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
@@ -296,13 +602,59 @@ export default function CropDoctorScreen({ navigation }) {
                 </View>
                 <View style={{ width: 50, alignItems: 'flex-end' }}>
                     {status === 'result' && (
-                        <TouchableOpacity onPress={handleReset}>
+                        <TouchableOpacity 
+                            ref={ref => ref && (ref._reactInternalInstance = 'refresh-button')}
+                            onPress={handleReset}
+                        >
                             <Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} />
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
             {renderContent()}
+
+            {/* Onboarding Tooltip */}
+            {showOnboarding && (
+                <InteractiveGuideTooltip
+                    step={ONBOARDING_STEPS[currentOnboardingStep]}
+                    onNext={nextOnboardingStep}
+                    onClose={completeOnboarding}
+                />
+            )}
+
+            {/* Debug Buttons for Testing (remove in production) */}
+            {__DEV__ && (
+                <View style={{
+                    position: 'absolute',
+                    top: 100,
+                    left: 10,
+                    zIndex: 999,
+                    flexDirection: 'row'
+                }}>
+                    <TouchableOpacity
+                        onPress={startOnboardingTour}
+                        style={{
+                            backgroundColor: '#34D399',
+                            padding: 8,
+                            borderRadius: 4,
+                            marginRight: 8
+                        }}
+                    >
+                        <Text style={{ color: 'black', fontSize: 10 }}>Tour</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                        onPress={resetOnboarding}
+                        style={{
+                            backgroundColor: '#EF4444',
+                            padding: 8,
+                            borderRadius: 4
+                        }}
+                    >
+                        <Text style={{ color: 'white', fontSize: 10 }}>Reset</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </SafeAreaView>
     );
 }

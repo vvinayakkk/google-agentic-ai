@@ -50,6 +50,84 @@ const CropIntelligenceScreen = ({ navigation }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [cropCombos, setCropCombos] = useState([]);
 
+  // Edit combo states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCombo, setEditingCombo] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  // Onboarding states
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
+  const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
+
+  // Refs for onboarding
+  const backButtonRef = useRef(null);
+  const weatherSectionRef = useRef(null);
+  const tabsSectionRef = useRef(null);
+  const comboCardsRef = useRef(null);
+  const aiTabRef = useRef(null);
+
+  // Onboarding steps configuration
+  const ONBOARDING_STEPS = [
+    {
+      id: 'back_button',
+      title: 'Navigation',
+      content: 'Tap here to go back to the main screen anytime.',
+      targetElement: 'back-button',
+      position: { top: 100, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'weather_section',
+      title: 'Weather Dashboard',
+      content: 'Monitor real-time weather conditions, forecasts, and alerts for your farming area.',
+      targetElement: 'weather-section',
+      position: { top: 200, alignSelf: 'center' },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'tabs_section',
+      title: 'Intelligence Tabs',
+      content: 'Switch between Crop Combos and AI Recommendations to explore different farming insights.',
+      targetElement: 'tabs-section',
+      position: { top: 350, alignSelf: 'center' },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'combo_cards',
+      title: 'Crop Combo Cards',
+      content: 'Explore proven crop combinations with investment details, ROI, and success rates.',
+      targetElement: 'combo-cards',
+      position: { top: 450, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'combo_details',
+      title: 'Detailed Information',
+      content: 'Tap any combo card to view complete details, advantages, challenges, and edit options.',
+      targetElement: 'combo-card-item',
+      position: { top: 500, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'ai_tab',
+      title: 'AI Recommendations',
+      content: 'Get personalized farming recommendations powered by AI based on your location and conditions.',
+      targetElement: 'ai-tab',
+      position: { top: 400, right: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'generate_plan',
+      title: 'Master Plan Generation',
+      content: 'Generate comprehensive farming plans tailored to your specific needs and conditions.',
+      targetElement: 'generate-plan-button',
+      position: { bottom: 150, alignSelf: 'center' },
+      arrowPosition: 'bottom'
+    }
+  ];
+
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -58,6 +136,18 @@ const CropIntelligenceScreen = ({ navigation }) => {
     loadData();
     animateEntry();
     getCurrentLocation();
+    checkOnboardingStatus();
+  }, []);
+
+  useEffect(() => {
+    const getDimensions = () => {
+      const { width, height } = Dimensions.get('window');
+      setScreenDimensions({ width, height });
+    };
+
+    getDimensions();
+    const subscription = Dimensions.addEventListener('change', getDimensions);
+    return () => subscription?.remove();
   }, []);
 
   const animateEntry = () => {
@@ -398,6 +488,253 @@ const CropIntelligenceScreen = ({ navigation }) => {
     return '#f44336'; // Low ROI - Red
   };
 
+  // Edit combo functions
+  const openEditModal = (combo) => {
+    setEditingCombo(combo);
+    setEditForm({
+      name: combo.name || '',
+      description: combo.description || '',
+      season: combo.season || '',
+      difficulty: combo.difficulty || 'Beginner',
+      total_investment: combo.total_investment || '',
+      expected_returns: combo.expected_returns || '',
+      roi_percentage: combo.roi_percentage || '',
+      duration: combo.duration || '',
+      success_rate: combo.success_rate || '',
+      farmers_using: combo.farmers_using || '',
+      crops: combo.crops ? combo.crops.join(', ') : '',
+      advantages: combo.advantages ? combo.advantages.join('\n') : '',
+      challenges: combo.challenges ? combo.challenges.join('\n') : ''
+    });
+    setShowEditModal(true);
+  };
+
+  const updateFormField = (field, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const saveComboChanges = async () => {
+    if (!editingCombo || !editForm.name.trim()) {
+      Alert.alert('Error', 'Please fill in the combo name.');
+      return;
+    }
+
+    setSaveLoading(true);
+    try {
+      const updatedCombo = {
+        ...editingCombo,
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+        season: editForm.season.trim(),
+        difficulty: editForm.difficulty,
+        total_investment: editForm.total_investment.trim(),
+        expected_returns: editForm.expected_returns.trim(),
+        roi_percentage: editForm.roi_percentage.trim(),
+        duration: editForm.duration.trim(),
+        success_rate: editForm.success_rate.trim(),
+        farmers_using: editForm.farmers_using.trim(),
+        crops: editForm.crops.split(',').map(crop => crop.trim()).filter(crop => crop),
+        advantages: editForm.advantages.split('\n').map(adv => adv.trim()).filter(adv => adv),
+        challenges: editForm.challenges.split('\n').map(ch => ch.trim()).filter(ch => ch)
+      };
+
+      // Update local state
+      const updatedCombos = cropCombos.map(combo => 
+        combo.combo_id === editingCombo.combo_id || combo.name === editingCombo.name
+          ? updatedCombo
+          : combo
+      );
+      setCropCombos(updatedCombos);
+
+      // Save to cache
+      await AsyncStorage.setItem(CROP_COMBOS_CACHE_KEY, JSON.stringify(updatedCombos));
+
+      // TODO: Save to backend
+      // const response = await fetch(`${API_BASE}/farmer/${FARMER_ID}/crop-combos/${editingCombo.combo_id}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(updatedCombo)
+      // });
+
+      setShowEditModal(false);
+      setSelectedCombo(updatedCombo); // Update selected combo if it's being viewed
+      Alert.alert('Success', 'Crop combo updated successfully!');
+    } catch (error) {
+      console.error('Error saving combo:', error);
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const resetEditForm = () => {
+    setEditForm({});
+    setEditingCombo(null);
+  };
+
+  // Onboarding functions
+  const checkOnboardingStatus = async () => {
+    try {
+      const completed = await AsyncStorage.getItem('cropIntelligenceOnboardingCompleted');
+      if (!completed) {
+        setTimeout(() => {
+          setShowOnboarding(true);
+          setCurrentOnboardingStep(0);
+        }, 1000);
+      }
+    } catch (error) {
+      console.log('Error checking onboarding status:', error);
+      setTimeout(() => {
+        setShowOnboarding(true);
+        setCurrentOnboardingStep(0);
+      }, 1000);
+    }
+  };
+
+  const nextOnboardingStep = () => {
+    if (currentOnboardingStep < ONBOARDING_STEPS.length - 1) {
+      setCurrentOnboardingStep(currentOnboardingStep + 1);
+    } else {
+      completeOnboarding();
+    }
+  };
+
+  const completeOnboarding = async () => {
+    setShowOnboarding(false);
+    try {
+      await AsyncStorage.setItem('cropIntelligenceOnboardingCompleted', 'true');
+    } catch (error) {
+      console.log('Error saving onboarding completion:', error);
+    }
+  };
+
+  const startOnboardingTour = () => {
+    setCurrentOnboardingStep(0);
+    setShowOnboarding(true);
+  };
+
+  const resetOnboarding = async () => {
+    try {
+      await AsyncStorage.removeItem('cropIntelligenceOnboardingCompleted');
+      Alert.alert('Reset Complete', 'Onboarding has been reset. Restart the app to see the tour again.');
+    } catch (error) {
+      console.log('Error resetting onboarding:', error);
+    }
+  };
+
+  // Interactive Guide Tooltip Component
+  const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
+    const getTooltipStyle = () => {
+      const style = {
+        position: 'absolute',
+        backgroundColor: '#1E293B',
+        borderRadius: 12,
+        padding: 16,
+        maxWidth: 280,
+        zIndex: 1000,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+      };
+
+      if (step.position.top !== undefined) style.top = step.position.top;
+      if (step.position.bottom !== undefined) style.bottom = step.position.bottom;
+      if (step.position.left !== undefined) style.left = step.position.left;
+      if (step.position.right !== undefined) style.right = step.position.right;
+      if (step.position.alignSelf) style.alignSelf = step.position.alignSelf;
+
+      return style;
+    };
+
+    const getArrowStyle = () => {
+      const arrowStyle = {
+        position: 'absolute',
+        width: 0,
+        height: 0,
+        backgroundColor: 'transparent',
+        borderStyle: 'solid',
+      };
+
+      switch (step.arrowPosition) {
+        case 'top':
+          arrowStyle.top = -8;
+          arrowStyle.left = 20;
+          arrowStyle.borderLeftWidth = 8;
+          arrowStyle.borderRightWidth = 8;
+          arrowStyle.borderBottomWidth = 8;
+          arrowStyle.borderLeftColor = 'transparent';
+          arrowStyle.borderRightColor = 'transparent';
+          arrowStyle.borderBottomColor = '#1E293B';
+          break;
+        case 'bottom':
+          arrowStyle.bottom = -8;
+          arrowStyle.left = 20;
+          arrowStyle.borderLeftWidth = 8;
+          arrowStyle.borderRightWidth = 8;
+          arrowStyle.borderTopWidth = 8;
+          arrowStyle.borderLeftColor = 'transparent';
+          arrowStyle.borderRightColor = 'transparent';
+          arrowStyle.borderTopColor = '#1E293B';
+          break;
+        default:
+          break;
+      }
+
+      return arrowStyle;
+    };
+
+    return (
+      <>
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 999,
+        }} />
+        <View style={getTooltipStyle()}>
+          <View style={getArrowStyle()} />
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
+            {step.title}
+          </Text>
+          <Text style={{ color: '#CBD5E1', fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
+            {step.content}
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+              {currentOnboardingStep + 1} of {ONBOARDING_STEPS.length}
+            </Text>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity onPress={onClose} style={{ marginRight: 16 }}>
+                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onNext}
+                style={{
+                  backgroundColor: '#00C853',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  {currentOnboardingStep === ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </>
+    );
+  };
+
   const renderHeader = () => (
     <View style={styles.header}>
       <LinearGradient
@@ -409,6 +746,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
         <SafeAreaView>
           <View style={styles.headerContent}>
             <TouchableOpacity
+              ref={backButtonRef}
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
@@ -438,7 +776,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </View>
 
           {weatherData && (
-            <View style={styles.currentWeatherMainCard}>
+            <View ref={weatherSectionRef} style={styles.currentWeatherMainCard}>
               <View style={styles.currentWeatherMainInfo}>
                 <View style={styles.currentWeatherVisual}>
                   {weatherData.weather?.[0]?.icon && (
@@ -494,7 +832,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
   );
 
   const renderTabBar = () => (
-    <View style={styles.tabBarContainer}>
+    <View ref={tabsSectionRef} style={styles.tabBarContainer}>
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'combos' && styles.activeTab]}
@@ -514,6 +852,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity
+          ref={aiTabRef}
           style={[styles.tab, activeTab === 'ai' && styles.activeTab]}
           onPress={() => setActiveTab('ai')}
         >
@@ -810,7 +1149,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
           {renderTabBar()}
 
           {activeTab === 'combos' && (
-            <View style={styles.combosSection}>
+            <View ref={comboCardsRef} style={styles.combosSection}>
               <Text style={styles.sectionTitle}>Available Crop Combinations</Text>
               {cropCombos.length > 0 ? (
                 cropCombos.map((combo, index) => renderCropComboCard(combo))
@@ -851,9 +1190,22 @@ const CropIntelligenceScreen = ({ navigation }) => {
                     style={styles.modalCloseButton}
                     onPress={() => setShowComboModal(false)}
                   >
-                    <Ionicons name="close" size={26} color="white" />
+                    <Ionicons name="arrow-back" size={26} color="white" />
                   </TouchableOpacity>
-                  <Text style={styles.modalTitle}>{selectedCombo.name}</Text>
+                  
+                  <View style={styles.modalTitleContainer}>
+                    <Text style={styles.modalTitle}>{selectedCombo.name}</Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={styles.modalEditButton}
+                    onPress={() => {
+                      setShowComboModal(false);
+                      openEditModal(selectedCombo);
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={24} color="white" />
+                  </TouchableOpacity>
                 </View>
               </SafeAreaView>
             </LinearGradient>
@@ -920,6 +1272,305 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </View>
         )}
       </Modal>
+
+      {/* Edit Combo Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setShowEditModal(false);
+          resetEditForm();
+        }}
+      >
+        <View style={styles.modalContainer}>
+          <LinearGradient
+            colors={['#1B5E20', '#2E7D32']}
+            style={styles.modalHeaderGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <SafeAreaView style={{ flex: 1 }}>
+              <View style={styles.modalHeaderContent}>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => {
+                    setShowEditModal(false);
+                    resetEditForm();
+                  }}
+                >
+                  <Ionicons name="close" size={26} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Edit Crop Combo</Text>
+                <TouchableOpacity
+                  style={styles.modalSaveButton}
+                  onPress={saveComboChanges}
+                  disabled={saveLoading}
+                >
+                  {saveLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Ionicons name="checkmark" size={24} color="white" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </LinearGradient>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {/* Basic Information */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionTitle}>Basic Information</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Combo Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editForm.name}
+                  onChangeText={(value) => updateFormField('name', value)}
+                  placeholder="Enter combo name"
+                  placeholderTextColor="#666"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editForm.description}
+                  onChangeText={(value) => updateFormField('description', value)}
+                  placeholder="Enter combo description"
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Season</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.season}
+                    onChangeText={(value) => updateFormField('season', value)}
+                    placeholder="e.g., Kharif, Rabi"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+                
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Difficulty</Text>
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Select Difficulty',
+                        '',
+                        [
+                          { text: 'Beginner', onPress: () => updateFormField('difficulty', 'Beginner') },
+                          { text: 'Intermediate', onPress: () => updateFormField('difficulty', 'Intermediate') },
+                          { text: 'Advanced', onPress: () => updateFormField('difficulty', 'Advanced') },
+                          { text: 'Cancel', style: 'cancel' }
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={styles.pickerButtonText}>{editForm.difficulty || 'Select'}</Text>
+                    <Ionicons name="chevron-down" size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Financial Information */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionTitle}>Financial Details</Text>
+              
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Total Investment</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.total_investment}
+                    onChangeText={(value) => updateFormField('total_investment', value)}
+                    placeholder="e.g., ₹50,000"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+                
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Expected Returns</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.expected_returns}
+                    onChangeText={(value) => updateFormField('expected_returns', value)}
+                    placeholder="e.g., ₹80,000"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>ROI Percentage</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.roi_percentage}
+                    onChangeText={(value) => updateFormField('roi_percentage', value)}
+                    placeholder="e.g., 60-80%"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+                
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Duration</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.duration}
+                    onChangeText={(value) => updateFormField('duration', value)}
+                    placeholder="e.g., 4-6 months"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Performance Metrics */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionTitle}>Performance Metrics</Text>
+              
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Success Rate</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.success_rate}
+                    onChangeText={(value) => updateFormField('success_rate', value)}
+                    placeholder="e.g., 85%"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+                
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Farmers Using</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.farmers_using}
+                    onChangeText={(value) => updateFormField('farmers_using', value)}
+                    placeholder="e.g., 1,200+ farmers"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Crops Information */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionTitle}>Crops & Details</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Crops (comma-separated)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editForm.crops}
+                  onChangeText={(value) => updateFormField('crops', value)}
+                  placeholder="e.g., Rice, Wheat, Sugarcane"
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Advantages (one per line)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editForm.advantages}
+                  onChangeText={(value) => updateFormField('advantages', value)}
+                  placeholder={`High yield potential\nGood market demand\nLow maintenance cost`}
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Challenges (one per line)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editForm.challenges}
+                  onChangeText={(value) => updateFormField('challenges', value)}
+                  placeholder={`Water management required\nSeasonal dependency\nMarket price fluctuation`}
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+            </View>
+
+            {/* Save Button */}
+            <View style={styles.saveButtonContainer}>
+              <TouchableOpacity
+                style={[styles.saveButton, saveLoading && styles.saveButtonDisabled]}
+                onPress={saveComboChanges}
+                disabled={saveLoading}
+              >
+                {saveLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="save-outline" size={20} color="white" />
+                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: 50 }} />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && ONBOARDING_STEPS[currentOnboardingStep] && (
+        <InteractiveGuideTooltip
+          step={ONBOARDING_STEPS[currentOnboardingStep]}
+          onNext={nextOnboardingStep}
+          onClose={completeOnboarding}
+        />
+      )}
+
+      {/* Debug buttons for testing (remove in production) */}
+      {__DEV__ && (
+        <View style={{
+          position: 'absolute',
+          bottom: 20,
+          right: 20,
+          flexDirection: 'column',
+          gap: 10,
+        }}>
+          <TouchableOpacity
+            onPress={startOnboardingTour}
+            style={{
+              backgroundColor: 'rgba(0,200,83,0.8)',
+              padding: 10,
+              borderRadius: 5,
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 12 }}>Start Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={resetOnboarding}
+            style={{
+              backgroundColor: 'rgba(255,0,0,0.8)',
+              padding: 10,
+              borderRadius: 5,
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 12 }}>Reset Tour</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -1575,6 +2226,7 @@ const styles = StyleSheet.create({
   modalHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 10,
   },
@@ -1582,11 +2234,15 @@ const styles = StyleSheet.create({
     padding: 5,
     marginRight: 15,
   },
+  modalTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
-    flex: 1,
+    textAlign: 'center',
   },
   modalContent: {
     flex: 1,
@@ -1675,6 +2331,113 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#E0E0E0',
+  },
+
+  // Edit Modal Styles
+  modalEditButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSaveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editSection: {
+    marginBottom: 24,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+  },
+  editSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#00C853',
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E0E0E0',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#FFFFFF',
+    minHeight: 48,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+    paddingTop: 12,
+  },
+  pickerButton: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 48,
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  saveButtonContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  saveButton: {
+    backgroundColor: '#00C853',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#00C853',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#666',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginLeft: 8,
   },
 });
 

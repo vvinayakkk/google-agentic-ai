@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -11,6 +11,86 @@ import * as FileSystem from 'expo-file-system';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 
+const { width } = Dimensions.get('window');
+
+// Interactive Guide Tooltip Component for VoiceChatInputScreen
+function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+  const getTooltipPosition = () => {
+    switch (step.target) {
+      case 'profileIcon':
+        return {
+          top: 120, // Below the profile icon (top right)
+          right: 5,
+        };
+      case 'chatHistory':
+        return {
+          top: 120, // Below the chat history icon
+          left: 20,
+        };
+      case 'newChatButton':
+        return {
+          top: 180, // Below the new chat button
+          alignSelf: 'center',
+        };
+      case 'featuresArea':
+        return {
+          top: '40%', // Middle of features area
+          alignSelf: 'center',
+        };
+      case 'inputArea':
+        return {
+          bottom: 120, // Above the input container
+          alignSelf: 'center',
+        };
+      case 'attachButtons':
+        return {
+          bottom: 120, // Above the attachment buttons
+          left: 20,
+        };
+      case 'voiceButton':
+        return {
+          bottom: 120, // Above the voice/send button
+          right: 80,
+        };
+      case 'homeButton':
+        return {
+          bottom: 80, // Above the home button
+          right: 20,
+        };
+      case 'screen':
+      default:
+        return {
+          top: '35%', // Center of screen for welcome message
+          alignSelf: 'center',
+        };
+    }
+  };
+
+  return (
+    <View style={[styles.tooltip, getTooltipPosition()]}>
+      {/* Pointer Arrow */}
+      {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
+      {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
+      {/* No arrow for center position */}
+      
+      <View style={styles.tooltipContent}>
+        <Text style={styles.tooltipTitle}>{step.title}</Text>
+        <Text style={styles.tooltipMessage}>{step.message}</Text>
+        
+        <View style={styles.tooltipButtons}>
+          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+            <Text style={styles.skipButtonText}>Skip Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.nextButton} onPress={onNext}>
+            <Text style={styles.nextButtonText}>
+              {step.id === 'home_navigation' ? 'Got it!' : 'Next'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 // --- Simulated API Configuration ---
 const getKissanAIResponse = async (message, context) => {
@@ -255,6 +335,151 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     const flatListRef = useRef();
     const [allContext, setAllContext] = useState({ weather: '', soil: '', market: '' });
     const [attachedImage, setAttachedImage] = useState(null); // NEW: for image preview
+    
+    // Onboarding states
+    const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
+    const [onboardingStep, setOnboardingStep] = useState(0);
+    const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+    // Interactive onboarding steps for VoiceChatInputScreen
+    const ONBOARDING_STEPS = [
+        {
+            id: 'welcome',
+            title: 'Welcome to Chat Mode! 💬',
+            message: 'This is where you can have detailed conversations with your AI farming assistant.',
+            target: 'screen',
+            position: 'center'
+        },
+        {
+            id: 'profile_access',
+            title: 'Your Profile 👤',
+            message: 'Access your farmer profile and settings from here.',
+            target: 'profileIcon',
+            position: 'bottom'
+        },
+        {
+            id: 'chat_history',
+            title: 'Chat History 📝',
+            message: 'View all your previous conversations and continue where you left off.',
+            target: 'chatHistory',
+            position: 'bottom'
+        },
+        {
+            id: 'new_chat',
+            title: 'Start New Chat ➕',
+            message: 'Click here to start a fresh conversation anytime.',
+            target: 'newChatButton',
+            position: 'bottom'
+        },
+        {
+            id: 'features_overview',
+            title: 'Quick Features 🚀',
+            message: 'Access farming tools like weather, marketplace, cattle management, and more directly from here.',
+            target: 'featuresArea',
+            position: 'top'
+        },
+        {
+            id: 'text_input',
+            title: 'Type Your Questions ⌨️',
+            message: 'Type your farming questions here. You can ask about crops, weather, diseases, or anything farm-related.',
+            target: 'inputArea',
+            position: 'bottom'
+        },
+        {
+            id: 'attachments',
+            title: 'Add Files & Images 📎',
+            message: 'Attach documents or images to get help with crop diseases, documents, or visual analysis.',
+            target: 'attachButtons',
+            position: 'bottom'
+        },
+        {
+            id: 'voice_mode',
+            title: 'Switch to Voice 🎤',
+            message: 'When input is empty, tap this button to switch to voice mode for hands-free interaction.',
+            target: 'voiceButton',
+            position: 'bottom'
+        },
+        {
+            id: 'home_navigation',
+            title: 'Return Home 🏠',
+            message: 'Use this button to go back to the main screen and choose between voice or chat modes.',
+            target: 'homeButton',
+            position: 'bottom'
+        }
+    ];
+
+    // Check if user has seen onboarding before
+    useEffect(() => {
+        checkOnboardingStatus();
+    }, []);
+
+    const checkOnboardingStatus = async () => {
+        try {
+            const hasSeenGuide = await AsyncStorage.getItem('voiceChatInputScreenOnboardingCompleted');
+            console.log('VoiceChatInputScreen onboarding status:', hasSeenGuide);
+            
+            if (!hasSeenGuide) {
+                console.log('First-time user detected, starting onboarding...');
+                // Start onboarding after a short delay
+                setTimeout(() => {
+                    setShowInteractiveGuide(true);
+                    setOnboardingStep(0);
+                }, 2000); // Longer delay for this screen due to more complexity
+            } else {
+                console.log('Returning user, onboarding already completed');
+            }
+            setHasSeenOnboarding(!!hasSeenGuide);
+        } catch (error) {
+            console.error('Error checking onboarding status:', error);
+            // If there's an error, show onboarding anyway for first-time experience
+            setTimeout(() => {
+                setShowInteractiveGuide(true);
+                setOnboardingStep(0);
+            }, 2000);
+        }
+    };
+
+    const startInteractiveGuide = () => {
+        console.log('Starting VoiceChatInputScreen interactive guide manually...');
+        setShowInteractiveGuide(true);
+        setOnboardingStep(0);
+    };
+
+    const nextOnboardingStep = () => {
+        if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+            setOnboardingStep(onboardingStep + 1);
+        } else {
+            completeOnboarding();
+        }
+    };
+
+    const skipOnboarding = async () => {
+        completeOnboarding();
+    };
+
+    const completeOnboarding = async () => {
+        setShowInteractiveGuide(false);
+        setOnboardingStep(0);
+        setHasSeenOnboarding(true);
+        
+        try {
+            await AsyncStorage.setItem('voiceChatInputScreenOnboardingCompleted', 'true');
+        } catch (error) {
+            console.error('Error saving onboarding completion:', error);
+        }
+    };
+
+    // Debug function to reset onboarding (for testing)
+    const resetOnboarding = async () => {
+        try {
+            await AsyncStorage.removeItem('voiceChatInputScreenOnboardingCompleted');
+            setHasSeenOnboarding(false);
+            console.log('VoiceChatInputScreen onboarding reset - will show on next app start');
+            Alert.alert('Debug', 'Onboarding reset! Restart the app to see it again.');
+        } catch (error) {
+            console.error('Error resetting onboarding:', error);
+        }
+    };
 
     useEffect(() => {
         const context = route.params?.context;
@@ -477,7 +702,43 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 >
                     <Ionicons name="home-outline" size={38} color="#10B981" />
                 </TouchableOpacity>
+
+                {/* Onboarding debug buttons for testing */}
+                {hasSeenOnboarding && (
+                    <View style={styles.tourButtonsContainer}>
+                        <TouchableOpacity 
+                            style={styles.restartTourButton} 
+                            onPress={startInteractiveGuide}
+                        >
+                            <MaterialCommunityIcons name="replay" size={16} color="#10B981" />
+                            <Text style={styles.restartTourText}>Tour</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.resetTourButton} 
+                            onPress={resetOnboarding}
+                        >
+                            <MaterialCommunityIcons name="refresh" size={14} color="#FF5722" />
+                            <Text style={styles.resetTourText}>Reset</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </KeyboardAvoidingView>
+
+            {/* Interactive Guide Overlay */}
+            {showInteractiveGuide && (
+                <View style={styles.guideOverlay}>
+                    <TouchableOpacity 
+                        style={styles.guideOverlayBackground}
+                        onPress={nextOnboardingStep}
+                        activeOpacity={1}
+                    />
+                    <InteractiveGuideTooltip 
+                        step={ONBOARDING_STEPS[onboardingStep]}
+                        onNext={nextOnboardingStep}
+                        onSkip={skipOnboarding}
+                    />
+                </View>
+            )}
         </SafeAreaView>
     );
 };
@@ -590,4 +851,147 @@ const styles = StyleSheet.create({
     pillLabel: { fontSize: 15, fontWeight: '500', marginLeft: 6, color: '#bbb' },
     centeredNewChatRow: { alignItems: 'center', marginTop: -20, marginBottom: 10 },
     centeredNewChatButton: { backgroundColor: 'transparent', borderRadius: 24, padding: 2 },
+
+    // Onboarding Tour Buttons (smaller for this screen)
+    tourButtonsContainer: {
+        position: 'absolute',
+        bottom: 15,
+        left: 15,
+        flexDirection: 'row',
+        gap: 6,
+        zIndex: 15,
+    },
+    restartTourButton: {
+        backgroundColor: '#18181b',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#10B981',
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    restartTourText: {
+        color: '#10B981',
+        fontSize: 10,
+        fontWeight: '600',
+        marginLeft: 3,
+    },
+    resetTourButton: {
+        backgroundColor: '#18181b',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FF5722',
+        paddingHorizontal: 6,
+        paddingVertical: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    resetTourText: {
+        color: '#FF5722',
+        fontSize: 9,
+        fontWeight: '600',
+        marginLeft: 2,
+    },
+
+    // Interactive Guide Styles (adapted for smaller screen space)
+    guideOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 2000,
+    },
+    guideOverlayBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    tooltip: {
+        position: 'absolute',
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 14,
+        marginHorizontal: 15,
+        maxWidth: width - 30,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    tooltipArrowDown: {
+        position: 'absolute',
+        bottom: -7,
+        alignSelf: 'center',
+        width: 0,
+        height: 0,
+        borderLeftWidth: 7,
+        borderRightWidth: 7,
+        borderTopWidth: 7,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: 'white',
+    },
+    tooltipArrowUp: {
+        position: 'absolute',
+        top: -7,
+        alignSelf: 'center',
+        width: 0,
+        height: 0,
+        borderLeftWidth: 7,
+        borderRightWidth: 7,
+        borderBottomWidth: 7,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderBottomColor: 'white',
+    },
+    tooltipContent: {
+        alignItems: 'center',
+    },
+    tooltipTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 6,
+        textAlign: 'center',
+    },
+    tooltipMessage: {
+        fontSize: 13,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 18,
+        marginBottom: 14,
+    },
+    tooltipButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    skipButton: {
+        flex: 1,
+        padding: 10,
+        alignItems: 'center',
+        marginRight: 6,
+        borderRadius: 6,
+        backgroundColor: '#f5f5f5',
+    },
+    skipButtonText: {
+        color: '#666',
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    nextButton: {
+        flex: 1,
+        padding: 10,
+        alignItems: 'center',
+        marginLeft: 6,
+        borderRadius: 6,
+        backgroundColor: '#10B981',
+    },
+    nextButtonText: {
+        color: 'white',
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
 });

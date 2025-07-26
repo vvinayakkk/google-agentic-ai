@@ -13,10 +13,12 @@ import {
   Easing,
   ActivityIndicator, // Added for loading indicator
   Image, // Added for displaying images
+  Dimensions,
 } from 'react-native';
 import { ChevronLeft, ChevronDown, Calendar, MapPin, Droplets, Egg } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
@@ -56,6 +58,12 @@ const CattleScreen = ({ navigation }) => {
   const animalMicAnim = useRef(new Animated.Value(1)).current;
 
   const [imageModalVisible, setImageModalVisible] = useState(false);
+
+  // Onboarding states
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
+
+  const screenDimensions = Dimensions.get('window');
   const [imageLoading, setImageLoading] = useState(false);
   const [lastSpaceImage, setLastSpaceImage] = useState(null);
   const [spaceSuggestions, setSpaceSuggestions] = useState([]);
@@ -68,6 +76,229 @@ const CattleScreen = ({ navigation }) => {
   ];
 
   const { t } = useTranslation();
+
+  // Onboarding steps configuration
+  const ONBOARDING_STEPS = [
+    {
+      id: 'back_button',
+      title: 'Navigation',
+      content: 'Tap here to go back to the main screen anytime.',
+      targetElement: 'back-button',
+      position: { top: 70, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'live_indicator',
+      title: 'Live Status',
+      content: 'This shows your farm data is updated in real-time.',
+      targetElement: 'live-indicator',
+      position: { top: 70, right: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'cattle_list',
+      title: 'Your Livestock',
+      content: 'View all your animals here. Tap any card to see more details.',
+      targetElement: 'cattle-section',
+      position: { top: 160, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'animal_card',
+      title: 'Animal Cards',
+      content: 'Each card shows animal info. Tap to expand, use edit/delete buttons.',
+      targetElement: 'animal-card',
+      position: { top: 200, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'calendar_section',
+      title: 'Livestock Schedule',
+      content: 'View upcoming tasks and care reminders for your animals.',
+      targetElement: 'calendar-section',
+      position: { top: 400, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'space_suggestions',
+      title: 'AI Space Suggestions',
+      content: 'Get intelligent recommendations for optimizing your livestock space.',
+      targetElement: 'suggestions-section',
+      position: { top: 500, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'image_upload',
+      title: 'Upload Field Photos',
+      content: 'Take or upload photos of your farm space for AI analysis.',
+      targetElement: 'image-upload-button',
+      position: { top: 600, left: 20 },
+      arrowPosition: 'top'
+    },
+    {
+      id: 'add_animal',
+      title: 'Add New Animals',
+      content: 'Tap the + button to add new animals to your livestock.',
+      targetElement: 'add-animal-fab',
+      position: { bottom: 120, right: 40 },
+      arrowPosition: 'bottom'
+    }
+  ];
+
+  // Onboarding functions
+  const checkOnboardingStatus = async () => {
+    try {
+      const completed = await AsyncStorage.getItem('cattleScreenOnboardingCompleted');
+      if (!completed) {
+        setTimeout(() => {
+          setShowOnboarding(true);
+          setCurrentOnboardingStep(0);
+        }, 1000);
+      }
+    } catch (error) {
+      console.log('Error checking onboarding status:', error);
+    }
+  };
+
+  const nextOnboardingStep = () => {
+    if (currentOnboardingStep < ONBOARDING_STEPS.length - 1) {
+      setCurrentOnboardingStep(currentOnboardingStep + 1);
+    } else {
+      completeOnboarding();
+    }
+  };
+
+  const completeOnboarding = async () => {
+    setShowOnboarding(false);
+    try {
+      await AsyncStorage.setItem('cattleScreenOnboardingCompleted', 'true');
+    } catch (error) {
+      console.log('Error saving onboarding completion:', error);
+    }
+  };
+
+  const startOnboardingTour = () => {
+    setCurrentOnboardingStep(0);
+    setShowOnboarding(true);
+  };
+
+  const resetOnboarding = async () => {
+    try {
+      await AsyncStorage.removeItem('cattleScreenOnboardingCompleted');
+      Alert.alert('Reset Complete', 'Onboarding has been reset. Restart the app to see the tour again.');
+    } catch (error) {
+      console.log('Error resetting onboarding:', error);
+    }
+  };
+
+  // Interactive Guide Tooltip Component
+  const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
+    const getTooltipStyle = () => {
+      const style = {
+        position: 'absolute',
+        backgroundColor: '#1E293B',
+        borderRadius: 12,
+        padding: 16,
+        maxWidth: 280,
+        zIndex: 1000,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+      };
+
+      if (step.position.top !== undefined) style.top = step.position.top;
+      if (step.position.bottom !== undefined) style.bottom = step.position.bottom;
+      if (step.position.left !== undefined) style.left = step.position.left;
+      if (step.position.right !== undefined) style.right = step.position.right;
+
+      return style;
+    };
+
+    const getArrowStyle = () => {
+      const arrowStyle = {
+        position: 'absolute',
+        width: 0,
+        height: 0,
+        backgroundColor: 'transparent',
+        borderStyle: 'solid',
+      };
+
+      switch (step.arrowPosition) {
+        case 'top':
+          arrowStyle.top = -8;
+          arrowStyle.left = 20;
+          arrowStyle.borderLeftWidth = 8;
+          arrowStyle.borderRightWidth = 8;
+          arrowStyle.borderBottomWidth = 8;
+          arrowStyle.borderLeftColor = 'transparent';
+          arrowStyle.borderRightColor = 'transparent';
+          arrowStyle.borderBottomColor = '#1E293B';
+          break;
+        case 'bottom':
+          arrowStyle.bottom = -8;
+          arrowStyle.right = 20;
+          arrowStyle.borderLeftWidth = 8;
+          arrowStyle.borderRightWidth = 8;
+          arrowStyle.borderTopWidth = 8;
+          arrowStyle.borderLeftColor = 'transparent';
+          arrowStyle.borderRightColor = 'transparent';
+          arrowStyle.borderTopColor = '#1E293B';
+          break;
+        default:
+          break;
+      }
+
+      return arrowStyle;
+    };
+
+    return (
+      <>
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 999,
+        }} />
+        <View style={getTooltipStyle()}>
+          <View style={getArrowStyle()} />
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
+            {step.title}
+          </Text>
+          <Text style={{ color: '#CBD5E1', fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
+            {step.content}
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+              {currentOnboardingStep + 1} of {ONBOARDING_STEPS.length}
+            </Text>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity onPress={onClose} style={{ marginRight: 16 }}>
+                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onNext}
+                style={{
+                  backgroundColor: '#10B981',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  {currentOnboardingStep === ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Next'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </>
+    );
+  };
 
   // Function to fetch and cache data
   const fetchCattleData = async () => {
@@ -178,6 +409,7 @@ const CattleScreen = ({ navigation }) => {
     fetchCattleData();
     fetchLastSpaceImage();
     fetchSpaceSuggestions(); // Update in background
+    checkOnboardingStatus(); // Check if onboarding should be shown
   }, []);
 
   // Mic animation effect
@@ -357,12 +589,13 @@ const CattleScreen = ({ navigation }) => {
     setExpandedCard(expandedCard === id ? null : id);
   };
 
-  const renderAnimalCard = (animal) => {
+  const renderAnimalCard = (animal, index) => {
     const isExpanded = expandedCard === animal.id;
 
     return (
       <TouchableOpacity
         key={animal.id}
+        ref={index === 0 ? (ref => ref && (ref._reactInternalInstance = 'animal-card')) : null}
         style={[styles.animalCard, { borderLeftColor: animal.color }]}
         onPress={() => toggleCard(animal.id)}
         activeOpacity={0.7}
@@ -503,14 +736,21 @@ const CattleScreen = ({ navigation }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity 
+          ref={ref => ref && (ref._reactInternalInstance = 'back-button')}
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
           <ChevronLeft color="#FFFFFF" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>{t('cattle.title')}</Text>
           <Text style={styles.headerSubtitle}>{t('cattle.suggestions')}</Text>
         </View>
-        <View style={styles.liveIndicator}>
+        <View 
+          ref={ref => ref && (ref._reactInternalInstance = 'live-indicator')}
+          style={styles.liveIndicator}
+        >
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>LIVE</Text>
         </View>
@@ -531,9 +771,12 @@ const CattleScreen = ({ navigation }) => {
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Animals Section */}
-          <View style={styles.section}>
+          <View 
+            ref={ref => ref && (ref._reactInternalInstance = 'cattle-section')}
+            style={styles.section}
+          >
             <Text style={styles.sectionTitle}>{t('cattle.title')} ({cattleData.length})</Text>
-            {cattleData.map(renderAnimalCard)}
+            {cattleData.map((animal, index) => renderAnimalCard(animal, index))}
             {cattleData.length === 0 && !loading && ( // Message if no animals and not loading
                 <Text style={styles.noDataText}>{t('cattle.no_animals')}</Text>
             )}
@@ -541,7 +784,10 @@ const CattleScreen = ({ navigation }) => {
 
           {/* Calendar Updates */}
           <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('CalenderScreen')}>
-            <View style={styles.section}>
+            <View 
+              ref={ref => ref && (ref._reactInternalInstance = 'calendar-section')}
+              style={styles.section}
+            >
               <View style={styles.sectionHeader}>
                 <Calendar color="#10B981" size={20} />
                 <Text style={styles.sectionTitle}>{t('calendar.title')}</Text>
@@ -565,7 +811,10 @@ const CattleScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {/* Suggestions */}
-          <View style={styles.section}>
+          <View 
+            ref={ref => ref && (ref._reactInternalInstance = 'suggestions-section')}
+            style={styles.section}
+          >
             <View style={styles.sectionHeader}>
               <MapPin color="#8B5CF6" size={20} />
               <Text style={styles.sectionTitle}>{t('cattle.space_suggestion')}</Text>
@@ -573,7 +822,12 @@ const CattleScreen = ({ navigation }) => {
             <View style={{ marginBottom: 10, marginLeft: 2 }}>
               <Text style={styles.helperText}>{t('cattle.suggestions')}</Text>
             </View>
-            <TouchableOpacity onPress={handleAddImagePress} style={styles.addFieldPhotoButton} activeOpacity={0.85}>
+            <TouchableOpacity 
+              ref={ref => ref && (ref._reactInternalInstance = 'image-upload-button')}
+              onPress={handleAddImagePress} 
+              style={styles.addFieldPhotoButton} 
+              activeOpacity={0.85}
+            >
               <Ionicons name="camera" size={24} color="#fff" style={{ marginRight: 10 }} />
               <Text style={styles.addFieldPhotoButtonText}>{t('cattle.add_image')}</Text>
             </TouchableOpacity>
@@ -608,7 +862,11 @@ const CattleScreen = ({ navigation }) => {
 
       {/* Floating + Add Animal Button */}
       <View style={{ position: 'absolute', bottom: 32, right: 32, zIndex: 100 }}>
-        <TouchableOpacity onPress={openAddAnimalModal} style={styles.fabButton}>
+        <TouchableOpacity 
+          ref={ref => ref && (ref._reactInternalInstance = 'add-animal-fab')}
+          onPress={openAddAnimalModal} 
+          style={styles.fabButton}
+        >
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -707,6 +965,49 @@ const CattleScreen = ({ navigation }) => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10B981" />
           <Text style={styles.loadingText}>Analyzing image and updating suggestions...</Text>
+        </View>
+      )}
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && (
+        <InteractiveGuideTooltip
+          step={ONBOARDING_STEPS[currentOnboardingStep]}
+          onNext={nextOnboardingStep}
+          onClose={completeOnboarding}
+        />
+      )}
+
+      {/* Debug Buttons for Testing (remove in production) */}
+      {__DEV__ && (
+        <View style={{
+          position: 'absolute',
+          top: 100,
+          left: 10,
+          zIndex: 999,
+          flexDirection: 'row'
+        }}>
+          <TouchableOpacity
+            onPress={startOnboardingTour}
+            style={{
+              backgroundColor: '#10B981',
+              padding: 8,
+              borderRadius: 4,
+              marginRight: 8
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 10 }}>Tour</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={resetOnboarding}
+            style={{
+              backgroundColor: '#EF4444',
+              padding: 8,
+              borderRadius: 4
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 10 }}>Reset</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -21,27 +21,29 @@ const API_BASE = NetworkConfig.API_BASE;
 
 export default function DocumentAgentScreen({ navigation }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState('ai-chat'); // 'ai-chat' or 'direct'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // AI Chat mode states
+  // AI Chat states
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
     { 
       role: 'assistant', 
-      message: '🤖 Hello! I\'m your AI farming assistant. I can help you with:\n\n✅ Government schemes information\n✅ Document generation\n✅ Farming advice\n✅ Application assistance\n\nJust ask me anything!'
+      message: '🤖 Hello! I\'m your smart document assistant. I can help you:\n\n✅ Find the right government scheme for your needs\n✅ Generate applications automatically\n✅ Answer questions about eligibility and benefits\n✅ Guide you through the application process\n\nTell me what kind of help you need or which scheme interests you!'
     }
   ]);
   const [sessionId, setSessionId] = useState(null);
   const [selectedSchemeContext, setSelectedSchemeContext] = useState(null);
+  const [documentInProgress, setDocumentInProgress] = useState(null);
+  const [collectedFields, setCollectedFields] = useState({});
+  const [waitingForUserInput, setWaitingForUserInput] = useState(false);
   
   // Government schemes data
   const [schemes, setSchemes] = useState([]);
-  const [allSchemes, setAllSchemes] = useState([]); // Store original unfiltered schemes
+  const [allSchemes, setAllSchemes] = useState([]);
   const [selectedScheme, setSelectedScheme] = useState(null);
   const [showSchemeModal, setShowSchemeModal] = useState(false);
-  const [schemeLoading, setSchemeLoading] = useState(false); // Loading state for schemes
+  const [schemeLoading, setSchemeLoading] = useState(false);
   
   // Filter and sorting states
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -66,203 +68,10 @@ export default function DocumentAgentScreen({ navigation }) {
     { value: 'benefit', label: '💰 Benefit', icon: '💰' }
   ];
   
-  // Form states for document generation
-  const [farmerData, setFarmerData] = useState({
-    farmer_name: '',
-    aadhaar_number: '',
-    contact_number: '',
-    address: '',
-    document_type: 'loan_application'
-  });
-  
-  // Generated document states
+  // Document generation states
   const [generatedDoc, setGeneratedDoc] = useState(null);
-  const [showDocumentTypes, setShowDocumentTypes] = useState(false);
+
   
-  const documentTypes = [
-    { value: 'loan_application', label: '🏦 Loan Application', desc: 'Agricultural loan application' },
-    { value: 'subsidy_application', label: '💰 Subsidy Application', desc: 'Equipment subsidy application' },
-    { value: 'crop_insurance', label: '🌾 Crop Insurance', desc: 'PMFBY crop insurance application' },
-    { value: 'kisan_credit_card', label: '💳 Kisan Credit Card', desc: 'KCC card application' },
-    { value: 'general_application', label: '📄 General Application', desc: 'Other government schemes' }
-  ];
-
-  // Comprehensive scheme-specific document requirements
-  const schemeDocumentRequirements = {
-    'PM-KISAN': {
-      documents: [
-        {
-          type: 'pm_kisan_application',
-          label: '📄 PM-KISAN Registration',
-          desc: 'Direct income support application',
-          fields: [
-            { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true, pattern: /^\d{12}$/ },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'bank_account', label: 'Bank Account Number', type: 'text', required: true },
-            { name: 'ifsc_code', label: 'IFSC Code', type: 'text', required: true },
-            { name: 'land_survey_number', label: 'Survey/Khata Number', type: 'text', required: true },
-            { name: 'land_area', label: 'Land Area (in hectares)', type: 'number', required: true },
-            { name: 'state', label: 'State', type: 'text', required: true },
-            { name: 'district', label: 'District', type: 'text', required: true },
-            { name: 'village', label: 'Village', type: 'text', required: true }
-          ]
-        }
-      ]
-    },
-    'PMFBY': {
-      documents: [
-        {
-          type: 'pmfby_application',
-          label: '🌾 PMFBY Crop Insurance',
-          desc: 'Crop insurance under PMFBY scheme',
-          fields: [
-            { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'bank_account', label: 'Bank Account Number', type: 'text', required: true },
-            { name: 'crop_name', label: 'Crop Name', type: 'text', required: true },
-            { name: 'crop_area', label: 'Crop Area (hectares)', type: 'number', required: true },
-            { name: 'sowing_date', label: 'Sowing Date', type: 'date', required: true },
-            { name: 'season', label: 'Season (Kharif/Rabi)', type: 'select', options: ['Kharif', 'Rabi'], required: true },
-            { name: 'loan_account', label: 'Loan Account Number (if any)', type: 'text', required: false },
-            { name: 'village', label: 'Village', type: 'text', required: true },
-            { name: 'tehsil', label: 'Tehsil', type: 'text', required: true }
-          ]
-        }
-      ]
-    },
-    'Kisan Credit Card': {
-      documents: [
-        {
-          type: 'kcc_application',
-          label: '💳 Kisan Credit Card Application',
-          desc: 'KCC application for credit facility',
-          fields: [
-            { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'father_name', label: "Father's Name", type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'pan_number', label: 'PAN Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'bank_name', label: 'Preferred Bank', type: 'text', required: true },
-            { name: 'bank_branch', label: 'Branch Name', type: 'text', required: true },
-            { name: 'total_land_area', label: 'Total Land Area (hectares)', type: 'number', required: true },
-            { name: 'annual_income', label: 'Annual Income', type: 'number', required: true },
-            { name: 'credit_limit_required', label: 'Credit Limit Required', type: 'number', required: true },
-            { name: 'purpose', label: 'Purpose of Credit', type: 'textarea', required: true }
-          ]
-        }
-      ]
-    },
-    'MIDH': {
-      documents: [
-        {
-          type: 'midh_horticulture_subsidy',
-          label: '🌱 Horticulture Development Subsidy',
-          desc: 'Subsidy for horticultural development',
-          fields: [
-            { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'crop_type', label: 'Horticultural Crop', type: 'text', required: true },
-            { name: 'land_area', label: 'Area for Development (hectares)', type: 'number', required: true },
-            { name: 'irrigation_source', label: 'Irrigation Source', type: 'text', required: true },
-            { name: 'estimated_cost', label: 'Estimated Project Cost', type: 'number', required: true },
-            { name: 'subsidy_component', label: 'Subsidy Component', type: 'select', 
-              options: ['Area Expansion', 'Protected Cultivation', 'Post Harvest Management', 'Technology'], required: true }
-          ]
-        }
-      ]
-    },
-    'PKVY': {
-      documents: [
-        {
-          type: 'pkvy_organic_farming',
-          label: '🌿 Organic Farming Certification',
-          desc: 'Organic farming support under PKVY',
-          fields: [
-            { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'land_area', label: 'Land Area for Organic Farming (hectares)', type: 'number', required: true },
-            { name: 'current_farming_type', label: 'Current Farming Type', type: 'select', 
-              options: ['Conventional', 'Transitional', 'Organic'], required: true },
-            { name: 'crops_planned', label: 'Crops Planned for Organic Cultivation', type: 'textarea', required: true },
-            { name: 'water_source', label: 'Water Source', type: 'text', required: true },
-            { name: 'group_registration', label: 'Group/Cluster Registration', type: 'text', required: false }
-          ]
-        }
-      ]
-    },
-    'PMAY': {
-      documents: [
-        {
-          type: 'pmay_housing_application',
-          label: '🏠 PMAY Housing Application',
-          desc: 'Affordable housing under PMAY',
-          fields: [
-            { name: 'applicant_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'annual_income', label: 'Annual Household Income', type: 'number', required: true },
-            { name: 'category', label: 'Category', type: 'select', 
-              options: ['EWS', 'LIG', 'MIG-I', 'MIG-II'], required: true },
-            { name: 'house_type', label: 'House Type Required', type: 'select', 
-              options: ['New Construction', 'Enhancement', 'Completion'], required: true },
-            { name: 'plot_area', label: 'Plot Area (sq. ft.)', type: 'number', required: true },
-            { name: 'family_size', label: 'Family Size', type: 'number', required: true }
-          ]
-        }
-      ]
-    },
-    'Ayushman Bharat': {
-      documents: [
-        {
-          type: 'ayushman_bharat_application',
-          label: '🏥 Ayushman Bharat Health Card',
-          desc: 'Health insurance under Ayushman Bharat',
-          fields: [
-            { name: 'family_head_name', label: 'Family Head Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'ration_card_number', label: 'Ration Card Number', type: 'text', required: true },
-            { name: 'family_members', label: 'Number of Family Members', type: 'number', required: true },
-            { name: 'annual_income', label: 'Annual Family Income', type: 'number', required: true },
-            { name: 'bpl_card', label: 'BPL Card Number (if any)', type: 'text', required: false },
-            { name: 'caste_category', label: 'Caste Category', type: 'select', 
-              options: ['General', 'OBC', 'SC', 'ST'], required: true }
-          ]
-        }
-      ]
-    },
-    'Mudra Loan': {
-      documents: [
-        {
-          type: 'mudra_loan_application',
-          label: '💼 MUDRA Loan Application',
-          desc: 'Micro-finance loan under MUDRA scheme',
-          fields: [
-            { name: 'applicant_name', label: 'Full Name', type: 'text', required: true },
-            { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-            { name: 'pan_number', label: 'PAN Number', type: 'text', required: true },
-            { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-            { name: 'business_type', label: 'Business Type', type: 'text', required: true },
-            { name: 'loan_category', label: 'Loan Category', type: 'select', 
-              options: ['Shishu (up to ₹50,000)', 'Kishore (₹50,000 to ₹5 lakh)', 'Tarun (₹5 lakh to ₹10 lakh)'], required: true },
-            { name: 'loan_amount', label: 'Loan Amount Required', type: 'number', required: true },
-            { name: 'business_experience', label: 'Business Experience (years)', type: 'number', required: true },
-            { name: 'purpose', label: 'Purpose of Loan', type: 'textarea', required: true }
-          ]
-        }
-      ]
-    }
-  };
-
-  // Application states
-  const [selectedSchemeForApplication, setSelectedSchemeForApplication] = useState(null);
-  const [selectedDocumentType, setSelectedDocumentType] = useState(null);
-  const [applicationFormData, setApplicationFormData] = useState({});
-
   // Load government schemes on component mount
   useEffect(() => {
     loadGovernmentSchemes();
@@ -440,7 +249,7 @@ export default function DocumentAgentScreen({ navigation }) {
     setSchemes(sortedSchemes);
   }, [allSchemes, selectedFilter, selectedSort]);
 
-  // AI Chat function with intelligent document generation
+  // Smart AI Chat function with automatic document generation
   const sendChatMessage = async () => {
     if (!chatMessage.trim()) {
       Alert.alert('Error', 'Please enter a message');
@@ -457,17 +266,25 @@ export default function DocumentAgentScreen({ navigation }) {
     setChatMessage(''); // Clear input
 
     try {
-      // Prepare the request body
-      const requestBody = {
-        message: currentMessage,
-        session_id: sessionId,
-        farmer_data: farmerData
+      // Create FormData for the request (backend expects form data, not JSON)
+      const formData = new FormData();
+      formData.append('message', currentMessage);
+      
+      if (sessionId) {
+        formData.append('session_id', sessionId);
+      }
+      
+      // Include collected fields and document context if available
+      let contextData = {
+        collected_fields: collectedFields,
+        document_in_progress: documentInProgress,
+        waiting_for_input: waitingForUserInput
       };
-
+      
       // Add scheme context if available
       if (selectedSchemeContext) {
         const formattedSchemeData = formatSchemeContent(selectedSchemeContext);
-        requestBody.scheme_context = {
+        contextData.scheme_context = {
           scheme_name: selectedSchemeContext.scheme_name,
           scheme_type: selectedSchemeContext.scheme_type,
           content: selectedSchemeContext.content,
@@ -481,13 +298,14 @@ export default function DocumentAgentScreen({ navigation }) {
           helpline_number: formattedSchemeData.helplineNumber
         };
       }
+      
+      if (Object.keys(contextData).length > 0) {
+        formData.append('farmer_data', JSON.stringify(contextData));
+      }
 
       const response = await fetch(`${API_BASE}/api/v1/document-builder/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
+        body: formData
       });
 
       if (!response.ok) {
@@ -512,18 +330,41 @@ export default function DocumentAgentScreen({ navigation }) {
         
         setChatHistory(prev => [...prev, aiMessage]);
 
-        // Check if AI suggests document generation
+        // Handle automatic document generation workflow
         if (result.should_generate_document) {
-          setTimeout(() => {
-            Alert.alert(
-              'Document Generation',
-              'Based on our conversation, I can generate a document for you. Would you like me to create it?',
-              [
-                { text: 'Not now', style: 'cancel' },
-                { text: 'Generate Document', onPress: () => generateDocumentFromChat(result.suggested_document_type) }
-              ]
-            );
-          }, 1000);
+          // Check if we have all required fields
+          const hasRequiredFields = checkIfHasRequiredFields(result.suggested_document_type, currentMessage);
+          
+          if (hasRequiredFields) {
+            // Generate document automatically
+            setTimeout(() => generateDocumentAutomatically(result.suggested_document_type, currentMessage), 1000);
+          } else {
+            // Start collecting required fields
+            setDocumentInProgress(result.suggested_document_type);
+            setWaitingForUserInput(true);
+            
+            // AI will ask for missing fields in next response
+            setTimeout(() => {
+              setChatHistory(prev => [...prev, { 
+                role: 'assistant', 
+                message: `I can help you generate a ${result.suggested_document_type ? result.suggested_document_type.replace('_', ' ') : 'document'}. Let me collect some information from you first.` 
+              }]);
+            }, 1000);
+          }
+        }
+
+        // Handle field collection from user response
+        if (waitingForUserInput && documentInProgress) {
+          const extractedFields = extractFieldsFromMessage(currentMessage);
+          if (Object.keys(extractedFields).length > 0) {
+            setCollectedFields(prev => ({ ...prev, ...extractedFields }));
+            
+            // Check if we have enough fields to generate document
+            if (hasAllRequiredFields(documentInProgress, { ...collectedFields, ...extractedFields })) {
+              setWaitingForUserInput(false);
+              setTimeout(() => generateDocumentAutomatically(documentInProgress, ''), 1500);
+            }
+          }
         }
       }
     } catch (err) {
@@ -538,119 +379,80 @@ export default function DocumentAgentScreen({ navigation }) {
     }
   };
 
-  // Generate scheme-specific document
-  const generateSchemeSpecificDocument = async () => {
-    if (!selectedDocumentType || !selectedSchemeForApplication) {
-      Alert.alert('Error', 'Please select a scheme and document type');
-      return;
-    }
-
-    // Validate required fields
-    const requiredFields = selectedDocumentType.fields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !applicationFormData[field.name] || applicationFormData[field.name].trim() === '');
+  // Check if message contains required fields for document generation
+  const checkIfHasRequiredFields = (documentType, message) => {
+    const lowerMessage = message.toLowerCase();
     
-    if (missingFields.length > 0) {
-      Alert.alert(
-        'Missing Information', 
-        `Please fill in the following required fields:\n• ${missingFields.map(f => f.label).join('\n• ')}`
-      );
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/document-builder/generate-scheme-specific-pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scheme_name: selectedSchemeForApplication.scheme_name,
-          document_type: selectedDocumentType.type,
-          application_data: applicationFormData,
-          scheme_context: {
-            scheme_type: selectedSchemeForApplication.scheme_type,
-            key_benefit: selectedSchemeForApplication.metadata?.key_benefit || '',
-            helpline_number: selectedSchemeForApplication.metadata?.helpline_number || '',
-            official_website: selectedSchemeForApplication.metadata?.official_website || ''
-          },
-          format_type: 'pdf'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Document generation failed');
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setGeneratedDoc(result);
-        
-        Alert.alert(
-          '🎉 Success!', 
-          `Your ${selectedDocumentType.label} has been generated!\n\nScheme: ${selectedSchemeForApplication.scheme_name}\nFile: ${result.filename}`,
-          [
-            { text: 'OK', style: 'default' },
-            { text: '📥 Download', onPress: () => downloadDocument(result.document_id) }
-          ]
-        );
-
-        // Reset form after successful generation
-        setApplicationFormData({});
-      }
-    } catch (err) {
-      setError(err.message);
-      Alert.alert('Error', `Failed to generate document: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    // Basic field checks
+    const hasName = /name|naam|नाम/.test(lowerMessage) || /my name is|i am|मैं हूं/.test(lowerMessage);
+    const hasContact = /\d{10}/.test(message) || /phone|mobile|contact/.test(lowerMessage);
+    
+    return hasName; // Minimum requirement
   };
 
-  // Render direct mode
-  const renderDirectMode = () => (
-    <View style={styles.directContainer}>
-      <Text style={styles.sectionTitle}>📄 Quick PDF Generation</Text>
-      <Text style={styles.subtitle}>Generate basic documents quickly without scheme selection</Text>
-      
-      {/* Show selected document type info */}
-      <View style={styles.selectedDocTypeInfo}>
-        <Text style={styles.selectedDocTypeLabel}>Selected Document Type:</Text>
-        <Text style={styles.selectedDocTypeValue}>
-          {documentTypes.find(d => d.value === farmerData.document_type)?.label || 'General Application'}
-        </Text>
-        <Text style={styles.selectedDocTypeDesc}>
-          {documentTypes.find(d => d.value === farmerData.document_type)?.desc || 'Document generation'}
-        </Text>
-      </View>
-      
-      <TouchableOpacity 
-        style={styles.generateBtn} 
-        onPress={generateBasicPDF}
-        disabled={loading}
-      >
-        <Feather name="file-text" size={24} color="#fff" />
-        <Text style={styles.btnText}>
-          {loading ? 'Generating PDF...' : '📄 Generate Basic PDF'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-  const generateDocumentFromChat = async (documentType = null) => {
-    if (!farmerData.farmer_name.trim()) {
-      Alert.alert('Error', 'Please enter your name first');
-      return;
+  // Extract fields from user message using regex and keywords
+  const extractFieldsFromMessage = (message) => {
+    const fields = {};
+    const lowerMessage = message.toLowerCase();
+    
+    // Extract name
+    const nameMatch = message.match(/(?:my name is|i am|नाम है)\s+([a-zA-Z\s]+)/i);
+    if (nameMatch) {
+      fields.farmer_name = nameMatch[1].trim();
     }
+    
+    // Extract phone number
+    const phoneMatch = message.match(/(\d{10})/);
+    if (phoneMatch) {
+      fields.contact_number = phoneMatch[1];
+    }
+    
+    // Extract Aadhaar
+    const aadhaarMatch = message.match(/(\d{12})/);
+    if (aadhaarMatch && aadhaarMatch[1] !== fields.contact_number) {
+      fields.aadhaar_number = aadhaarMatch[1];
+    }
+    
+    // Extract address
+    if (lowerMessage.includes('address') || lowerMessage.includes('पता')) {
+      const addressMatch = message.match(/(?:address|पता)[\s:]+([^,]+)/i);
+      if (addressMatch) {
+        fields.address = addressMatch[1].trim();
+      }
+    }
+    
+    return fields;
+  };
 
+  // Check if we have all required fields for document generation
+  const hasAllRequiredFields = (documentType, collectedFields) => {
+    // Minimum requirement: name
+    return collectedFields.farmer_name && collectedFields.farmer_name.trim().length > 0;
+  };
+
+  // Generate document automatically based on collected information
+  const generateDocumentAutomatically = async (documentType, userMessage) => {
     setLoading(true);
 
     try {
-      // Use the last few chat messages as context for document generation
+      // Combine collected fields with any additional info from message
+      const extractedFields = extractFieldsFromMessage(userMessage);
+      const allFields = { ...collectedFields, ...extractedFields };
+      
+      // Ensure we have minimum required data
+      if (!allFields.farmer_name) {
+        setChatHistory(prev => [...prev, { 
+          role: 'assistant', 
+          message: '❌ I need at least your name to generate the document. Please provide your full name.' 
+        }]);
+        setLoading(false);
+        return;
+      }
+
+      // Generate comprehensive context from chat history
       const chatContext = chatHistory
         .filter(msg => msg.role === 'user')
-        .slice(-3)
+        .slice(-5) // Last 5 user messages
         .map(msg => msg.message)
         .join(' ');
 
@@ -660,13 +462,17 @@ export default function DocumentAgentScreen({ navigation }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          farmer_name: farmerData.farmer_name,
-          user_question: chatContext || 'Generate document based on our conversation',
-          aadhaar_number: farmerData.aadhaar_number || '',
-          contact_number: farmerData.contact_number || '',
-          address: farmerData.address || '',
-          document_type: documentType || farmerData.document_type,
-          format_type: 'pdf'
+          farmer_name: allFields.farmer_name,
+          user_question: chatContext + ' ' + userMessage,
+          aadhaar_number: allFields.aadhaar_number || '',
+          contact_number: allFields.contact_number || '',
+          address: allFields.address || '',
+          document_type: documentType || 'general_application',
+          format_type: 'pdf',
+          scheme_context: selectedSchemeContext ? {
+            scheme_name: selectedSchemeContext.scheme_name,
+            scheme_type: selectedSchemeContext.scheme_type
+          } : null
         })
       });
 
@@ -679,79 +485,41 @@ export default function DocumentAgentScreen({ navigation }) {
       if (result.success) {
         setGeneratedDoc(result);
         
-        // Add success message to chat
+        // Add success message to chat with download option
         setChatHistory(prev => [...prev, { 
           role: 'assistant', 
-          message: `✅ Great! I've generated your document: ${result.filename}\n\n� Document Type: ${documentType || farmerData.document_type}\n🤖 AI Assistance: Included\n\nYou can download it now!` 
+          message: `🎉 Perfect! I've generated your document automatically!\n\n📄 Document: ${result.filename}\n👤 Name: ${allFields.farmer_name}\n📞 Contact: ${allFields.contact_number || 'Not provided'}\n\n✅ Your ${documentType ? documentType.replace('_', ' ') : 'document'} is ready for download!`,
+          generated_document: result
         }]);
         
-        Alert.alert(
-          '🎉 Success!', 
-          `Your document has been generated with AI assistance!\n\nFile: ${result.filename}`,
-          [
-            { text: 'OK', style: 'default' },
-            { text: '📥 Download', onPress: () => downloadDocument(result.document_id) }
-          ]
-        );
+        // Reset document generation states
+        setDocumentInProgress(null);
+        setCollectedFields({});
+        setWaitingForUserInput(false);
+        
+        // Show download option
+        setTimeout(() => {
+          Alert.alert(
+            '🎉 Document Generated!', 
+            `Your ${documentType ? documentType.replace('_', ' ') : 'document'} has been created successfully!\n\nFile: ${result.filename}`,
+            [
+              { text: 'Great!', style: 'default' },
+              { text: '📥 Download Now', onPress: () => downloadDocument(result.document_id) }
+            ]
+          );
+        }, 1000);
       }
     } catch (err) {
       setError(err.message);
       setChatHistory(prev => [...prev, { 
         role: 'assistant', 
-        message: `❌ I couldn't generate the document: ${err.message}. Please try again.` 
+        message: `❌ I couldn't generate the document automatically: ${err.message}. Let me try a different approach. Can you provide your basic details again?` 
       }]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Generate basic PDF without AI
-  const generateBasicPDF = async () => {
-    if (!farmerData.farmer_name.trim()) {
-      Alert.alert('त्रुटी', 'कृपया तुमचे नाव प्रविष्ट करा');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/document-builder/generate-pdf-json`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          farmer_name: farmerData.farmer_name,
-          aadhaar_number: farmerData.aadhaar_number || '',
-          contact_number: farmerData.contact_number || '',
-          address: farmerData.address || '',
-          document_type: farmerData.document_type,
-          format_type: 'pdf'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('PDF generation failed');
-      }
-
-      const result = await response.json();
       
-      if (result.success) {
-        setGeneratedDoc(result);
-        
-        Alert.alert(
-          '🎉 यशस्वी!', 
-          `तुमचा PDF दस्तावेज तयार झाला!\n\nफाइल: ${result.filename}`,
-          [
-            { text: 'ठीक आहे', style: 'default' },
-            { text: '📥 डाउनलोड करा', onPress: () => downloadDocument(result.document_id) }
-          ]
-        );
-      }
-    } catch (err) {
-      setError(err.message);
-      Alert.alert('त्रुटी', err.message);
+      // Reset states on error
+      setDocumentInProgress(null);
+      setCollectedFields({});
+      setWaitingForUserInput(false);
     } finally {
       setLoading(false);
     }
@@ -766,10 +534,10 @@ export default function DocumentAgentScreen({ navigation }) {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('त्रुटी', 'दस्तावेज उघडू शकत नाही');
+        Alert.alert('Error', 'Cannot open document');
       }
     } catch (err) {
-      Alert.alert('त्रुटी', 'डाउनलोड करताना त्रुटी');
+      Alert.alert('Error', 'Download failed');
     }
   };
 
@@ -809,7 +577,7 @@ export default function DocumentAgentScreen({ navigation }) {
                       styles.filterGridText,
                       selectedFilter === filter.value && styles.filterGridTextActive
                     ]}>
-                      {filter.label.replace(/🏛️|🇮🇳|🌾|🏥|🏠|💼|📚/g, '').trim()}
+                      {filter.label ? filter.label.replace(/🏛️|🇮🇳|🌾|🏥|🏠|💼|📚/g, '').trim() : 'Filter'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -834,7 +602,7 @@ export default function DocumentAgentScreen({ navigation }) {
                       styles.sortGridText,
                       selectedSort === sort.value && styles.sortGridTextActive
                     ]}>
-                      {sort.label.replace(/📝|🏛️|💰/g, '').trim()}
+                      {sort.label ? sort.label.replace(/📝|🏛️|💰/g, '').trim() : 'Sort'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -845,7 +613,7 @@ export default function DocumentAgentScreen({ navigation }) {
             <View style={styles.filterResultsSummary}>
               <Text style={styles.filterResultsText}>
                 📊 Showing {schemes.length} schemes
-                {selectedFilter !== 'all' && ` in ${filterOptions.find(f => f.value === selectedFilter)?.label.replace(/🏛️|🇮🇳|🌾|🏥|🏠|💼|📚/g, '').trim()}`}
+                {selectedFilter !== 'all' && ` in ${filterOptions.find(f => f.value === selectedFilter)?.label?.replace(/🏛️|🇮🇳|🌾|🏥|🏠|💼|📚/g, '').trim() || 'category'}`}
               </Text>
             </View>
           </ScrollView>
@@ -874,7 +642,7 @@ export default function DocumentAgentScreen({ navigation }) {
     </Modal>
   );
 
-  // Render government schemes carousel
+  // Render government schemes carousel with bigger cards
   const renderSchemesCarousel = () => (
     <View style={styles.schemesContainer}>
       <View style={styles.schemesHeader}>
@@ -894,20 +662,20 @@ export default function DocumentAgentScreen({ navigation }) {
         style={styles.schemesScroll}
         contentContainerStyle={styles.schemesScrollContent}
         decelerationRate="fast"
-        snapToInterval={200}
+        snapToInterval={280} // Increased for bigger cards
         snapToAlignment="start"
       >
         {schemes.length > 0 ? schemes.map((scheme, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.schemeCard}
+            style={styles.bigSchemeCard} // New bigger card style
             onPress={() => {
               setSelectedScheme(scheme);
               setShowSchemeModal(true);
             }}
           >
             <View style={styles.schemeCardHeader}>
-              <Text style={styles.schemeTitle} numberOfLines={1}>{scheme.scheme_name}</Text>
+              <Text style={styles.bigSchemeTitle} numberOfLines={2}>{scheme.scheme_name}</Text>
               <View style={styles.schemeTypeTag}>
                 <Text style={styles.schemeTypeText}>
                   {scheme.scheme_type === 'central_government' ? '🇮🇳' : 
@@ -918,43 +686,73 @@ export default function DocumentAgentScreen({ navigation }) {
             </View>
             
             {scheme.metadata?.key_benefit && (
-              <Text style={styles.schemeBenefit} numberOfLines={1}>{scheme.metadata.key_benefit}</Text>
+              <View style={styles.benefitContainer}>
+                <Text style={styles.benefitLabel}>Key Benefit:</Text>
+                <Text style={styles.schemeBenefit}>{scheme.metadata.key_benefit}</Text>
+              </View>
             )}
             
-            <Text style={styles.schemeDesc} numberOfLines={2}>
+            <Text style={styles.bigSchemeDesc} numberOfLines={3}>
               {scheme.content || scheme.label || 'Government scheme for citizens'}
             </Text>
             
-            {/* Quick Action Buttons */}
-            <View style={styles.schemeQuickActions}>
+            {/* Contact Information */}
+            <View style={styles.contactInfo}>
+              {(scheme.metadata?.helpline_number || scheme.raw_data?.helplineNumber) && (
+                <View style={styles.contactItem}>
+                  <MaterialIcons name="phone" size={14} color="#22c55e" />
+                  <Text style={styles.contactText}>
+                    {scheme.metadata?.helpline_number || scheme.raw_data?.helplineNumber}
+                  </Text>
+                </View>
+              )}
+              {(scheme.metadata?.official_website || scheme.raw_data?.officialWebsite) && (
+                <View style={styles.contactItem}>
+                  <MaterialIcons name="language" size={14} color="#3b82f6" />
+                  <Text style={styles.contactText} numberOfLines={1}>Website</Text>
+                </View>
+              )}
+            </View>
+            
+            {/* Enhanced Action Buttons */}
+            <View style={styles.bigSchemeActions}>
               <TouchableOpacity 
-                style={styles.quickActionBtn}
+                style={styles.bigActionBtn}
                 onPress={(e) => {
                   e.stopPropagation();
                   setSelectedSchemeContext(scheme);
-                  setMode('ai-chat');
+                  setChatHistory(prev => [...prev, { 
+                    role: 'assistant', 
+                    message: `Great! I now have detailed information about ${scheme.scheme_name}. How can I help you with this scheme? I can:\n\n• Explain eligibility criteria\n• Help you apply\n• Generate required documents\n• Answer any questions\n\nWhat would you like to know?` 
+                  }]);
                 }}
               >
-                <MaterialIcons name="psychology" size={14} color="#22c55e" />
-                <Text style={styles.quickActionText}>Ask AI</Text>
+                <MaterialIcons name="psychology" size={18} color="#fff" />
+                <Text style={styles.bigActionText}>Ask AI</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.quickActionBtn}
+                style={[styles.bigActionBtn, styles.applyBtn]}
                 onPress={(e) => {
                   e.stopPropagation();
-                  setSelectedSchemeForApplication(scheme);
-                  setMode('application');
+                  setSelectedSchemeContext(scheme);
+                  setChatMessage(`I want to apply for ${scheme.scheme_name}. Can you help me generate the required documents?`);
                 }}
               >
-                <MaterialIcons name="description" size={14} color="#3b82f6" />
-                <Text style={styles.quickActionText}>Apply</Text>
+                <MaterialIcons name="description" size={18} color="#fff" />
+                <Text style={styles.bigActionText}>Apply Now</Text>
               </TouchableOpacity>
             </View>
             
-            <View style={styles.schemeFooter}>
-              <Text style={styles.learnMore}>View Details →</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.viewDetailsBtn}
+              onPress={() => {
+                setSelectedScheme(scheme);
+                setShowSchemeModal(true);
+              }}
+            >
+              <Text style={styles.viewDetailsText}>View Full Details →</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )) : (
           <View style={styles.noSchemesContainer}>
@@ -969,7 +767,7 @@ export default function DocumentAgentScreen({ navigation }) {
         )}
       </ScrollView>
       
-      {schemes.length > 3 && (
+      {schemes.length > 2 && (
         <View style={styles.scrollIndicator}>
           <Text style={styles.scrollIndicatorText}>← Scroll to see more schemes →</Text>
         </View>
@@ -977,44 +775,15 @@ export default function DocumentAgentScreen({ navigation }) {
     </View>
   );
 
-  // Render mode selection
-  const renderModeSelection = () => (
-    <View style={styles.modeSelection}>
-      <TouchableOpacity 
-        style={[styles.modeBtn, mode === 'ai-chat' && styles.modeActive]}
-        onPress={() => setMode('ai-chat')}
-      >
-        <MaterialIcons name="psychology" size={24} color={mode === 'ai-chat' ? '#fff' : '#22c55e'} />
-        <Text style={[styles.modeText, mode === 'ai-chat' && styles.modeActiveText]}>🤖 AI Chat</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.modeBtn, mode === 'application' && styles.modeActive]}
-        onPress={() => setMode('application')}
-      >
-        <MaterialIcons name="assignment" size={24} color={mode === 'application' ? '#fff' : '#3b82f6'} />
-        <Text style={[styles.modeText, mode === 'application' && styles.modeActiveText]}>📋 Application Zone</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.modeBtn, mode === 'direct' && styles.modeActive]}
-        onPress={() => setMode('direct')}
-      >
-        <Feather name="file-text" size={24} color={mode === 'direct' ? '#fff' : '#ef4444'} />
-        <Text style={[styles.modeText, mode === 'direct' && styles.modeActiveText]}>📄 Quick PDF</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  // Render AI chat mode
-  const renderAIChatMode = () => (
+  // Render enhanced AI chat interface
+  const renderAIChatInterface = () => (
     <View style={styles.aiChatContainer}>
       {/* Scheme Context Indicator */}
       {selectedSchemeContext && (
         <View style={styles.schemeContextIndicator}>
           <View style={styles.schemeContextHeader}>
             <MaterialIcons name="info" size={16} color="#22c55e" />
-            <Text style={styles.schemeContextTitle}>Added Context: {selectedSchemeContext.scheme_name}</Text>
+            <Text style={styles.schemeContextTitle}>Active Context: {selectedSchemeContext.scheme_name}</Text>
             <TouchableOpacity 
               onPress={() => setSelectedSchemeContext(null)}
               style={styles.removeContextBtn}
@@ -1023,23 +792,71 @@ export default function DocumentAgentScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <Text style={styles.schemeContextDesc}>
-            AI assistant now has detailed information about this scheme
+            I have detailed information about this scheme and can help you apply or generate documents
           </Text>
         </View>
       )}
 
+      {/* Document Generation Status */}
+      {documentInProgress && (
+        <View style={styles.documentProgress}>
+          <MaterialIcons name="description" size={16} color="#3b82f6" />
+          <Text style={styles.documentProgressText}>
+            Preparing {documentInProgress ? documentInProgress.replace('_', ' ') : 'document'}...
+          </Text>
+          {waitingForUserInput && (
+            <Text style={styles.documentProgressSubtext}>
+              Please provide the requested information
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Chat History */}
-      <ScrollView style={styles.chatArea} contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView 
+        style={styles.chatArea} 
+        contentContainerStyle={{ paddingBottom: 20 }}
+        ref={chatScrollRef}
+        onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+      >
         {chatHistory.map((msg, idx) => (
           <View key={idx} style={[
             styles.chatBubble, 
             msg.role === 'user' ? styles.userBubble : styles.assistantBubble
           ]}>
             <Text style={styles.chatText}>{msg.message}</Text>
-            {msg.suggested_actions && (
+            
+            {/* Show download button if message contains generated document */}
+            {msg.generated_document && (
+              <TouchableOpacity 
+                style={styles.downloadBtn}
+                onPress={() => downloadDocument(msg.generated_document.document_id)}
+              >
+                <MaterialIcons name="download" size={20} color="#fff" />
+                <Text style={styles.downloadBtnText}>Download PDF</Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* Show context schemes if available */}
+            {msg.context_schemes && msg.context_schemes.length > 0 && (
+              <View style={styles.contextSchemes}>
+                <Text style={styles.contextSchemesTitle}>Related Schemes:</Text>
+                {msg.context_schemes.map((schemeName, idx) => (
+                  <Text key={idx} style={styles.contextSchemeItem}>• {schemeName}</Text>
+                ))}
+              </View>
+            )}
+            
+            {/* Show suggested actions */}
+            {msg.suggested_actions && msg.suggested_actions.length > 0 && (
               <View style={styles.suggestedActions}>
+                <Text style={styles.suggestedActionsTitle}>Quick Actions:</Text>
                 {msg.suggested_actions.map((action, actionIdx) => (
-                  <TouchableOpacity key={actionIdx} style={styles.actionBtn}>
+                  <TouchableOpacity 
+                    key={actionIdx} 
+                    style={styles.actionBtn}
+                    onPress={() => setChatMessage(action)}
+                  >
                     <Text style={styles.actionText}>{action}</Text>
                   </TouchableOpacity>
                 ))}
@@ -1047,28 +864,34 @@ export default function DocumentAgentScreen({ navigation }) {
             )}
           </View>
         ))}
+        
         {loading && (
           <View style={styles.loadingMessage}>
             <ActivityIndicator size="small" color="#22c55e" />
-            <Text style={styles.loadingText}>AI is thinking...</Text>
+            <Text style={styles.loadingText}>
+              {documentInProgress ? 'Generating your document...' : 'AI is thinking...'}
+            </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Chat Input */}
+      {/* Enhanced Chat Input */}
       <View style={styles.chatInputContainer}>
         <View style={styles.chatInputWrapper}>
           <TextInput
             style={styles.chatInput}
             value={chatMessage}
             onChangeText={setChatMessage}
-            placeholder={selectedSchemeContext ? 
-              `Ask about ${selectedSchemeContext.scheme_name} or anything else...` : 
-              "Ask me about farming, schemes, or document generation..."
+            placeholder={
+              documentInProgress 
+                ? "Provide the requested information..." 
+                : selectedSchemeContext 
+                  ? `Ask about ${selectedSchemeContext.scheme_name} or request documents...` 
+                  : "Ask me about schemes, eligibility, or say 'I want to apply for...'"
             }
             placeholderTextColor="#666"
             multiline
-            maxLength={800}
+            maxLength={1000}
             textAlignVertical="top"
           />
         </View>
@@ -1080,244 +903,83 @@ export default function DocumentAgentScreen({ navigation }) {
           <Ionicons name="send" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
-  );
 
-  // Render application zone
-  const renderApplicationZone = () => {
-    if (!selectedSchemeForApplication) {
-      return (
-        <View style={styles.applicationContainer}>
-          <Text style={styles.sectionTitle}>� Application Zone</Text>
-          <Text style={styles.subtitle}>Select a scheme from the carousel above to start your application</Text>
-          
-          <View style={styles.applicationPrompt}>
-            <MaterialIcons name="info" size={48} color="#3b82f6" />
-            <Text style={styles.promptTitle}>Choose a Government Scheme</Text>
-            <Text style={styles.promptDesc}>
-              Browse through the government schemes above and click "Apply" to start your application with scheme-specific documents and requirements.
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-    const availableDocuments = schemeDocumentRequirements[selectedSchemeForApplication.scheme_name] || {
-      documents: [{
-        type: 'general_application',
-        label: '📄 General Application',
-        desc: 'Standard government scheme application',
-        fields: [
-          { name: 'farmer_name', label: 'Full Name', type: 'text', required: true },
-          { name: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', required: true },
-          { name: 'mobile_number', label: 'Mobile Number', type: 'tel', required: true },
-          { name: 'purpose', label: 'Purpose of Application', type: 'textarea', required: true }
-        ]
-      }]
-    };
-
-    if (!selectedDocumentType) {
-      return (
-        <View style={styles.applicationContainer}>
-          <View style={styles.schemeHeader}>
-            <TouchableOpacity 
-              onPress={() => setSelectedSchemeForApplication(null)}
-              style={styles.backToSchemesBtn}
-            >
-              <MaterialIcons name="arrow-back" size={20} color="#3b82f6" />
-              <Text style={styles.backToSchemesText}>Back to Schemes</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.sectionTitle}>📋 {selectedSchemeForApplication.scheme_name}</Text>
-          <Text style={styles.subtitle}>Select the document you want to apply for</Text>
-          
-          <View style={styles.documentsGrid}>
-            {availableDocuments.documents.map((doc, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.documentCard}
-                onPress={() => {
-                  setSelectedDocumentType(doc);
-                  setApplicationFormData({});
-                }}
+      {/* Quick Suggestions */}
+      {chatHistory.length <= 1 && !selectedSchemeContext && (
+        <View style={styles.quickSuggestions}>
+          <Text style={styles.suggestionsTitle}>💡 Try asking:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {[
+              "I want to apply for PM-KISAN",
+              "Show me crop insurance schemes", 
+              "I need a loan application",
+              "Help me with housing schemes",
+              "What documents do I need for KCC?"
+            ].map((suggestion, idx) => (
+              <TouchableOpacity 
+                key={idx}
+                style={styles.suggestionChip}
+                onPress={() => setChatMessage(suggestion)}
               >
-                <Text style={styles.documentLabel}>{doc.label}</Text>
-                <Text style={styles.documentDesc}>{doc.desc}</Text>
-                <Text style={styles.documentFieldCount}>
-                  {doc.fields.filter(f => f.required).length} required fields
-                </Text>
-                <View style={styles.documentFooter}>
-                  <Text style={styles.selectDocText}>Select →</Text>
-                </View>
+                <Text style={styles.suggestionText}>{suggestion}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
-      );
-    }
-
-    return (
-      <View style={styles.applicationContainer}>
-        <View style={styles.applicationHeader}>
-          <TouchableOpacity 
-            onPress={() => setSelectedDocumentType(null)}
-            style={styles.backToDocsBtn}
-          >
-            <MaterialIcons name="arrow-back" size={20} color="#3b82f6" />
-            <Text style={styles.backToDocsText}>Back to Documents</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <Text style={styles.sectionTitle}>{selectedDocumentType.label}</Text>
-        <Text style={styles.subtitle}>{selectedDocumentType.desc}</Text>
-        
-        <ScrollView style={styles.applicationForm} showsVerticalScrollIndicator={false}>
-          {selectedDocumentType.fields.map((field, index) => (
-            <View key={index} style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>
-                {field.label} {field.required && <Text style={styles.requiredStar}>*</Text>}
-              </Text>
-              
-              {field.type === 'select' ? (
-                <TouchableOpacity 
-                  style={styles.selectField}
-                  onPress={() => {
-                    // Show select options modal
-                    Alert.alert(
-                      field.label,
-                      'Select an option',
-                      field.options.map(option => ({
-                        text: option,
-                        onPress: () => setApplicationFormData(prev => ({ ...prev, [field.name]: option }))
-                      })).concat([{ text: 'Cancel', style: 'cancel' }])
-                    );
-                  }}
-                >
-                  <Text style={[styles.selectFieldText, !applicationFormData[field.name] && styles.placeholderText]}>
-                    {applicationFormData[field.name] || `Select ${field.label}`}
-                  </Text>
-                  <MaterialIcons name="arrow-drop-down" size={24} color="#666" />
-                </TouchableOpacity>
-              ) : field.type === 'textarea' ? (
-                <TextInput
-                  style={[styles.applicationInput, styles.textAreaInput]}
-                  value={applicationFormData[field.name] || ''}
-                  onChangeText={(text) => setApplicationFormData(prev => ({ ...prev, [field.name]: text }))}
-                  placeholder={`Enter ${field.label}`}
-                  placeholderTextColor="#666"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              ) : (
-                <TextInput
-                  style={styles.applicationInput}
-                  value={applicationFormData[field.name] || ''}
-                  onChangeText={(text) => setApplicationFormData(prev => ({ ...prev, [field.name]: text }))}
-                  placeholder={`Enter ${field.label}`}
-                  placeholderTextColor="#666"
-                  keyboardType={field.type === 'number' ? 'numeric' : field.type === 'tel' ? 'phone-pad' : 'default'}
-                />
-              )}
-            </View>
-          ))}
-          
-          <TouchableOpacity 
-            style={styles.generateApplicationBtn}
-            onPress={generateSchemeSpecificDocument}
-            disabled={loading}
-          >
-            <MaterialIcons name="description" size={24} color="#fff" />
-            <Text style={styles.generateApplicationText}>
-              {loading ? 'Generating Application...' : '📄 Generate Application'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    );
-  };
-
-  // Render farmer form
-  const renderFarmerForm = () => (
-    <View style={styles.formContainer}>
-      <Text style={styles.sectionTitle}>👨‍🌾 Farmer Information</Text>
-      
-      <TextInput
-        style={styles.input}
-        value={farmerData.farmer_name}
-        onChangeText={(text) => setFarmerData(prev => ({ ...prev, farmer_name: text }))}
-        placeholder="Your Full Name *"
-        placeholderTextColor="#666"
-      />
-      
-      <TextInput
-        style={styles.input}
-        value={farmerData.aadhaar_number}
-        onChangeText={(text) => setFarmerData(prev => ({ ...prev, aadhaar_number: text }))}
-        placeholder="Aadhaar Number (Optional)"
-        placeholderTextColor="#666"
-        keyboardType="numeric"
-      />
-      
-      <TextInput
-        style={styles.input}
-        value={farmerData.contact_number}
-        onChangeText={(text) => setFarmerData(prev => ({ ...prev, contact_number: text }))}
-        placeholder="Mobile Number (Optional)"
-        placeholderTextColor="#666"
-        keyboardType="phone-pad"
-      />
-      
-      <TextInput
-        style={[styles.input, styles.addressInput]}
-        value={farmerData.address}
-        onChangeText={(text) => setFarmerData(prev => ({ ...prev, address: text }))}
-        placeholder="Address (Optional)"
-        placeholderTextColor="#666"
-        multiline
-        numberOfLines={2}
-      />
-
-      {/* Document Type Selection */}
-      <TouchableOpacity 
-        style={styles.documentTypeBtn}
-        onPress={() => setShowDocumentTypes(true)}
-      >
-        <Text style={styles.documentTypeText}>
-          {documentTypes.find(d => d.value === farmerData.document_type)?.label || 'Select Document Type'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color="#22c55e" />
-      </TouchableOpacity>
+      )}
     </View>
   );
+
+  const chatScrollRef = useRef(null);
 
   // Format scheme content for better display
   const formatSchemeContent = (scheme) => {
-    if (!scheme) return null;
+    if (!scheme) return {
+      description: 'No description available',
+      keyBenefit: 'Not specified',
+      ministry: '',
+      primaryObjective: '',
+      eligibility: '',
+      applicationProcess: '',
+      requiredDocuments: '',
+      officialWebsite: '',
+      helplineNumber: '',
+      launchDate: '',
+      applicableRegion: 'India',
+      schemeType: 'Government Scheme',
+      targetBeneficiaries: '',
+      budgetAllocation: '',
+      implementingAgency: ''
+    };
 
     // Try multiple data sources - raw_data, metadata, or direct scheme properties
     const rawData = scheme.raw_data || scheme || {};
     const metadata = scheme.metadata || {};
     
+    // Helper function to safely get string value and handle nulls
+    const safeString = (value) => {
+      if (value === null || value === undefined) return '';
+      return String(value);
+    };
+    
     // Extract comprehensive information from all possible sources
     return {
-      description: rawData.description || rawData.content || scheme.content || rawData.scheme_description || 'No description available',
-      keyBenefit: rawData.keyBenefit || rawData.key_benefit || metadata.key_benefit || rawData.benefit_amount || 'Not specified',
-      ministry: rawData.administeringMinistry || rawData.ministry || metadata.ministry || rawData.administering_ministry || '',
-      primaryObjective: rawData.primaryObjective || rawData.primary_objective || metadata.primary_objective || rawData.objective || '',
-      eligibility: rawData.eligibilityCriteria || rawData.eligibility_criteria || rawData.eligibility || rawData.target_beneficiaries || '',
-      applicationProcess: rawData.applicationProcess || rawData.application_process || rawData.how_to_apply || '',
-      requiredDocuments: rawData.requiredDocuments || rawData.required_documents || rawData.documents_required || '',
-      officialWebsite: rawData.officialWebsite || rawData.official_website || metadata.official_website || rawData.website || '',
-      helplineNumber: rawData.helplineNumber || rawData.helpline_number || metadata.helpline_number || rawData.contact_number || '',
-      launchDate: rawData.launchDate || rawData.launch_date || rawData.start_date || '',
-      applicableRegion: rawData.applicableRegion || rawData.applicable_region || metadata.applicable_region || rawData.coverage_area || 'India',
+      description: safeString(rawData.description || rawData.content || scheme.content || rawData.scheme_description || 'No description available'),
+      keyBenefit: safeString(rawData.keyBenefit || rawData.key_benefit || metadata.key_benefit || rawData.benefit_amount || 'Not specified'),
+      ministry: safeString(rawData.administeringMinistry || rawData.ministry || metadata.ministry || rawData.administering_ministry || ''),
+      primaryObjective: safeString(rawData.primaryObjective || rawData.primary_objective || metadata.primary_objective || rawData.objective || ''),
+      eligibility: safeString(rawData.eligibilityCriteria || rawData.eligibility_criteria || rawData.eligibility || rawData.target_beneficiaries || ''),
+      applicationProcess: safeString(rawData.applicationProcess || rawData.application_process || rawData.how_to_apply || ''),
+      requiredDocuments: safeString(rawData.requiredDocuments || rawData.required_documents || rawData.documents_required || ''),
+      officialWebsite: safeString(rawData.officialWebsite || rawData.official_website || metadata.official_website || rawData.website || ''),
+      helplineNumber: safeString(rawData.helplineNumber || rawData.helpline_number || metadata.helpline_number || rawData.contact_number || ''),
+      launchDate: safeString(rawData.launchDate || rawData.launch_date || rawData.start_date || ''),
+      applicableRegion: safeString(rawData.applicableRegion || rawData.applicable_region || metadata.applicable_region || rawData.coverage_area || 'India'),
       // Additional fields that might be present
-      schemeType: rawData.scheme_type || scheme.scheme_type || 'Government Scheme',
-      targetBeneficiaries: rawData.targetBeneficiaries || rawData.target_beneficiaries || '',
-      budgetAllocation: rawData.budgetAllocation || rawData.budget_allocation || '',
-      implementingAgency: rawData.implementingAgency || rawData.implementing_agency || ''
+      schemeType: safeString(rawData.scheme_type || scheme.scheme_type || 'Government Scheme'),
+      targetBeneficiaries: safeString(rawData.targetBeneficiaries || rawData.target_beneficiaries || ''),
+      budgetAllocation: safeString(rawData.budgetAllocation || rawData.budget_allocation || ''),
+      implementingAgency: safeString(rawData.implementingAgency || rawData.implementing_agency || '')
     };
   };
 
@@ -1395,7 +1057,7 @@ export default function DocumentAgentScreen({ navigation }) {
               <View style={styles.schemeInfoSection}>
                 <Text style={styles.schemeInfoLabel}>📄 Description</Text>
                 <Text style={styles.schemeInfoValue}>
-                  {formattedData.description.replace(/\[cite:.*?\]/g, '').trim()}
+                  {formattedData.description ? formattedData.description.replace(/\[cite:.*?\]/g, '').trim() : 'No description available'}
                 </Text>
               </View>
 
@@ -1406,12 +1068,12 @@ export default function DocumentAgentScreen({ navigation }) {
                   {Array.isArray(formattedData.eligibility) ? (
                     formattedData.eligibility.map((criteria, index) => (
                       <Text key={index} style={styles.schemeInfoBullet}>
-                        • {criteria.replace(/\[cite:.*?\]/g, '').trim()}
+                        • {criteria ? String(criteria).replace(/\[cite:.*?\]/g, '').trim() : ''}
                       </Text>
                     ))
                   ) : (
                     <Text style={styles.schemeInfoValue}>
-                      {formattedData.eligibility.replace(/\[cite:.*?\]/g, '').trim()}
+                      {formattedData.eligibility ? formattedData.eligibility.replace(/\[cite:.*?\]/g, '').trim() : ''}
                     </Text>
                   )}
                 </View>
@@ -1424,12 +1086,12 @@ export default function DocumentAgentScreen({ navigation }) {
                   {Array.isArray(formattedData.applicationProcess) ? (
                     formattedData.applicationProcess.map((step, index) => (
                       <Text key={index} style={styles.schemeInfoBullet}>
-                        {index + 1}. {step.replace(/\[cite:.*?\]/g, '').trim()}
+                        {index + 1}. {step ? String(step).replace(/\[cite:.*?\]/g, '').trim() : ''}
                       </Text>
                     ))
                   ) : (
                     <Text style={styles.schemeInfoValue}>
-                      {formattedData.applicationProcess.replace(/\[cite:.*?\]/g, '').trim()}
+                      {formattedData.applicationProcess ? formattedData.applicationProcess.replace(/\[cite:.*?\]/g, '').trim() : ''}
                     </Text>
                   )}
                 </View>
@@ -1442,12 +1104,12 @@ export default function DocumentAgentScreen({ navigation }) {
                   {Array.isArray(formattedData.requiredDocuments) ? (
                     formattedData.requiredDocuments.map((doc, index) => (
                       <Text key={index} style={styles.schemeInfoBullet}>
-                        • {doc.replace(/\[cite:.*?\]/g, '').trim()}
+                        • {doc ? String(doc).replace(/\[cite:.*?\]/g, '').trim() : ''}
                       </Text>
                     ))
                   ) : (
                     <Text style={styles.schemeInfoValue}>
-                      {formattedData.requiredDocuments.replace(/\[cite:.*?\]/g, '').trim()}
+                      {formattedData.requiredDocuments ? formattedData.requiredDocuments.replace(/\[cite:.*?\]/g, '').trim() : ''}
                     </Text>
                   )}
                 </View>
@@ -1595,12 +1257,19 @@ export default function DocumentAgentScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>🤖 AI Farming Assistant</Text>
+        <Text style={styles.headerText}>🤖 Smart Document Assistant</Text>
         <TouchableOpacity onPress={() => {
-          setChatHistory([chatHistory[0]]);
+          setChatHistory([{
+            role: 'assistant', 
+            message: '🤖 Hello! I\'m your smart document assistant. I can help you:\n\n✅ Find the right government scheme for your needs\n✅ Generate applications automatically\n✅ Answer questions about eligibility and benefits\n✅ Guide you through the application process\n\nTell me what kind of help you need or which scheme interests you!'
+          }]);
           setGeneratedDoc(null);
           setError(null);
           setSessionId(null);
+          setSelectedSchemeContext(null);
+          setDocumentInProgress(null);
+          setCollectedFields({});
+          setWaitingForUserInput(false);
         }}>
           <Ionicons name="refresh" size={24} color="#facc15" />
         </TouchableOpacity>
@@ -1610,47 +1279,45 @@ export default function DocumentAgentScreen({ navigation }) {
         {/* Government Schemes Carousel */}
         {renderSchemesCarousel()}
         
-        {/* Mode Selection */}
-        {renderModeSelection()}
-        
-        {/* Farmer Form - only show in direct mode */}
-        {mode === 'direct' && renderFarmerForm()}
-        
-        {/* Content based on mode */}
-        {mode === 'ai-chat' ? renderAIChatMode() : 
-         mode === 'application' ? renderApplicationZone() : 
-         renderDirectMode()}
+        {/* AI Chat Interface */}
+        {renderAIChatInterface()}
         
         {/* Generated Document Info */}
         {generatedDoc && (
           <View style={styles.docInfo}>
-            <Text style={styles.docInfoTitle}>📄 Generated Document</Text>
+            <Text style={styles.docInfoTitle}>🎉 Document Generated Successfully!</Text>
             <Text style={styles.docInfoText}>📁 {generatedDoc.filename}</Text>
-            <Text style={styles.docInfoText}>📊 {generatedDoc.format.toUpperCase()}</Text>
-            <Text style={styles.docInfoText}>🕒 {new Date(generatedDoc.generated_at).toLocaleString()}</Text>
+            <Text style={styles.docInfoText}>📊 {generatedDoc.format?.toUpperCase() || 'PDF'}</Text>
+            <Text style={styles.docInfoText}>🕒 {new Date(generatedDoc.generated_at || Date.now()).toLocaleString()}</Text>
             
             <TouchableOpacity 
-              style={styles.downloadBtn}
+              style={styles.downloadDocBtn}
               onPress={() => downloadDocument(generatedDoc.document_id)}
             >
-              <Feather name="download" size={20} color="#fff" />
-              <Text style={styles.downloadBtnText}>📥 Download</Text>
+              <MaterialIcons name="download" size={20} color="#fff" />
+              <Text style={styles.downloadDocText}>Download PDF</Text>
             </TouchableOpacity>
           </View>
         )}
-        
+
         {/* Error Display */}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>❌ {error}</Text>
+            <TouchableOpacity 
+              style={styles.errorRetryBtn}
+              onPress={() => setError(null)}
+            >
+              <Text style={styles.errorRetryText}>Dismiss</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
-      
-      {/* Modals */}
+
+      {/* Filter Modal */}
       {renderFilterSort()}
+      {/* Scheme Detail Modal */}
       {renderSchemeModal()}
-      {renderDocumentTypeModal()}
     </View>
   );
 }
@@ -1840,6 +1507,235 @@ const styles = StyleSheet.create({
   learnMore: {
     color: '#3b82f6',
     fontSize: 11,
+    fontWeight: '600',
+  },
+  
+  // Bigger Scheme Cards
+  bigSchemeCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 16,
+    width: 260,
+    minHeight: 220,
+    borderWidth: 1,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bigSchemeTitle: {
+    color: '#22c55e',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 8,
+    lineHeight: 20,
+  },
+  benefitContainer: {
+    backgroundColor: '#22c55e10',
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#22c55e',
+  },
+  benefitLabel: {
+    color: '#22c55e',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  bigSchemeDesc: {
+    color: '#ccc',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  contactInfo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  contactText: {
+    color: '#ccc',
+    fontSize: 11,
+    marginLeft: 4,
+  },
+  bigSchemeActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  bigActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  applyBtn: {
+    backgroundColor: '#3b82f6',
+  },
+  bigActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  viewDetailsBtn: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  viewDetailsText: {
+    color: '#3b82f6',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  // Enhanced Chat Styles
+  documentProgress: {
+    backgroundColor: '#3b82f610',
+    borderLeftWidth: 3,
+    borderLeftColor: '#3b82f6',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  documentProgressText: {
+    color: '#3b82f6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  documentProgressSubtext: {
+    color: '#3b82f6',
+    fontSize: 12,
+    marginLeft: 8,
+    opacity: 0.8,
+  },
+  downloadBtn: {
+    backgroundColor: '#22c55e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  downloadBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  contextSchemes: {
+    backgroundColor: '#22c55e10',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  contextSchemesTitle: {
+    color: '#22c55e',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  contextSchemeItem: {
+    color: '#ccc',
+    fontSize: 11,
+    marginLeft: 8,
+  },
+  suggestedActionsTitle: {
+    color: '#3b82f6',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  quickSuggestions: {
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  suggestionsTitle: {
+    color: '#22c55e',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  suggestionChip: {
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  suggestionText: {
+    color: '#ccc',
+    fontSize: 12,
+  },
+  downloadDocBtn: {
+    backgroundColor: '#22c55e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+    alignSelf: 'center',
+  },
+  downloadDocText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  errorContainer: {
+    backgroundColor: '#ef444420',
+    borderLeftWidth: 3,
+    borderLeftColor: '#ef4444',
+    padding: 12,
+    margin: 16,
+    borderRadius: 8,
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+  },
+  errorRetryBtn: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  errorRetryText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '600',
   },
   // Filter Modal Styles
