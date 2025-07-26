@@ -22,6 +22,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
@@ -1010,6 +1011,16 @@ const CattleScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </View>
   );
 };

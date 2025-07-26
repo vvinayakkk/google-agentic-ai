@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 const { width } = Dimensions.get('window');
 
@@ -54,8 +55,8 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
         };
       case 'homeButton':
         return {
-          bottom: 80, // Above the home button
-          right: 20,
+          bottom: 60, // Above the home button
+          right: 40,
         };
       case 'screen':
       default:
@@ -696,12 +697,22 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 </View>
                 {/* Floating Home Button at Bottom Right */}
                 <TouchableOpacity
-                    style={{ position: 'absolute', bottom: 10, right: 10, zIndex: 20, backgroundColor: '#18181b', borderRadius: 32, padding: 10, elevation: 8 }}
+                    style={{ position: 'absolute', bottom: 10, right: 9, zIndex: 20, backgroundColor: '#18181b', borderRadius: 32, padding: 10, elevation: 8 }}
                     onPress={() => navigation.navigate('ChoiceScreen')}
                     activeOpacity={0.85}
                 >
                     <Ionicons name="home-outline" size={38} color="#10B981" />
                 </TouchableOpacity>
+
+                {/* Mic Overlay - UI only for now */}
+                <MicOverlay 
+                    onPress={() => {
+                        // For now, just navigate to LiveVoiceScreen
+                        navigation.navigate('LiveVoiceScreen');
+                    }}
+                    isVisible={true}
+                    isActive={false}
+                />
 
                 {/* Onboarding debug buttons for testing */}
                 {hasSeenOnboarding && (
@@ -855,7 +866,7 @@ const styles = StyleSheet.create({
     // Onboarding Tour Buttons (smaller for this screen)
     tourButtonsContainer: {
         position: 'absolute',
-        bottom: 15,
+        bottom: 85,
         left: 15,
         flexDirection: 'row',
         gap: 6,

@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = NetworkConfig.API_BASE;
@@ -445,6 +446,16 @@ const WeatherScreen = ({ navigation }) => {
           )}
         </ScrollView>
       </SafeAreaView>
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </View>
   );
 };

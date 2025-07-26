@@ -21,6 +21,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5, Entypo } from '@expo/ve
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import MicOverlay from '../components/MicOverlay';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = NetworkConfig.API_BASE;
@@ -1571,6 +1572,16 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
+      
+      {/* Mic Overlay - UI only for now */}
+      <MicOverlay 
+        onPress={() => {
+          // For now, just navigate to LiveVoiceScreen
+          navigation.navigate('LiveVoiceScreen');
+        }}
+        isVisible={true}
+        isActive={false}
+      />
     </View>
   );
 };
