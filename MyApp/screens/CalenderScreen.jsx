@@ -9,228 +9,181 @@ import {
   Animated,
   Dimensions,
   StatusBar,
-  FlatList,
   Modal,
   TextInput,
   Alert,
-  Easing,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Markdown from 'react-native-markdown-display';
-import { PanResponder } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
-import MicOverlay from '../components/MicOverlay';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const CALENDAR_CACHE_KEY = 'calendar-events-cache';
-const CALENDAR_ANALYSIS_CACHE_KEY = 'calendar-ai-analysis-f001';
+
+// Hardcoded AI insights for carousel
+const AI_INSIGHTS = [
+  {
+    icon: 'water-outline',
+    title: 'Irrigation Schedule',
+    description: 'Your tomato field needs watering in 2 days based on soil moisture and weather patterns.',
+    color: '#10b981'
+  },
+  {
+    icon: 'leaf-outline',
+    title: 'Crop Growth',
+    description: 'Wheat is entering flowering stage. Consider applying nitrogen fertilizer this week.',
+    color: '#3b82f6'
+  },
+  {
+    icon: 'bug-outline',
+    title: 'Pest Alert',
+    description: 'Weather conditions favor aphid growth. Monitor your crops closely.',
+    color: '#f59e0b'
+  },
+  {
+    icon: 'sunny-outline',
+    title: 'Weather Insight',
+    description: 'Perfect conditions for outdoor activities next 3 days. Plan your harvesting.',
+    color: '#ef4444'
+  }
+];
 
 const SmartCalendar = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // REMOVED: fullSummaryLines, summaryLines, currentLine, loading, showCursor states
-  // as these were tied to the hardcoded typewriter effect.
-
-  const [mounted, setMounted] = useState(false);
-  // Add expandedEventIndex state
-  const [expandedEventIndex, setExpandedEventIndex] = useState(null);
-
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [events, setEvents] = useState({});
-  const [dataLoading, setDataLoading] = useState(true); // For calendar events
-  const [dataError, setDataError] = useState(null);
-  const [calendarAnalysis, setCalendarAnalysis] = useState(''); // This is the AI analysis from backend
-  const [analysisLoading, setAnalysisLoading] = useState(false); // For AI analysis loading
-  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
-  // Remove pan, panResponder, analysisBoxPosition, and related useRef/useState
-  // Remove Animated.View with absolute positioning for AI Calendar Analysis
+  const [dataLoading, setDataLoading] = useState(true);
+  const [eventModalVisible, setEventModalVisible] = useState(false);
+  const [addMethodModalVisible, setAddMethodModalVisible] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [selectedEventDetails, setSelectedEventDetails] = useState(null);
+  const [eventModalEvent, setEventModalEvent] = useState({ 
+    date: '', time: '', task: '', type: '', priority: 'medium', details: '' 
+  });
+  const [currentEventPopupVisible, setCurrentEventPopupVisible] = useState(false);
+  const [currentEvent, setCurrentEvent] = useState(null);
 
-  // Animated values
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const carouselScrollX = useRef(new Animated.Value(0)).current;
+  const eventDetailsOpacity = useRef(new Animated.Value(0)).current;
 
-  // REMOVED: const fullSummary - no longer needed.
-
-  // Floating particles component
-  const FloatingParticle = ({ delay, duration }) => {
-    const particleAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-      const animate = () => {
-        Animated.sequence([
-          Animated.timing(particleAnim, {
-            toValue: 1,
-            duration: duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particleAnim, {
-            toValue: 0,
-            duration: duration,
-            useNativeDriver: true,
-          })
-        ]).start(() => animate());
-      };
-
-      setTimeout(() => animate(), delay);
-    }, []);
-
-    const translateY = particleAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, -30]
-    });
-
-    const opacity = particleAnim.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0.2, 0.8, 0.2]
-    });
-
-    return (
-      <Animated.View
-        style={[
-          styles.floatingParticle,
-          {
-            transform: [{ translateY }],
-            opacity,
-            left: Math.random() * (width - 20),
-            top: Math.random() * (height - 300) + 150,
-          }
-        ]}
-      >
-        <View style={styles.particle} />
-      </Animated.View>
-    );
-  };
+  // Auto-scroll carousel
+  const carouselRef = useRef(null);
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      })
-    ]).start();
-
-    // Pulse animation
-    const pulsing = () => {
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        })
-      ]).start(() => pulsing());
-    };
-    pulsing();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
 
     fetchCalendarEvents();
-    loadCalendarAnalysis(); // Load analysis for the movable section
+    startCarouselAutoScroll();
+    checkCurrentEvent();
+  }, []);
 
-    // REMOVED: The entire typewriter effect logic from this useEffect
-    // as it was tied to the hardcoded summary.
-  }, []); // Dependencies remain for initial loads and animations.
+  const startCarouselAutoScroll = () => {
+    const interval = setInterval(() => {
+      if (carouselRef.current) {
+        const nextIndex = (currentInsightIndex + 1) % AI_INSIGHTS.length;
+        carouselRef.current.scrollTo({
+          x: nextIndex * (width - 40),
+          animated: true,
+        });
+        setCurrentInsightIndex(nextIndex);
+      }
+    }, 4000);
 
-  // REMOVED: Blinking cursor effect useEffect as it's no longer needed for the hardcoded summary.
+    return () => clearInterval(interval);
+  };
 
-  // Load calendar events from cache, then fetch from backend
+  const checkCurrentEvent = () => {
+    const now = new Date();
+    const todayKey = formatDateKey(now);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+
+    // Check if there's a current event happening now
+    const todayEvents = events[todayKey] || [];
+    const currentEvents = todayEvents.filter(event => {
+      const [eventHour, eventMinute] = event.time.split(':').map(Number);
+      const eventTimeMinutes = eventHour * 60 + eventMinute;
+      // Check if event is within 30 minutes window (15 before, 15 after)
+      return Math.abs(currentTimeMinutes - eventTimeMinutes) <= 15;
+    });
+
+    if (currentEvents.length > 0) {
+      setCurrentEvent(currentEvents[0]);
+      setCurrentEventPopupVisible(true);
+      
+      // Auto hide after 5 seconds
+      setTimeout(() => {
+        setCurrentEventPopupVisible(false);
+      }, 5000);
+    }
+  };
+
   const fetchCalendarEvents = async () => {
     setDataLoading(true);
-    setDataError(null);
-    // Try to load from cache first
     try {
       const cached = await AsyncStorage.getItem(CALENDAR_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         setCalendarEvents(parsed);
-        // Transform array to date-keyed object
         const eventsByDate = {};
         parsed.forEach(ev => {
           if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
           eventsByDate[ev.date].push(ev);
         });
         setEvents(eventsByDate);
-        setDataLoading(false); // Show cached data immediately
-      }
-    } catch (e) { }
-    // Always fetch from backend in background
-    fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar`)
-      .then(res => res.json())
-      .then(data => {
-        setCalendarEvents(data);
-        // Transform array to date-keyed object
-        const eventsByDate = {};
-        data.forEach(ev => {
-          if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
-          eventsByDate[ev.date].push(ev);
-        });
-        setEvents(eventsByDate);
-        AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(data));
         setDataLoading(false);
-      })
-      .catch(err => {
-        setDataError('Failed to load calendar events');
-        setDataLoading(false);
-      });
-  };
-
-  // Fetch or load cached AI analysis
-  const loadCalendarAnalysis = async () => {
-    setAnalysisLoading(true);
-    try {
-      const cached = await AsyncStorage.getItem(CALENDAR_ANALYSIS_CACHE_KEY);
-      if (cached) {
-        setCalendarAnalysis(cached);
-        setAnalysisLoading(false);
         return;
       }
-      // If not cached, fetch from backend
-      const res = await fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/ai-analysis`);
-      const data = await res.json();
-      setCalendarAnalysis(data.analysis);
-      await AsyncStorage.setItem(CALENDAR_ANALYSIS_CACHE_KEY, data.analysis);
-      setAnalysisLoading(false);
     } catch (e) {
-      setCalendarAnalysis('Failed to load AI analysis.');
-      setAnalysisLoading(false);
+      console.error('Cache load error:', e);
     }
-  };
 
-  const updateCalendarAnalysis = async () => {
-    setAnalysisLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/ai-analysis`);
-      const data = await res.json();
-      setCalendarAnalysis(data.analysis);
-      await AsyncStorage.setItem(CALENDAR_ANALYSIS_CACHE_KEY, data.analysis);
-      setAnalysisLoading(false);
-    } catch (e) {
-      setCalendarAnalysis('Failed to update AI analysis.');
-      setAnalysisLoading(false);
-    }
+    // Mock data for demo
+    const mockEvents = [
+      {
+        eventId: 'ev1',
+        date: formatDateKey(new Date()),
+        time: '08:00',
+        task: 'Water tomato plants',
+        type: 'irrigation',
+        priority: 'high',
+        details: 'Check soil moisture and apply drip irrigation'
+      },
+      {
+        eventId: 'ev2',
+        date: formatDateKey(new Date(Date.now() + 86400000)),
+        time: '15:00',
+        task: 'Apply fertilizer to wheat field',
+        type: 'treatment',
+        priority: 'medium',
+        details: 'Use nitrogen-rich fertilizer'
+      }
+    ];
+
+    setCalendarEvents(mockEvents);
+    const eventsByDate = {};
+    mockEvents.forEach(ev => {
+      if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+      eventsByDate[ev.date].push(ev);
+    });
+    setEvents(eventsByDate);
+    setDataLoading(false);
   };
 
   const getDaysInMonth = (date) => {
@@ -254,42 +207,45 @@ const SmartCalendar = ({ navigation }) => {
     return events[formatDateKey(date)]?.length > 0;
   };
 
-  const getEventIcon = (type) => {
-    switch (type) {
-      case 'irrigation': return 'water-outline';
-      case 'planting': return 'leaf-outline';
-      case 'livestock': return 'paw-outline';
-      case 'analysis': return 'analytics-outline';
-      case 'treatment': return 'flash-outline';
-      case 'market': return 'trending-up-outline';
-      case 'monitoring': return 'eye-outline';
-      default: return 'calendar-outline';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return ['#ef4444', '#dc2626'];
-      case 'medium': return ['#f59e0b', '#d97706'];
-      case 'low': return ['#10b981', '#059669'];
-      default: return ['#3b82f6', '#2563eb'];
-    }
-  };
-
   const changeMonth = (direction) => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + direction);
     setCurrentDate(newDate);
   };
 
-  // --- FIXED renderCalendar for correct weekday alignment ---
+  const handleDatePress = (date) => {
+    setSelectedDate(date);
+    const dateKey = formatDateKey(date);
+    const dayEvents = events[dateKey];
+    
+    if (dayEvents && dayEvents.length > 0) {
+      setSelectedEventDetails(dayEvents[0]);
+      Animated.timing(eventDetailsOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        Animated.timing(eventDetailsOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setSelectedEventDetails(null);
+        });
+      }, 3000);
+    }
+  };
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate); // 0=Sun, 6=Sat
+    const firstDay = getFirstDayOfMonth(currentDate);
     const days = [];
     let week = [];
 
-    // Fill initial empty cells for the first week
+    // Fill initial empty cells
     for (let i = 0; i < firstDay; i++) {
       week.push(<View key={`empty-${i}`} style={styles.emptyDay} />);
     }
@@ -310,61 +266,35 @@ const SmartCalendar = ({ navigation }) => {
             isTodayDate && styles.todayCell,
             isSelectedDate && styles.selectedCell,
           ]}
-          onPress={() => setSelectedDate(date)}
+          onPress={() => handleDatePress(date)}
           activeOpacity={0.7}
         >
-          <LinearGradient
-            colors={
-              isTodayDate
-                ? ['rgba(16, 185, 129, 0.2)', 'rgba(59, 130, 246, 0.2)']
-                : isSelectedDate
-                  ? ['rgba(16, 185, 129, 0.1)', 'rgba(59, 130, 246, 0.1)']
-                  : ['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']
-            }
-            style={styles.dayCellGradient}
-          >
-            <Text style={[
-              styles.dayNumber,
-              isTodayDate && styles.todayNumber,
-              isSelectedDate && styles.selectedNumber,
-            ]}>
-              {day}
-            </Text>
-            {dayEvents.length > 0 && (
-              <View style={styles.eventsContainer}>
-                {dayEvents.slice(0, 2).map((event, idx) => (
-                  <LinearGradient
-                    key={idx}
-                    colors={getPriorityColor(event.priority)}
-                    style={styles.eventDot}
-                  />
-                ))}
-                {dayEvents.length > 2 && (
-                  <View style={styles.moreEvents}>
-                    <Text style={styles.moreEventsText}>+</Text>
-                  </View>
-                )}
-              </View>
-            )}
-            {hasEvents(date) && (
-              <Animated.View style={[styles.eventIndicator, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={styles.pulseDot} />
-              </Animated.View>
-            )}
-          </LinearGradient>
+          <Text style={[
+            styles.dayNumber,
+            isTodayDate && styles.todayNumber,
+            isSelectedDate && styles.selectedNumber,
+          ]}>
+            {day}
+          </Text>
+          {dayEvents.length > 0 && (
+            <View style={styles.eventIndicator}>
+              <View style={[
+                styles.eventDot,
+                { backgroundColor: dayEvents[0].priority === 'high' ? '#ff4444' : '#10b981' }
+              ]} />
+            </View>
+          )}
         </TouchableOpacity>
       );
 
-      // If week is complete, push to days and start new week
-      if ((week.length === 7) || (day === daysInMonth)) {
-        // Fill trailing empty cells if last week is not complete
+      if (week.length === 7 || day === daysInMonth) {
         if (day === daysInMonth && week.length < 7) {
           for (let j = week.length; j < 7; j++) {
             week.push(<View key={`empty-end-${day}-${j}`} style={styles.emptyDay} />);
           }
         }
         days.push(
-          <View key={`week-${day}`} style={{ flexDirection: 'row' }}>
+          <View key={`week-${day}`} style={styles.weekRow}>
             {week}
           </View>
         );
@@ -374,496 +304,438 @@ const SmartCalendar = ({ navigation }) => {
     return days;
   };
 
-  const selectedDateEvents = events[formatDateKey(selectedDate)] || [];
-
-  // Update renderEventItem to support expand/collapse
-  const renderEventItem = ({ item, index }) => {
-    const isExpanded = expandedEventIndex === index;
-    return (
-      <View key={index}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setExpandedEventIndex(isExpanded ? null : index)}
-          style={{ marginBottom: 12 }}
-        >
-          <Animated.View
-            style={[
-              styles.eventItem,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateX: slideAnim }]
-              }
-            ]}
-          >
-            <LinearGradient
-              colors={['rgba(24, 24, 27, 0.8)', 'rgba(39, 39, 42, 0.8)']}
-              style={styles.eventItemGradient}
-            >
-              <View style={styles.eventItemHeader}>
-                <LinearGradient
-                  colors={getPriorityColor(item.priority)}
-                  style={styles.eventIconContainer}
-                >
-                  <Ionicons name={getEventIcon(item.type)} size={16} color="white" />
-                </LinearGradient>
-                <View style={styles.eventItemContent}>
-                  <Text style={styles.eventTitle} numberOfLines={2}>{item.task}</Text>
-                  <Text style={styles.eventTime}>{item.time}</Text>
-                </View>
-                <LinearGradient
-                  colors={getPriorityColor(item.priority)}
-                  style={styles.priorityBadge}
-                >
-                  <Text style={styles.priorityText}>{item.priority.toUpperCase()}</Text>
-                </LinearGradient>
-              </View>
-              {isExpanded && (
-                <View style={styles.eventDetailsContainer}>
-                  <Text style={styles.eventDetailsText}>{item.details}</Text>
-                </View>
-              )}
-            </LinearGradient>
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
-    );
+  const getNextUpcomingTask = () => {
+    const today = new Date();
+    const sortedEvents = calendarEvents
+      .filter(event => new Date(event.date) >= today)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return sortedEvents[0] || null;
   };
 
-  // Add state for event modals and mic
-  const [eventModalVisible, setEventModalVisible] = useState(false);
-  const [eventModalMode, setEventModalMode] = useState('add');
-  const [eventModalEvent, setEventModalEvent] = useState({ date: '', time: '', task: '', type: '', priority: 'medium', details: '' });
-  const [eventModalLoading, setEventModalLoading] = useState(false);
-  const [eventAddOptionSheet, setEventAddOptionSheet] = useState(false);
-  const [eventMicModal, setEventMicModal] = useState(false);
-  const eventMicAnim = useRef(new Animated.Value(1)).current;
-
-  // Mic animation effect
-  useEffect(() => {
-    let timer;
-    if (eventMicModal) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(eventMicAnim, { toValue: 1.2, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(eventMicAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ])
-      ).start();
-      timer = setTimeout(() => {
-        setEventMicModal(false);
-        setEventModalMode('add');
-        setEventModalEvent({ date: formatDateKey(selectedDate), time: '09:00', task: 'Irrigation for Wheat', type: 'irrigation', priority: 'high', details: 'Irrigate field A for wheat.' });
-        setEventModalVisible(true);
-      }, 5000);
-    } else {
-      eventMicAnim.setValue(1);
+  const getTaskIcon = (type) => {
+    switch (type) {
+      case 'irrigation': return 'water-outline';
+      case 'planting': return 'leaf-outline';
+      case 'livestock': return 'paw-outline';
+      case 'treatment': return 'medical-outline';
+      case 'harvest': return 'cut-outline';
+      default: return 'calendar-outline';
     }
-    return () => clearTimeout(timer);
-  }, [eventMicModal]);
+  };
 
-  // Add event handlers
-  const openAddEventModal = () => setEventAddOptionSheet(true);
-  const handleManualAddEvent = () => {
-    setEventAddOptionSheet(false);
-    setEventModalMode('add');
-    setEventModalEvent({ date: formatDateKey(selectedDate), time: '', task: '', type: '', priority: 'medium', details: '' });
+  const openAddMethodModal = () => {
+    setAddMethodModalVisible(true);
+  };
+
+  const handleManualAdd = () => {
+    setAddMethodModalVisible(false);
+    setEventModalEvent({ 
+      date: formatDateKey(selectedDate), 
+      time: '', 
+      task: '', 
+      type: '', 
+      priority: 'medium', 
+      details: '' 
+    });
     setEventModalVisible(true);
   };
-  const handleSpeakAddEvent = () => {
-    setEventAddOptionSheet(false);
-    setEventMicModal(true);
-  };
-  const openEditEventModal = (event) => {
-    setEventModalMode('edit');
-    setEventModalEvent({ ...event });
-    setEventModalVisible(true);
-  };
-  const handleDeleteEvent = (event) => {
-    Alert.alert('Delete Event', `Are you sure you want to delete "${event.task}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          setEventModalLoading(true);
-          // Optimistically update UI
-          const newEvents = calendarEvents.filter(e => e.eventId !== event.eventId);
-          setCalendarEvents(newEvents);
-          // Update cache
-          await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
-          setEventModalLoading(false);
-          // Sync with backend
-          fetch(`${API_BASE}/farmer/${FARMER_ID}/calendar/${event.eventId}`, { method: 'DELETE' })
-            .catch(() => { Alert.alert('Error', 'Failed to delete event on server.'); });
+
+  const handleAIAdd = async () => {
+    setAddMethodModalVisible(false);
+    setAiGenerating(true);
+    
+    // Simulate AI generation
+    setTimeout(() => {
+      const aiSuggestions = [
+        {
+          task: 'Check soil moisture levels',
+          time: '07:00',
+          type: 'irrigation',
+          priority: 'high',
+          details: 'Monitor field sections A-C for optimal watering schedule'
+        },
+        {
+          task: 'Inspect crop health',
+          time: '16:00',
+          type: 'monitoring',
+          priority: 'medium',
+          details: 'Look for signs of pest damage or disease in tomato plants'
         }
-      }
-    ]);
+      ];
+      
+      const suggestion = aiSuggestions[Math.floor(Math.random() * aiSuggestions.length)];
+      setEventModalEvent({ 
+        date: formatDateKey(selectedDate), 
+        ...suggestion
+      });
+      setAiGenerating(false);
+      setEventModalVisible(true);
+    }, 2500);
   };
-  const handleEventModalSave = async () => {
-    if (!eventModalEvent.task || !eventModalEvent.time || !eventModalEvent.type) {
-      Alert.alert('Missing Info', 'Please fill all required fields.');
+
+  const handleSaveEvent = async () => {
+    if (!eventModalEvent.task || !eventModalEvent.time) {
+      Alert.alert('Missing Info', 'Please fill task and time fields.');
       return;
     }
-    setEventModalLoading(true);
-    const method = eventModalMode === 'add' ? 'POST' : 'PUT';
-    const url = eventModalMode === 'add'
-      ? `${API_BASE}/farmer/${FARMER_ID}/calendar`
-      : `${API_BASE}/farmer/${FARMER_ID}/calendar/${eventModalEvent.eventId}`;
+
     const newEvent = {
       ...eventModalEvent,
-      eventId: eventModalEvent.eventId || `ev${Date.now()}`,
+      eventId: `ev${Date.now()}`,
       date: eventModalEvent.date || formatDateKey(selectedDate),
     };
-    // Optimistically update UI
-    let newEvents;
-    if (eventModalMode === 'add') {
-      newEvents = [newEvent, ...calendarEvents];
-    } else {
-      newEvents = calendarEvents.map(e => e.eventId === newEvent.eventId ? newEvent : e);
-    }
+
+    const newEvents = [newEvent, ...calendarEvents];
     setCalendarEvents(newEvents);
+    
+    const eventsByDate = {};
+    newEvents.forEach(ev => {
+      if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+      eventsByDate[ev.date].push(ev);
+    });
+    setEvents(eventsByDate);
+
     await AsyncStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(newEvents));
-    setEventModalLoading(false);
     setEventModalVisible(false);
-    // Sync with backend
-    fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newEvent)
-    })
-      .catch(() => { Alert.alert('Error', 'Failed to save event on server.'); });
   };
 
-  if (!mounted) return null;
+  const nextTask = getNextUpcomingTask();
 
-  const modalInputStyle = {
-    backgroundColor: '#23232a',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 12,
-  };
+  if (dataLoading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="black" />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <Ionicons name="calendar" size={48} color="#10b981" />
+            <Text style={styles.loadingText}>Loading your farm calendar...</Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
-      {/* Background */}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]} />
-
-      {/* Background Gradients */}
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      {/* Floating Particles */}
-      {mounted && (
-        <>
-          <FloatingParticle delay={0} duration={3000} />
-          <FloatingParticle delay={1000} duration={2500} />
-          <FloatingParticle delay={2000} duration={3500} />
-          <FloatingParticle delay={3000} duration={2800} />
-          <FloatingParticle delay={4000} duration={3200} />
-        </>
-      )}
-
-      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="light-content" backgroundColor="black" />
+      <SafeAreaView style={styles.safeArea}>
+        
         {/* Header */}
-        <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                  style={styles.backButtonGradient}
-                >
-                  <Ionicons name="chevron-back" size={24} color="white" />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <View style={styles.headerCenter}>
-                <View style={styles.headerTitleContainer}>
-                  <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                    <Ionicons name="calendar" size={20} color="#10b981" />
-                  </Animated.View>
-                  <Text style={styles.headerTitle}>{t('calendar.title')}</Text>
-                </View>
-                <Text style={styles.headerSubtitle}>{t('calendar.subtitle')}</Text>
-              </View>
-
-              <View style={styles.syncIndicator}>
-                <Animated.View style={[styles.syncDot, { transform: [{ scale: pulseAnim }] }]} />
-                <Text style={styles.syncText}>LIVE</Text>
-              </View>
-            </View>
-          </BlurView>
+        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={24} color="#10b981" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Farm Calendar</Text>
+            <Text style={styles.headerSubtitle}>Plan your farming activities</Text>
+          </View>
+          
+          <View style={styles.headerRight}>
+            <View style={styles.statusDot} />
+          </View>
         </Animated.View>
 
-        {/* AI Calendar Analysis Section (static, above calendar) */}
-        <View style={{
-          backgroundColor: '#18181b',
-          borderRadius: 16,
-          padding: 16,
-          marginHorizontal: 16,
-          marginTop: 4,
-          marginBottom: 0,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.1)',
-          elevation: 10,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>{t('calendar.ai_analysis')}</Text>
-            <TouchableOpacity onPress={updateCalendarAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.update')}</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={{ maxHeight: 250 }}>
-            {analysisLoading ? (
-              <Text style={{ color: '#fff' }}>{t('calendar.loading_analysis')}</Text>
-            ) : (
-              (() => {
-                const lines = calendarAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
-                const previewLines = lines.slice(0, 4); // Still show preview lines if desired
-                const isLong = lines.length > 4;
-                return (
-                  <>
-                    <Markdown style={{ body: { color: '#fff', fontSize: 15} }}>
-                      {showFullAnalysis ? calendarAnalysis : previewLines.join('\n')}
-                    </Markdown>
-                    {isLong && (
-                      <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? t('calendar.show_less') : t('calendar.show_more')}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                );
-              })()
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Main content: loading, error, or calendar UI */}
-        {dataLoading ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: '#fff' }}>{t('common.loading')}</Text></View>
-        ) : dataError ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{t('calendar.error_loading_events')}</Text></View>
-        ) : (
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <View style={styles.calendarNav}>
-              <TouchableOpacity
-                style={styles.navButton}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          
+          {/* Calendar Section */}
+          <Animated.View style={[styles.calendarSection, { opacity: fadeAnim }]}>
+            <View style={styles.monthNav}>
+              <TouchableOpacity 
+                style={styles.navButton} 
                 onPress={() => changeMonth(-1)}
-                activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                  style={styles.navButtonGradient}
-                >
-                  <Ionicons name="chevron-back" size={20} color="#10b981" />
-                </LinearGradient>
+                <Ionicons name="chevron-back" size={20} color="#10b981" />
               </TouchableOpacity>
-              <Text style={styles.monthYear}>
+              
+              <Text style={styles.monthText}>
                 {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
               </Text>
-              <TouchableOpacity
-                style={styles.navButton}
+              
+              <TouchableOpacity 
+                style={styles.navButton} 
                 onPress={() => changeMonth(1)}
-                activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                  style={styles.navButtonGradient}
-                >
-                  <Ionicons name="chevron-forward" size={20} color="#10b981" />
-                </LinearGradient>
+                <Ionicons name="chevron-forward" size={20} color="#10b981" />
               </TouchableOpacity>
             </View>
 
-            {/* Calendar */}
-            <Animated.View style={[styles.calendarContainer, { opacity: fadeAnim }]}>
-              <LinearGradient
-                colors={['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)']}
-                style={styles.calendarCard}
+            <View style={styles.calendarContainer}>
+              {/* Add Task Button - Top Right of Calendar */}
+              <TouchableOpacity 
+                style={styles.addTaskButton}
+                onPress={openAddMethodModal}
               >
-                {/* Days of week */}
-                <View style={styles.weekDaysHeader}>
-                  {['calendar.sun', 'calendar.mon', 'calendar.tue', 'calendar.wed', 'calendar.thu', 'calendar.fri', 'calendar.sat'].map(dayKey => (
-                    <Text key={dayKey} style={styles.weekDayText}>{t(dayKey)}</Text>
-                  ))}
-                </View>
+                <Ionicons name="add" size={20} color="white" />
+              </TouchableOpacity>
 
-                {/* Calendar Grid */}
-                <View style={styles.calendarGrid}>
-                  {renderCalendar()}
-                </View>
-              </LinearGradient>
-            </Animated.View>
-
-            {/* Selected Date Events */}
-            <View style={styles.eventsSection}>
-              <View style={styles.eventsSectionHeader}>
-                <LinearGradient
-                  colors={['#3b82f6', '#10b981']}
-                  style={styles.eventsIcon}
-                >
-                  <Ionicons name="time-outline" size={18} color="white" />
-                </LinearGradient>
-                <Text style={styles.eventsSectionTitle}>
-                  {selectedDate.toLocaleDateString('default', {
-                    weekday: 'long',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </Text>
-                <Text style={styles.eventsCount}>
-                  {selectedDateEvents.length} {selectedDateEvents.length === 1 ? t('calendar.task') : t('calendar.tasks')}
-                </Text>
+              <View style={styles.weekHeader}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <Text key={index} style={styles.weekDay}>{day}</Text>
+                ))}
               </View>
 
-              {selectedDateEvents.length > 0 ? (
-                <View style={styles.eventsList}>
-                  {selectedDateEvents.map((item, index) => (
-                    <View key={index}>
-                      {renderEventItem({ item, index })}
-                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
-                        <TouchableOpacity onPress={() => openEditEventModal(item)} style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 8, marginRight: 8 }}>
-                          <Ionicons name="create-outline" size={18} color="#fff" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleDeleteEvent(item)} style={{ backgroundColor: '#EF4444', borderRadius: 8, padding: 8 }}>
-                          <Ionicons name="trash-outline" size={18} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
+              <View style={styles.calendarGrid}>
+                {renderCalendar()}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Event Details Popup */}
+          {selectedEventDetails && (
+            <Animated.View style={[styles.eventDetailsPopup, { opacity: eventDetailsOpacity }]}>
+              <View style={styles.eventDetailsContent}>
+                <Ionicons 
+                  name={getTaskIcon(selectedEventDetails.type)} 
+                  size={20} 
+                  color="#10b981" 
+                />
+                <View style={styles.eventDetailsText}>
+                  <Text style={styles.eventDetailsTitle}>{selectedEventDetails.task}</Text>
+                  <Text style={styles.eventDetailsTime}>{selectedEventDetails.time}</Text>
                 </View>
-              ) : (
-                <Animated.View style={[styles.noEventsContainer, { opacity: fadeAnim }]}>
-                  <LinearGradient
-                    colors={['rgba(24, 24, 27, 0.5)', 'rgba(39, 39, 42, 0.5)']}
-                    style={styles.noEventsCard}
-                  >
-                    <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.3)" />
-                    <Text style={styles.noEventsText}>{t('calendar.no_tasks_scheduled')}</Text>
-                  </LinearGradient>
-                </Animated.View>
-              )}
+              </View>
+            </Animated.View>
+          )}
+
+          {/* Next Upcoming Task */}
+          {nextTask && (
+            <View style={styles.upcomingSection}>
+              <Text style={styles.upcomingSectionTitle}>Next Upcoming Task</Text>
+              <View style={styles.upcomingTaskCard}>
+                <View style={styles.upcomingTaskIcon}>
+                  <Ionicons 
+                    name={getTaskIcon(nextTask.type)} 
+                    size={24} 
+                    color="#10b981" 
+                  />
+                </View>
+                <View style={styles.upcomingTaskContent}>
+                  <Text style={styles.upcomingTaskTitle}>{nextTask.task}</Text>
+                  <Text style={styles.upcomingTaskDate}>
+                    {new Date(nextTask.date).toLocaleDateString('default', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric'
+                    })} at {nextTask.time}
+                  </Text>
+                  {nextTask.details && (
+                    <Text style={styles.upcomingTaskDetails}>{nextTask.details}</Text>
+                  )}
+                </View>
+                <View style={[
+                  styles.upcomingTaskPriority,
+                  { backgroundColor: nextTask.priority === 'high' ? '#ff4444' : 
+                                   nextTask.priority === 'medium' ? '#ffaa00' : '#10b981' }
+                ]} />
+              </View>
+            </View>
+          )}
+
+          {/* AI Analysis Carousel */}
+          <View style={styles.aiAnalysisSection}>
+            <View style={styles.aiAnalysisHeader}>
+              <MaterialCommunityIcons name="brain" size={24} color="#10b981" />
+              <Text style={styles.aiAnalysisTitle}>AI Farm Insights</Text>
             </View>
 
-            {/* Weather Panel */}
-            <Animated.View style={[styles.weatherPanel, { opacity: fadeAnim }]}>
-              <LinearGradient
-                colors={['rgba(59, 130, 246, 0.1)', 'rgba(16, 185, 129, 0.1)']}
-                style={styles.weatherCard}
-              >
-                <View style={styles.weatherHeader}>
-                  <LinearGradient
-                    colors={['#3b82f6', '#10b981']}
-                    style={styles.weatherIcon}
-                  >
-                    <Ionicons name="sunny-outline" size={16} color="white" />
-                  </LinearGradient>
-                  <Text style={styles.weatherTitle}>{t('calendar.weather_sync')}</Text>
-                </View>
-
-                <View style={styles.weatherStats}>
-                  <View style={styles.weatherStat}>
-                    <Ionicons name="thermometer-outline" size={16} color="#10b981" />
-                    <Text style={styles.weatherLabel}>{t('calendar.temperature')}</Text>
-                    <Text style={styles.weatherValue}>28°C</Text>
+            <ScrollView
+              ref={carouselRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              style={styles.insightsCarousel}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: carouselScrollX } } }],
+                { useNativeDriver: false }
+              )}
+            >
+              {AI_INSIGHTS.map((insight, index) => (
+                <View key={index} style={styles.insightCard}>
+                  <View style={[styles.insightIconContainer, { backgroundColor: `${insight.color}20` }]}>
+                    <Ionicons name={insight.icon} size={28} color={insight.color} />
                   </View>
-                  <View style={styles.weatherStat}>
-                    <Ionicons name="water-outline" size={16} color="#3b82f6" />
-                    <Text style={styles.weatherLabel}>{t('calendar.humidity')}</Text>
-                    <Text style={styles.weatherValue}>65%</Text>
-                  </View>
-                  <View style={styles.weatherStat}>
-                    <Ionicons name="rainy-outline" size={16} color="#f59e0b" />
-                    <Text style={styles.weatherLabel}>{t('calendar.rain')}</Text>
-                    <Text style={styles.weatherValue}>Tomorrow</Text>
-                  </View>
+                  <Text style={styles.insightTitle}>{insight.title}</Text>
+                  <Text style={styles.insightDescription}>{insight.description}</Text>
                 </View>
-              </LinearGradient>
-            </Animated.View>
+              ))}
+            </ScrollView>
 
-            {/* Add Event Option Sheet */}
-            <Modal visible={eventAddOptionSheet} transparent animationType="fade">
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ backgroundColor: '#23232a', borderRadius: 16, padding: 24, width: 300 }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{t('calendar.add_event')}</Text>
-                  <TouchableOpacity style={{ backgroundColor: '#10B981', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12 }} onPress={handleManualAddEvent}>
-                    <Ionicons name="create-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.type_manually')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ backgroundColor: '#3B82F6', borderRadius: 8, padding: 14, alignItems: 'center' }} onPress={handleSpeakAddEvent}>
-                    <Ionicons name="mic-outline" size={22} color="#fff" style={{ marginBottom: 4 }} />
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('calendar.speak_ai_extract')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ marginTop: 18, alignItems: 'center' }} onPress={() => setEventAddOptionSheet(false)}>
-                    <Text style={{ color: '#64748B' }}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
+            {/* Carousel Indicators */}
+            <View style={styles.carouselIndicators}>
+              {AI_INSIGHTS.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    index === currentInsightIndex && styles.activeIndicator
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Current Event Popup */}
+        <Modal visible={currentEventPopupVisible} animationType="fade" transparent>
+          <View style={styles.currentEventOverlay}>
+            <Animated.View style={styles.currentEventPopup}>
+              <View style={styles.currentEventHeader}>
+                <View style={styles.currentEventIconContainer}>
+                  <Ionicons 
+                    name={currentEvent ? getTaskIcon(currentEvent.type) : 'calendar'} 
+                    size={24} 
+                    color="#10b981" 
+                  />
                 </View>
-              </View>
-            </Modal>
-
-            {/* Mic Modal for Event */}
-            <Modal visible={eventMicModal} transparent animationType="fade">
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
-                <Animated.View style={{
-                  width: 120, height: 120, borderRadius: 60, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center',
-                  transform: [{ scale: eventMicAnim }], marginBottom: 32
-                }}>
-                  <Ionicons name="mic" size={56} color="#fff" />
-                </Animated.View>
-                <Text style={{ color: '#fff', fontSize: 18, marginBottom: 24 }}>{t('calendar.listening')}</Text>
-                <TouchableOpacity onPress={() => setEventMicModal(false)} style={{ backgroundColor: '#23232a', borderRadius: 8, padding: 14, alignItems: 'center', width: 120 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('common.cancel')}</Text>
+                <View style={styles.currentEventTextContainer}>
+                  <Text style={styles.currentEventTitle}>Current Task</Text>
+                  <Text style={styles.currentEventTask}>{currentEvent?.task}</Text>
+                  <Text style={styles.currentEventTime}>Scheduled: {currentEvent?.time}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.currentEventCloseButton}
+                  onPress={() => setCurrentEventPopupVisible(false)}
+                >
+                  <Ionicons name="close" size={20} color="#666" />
                 </TouchableOpacity>
               </View>
-            </Modal>
+              {currentEvent?.details && (
+                <Text style={styles.currentEventDetails}>{currentEvent.details}</Text>
+              )}
+            </Animated.View>
+          </View>
+        </Modal>
 
-            {/* Event Add/Edit Modal */}
-            <Modal visible={eventModalVisible} animationType="slide" transparent>
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, maxHeight: '90%' }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>{eventModalMode === 'add' ? t('calendar.add_new_event') : t('calendar.edit_event')}</Text>
-                  <ScrollView style={{ maxHeight: 400 }}>
-                    <TextInput style={modalInputStyle} placeholder={t('calendar.task_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.task} onChangeText={v => setEventModalEvent({ ...eventModalEvent, task: v })} />
-                    <TextInput style={modalInputStyle} placeholder={t('calendar.time_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.time} onChangeText={v => setEventModalEvent({ ...eventModalEvent, time: v })} />
-                    <TextInput style={modalInputStyle} placeholder={t('calendar.type_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.type} onChangeText={v => setEventModalEvent({ ...eventModalEvent, type: v })} />
-                    <TextInput style={modalInputStyle} placeholder={t('calendar.priority_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.priority} onChangeText={v => setEventModalEvent({ ...eventModalEvent, priority: v })} />
-                    <TextInput style={modalInputStyle} placeholder={t('calendar.details_placeholder')} placeholderTextColor="#64748B" value={eventModalEvent.details} onChangeText={v => setEventModalEvent({ ...eventModalEvent, details: v })} multiline />
-                  </ScrollView>
-                  <View style={{ flexDirection: 'row', marginTop: 24 }}>
-                    <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#27272a', borderRadius: 8, marginRight: 8 }} onPress={() => setEventModalVisible(false)}>
-                      <Text style={{ color: '#64748B' }}>{t('common.cancel')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#10B981', borderRadius: 8, marginLeft: 8 }} onPress={handleEventModalSave} disabled={eventModalLoading}>
-                      <Text style={{ color: '#fff' }}>{eventModalLoading ? t('calendar.saving') : t('common.save')}</Text>
-                    </TouchableOpacity>
-                  </View>
+        {/* Add Method Selection Modal */}
+        <Modal visible={addMethodModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.addMethodModal}>
+              <Text style={styles.addMethodTitle}>Add New Task</Text>
+              <Text style={styles.addMethodSubtitle}>Choose how you'd like to add your farming task</Text>
+              
+              <TouchableOpacity 
+                style={styles.addMethodOption}
+                onPress={handleManualAdd}
+              >
+                <Ionicons name="create-outline" size={24} color="#10b981" />
+                <View style={styles.addMethodOptionContent}>
+                  <Text style={styles.addMethodOptionTitle}>Fill Manually</Text>
+                  <Text style={styles.addMethodOptionDesc}>Enter task details yourself</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.addMethodOption}
+                onPress={handleAIAdd}
+              >
+                <MaterialCommunityIcons name="brain" size={24} color="#3b82f6" />
+                <View style={styles.addMethodOptionContent}>
+                  <Text style={styles.addMethodOptionTitle}>Fill with AI</Text>
+                  <Text style={styles.addMethodOptionDesc}>Let AI suggest optimal tasks</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.addMethodCancel}
+                onPress={() => setAddMethodModalVisible(false)}
+              >
+                <Text style={styles.addMethodCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* AI Generation Loading Modal */}
+        <Modal visible={aiGenerating} animationType="fade" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.aiLoadingModal}>
+              <Animated.View style={styles.aiLoadingAnimation}>
+                <MaterialCommunityIcons name="brain" size={48} color="#3b82f6" />
+              </Animated.View>
+              <Text style={styles.aiLoadingTitle}>Generating using Reinforcement Learning</Text>
+              <Text style={styles.aiLoadingSubtitle}>Analyzing your farm data and weather patterns...</Text>
+              <View style={styles.loadingBar}>
+                <Animated.View style={styles.loadingBarFill} />
               </View>
-            </Modal>
-          </ScrollView>
-        )}
-        <View style={{ position: 'absolute', bottom: 32, right: 32, zIndex: 100 }}>
-          <TouchableOpacity onPress={openAddEventModal} style={{ backgroundColor: '#10B981', borderRadius: 32, width: 64, height: 64, alignItems: 'center', justifyContent: 'center', shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}>
-            <Ionicons name="add" size={36} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Mic Overlay - UI only for now */}
-        <MicOverlay 
-          onPress={() => {
-            // For now, just navigate to LiveVoiceScreen
-            navigation.navigate('LiveVoiceScreen');
-          }}
-          isVisible={true}
-          isActive={false}
-          position="bottomLeft"
-        />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add/Edit Event Modal */}
+        <Modal visible={eventModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Farm Task</Text>
+                <TouchableOpacity 
+                  onPress={() => setEventModalVisible(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalContent}>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="What needs to be done?"
+                  placeholderTextColor="#666"
+                  value={eventModalEvent.task}
+                  onChangeText={(text) => setEventModalEvent({...eventModalEvent, task: text})}
+                />
+                
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Time (e.g., 09:00)"
+                  placeholderTextColor="#666"
+                  value={eventModalEvent.time}
+                  onChangeText={(text) => setEventModalEvent({...eventModalEvent, time: text})}
+                />
+                
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Type (irrigation, planting, etc.)"
+                  placeholderTextColor="#666"
+                  value={eventModalEvent.type}
+                  onChangeText={(text) => setEventModalEvent({...eventModalEvent, type: text})}
+                />
+                
+                <TextInput
+                  style={[styles.modalInput, styles.modalTextArea]}
+                  placeholder="Additional details (optional)"
+                  placeholderTextColor="#666"
+                  value={eventModalEvent.details}
+                  onChangeText={(text) => setEventModalEvent({...eventModalEvent, details: text})}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={styles.modalCancelButton}
+                  onPress={() => setEventModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.modalSaveButton}
+                  onPress={handleSaveEvent}
+                >
+                  <Text style={styles.modalSaveText}>Save Task</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -872,353 +744,533 @@ const SmartCalendar = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: '#000',
   },
   safeArea: {
     flex: 1,
   },
-  floatingParticle: {
-    position: 'absolute',
-    zIndex: 1,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  particle: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#10b981',
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 16,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  headerBlur: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  backButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 8,
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 25,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 15,
-    marginTop: 2,
-  },
-  syncIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    borderRadius: 12,
-  },
-  syncDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
-  },
-  syncText: {
-    color: '#10b981',
-    fontSize: 10,
+    color: '#fff',
+    fontSize: 20,
     fontWeight: '600',
   },
-  // REMOVED: Styles related to summaryContainer, summaryCard, summaryHeader,
-  // summaryIcon, summaryTitle, typingIndicator, summaryText, cursor
-  // as the hardcoded AI Farm Assistant is removed.
+  headerSubtitle: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  headerRight: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+  },
   scrollView: {
     flex: 1,
   },
-  calendarNav: {
+  calendarSection: {
+    padding: 20,
+  },
+  monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  navButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthYear: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  calendarContainer: {
-    paddingHorizontal: 16,
     marginBottom: 20,
   },
-  calendarCard: {
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  weekDaysHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
-  },
-  weekDayText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    width: (width - 64) / 7,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  emptyDay: {
-    width: (width - 64) / 7,
-    height: 50,
-  },
-  dayCell: {
-    width: (width - 64) / 7,
-    height: 50,
-    padding: 2,
-  },
-  dayCellGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  navButton: {
+    padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#1a1a1a',
+  },
+  monthText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  calendarContainer: {
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
     position: 'relative',
   },
-  todayCell: {},
-  selectedCell: {},
-  dayNumber: {
-    color: 'white',
+  addTaskButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  weekDay: {
+    color: '#666',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
+    textAlign: 'center',
+    width: (width - 72) / 7,
+  },
+  calendarGrid: {},
+  weekRow: {
+    flexDirection: 'row',
+  },
+  emptyDay: {
+    width: (width - 72) / 7,
+    height: 40,
+  },
+  dayCell: {
+    width: (width - 72) / 7,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  todayCell: {
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+  },
+  selectedCell: {
+    backgroundColor: '#1a4d3a',
+    borderRadius: 8,
+  },
+  dayNumber: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
   todayNumber: {
-    color: '#10b981',
-    fontWeight: '900',
+    color: '#000',
+    fontWeight: '700',
   },
   selectedNumber: {
     color: '#10b981',
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  eventsContainer: {
+  eventIndicator: {
     position: 'absolute',
     bottom: 2,
-    flexDirection: 'row',
-    gap: 2,
   },
   eventDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
   },
-  moreEvents: {
-    width: 8,
-    height: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moreEventsText: {
-    color: '#10b981',
-    fontSize: 6,
-    fontWeight: '600',
-  },
-  eventIndicator: {
+  eventDetailsPopup: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: 200,
+    left: 20,
+    right: 20,
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#10b981',
+    zIndex: 1000,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
-  },
-  eventsSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  eventsSectionHeader: {
+  eventDetailsContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  eventsIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  eventDetailsText: {
+    marginLeft: 12,
+    flex: 1,
   },
-  eventsSectionTitle: {
-    color: 'white',
+  eventDetailsTitle: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  eventDetailsTime: {
+    color: '#10b981',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  currentEventOverlay: {
     flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 100,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  eventsCount: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
+  currentEventPopup: {
+    backgroundColor: '#111',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    borderWidth: 2,
+    borderColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    maxWidth: 350,
+    width: '90%',
   },
-  eventsList: {
-    maxHeight: 300,
-  },
-  eventItem: {
+  currentEventHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
-  eventItemGradient: {
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  eventItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eventIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  currentEventIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1a4d3a',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  eventItemContent: {
+  currentEventTextContainer: {
     flex: 1,
   },
-  eventTitle: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  eventTime: {
-    color: 'rgba(255,255,255,0.6)',
+  currentEventTitle: {
+    color: '#10b981',
     fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  currentEventTask: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  currentEventTime: {
+    color: '#666',
+    fontSize: 14,
+  },
+  currentEventCloseButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  currentEventDetails: {
+    color: '#ccc',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#222',
+  },
+  upcomingSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  upcomingSectionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  upcomingTaskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111',
     borderRadius: 12,
+    padding: 20,
   },
-  priorityText: {
-    color: 'white',
-    fontSize: 8,
-    fontWeight: '700',
+  upcomingTaskIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1a4d3a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
   },
-  noEventsContainer: {
-    marginTop: 20,
+  upcomingTaskContent: {
+    flex: 1,
   },
-  noEventsCard: {
+  upcomingTaskTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  upcomingTaskDate: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  upcomingTaskDetails: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  upcomingTaskPriority: {
+    width: 4,
+    height: 48,
+    borderRadius: 2,
+  },
+  aiAnalysisSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  aiAnalysisHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  aiAnalysisTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  insightsCarousel: {
+    marginBottom: 16,
+  },
+  insightCard: {
+    width: width - 40,
+    backgroundColor: '#111',
+    borderRadius: 16,
+    padding: 24,
+    marginRight: 0,
+    alignItems: 'center',
+  },
+  insightIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  insightTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  insightDescription: {
+    color: '#ccc',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  carouselIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#333',
+    marginHorizontal: 4,
+  },
+  activeIndicator: {
+    backgroundColor: '#10b981',
+    width: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  addMethodModal: {
+    backgroundColor: '#111',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  addMethodTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  addMethodSubtitle: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  addMethodOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#222',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  addMethodOptionContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  addMethodOptionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  addMethodOptionDesc: {
+    color: '#666',
+    fontSize: 14,
+  },
+  addMethodCancel: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  addMethodCancelText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  aiLoadingModal: {
+    backgroundColor: '#111',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    width: '100%',
+    maxWidth: 300,
   },
-  noEventsText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  weatherPanel: {
-    paddingHorizontal: 16,
+  aiLoadingAnimation: {
     marginBottom: 20,
   },
-  weatherCard: {
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  weatherHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  weatherIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  weatherTitle: {
-    color: 'white',
-    fontSize: 19,
+  aiLoadingTitle: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  weatherStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  weatherStat: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  weatherLabel: {
-    color: 'rgba(255,255,255,0.6)',
+  aiLoadingSubtitle: {
+    color: '#666',
     fontSize: 14,
-    marginTop: 4,
-    marginBottom: 2,
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  weatherValue: {
-    color: 'white',
-    fontSize: 13,
+  loadingBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  loadingBarFill: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    width: '70%',
+  },
+  modalContainer: {
+    backgroundColor: '#111',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
   },
-  eventDetailsContainer: {
-    marginTop: 10,
-    backgroundColor: 'rgba(16,185,129,0.08)',
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalInput: {
+    backgroundColor: '#222',
     borderRadius: 8,
-    padding: 10,
+    padding: 16,
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 16,
   },
-  eventDetailsText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    lineHeight: 17,
+  modalTextArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
-});
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#222',
+  },
+  modalCancelButton: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: '#222',
+    borderRadius: 8,
+  },
+  modalCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  modalSaveButton: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    marginLeft: 8,
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+     },
+ });
 
 export default SmartCalendar;
