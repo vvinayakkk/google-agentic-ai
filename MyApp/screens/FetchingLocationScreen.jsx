@@ -21,10 +21,26 @@ const FetchingLocationScreen = ({ navigation }) => {
   const [selectedPoints, setSelectedPoints] = useState([]);
   const [boundingBox, setBoundingBox] = useState(null);
   const [isSelectingPoints, setIsSelectingPoints] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
+  const [showSelectionMessage, setShowSelectionMessage] = useState(false);
+  const [farmArea, setFarmArea] = useState(null);
   
   // Animation values
   const mapRef = useRef(null);
   const boundingBoxAnim = useRef(new Animated.Value(0)).current;
+  const loadingAnim = useRef(new Animated.Value(0)).current;
+  const stepAnim = useRef(new Animated.Value(0)).current;
+  const messageAnim = useRef(new Animated.Value(0)).current;
+
+  // Analysis steps
+  const analysisSteps = [
+    { title: 'Analyzing Farm Land', icon: 'leaf', color: '#10B981' },
+    { title: 'Analyzing Soil Conditions', icon: 'earth', color: '#8B4513' },
+    { title: 'Fetching Nearby Mandi Prices', icon: 'trending-up', color: '#F59E0B' },
+    { title: 'Getting Latest Weather Updates', icon: 'partly-sunny', color: '#3B82F6' },
+    { title: 'Finalizing Personalized Insights', icon: 'analytics', color: '#8B5CF6' },
+  ];
 
   // India center coordinates
   const INDIA_CENTER = {
@@ -32,6 +48,33 @@ const FetchingLocationScreen = ({ navigation }) => {
     longitude: 78.9629,
     latitudeDelta: 40,
     longitudeDelta: 40,
+  };
+
+  // Calculate area in acres using Haversine formula
+  const calculateAreaInAcres = (points) => {
+    if (points.length !== 4) return 0;
+
+    // Convert coordinates to radians
+    const toRadians = (degrees) => degrees * (Math.PI / 180);
+    
+    // Calculate area using shoelace formula for polygon
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += toRadians(points[i].longitude) * toRadians(points[j].latitude);
+      area -= toRadians(points[j].longitude) * toRadians(points[i].latitude);
+    }
+    
+    area = Math.abs(area) / 2;
+    
+    // Convert to square meters (approximate)
+    const earthRadius = 6371000; // meters
+    const areaInSquareMeters = area * earthRadius * earthRadius;
+    
+    // Convert to acres (1 acre = 4046.86 square meters)
+    const areaInAcres = areaInSquareMeters / 4046.86;
+    
+    return Math.round(areaInAcres * 100) / 100; // Round to 2 decimal places
   };
 
   // Get user location
@@ -62,7 +105,7 @@ const FetchingLocationScreen = ({ navigation }) => {
         longitudeDelta: 0.01,
       });
 
-      // Start location animation after 2 seconds
+      // Start location animation immediately after 2 seconds
       setTimeout(() => {
         animateToUserLocation(location.coords);
       }, 2000);
@@ -91,10 +134,15 @@ const FetchingLocationScreen = ({ navigation }) => {
       }, 1500); // Moderate zoom animation
     }
 
-    // Start point selection after showing location
+    // Show selection message after zoom completes
     setTimeout(() => {
-      startPointSelection();
-    }, 3000);
+      setShowSelectionMessage(true);
+      Animated.timing(messageAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }, 2000);
   };
 
   // Start point selection process
@@ -102,6 +150,16 @@ const FetchingLocationScreen = ({ navigation }) => {
     setIsSelectingPoints(true);
     setSelectedPoints([]);
     setBoundingBox(null);
+    setFarmArea(null);
+    
+    // Hide selection message
+    Animated.timing(messageAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowSelectionMessage(false);
+    });
   };
 
   // Handle map press to add points
@@ -123,25 +181,37 @@ const FetchingLocationScreen = ({ navigation }) => {
     }
   };
 
-  // Create bounding box from 4 points
+  // Create accurate bounding box from 4 points
   const createBoundingBox = (points) => {
-    const lats = points.map(p => p.latitude);
-    const lngs = points.map(p => p.longitude);
-    
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
+    // Calculate the center point
+    const centerLat = points.reduce((sum, p) => sum + p.latitude, 0) / points.length;
+    const centerLng = points.reduce((sum, p) => sum + p.longitude, 0) / points.length;
 
+    // Calculate distances from center to each point
+    const distances = points.map(point => {
+      const latDiff = point.latitude - centerLat;
+      const lngDiff = point.longitude - centerLng;
+      return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+    });
+
+    // Find the maximum distance to create a proper bounding box
+    const maxDistance = Math.max(...distances);
+    const buffer = maxDistance * 0.1; // Add 10% buffer for accuracy
+
+    // Create a more accurate bounding box
     const boundingBoxCoords = [
-      { latitude: minLat, longitude: minLng },
-      { latitude: minLat, longitude: maxLng },
-      { latitude: maxLat, longitude: maxLng },
-      { latitude: maxLat, longitude: minLng },
+      { latitude: centerLat - maxDistance - buffer, longitude: centerLng - maxDistance - buffer },
+      { latitude: centerLat - maxDistance - buffer, longitude: centerLng + maxDistance + buffer },
+      { latitude: centerLat + maxDistance + buffer, longitude: centerLng + maxDistance + buffer },
+      { latitude: centerLat + maxDistance + buffer, longitude: centerLng - maxDistance - buffer },
     ];
 
     setBoundingBox(boundingBoxCoords);
     setIsSelectingPoints(false);
+
+    // Calculate farm area
+    const area = calculateAreaInAcres(points);
+    setFarmArea(area);
 
     // Animate bounding box appearance
     Animated.timing(boundingBoxAnim, {
@@ -150,10 +220,50 @@ const FetchingLocationScreen = ({ navigation }) => {
       useNativeDriver: true,
     }).start();
 
-    // Wait 5 seconds then proceed
+    // Start analysis after 3 seconds
     setTimeout(() => {
-      navigation.replace('LoginScreen');
-    }, 5000);
+      startAnalysis();
+    }, 3000);
+  };
+
+  // Start analysis process
+  const startAnalysis = () => {
+    setIsAnalyzing(true);
+    setCurrentAnalysisStep(0);
+    
+    // Animate loading screen appearance
+    Animated.timing(loadingAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
+    // Process each analysis step
+    analysisSteps.forEach((step, index) => {
+      setTimeout(() => {
+        setCurrentAnalysisStep(index);
+        
+        // Animate step appearance
+        Animated.timing(stepAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          Animated.timing(stepAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        });
+
+        // If this is the last step, navigate after completion
+        if (index === analysisSteps.length - 1) {
+          setTimeout(() => {
+            navigation.replace('LoginScreen');
+          }, 2000);
+        }
+      }, (index + 1) * 1500); // 1.5 seconds per step
+    });
   };
 
   // Get user location after component mounts
@@ -195,16 +305,59 @@ const FetchingLocationScreen = ({ navigation }) => {
           </Marker>
         ))}
 
-        {/* Bounding box polygon */}
+        {/* Accurate bounding box polygon */}
         {boundingBox && (
           <Polygon
             coordinates={boundingBox}
-            fillColor="rgba(16, 185, 129, 0.3)"
-            strokeColor="rgba(16, 185, 129, 0.8)"
-            strokeWidth={3}
+            fillColor="rgba(16, 185, 129, 0.2)"
+            strokeColor="rgba(16, 185, 129, 0.9)"
+            strokeWidth={4}
           />
         )}
+
+        {/* Farm Area Display in Center */}
+        {boundingBox && farmArea && (
+          <Marker
+            coordinate={{
+              latitude: (boundingBox[0].latitude + boundingBox[2].latitude) / 2,
+              longitude: (boundingBox[0].longitude + boundingBox[2].longitude) / 2,
+            }}
+          >
+            <View style={styles.areaDisplay}>
+              <Text style={styles.areaText}>{farmArea} acres</Text>
+            </View>
+          </Marker>
+        )}
       </MapView>
+
+      {/* Selection Message Overlay */}
+      {showSelectionMessage && (
+        <Animated.View
+          style={[
+            styles.selectionMessage,
+            {
+              opacity: messageAnim,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.95)']}
+            style={styles.selectionGradient}
+          >
+            <Ionicons name="hand-left" size={28} color="#FFFFFF" />
+            <Text style={styles.selectionTitle}>Select Your Farm Land</Text>
+            <Text style={styles.selectionSubtext}>
+              Tap 4 points around your farm boundary to calculate area
+            </Text>
+            <TouchableOpacity 
+              style={styles.startButton}
+              onPress={startPointSelection}
+            >
+              <Text style={styles.startButtonText}>Start Selection</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+      )}
 
       {/* Point Selection Instructions */}
       {isSelectingPoints && (
@@ -232,7 +385,7 @@ const FetchingLocationScreen = ({ navigation }) => {
       )}
 
       {/* Bounding Box Created Message */}
-      {boundingBox && (
+      {boundingBox && !isAnalyzing && (
         <Animated.View
           style={[
             styles.boundingBoxMessage,
@@ -247,7 +400,80 @@ const FetchingLocationScreen = ({ navigation }) => {
           >
             <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
             <Text style={styles.boundingBoxText}>Farm boundary created!</Text>
-            <Text style={styles.boundingBoxSubText}>Proceeding in 5 seconds...</Text>
+            <Text style={styles.boundingBoxSubText}>
+              Area: {farmArea} acres • Starting analysis...
+            </Text>
+          </LinearGradient>
+        </Animated.View>
+      )}
+
+      {/* Analysis Loading Screen */}
+      {isAnalyzing && (
+        <Animated.View
+          style={[
+            styles.loadingOverlay,
+            {
+              opacity: loadingAnim,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.95)', 'rgba(0, 0, 0, 0.9)']}
+            style={styles.loadingGradient}
+          >
+            <View style={styles.loadingContent}>
+              <Text style={styles.loadingTitle}>Analyzing Your Farm</Text>
+              
+              {/* Current Step */}
+              <Animated.View
+                style={[
+                  styles.currentStepContainer,
+                  {
+                    opacity: stepAnim,
+                  },
+                ]}
+              >
+                <View style={styles.stepIconContainer}>
+                  <Ionicons 
+                    name={analysisSteps[currentAnalysisStep].icon} 
+                    size={32} 
+                    color={analysisSteps[currentAnalysisStep].color} 
+                  />
+                </View>
+                <Text style={styles.currentStepText}>
+                  {analysisSteps[currentAnalysisStep].title}
+                </Text>
+              </Animated.View>
+
+              {/* Progress Steps */}
+              <View style={styles.progressSteps}>
+                {analysisSteps.map((step, index) => (
+                  <View key={index} style={styles.stepRow}>
+                    <View style={[
+                      styles.stepDot,
+                      index <= currentAnalysisStep && styles.stepDotCompleted
+                    ]}>
+                      {index < currentAnalysisStep && (
+                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.stepText,
+                      index <= currentAnalysisStep && styles.stepTextCompleted
+                    ]}>
+                      {step.title}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Loading Animation */}
+              <View style={styles.loadingAnimation}>
+                <View style={styles.loadingDot} />
+                <View style={styles.loadingDot} />
+                <View style={styles.loadingDot} />
+              </View>
+            </View>
           </LinearGradient>
         </Animated.View>
       )}
@@ -276,6 +502,66 @@ const styles = StyleSheet.create({
   pointNumber: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  areaDisplay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  areaText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  selectionMessage: {
+    position: 'absolute',
+    top: height * 0.2,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  selectionGradient: {
+    padding: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  selectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 12,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  selectionSubtext: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  startButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  startButtonText: {
+    color: '#10B981',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   instructionsBox: {
@@ -339,6 +625,95 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
     fontWeight: '400',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2000,
+  },
+  loadingGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  loadingTitle: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  currentStepContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 15,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  stepIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    padding: 10,
+    marginRight: 15,
+  },
+  currentStepText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  progressSteps: {
+    width: '100%',
+    marginBottom: 40,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  stepDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  stepDotCompleted: {
+    backgroundColor: '#10B981',
+  },
+  stepText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 16,
+    flex: 1,
+  },
+  stepTextCompleted: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  loadingAnimation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    marginHorizontal: 4,
+    opacity: 0.6,
   },
 });
 
