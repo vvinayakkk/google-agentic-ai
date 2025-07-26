@@ -348,8 +348,8 @@ export default function LiveVoiceScreen({ navigation }) {
 
       console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
 
-      // Call the KisanKiAwaaz-Backend-V2 audio_agent endpoint
-      const response = await axios.post('http://10.215.221.37:8000/audio_agent', formData, {
+      // Use axios like other working screens
+      const response = await axios.post(`${API_BASE}/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000, // 30 seconds timeout
       });
@@ -383,16 +383,23 @@ export default function LiveVoiceScreen({ navigation }) {
       const toolResult = result.tool_result || null;
       
       // Update state with AI response and question
-      setCurrentQuestion(transcribedText);
-      setCurrentResponse(responseText);
-      setCurrentAction(invokedTool);
+      setCurrentQuestion(result.transcribed_text || '');
+      setCurrentResponse(result.response_text || 'No response received');
+      setCurrentAction(result.invoked_tool || 'do_nothing');
       
-      // Note: KisanKiAwaaz-Backend-V2 doesn't have TTS, so no audio response
-      setAudioBase64('');
-      
-      console.log(`🤖 Invoked tool: ${invokedTool}`);
-      if (toolResult) {
-        console.log(`� Tool result:`, toolResult);
+      // Store audio data for playback
+      if (result.audio) {
+        setAudioBase64(result.audio);
+        console.log('🎵 Audio response received, ready for playback');
+        
+        // Auto-play the audio response only if not muted
+        if (!isMuted) {
+          setTimeout(() => {
+            playAudioResponse(result.audio);
+          }, 500); // Small delay to let UI update first
+        } else {
+          console.log('🔇 Audio auto-play skipped - muted');
+        }
       }
       
       // Trigger follow-up onboarding after first question
@@ -409,11 +416,10 @@ export default function LiveVoiceScreen({ navigation }) {
       setConversationHistory(prev => [...prev, {
         id: Date.now(),
         type: 'ai_response',
-        action: invokedTool,
-        summary: responseText,
-        transcribed: transcribedText,
-        audioData: '', // No audio from this backend
-        toolResult: toolResult,
+        action: result.invoked_tool || 'do_nothing',
+        summary: result.response_text || 'No response',
+        transcribed: result.transcribed_text || '',
+        audioData: result.audio || '', // Store audio data
         timestamp: new Date().toLocaleTimeString()
       }]);
 
