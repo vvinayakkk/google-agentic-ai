@@ -1337,7 +1337,7 @@ const MarketplaceScreen = ({ navigation }) => {
                       setShowStrategicPlans(false);
                       setSelectedMandi(preselectedMandi || getMandiById(filteredCrops[0]?.mandi) || null);
                       setSelectedCrops(filteredCrops.map(crop => crop.name));
-                      setCurrentStep('multipleCrops');
+                      setCurrentStep('serviceInfo');
                     }}
                     activeOpacity={0.8}
                   >
