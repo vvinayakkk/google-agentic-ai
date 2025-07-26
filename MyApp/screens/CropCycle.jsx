@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,12 @@ import {
   SafeAreaView,
   Dimensions,
   FlatList,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import CropCycleService from '../services/CropCycleService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,6 +29,104 @@ const FarmingAssistant = () => {
   });
   const [selectedTile, setSelectedTile] = useState(null);
   const [currentInsight, setCurrentInsight] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [realData, setRealData] = useState({
+    analysis: null,
+    insights: [],
+    buyers: [],
+    loans: [],
+    insurance: [],
+    certifications: [],
+    solar: [],
+    mandi: [],
+    government: []
+  });
+
+  // Add a new state for cache loading
+  const [cacheLoaded, setCacheLoaded] = useState(false);
+
+  // Helper: Save to AsyncStorage
+  const saveToCache = async (data) => {
+    try {
+      await AsyncStorage.setItem('cropcycle_dashboard_data', JSON.stringify(data));
+    } catch (e) {
+      // Ignore cache errors
+    }
+  };
+
+  // Helper: Load from AsyncStorage
+  const loadFromCache = async () => {
+    try {
+      const cached = await AsyncStorage.getItem('cropcycle_dashboard_data');
+      if (cached) {
+        setRealData(JSON.parse(cached));
+        setCacheLoaded(true);
+        return true;
+      }
+    } catch (e) {}
+    setCacheLoaded(true);
+    return false;
+  };
+
+  // Fetch all dashboard data in parallel and cache (no fallback)
+  const fetchAllDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [analysisData, insightsData, buyersData, loansData, insuranceData, certificationsData, solarData, mandiData, governmentData] = await Promise.all([
+        CropCycleService.analyzeCrop({
+          crop: selectedCrop,
+          landSize: farmDetails.landSize,
+          irrigation: farmDetails.irrigation,
+          tools: farmDetails.tools,
+        }),
+        CropCycleService.generateInsights({
+          crop: selectedCrop,
+          landSize: farmDetails.landSize,
+          irrigation: farmDetails.irrigation,
+          tools: farmDetails.tools,
+        }),
+        CropCycleService.getCorporateBuyers(selectedCrop),
+        CropCycleService.getLoanSchemes(),
+        CropCycleService.getInsurancePlans(),
+        CropCycleService.getCertifications(),
+        CropCycleService.getSolarSchemes(),
+        CropCycleService.getMandiInfo(),
+        CropCycleService.getGovernmentSchemes(),
+      ]);
+      const dashboardData = {
+        analysis: analysisData,
+        insights: (insightsData && insightsData.insights) || [],
+        buyers: (buyersData && buyersData.buyers) || [],
+        loans: (loansData && loansData.schemes) || [],
+        insurance: (insuranceData && insuranceData.plans) || [],
+        certifications: (certificationsData && certificationsData.certifications) || [],
+        solar: (solarData && solarData.schemes) || [],
+        mandi: (mandiData && mandiData.mandis) || [],
+        government: (governmentData && governmentData.schemes) || [],
+      };
+      setRealData(dashboardData);
+      saveToCache(dashboardData);
+    } catch (error) {
+      setRealData({
+        analysis: {}, insights: [], buyers: [], loans: [], insurance: [], certifications: [], solar: [], mandi: [], government: []
+      });
+      saveToCache({
+        analysis: {}, insights: [], buyers: [], loans: [], insurance: [], certifications: [], solar: [], mandi: [], government: []
+      });
+    } finally {
+      setLoading(false);
+      setCacheLoaded(true);
+    }
+  };
+
+  // On mount, try to load cache, else fetch
+  useEffect(() => {
+    if (currentScreen === 3) {
+      loadFromCache().then((found) => {
+        if (!found) fetchAllDashboardData();
+      });
+    }
+  }, [currentScreen, selectedCrop, farmDetails.landSize, farmDetails.irrigation]);
 
   const crops = [
     { name: 'Rice', emoji: '🌾', season: 'Kharif' },
@@ -55,13 +157,75 @@ const FarmingAssistant = () => {
     { name: 'Water Pump', emoji: '⚡' }
   ];
 
-  const aiInsights = [
+  const aiInsights = realData.insights.length > 0 ? realData.insights : [
     `Market demand for ${selectedCrop} is expected to rise by 15% this season`,
     "Optimal planting window: Next 2-3 weeks based on weather patterns",
     "Consider companion planting with legumes to improve soil nitrogen",
     "Current market price is 8% above last year - good selling opportunity",
     "Weather forecast shows adequate rainfall for the next month"
   ];
+
+  // Fetch comprehensive crop data
+  const fetchCropData = async () => {
+    if (!selectedCrop || !farmDetails.landSize || !farmDetails.irrigation) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Analyze crop
+      const analysisData = await CropCycleService.analyzeCrop({
+        crop: selectedCrop,
+        landSize: farmDetails.landSize,
+        irrigation: farmDetails.irrigation,
+        tools: farmDetails.tools
+      });
+
+      // Generate insights
+      const insightsData = await CropCycleService.generateInsights({
+        crop: selectedCrop,
+        landSize: farmDetails.landSize,
+        irrigation: farmDetails.irrigation,
+        tools: farmDetails.tools
+      });
+
+      // Get other data
+      const [buyersData, loansData, insuranceData, certificationsData, solarData, mandiData, governmentData] = await Promise.all([
+        CropCycleService.getCorporateBuyers(selectedCrop),
+        CropCycleService.getLoanSchemes(),
+        CropCycleService.getInsurancePlans(),
+        CropCycleService.getCertifications(),
+        CropCycleService.getSolarSchemes(),
+        CropCycleService.getMandiInfo(),
+        CropCycleService.getGovernmentSchemes()
+      ]);
+
+      setRealData({
+        analysis: analysisData,
+        insights: insightsData.insights || [],
+        buyers: buyersData.buyers || [],
+        loans: loansData.schemes || [],
+        insurance: insuranceData.plans || [],
+        certifications: certificationsData.certifications || [],
+        solar: solarData.schemes || [],
+        mandi: mandiData.mandis || [],
+        government: governmentData.schemes || []
+      });
+
+    } catch (error) {
+      console.error('Error fetching crop data:', error);
+      Alert.alert('Error', 'Failed to fetch crop data. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use effect to fetch data when crop details are complete
+  useEffect(() => {
+    if (selectedCrop && farmDetails.landSize && farmDetails.irrigation && currentScreen === 3) {
+      fetchCropData();
+    }
+  }, [selectedCrop, farmDetails.landSize, farmDetails.irrigation, currentScreen]);
 
   const tiles = [
     { 
@@ -632,24 +796,38 @@ const FarmingAssistant = () => {
         <View style={styles.focusSection}>
           <View style={styles.focusCard}>
             <Text style={styles.focusTitle}>✅ Feasibility</Text>
-            <Text style={styles.focusValue}>Highly Suitable</Text>
-            <Text style={styles.focusSubtext}>Optimal conditions for {selectedCrop} cultivation</Text>
+            <Text style={styles.focusValue}>
+              {realData.analysis ? `${realData.analysis.analysis.feasibility}%` : 'Analyzing...'}
+            </Text>
+            <Text style={styles.focusSubtext}>
+              {realData.analysis ? 'AI-powered feasibility assessment' : 'Loading analysis...'}
+            </Text>
           </View>
           
           <View style={styles.focusCard}>
             <Text style={styles.focusTitle}>💰 Expected Profit</Text>
-            <Text style={styles.focusValue}>₹{(parseInt(farmDetails.landSize) || 1) * 45000}</Text>
+            <Text style={styles.focusValue}>
+              {realData.analysis ? `₹${realData.analysis.analysis.expected_profit}` : 'Calculating...'}
+            </Text>
             <Text style={styles.focusSubtext}>Net profit per season</Text>
-      </View>
+          </View>
           
           <View style={styles.focusCard}>
             <Text style={styles.focusTitle}>📊 ROI</Text>
-            <Text style={styles.focusValue}>165%</Text>
+            <Text style={styles.focusValue}>
+              {realData.analysis ? `${realData.analysis.analysis.roi_percentage}%` : 'Computing...'}
+            </Text>
             <Text style={styles.focusSubtext}>Return on investment</Text>
-        </View>
+          </View>
         </View>
 
-        {/* AI Insights Carousel */}
+        {/* Loading Indicator */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FF9800" />
+            <Text style={styles.loadingText}>Analyzing your farm data with AI...</Text>
+          </View>
+        )}        {/* AI Insights Carousel */}
         <View style={styles.insightsContainer}>
           <View style={styles.insightsHeader}>
             <Text style={styles.insightsTitle}>🤖 AI Insights</Text>

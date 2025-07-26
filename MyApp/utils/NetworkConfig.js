@@ -1,10 +1,11 @@
 // Network configuration and debugging utilities for React Native
 export const NetworkConfig = {
   // Primary API base URL
-  API_BASE: 'http://10.215.221.37:8000',
+  API_BASE: 'http://10.123.4.245:8000',
   
   // Alternative URLs to try
   FALLBACK_URLS: [
+    'http://10.123.4.245:8000',  // Primary
     'http://192.168.0.111:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
@@ -69,8 +70,7 @@ export const NetworkConfig = {
 
   // Enhanced fetch with better error handling
   safeFetch: async (endpoint, options = {}) => {
-    const baseUrl = await NetworkConfig.getBestUrl();
-    const url = `${baseUrl}${endpoint}`;
+    const url = `${NetworkConfig.API_BASE}${endpoint}`;
     
     // For FormData, don't set default headers - let the browser handle it
     const isFormData = options.body instanceof FormData;

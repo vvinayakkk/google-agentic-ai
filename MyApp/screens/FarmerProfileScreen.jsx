@@ -269,7 +269,6 @@ const FarmerProfileScreen = ({ route, navigation }) => {
         Alert.alert('Success', 'Crop updated successfully!');
       } else {
         // Add new crop
-        const res = await axios.post(`${API_BASE}/farmer/${farmerId}/crops`, currentCrop);
         setCrops([...crops, res.data]); // Assuming API returns the new crop with an ID
         Alert.alert('Success', 'Crop added successfully!');
       }

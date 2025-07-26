@@ -1,416 +1,281 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Easing, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Dimensions,
+  Alert,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
+import CropCycleService from '../../services/CropCycleService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-
-// Mock power data - in real app this would come from API
-const POWER_DATA = {
-  'Rice': {
-    currentPowerCost: 12000,
-    solarSavings: 8000,
-    systemSize: '10kW',
-    pumpHP: '7.5 HP',
-    dailyUsage: '8 hours',
-    bestSeason: 'Kharif',
-  },
-  'Wheat': {
-    currentPowerCost: 15000,
-    solarSavings: 10000,
-    systemSize: '12kW',
-    pumpHP: '10 HP',
-    dailyUsage: '6 hours',
-    bestSeason: 'Rabi',
-  },
-  'Maize': {
-    currentPowerCost: 10000,
-    solarSavings: 7000,
-    systemSize: '8kW',
-    pumpHP: '5 HP',
-    dailyUsage: '5 hours',
-    bestSeason: 'Both',
-  },
-  'Cotton': {
-    currentPowerCost: 18000,
-    solarSavings: 12000,
-    systemSize: '15kW',
-    pumpHP: '12 HP',
-    dailyUsage: '10 hours',
-    bestSeason: 'Kharif',
-  },
-  'Tomato': {
-    currentPowerCost: 8000,
-    solarSavings: 6000,
-    systemSize: '6kW',
-    pumpHP: '3 HP',
-    dailyUsage: '4 hours',
-    bestSeason: 'Both',
-  },
-  'Onion': {
-    currentPowerCost: 7000,
-    solarSavings: 5000,
-    systemSize: '5kW',
-    pumpHP: '2.5 HP',
-    dailyUsage: '3 hours',
-    bestSeason: 'Rabi',
-  },
-  // Fallback data for other crops
-  'Sugarcane': {
-    currentPowerCost: 20000,
-    solarSavings: 14000,
-    systemSize: '20kW',
-    pumpHP: '15 HP',
-    dailyUsage: '12 hours',
-    bestSeason: 'Annual',
-  },
-  'Potato': {
-    currentPowerCost: 9000,
-    solarSavings: 6500,
-    systemSize: '7kW',
-    pumpHP: '4 HP',
-    dailyUsage: '5 hours',
-    bestSeason: 'Rabi',
-  },
-  'Soybean': {
-    currentPowerCost: 11000,
-    solarSavings: 7500,
-    systemSize: '9kW',
-    pumpHP: '6 HP',
-    dailyUsage: '6 hours',
-    bestSeason: 'Kharif',
-  },
-  'Groundnut': {
-    currentPowerCost: 8500,
-    solarSavings: 6000,
-    systemSize: '6kW',
-    pumpHP: '3.5 HP',
-    dailyUsage: '4 hours',
-    bestSeason: 'Both',
-  },
-};
-
-const SUBSIDY_INFO = {
-  'PM-KUSUM': {
-    subsidy: '60%',
-    loan: '30% at 7% interest',
-    farmerShare: '10%',
-    maxSystem: '10 HP',
-    eligibility: 'All farmers with land',
-    documents: 'Aadhaar, Land docs, Electricity bill',
-    timeline: '3-4 months',
-    contact: '1800-180-1551',
-  },
-  'State Subsidy': {
-    subsidy: '40-50%',
-    loan: '40% at 8% interest',
-    farmerShare: '10-20%',
-    maxSystem: '15 HP',
-    eligibility: 'Small & marginal farmers',
-    documents: 'Land docs, Income certificate, Bank account',
-    timeline: '2-3 months',
-    contact: 'State agriculture office',
-  },
-  'Bank Loan': {
-    subsidy: '0%',
-    loan: '90% at 9% interest',
-    farmerShare: '10%',
-    maxSystem: 'No limit',
-    eligibility: 'Good credit score',
-    documents: 'Land docs, Income proof, Bank statements',
-    timeline: '1-2 months',
-    contact: 'Local bank branch',
-  },
-};
 
 const PowerSupplyScreen = ({ route }) => {
   const { selectedCrop, landSize } = route.params || { selectedCrop: 'Rice', landSize: '5' };
   
-  // Debug logging
-  console.log('PowerSupplyScreen received params:', { selectedCrop, landSize });
-  console.log('Route params:', route.params);
-  
-  const [currentView, setCurrentView] = useState('savings');
-  const [fadeAnim] = useState(new Animated.Value(1));
-  const [scaleAnim] = useState(new Animated.Value(1));
-  const [selectedStep, setSelectedStep] = useState(0);
+  const [currentView, setCurrentView] = useState('solar');
+  const [loading, setLoading] = useState(true);
+  const [solarSchemes, setSolarSchemes] = useState([]);
+  const [cropAnalysis, setCropAnalysis] = useState(null);
 
-  // Get power data with fallback and additional error handling
-  const powerData = POWER_DATA[selectedCrop] || POWER_DATA['Rice'];
-  const landSizeNum = parseInt(landSize) || 5;
-  
-  // Additional safety checks
-  if (!powerData) {
-    console.error('Power data not found for crop:', selectedCrop);
+  useEffect(() => {
+    const loadCache = async () => {
+      setLoading(true);
+      try {
+        const cached = await AsyncStorage.getItem('cropcycle_dashboard_data');
+        if (cached) {
+          const data = JSON.parse(cached);
+          setSolarSchemes(data.solar || []);
+          setCropAnalysis(data.analysis || null);
+        }
+      } catch (e) {}
+      setLoading(false);
+    };
+    loadCache();
+  }, [selectedCrop]);
+
+  const handlePhoneCall = async (phoneNumber) => {
+    try {
+      const callData = await CropCycleService.initiateCall(phoneNumber);
+      const phoneUrl = callData.call_url;
+      
+      const supported = await Linking.canOpenURL(phoneUrl);
+      if (supported) {
+        await Linking.openURL(phoneUrl);
+      } else {
+        Alert.alert('Error', 'Phone app is not available on this device');
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      Alert.alert('Error', 'Failed to initiate call');
+    }
+  };
+
+  const renderSolarSchemeCard = (scheme, index) => (
+    <View key={index} style={styles.schemeCard}>
+      <View style={styles.schemeHeader}>
+        <View style={styles.schemeInfo}>
+          <Text style={styles.schemeName}>{scheme.name}</Text>
+          <Text style={styles.schemeProvider}>{scheme.provider}</Text>
+        </View>
+        <View style={styles.subsidyBadge}>
+          <Text style={styles.subsidyText}>{scheme.subsidy}</Text>
+        </View>
+      </View>
+
+      <View style={styles.schemeDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>System Size:</Text>
+          <Text style={styles.detailValue}>{scheme.system_size}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Cost:</Text>
+          <Text style={styles.detailValue}>{scheme.cost}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Annual Savings:</Text>
+          <Text style={styles.detailValue}>{scheme.annual_savings}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Payback Period:</Text>
+          <Text style={styles.detailValue}>{scheme.payback_period}</Text>
+        </View>
+      </View>
+
+      <View style={styles.benefitsSection}>
+        <Text style={styles.sectionTitle}>Benefits</Text>
+        <Text style={styles.benefitsText}>{scheme.benefits}</Text>
+      </View>
+
+      <View style={styles.eligibilitySection}>
+        <Text style={styles.sectionTitle}>Eligibility</Text>
+        <Text style={styles.eligibilityText}>{scheme.eligibility}</Text>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.applyButton}
+        onPress={() => handlePhoneCall(scheme.contact?.split(': ')[1] || scheme.contact)}
+      >
+        <Text style={styles.applyButtonText}>📞 Apply Now - {scheme.contact}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderPowerAnalysis = () => {
+    if (!cropAnalysis) return null;
+
+    const powerCost = cropAnalysis.power_cost || 15000;
+    const solarSavings = Math.round(powerCost * 0.7);
+    const systemSize = Math.round(parseInt(landSize) * 2) + 'kW';
+
+    return (
+      <View style={styles.analysisCard}>
+        <Text style={styles.analysisTitle}>Power Analysis for {selectedCrop}</Text>
+        <View style={styles.analysisGrid}>
+          <View style={styles.analysisItem}>
+            <Text style={styles.analysisLabel}>Current Power Cost</Text>
+            <Text style={styles.currentCost}>₹{powerCost.toLocaleString()}/year</Text>
+          </View>
+          <View style={styles.analysisItem}>
+            <Text style={styles.analysisLabel}>Solar Savings</Text>
+            <Text style={styles.savingsValue}>₹{solarSavings.toLocaleString()}/year</Text>
+          </View>
+          <View style={styles.analysisItem}>
+            <Text style={styles.analysisLabel}>Recommended Size</Text>
+            <Text style={styles.systemValue}>{systemSize}</Text>
+          </View>
+          <View style={styles.analysisItem}>
+            <Text style={styles.analysisLabel}>ROI Period</Text>
+            <Text style={styles.roiValue}>4-5 years</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderTraditionaOptions = () => {
+    return (
+      <View style={styles.traditionalContainer}>
+        <Text style={styles.sectionTitle}>Traditional Power Options</Text>
+        
+        <View style={styles.optionCard}>
+          <Text style={styles.optionTitle}>🔌 Grid Connection</Text>
+          <View style={styles.optionDetails}>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Monthly Cost:</Text>
+              <Text style={styles.optionValue}>₹1,200 - ₹2,500</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Reliability:</Text>
+              <Text style={styles.optionValue}>Medium (6-8 hrs/day)</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Best For:</Text>
+              <Text style={styles.optionValue}>Small farms</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.inquireButton}
+            onPress={() => handlePhoneCall('+91 1912345678')}
+          >
+            <Text style={styles.inquireButtonText}>📞 Contact DISCOM - +91 1912345678</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.optionCard}>
+          <Text style={styles.optionTitle}>⛽ Diesel Generator</Text>
+          <View style={styles.optionDetails}>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Fuel Cost:</Text>
+              <Text style={styles.optionValue}>₹2,000 - ₹4,000/month</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Reliability:</Text>
+              <Text style={styles.optionValue}>High (24/7 available)</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Best For:</Text>
+              <Text style={styles.optionValue}>Emergency backup</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.inquireButton}
+            onPress={() => handlePhoneCall('+91 9876543210')}
+          >
+            <Text style={styles.inquireButtonText}>📞 Generator Dealers - +91 9876543210</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.optionCard}>
+          <Text style={styles.optionTitle}>🔋 Battery Storage</Text>
+          <View style={styles.optionDetails}>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Setup Cost:</Text>
+              <Text style={styles.optionValue}>₹50,000 - ₹2,00,000</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Backup:</Text>
+              <Text style={styles.optionValue}>4-8 hours</Text>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Best For:</Text>
+              <Text style={styles.optionValue}>Solar + grid hybrid</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.inquireButton}
+            onPress={() => handlePhoneCall('+91 8765432109')}
+          >
+            <Text style={styles.inquireButtonText}>📞 Battery Suppliers - +91 8765432109</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Data not available for {selectedCrop}</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Loading power supply options...</Text>
+        </View>
       </SafeAreaView>
     );
   }
-  
-  const annualSavings = powerData.solarSavings * landSizeNum;
-  const paybackPeriod = Math.round((powerData.systemSize.replace('kW', '') * 80000 * 0.1) / annualSavings);
-
-  const animateView = () => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0.3,
-        duration: 200,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
-      }),
-    ]).start();
-  };
-
-  const animateCard = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-        easing: Easing.bounce,
-      }),
-    ]).start();
-  };
-
-  useEffect(() => {
-    animateView();
-  }, [currentView]);
-
-  const renderSavingsView = () => (
-    <Animated.View style={[styles.viewContainer, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>💰 Your Power Savings</Text>
-      
-      {/* Current vs Solar Costs */}
-      <View style={styles.costComparison}>
-        <View style={styles.costCard}>
-          <Text style={styles.costLabel}>Current Power Cost</Text>
-          <Text style={styles.currentCost}>₹{(powerData.currentPowerCost * landSizeNum).toLocaleString()}</Text>
-          <Text style={styles.costSubtext}>Per year for {landSizeNum} acres</Text>
-        </View>
-        
-        <View style={styles.arrowContainer}>
-          <Text style={styles.arrow}>→</Text>
-          <Text style={styles.savingsText}>Save ₹{annualSavings.toLocaleString()}</Text>
-        </View>
-        
-        <View style={styles.costCard}>
-          <Text style={styles.costLabel}>With Solar</Text>
-          <Text style={styles.solarCost}>₹{((powerData.currentPowerCost - powerData.solarSavings) * landSizeNum).toLocaleString()}</Text>
-          <Text style={styles.costSubtext}>Per year after solar</Text>
-        </View>
-      </View>
-
-      {/* System Details */}
-      <Animated.View style={[styles.systemCard, { transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.systemTitle}>⚡ Solar System for {selectedCrop}</Text>
-        <View style={styles.systemDetails}>
-          <View style={styles.systemItem}>
-            <Text style={styles.systemItemLabel}>System Size</Text>
-            <Text style={styles.systemItemValue}>{powerData.systemSize}</Text>
-          </View>
-          <View style={styles.systemItem}>
-            <Text style={styles.systemItemLabel}>Pump Capacity</Text>
-            <Text style={styles.systemItemValue}>{powerData.pumpHP}</Text>
-          </View>
-          <View style={styles.systemItem}>
-            <Text style={styles.systemItemLabel}>Daily Usage</Text>
-            <Text style={styles.systemItemValue}>{powerData.dailyUsage}</Text>
-          </View>
-          <View style={styles.systemItem}>
-            <Text style={styles.systemItemLabel}>Best Season</Text>
-            <Text style={styles.systemItemValue}>{powerData.bestSeason}</Text>
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* Payback Analysis */}
-      <View style={styles.paybackCard}>
-        <Text style={styles.paybackTitle}>📈 Investment Analysis</Text>
-        <View style={styles.paybackItem}>
-          <Text style={styles.paybackLabel}>System Cost</Text>
-          <Text style={styles.paybackValue}>₹{(powerData.systemSize.replace('kW', '') * 80000).toLocaleString()}</Text>
-        </View>
-        <View style={styles.paybackItem}>
-          <Text style={styles.paybackLabel}>Annual Savings</Text>
-          <Text style={styles.paybackValue}>₹{annualSavings.toLocaleString()}</Text>
-        </View>
-        <View style={styles.paybackItem}>
-          <Text style={styles.paybackLabel}>Payback Period</Text>
-          <Text style={styles.paybackValue}>{paybackPeriod} years</Text>
-        </View>
-        <View style={styles.paybackItem}>
-          <Text style={styles.paybackLabel}>25-year Savings</Text>
-          <Text style={styles.paybackValue}>₹{(annualSavings * 25).toLocaleString()}</Text>
-        </View>
-      </View>
-    </Animated.View>
-  );
-
-  const renderSubsidyView = () => (
-    <Animated.View style={[styles.viewContainer, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>🏛️ Government Subsidies</Text>
-      
-      {Object.entries(SUBSIDY_INFO).map(([scheme, info], index) => (
-        <Animated.View key={scheme} style={[styles.subsidyCard, { transform: [{ scale: scaleAnim }] }]}>
-          <View style={styles.subsidyHeader}>
-            <Text style={styles.subsidyName}>{scheme}</Text>
-            <Text style={styles.subsidyRate}>{info.subsidy} subsidy</Text>
-          </View>
-          
-          <View style={styles.subsidyDetails}>
-            <View style={styles.subsidyItem}>
-              <Text style={styles.subsidyLabel}>💳 Loan</Text>
-              <Text style={styles.subsidyValue}>{info.loan}</Text>
-            </View>
-            <View style={styles.subsidyItem}>
-              <Text style={styles.subsidyLabel}>👤 Your Share</Text>
-              <Text style={styles.subsidyValue}>{info.farmerShare}</Text>
-            </View>
-            <View style={styles.subsidyItem}>
-              <Text style={styles.subsidyLabel}>📋 Documents</Text>
-              <Text style={styles.subsidyValue}>{info.documents}</Text>
-            </View>
-            <View style={styles.subsidyItem}>
-              <Text style={styles.subsidyLabel}>⏱️ Timeline</Text>
-              <Text style={styles.subsidyValue}>{info.timeline}</Text>
-            </View>
-            <View style={styles.subsidyItem}>
-              <Text style={styles.subsidyLabel}>📞 Contact</Text>
-              <Text style={styles.subsidyValue}>{info.contact}</Text>
-            </View>
-          </View>
-        </Animated.View>
-      ))}
-    </Animated.View>
-  );
-
-  const renderInstallationView = () => (
-    <Animated.View style={[styles.viewContainer, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>🔧 Installation Guide</Text>
-      
-      <View style={styles.stepsContainer}>
-        {[
-          {
-            step: 1,
-            title: 'Apply for Subsidy',
-            description: 'Submit application with land documents and Aadhaar',
-            duration: '1 week',
-            cost: '₹0',
-            contact: 'PM-KUSUM: 1800-180-1551',
-          },
-          {
-            step: 2,
-            title: 'Get Technical Survey',
-            description: 'Government engineer visits your farm for assessment',
-            duration: '2 weeks',
-            cost: '₹0',
-            contact: 'Local agriculture office',
-          },
-          {
-            step: 3,
-            title: 'Select Vendor',
-            description: 'Choose from government-empaneled solar vendors',
-            duration: '1 week',
-            cost: '₹0',
-            contact: 'List available at agriculture office',
-          },
-          {
-            step: 4,
-            title: 'Installation',
-            description: 'Solar panels and pump installation at your farm',
-            duration: '1 week',
-            cost: 'Your 10% share',
-            contact: 'Selected vendor',
-          },
-          {
-            step: 5,
-            title: 'Commissioning',
-            description: 'Testing and handover of solar system',
-            duration: '1 day',
-            cost: '₹0',
-            contact: 'Vendor + government team',
-          },
-        ].map((stepData, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.stepCard, selectedStep === index && styles.selectedStepCard]}
-            onPress={() => {
-              setSelectedStep(index);
-              animateCard();
-            }}
-          >
-            <View style={styles.stepHeader}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{stepData.step}</Text>
-              </View>
-              <View style={styles.stepInfo}>
-                <Text style={styles.stepTitle}>{stepData.title}</Text>
-                <Text style={styles.stepDuration}>⏱️ {stepData.duration}</Text>
-              </View>
-              <Text style={styles.stepCost}>{stepData.cost}</Text>
-            </View>
-            <Text style={styles.stepDescription}>{stepData.description}</Text>
-            <Text style={styles.stepContact}>📞 {stepData.contact}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </Animated.View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>⚡ Energy Independence</Text>
-          <Text style={styles.subtitle}>{selectedCrop} - {landSize} acres</Text>
+          <Text style={styles.title}>Power Supply Solutions</Text>
+          <Text style={styles.subtitle}>Sustainable energy options for {selectedCrop} cultivation</Text>
         </View>
 
-        {/* Navigation Tabs */}
+        {renderPowerAnalysis()}
+
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, currentView === 'savings' && styles.activeTab]}
-            onPress={() => {
-              setCurrentView('savings');
-              animateCard();
-            }}
+            style={[styles.tab, currentView === 'solar' && styles.activeTab]}
+            onPress={() => setCurrentView('solar')}
           >
-            <Text style={[styles.tabText, currentView === 'savings' && styles.activeTabText]}>💰 Savings</Text>
+            <Text style={[styles.tabText, currentView === 'solar' && styles.activeTabText]}>
+              Solar Schemes
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, currentView === 'subsidy' && styles.activeTab]}
-            onPress={() => {
-              setCurrentView('subsidy');
-              animateCard();
-            }}
+            style={[styles.tab, currentView === 'traditional' && styles.activeTab]}
+            onPress={() => setCurrentView('traditional')}
           >
-            <Text style={[styles.tabText, currentView === 'subsidy' && styles.activeTabText]}>🏛️ Subsidies</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, currentView === 'installation' && styles.activeTab]}
-            onPress={() => {
-              setCurrentView('installation');
-              animateCard();
-            }}
-          >
-            <Text style={[styles.tabText, currentView === 'installation' && styles.activeTabText]}>🔧 Install</Text>
+            <Text style={[styles.tabText, currentView === 'traditional' && styles.activeTabText]}>
+              Traditional
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Content Views */}
-        {currentView === 'savings' && renderSavingsView()}
-        {currentView === 'subsidy' && renderSubsidyView()}
-        {currentView === 'installation' && renderInstallationView()}
+        <View style={styles.viewContainer}>
+          {currentView === 'solar' && (
+            <>
+              <Text style={styles.sectionTitle}>Solar Power Schemes</Text>
+              {solarSchemes.length > 0 ? (
+                solarSchemes.map((scheme, index) => renderSolarSchemeCard(scheme, index))
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>No solar schemes available</Text>
+                  <Text style={styles.noDataSubtext}>Check back later for updates</Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {currentView === 'traditional' && renderTraditionaOptions()}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -420,69 +285,184 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#101613' },
   scrollContainer: { padding: 20 },
   header: { marginBottom: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#FF9800', marginBottom: 4 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#2196F3', marginBottom: 4 },
   subtitle: { fontSize: 16, color: '#aaa' },
-  tabContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: '#181818', borderRadius: 12, padding: 4 },
+  
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    color: '#aaa',
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+
+  analysisCard: {
+    backgroundColor: '#181818',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFC107',
+  },
+  analysisTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  analysisGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  analysisItem: {
+    width: '48%',
+    marginBottom: 10,
+  },
+  analysisLabel: {
+    color: '#aaa',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  currentCost: {
+    color: '#F44336',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  savingsValue: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  systemValue: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  roiValue: {
+    color: '#FF9800',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  tabContainer: { 
+    flexDirection: 'row', 
+    marginBottom: 20, 
+    backgroundColor: '#181818', 
+    borderRadius: 12, 
+    padding: 4 
+  },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 8 },
-  activeTab: { backgroundColor: '#FF9800' },
+  activeTab: { backgroundColor: '#2196F3' },
   tabText: { color: '#aaa', fontWeight: '600', fontSize: 14 },
   activeTabText: { color: '#fff' },
+
   viewContainer: { marginBottom: 20 },
-  sectionTitle: { fontSize: 20, color: '#FF9800', fontWeight: 'bold', marginBottom: 15 },
-  costComparison: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  costCard: { flex: 1, backgroundColor: '#181818', borderRadius: 16, padding: 20, alignItems: 'center' },
-  costLabel: { color: '#aaa', fontSize: 14, marginBottom: 8 },
-  currentCost: { color: '#FF6B6B', fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  solarCost: { color: '#4CAF50', fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  costSubtext: { color: '#666', fontSize: 12 },
-  arrowContainer: { paddingHorizontal: 15, alignItems: 'center' },
-  arrow: { fontSize: 24, color: '#FF9800', marginBottom: 4 },
-  savingsText: { color: '#4CAF50', fontWeight: 'bold', fontSize: 16 },
-  systemCard: { backgroundColor: '#181818', borderRadius: 16, padding: 20, marginBottom: 20 },
-  systemTitle: { color: '#FF9800', fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-  systemDetails: { gap: 12 },
-  systemItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  systemItemLabel: { color: '#aaa', fontSize: 14 },
-  systemItemValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  paybackCard: { backgroundColor: '#181818', borderRadius: 16, padding: 20 },
-  paybackTitle: { color: '#FFC107', fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
-  paybackItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  paybackLabel: { color: '#aaa', fontSize: 14 },
-  paybackValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  subsidyCard: { backgroundColor: '#181818', borderRadius: 16, padding: 20, marginBottom: 15 },
-  subsidyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  subsidyName: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  subsidyRate: { color: '#4CAF50', fontSize: 16, fontWeight: 'bold' },
-  subsidyDetails: { gap: 10 },
-  subsidyItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  subsidyLabel: { color: '#aaa', fontSize: 14 },
-  subsidyValue: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1, textAlign: 'right' },
-  stepsContainer: { gap: 15 },
-  stepCard: { backgroundColor: '#181818', borderRadius: 16, padding: 20 },
-  selectedStepCard: { backgroundColor: '#232323', borderColor: '#FF9800', borderWidth: 2 },
-  stepHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  stepNumber: { 
-    width: 32, 
-    height: 32, 
-    backgroundColor: '#FF9800', 
-    borderRadius: 16, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginRight: 12 
-  },
-  stepNumberText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  stepInfo: { flex: 1 },
-  stepTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  stepDuration: { color: '#FF9800', fontSize: 12 },
-  stepCost: { color: '#4CAF50', fontSize: 14, fontWeight: 'bold' },
-  stepDescription: { color: '#aaa', fontSize: 14, marginBottom: 8 },
-  stepContact: { color: '#FFC107', fontSize: 12 },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 18,
-    textAlign: 'center',
+  sectionTitle: { fontSize: 20, color: '#2196F3', fontWeight: 'bold', marginBottom: 15 },
+
+  schemeCard: {
+    backgroundColor: '#181818',
+    borderRadius: 16,
     padding: 20,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  schemeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
+  schemeInfo: { flex: 1 },
+  schemeName: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+  schemeProvider: { color: '#aaa', fontSize: 14 },
+  subsidyBadge: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  subsidyText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+
+  schemeDetails: { marginBottom: 15 },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  detailLabel: { color: '#aaa', fontSize: 14 },
+  detailValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+  benefitsSection: { marginBottom: 15 },
+  benefitsText: { color: '#ccc', fontSize: 14, lineHeight: 20 },
+
+  eligibilitySection: { marginBottom: 15 },
+  eligibilityText: { color: '#ccc', fontSize: 14, lineHeight: 20 },
+
+  applyButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  applyButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+  // Traditional Options Styles
+  traditionalContainer: { marginBottom: 20 },
+  optionCard: {
+    backgroundColor: '#181818',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF5722',
+  },
+  optionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  optionDetails: { marginBottom: 15 },
+  optionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  optionLabel: { color: '#aaa', fontSize: 14 },
+  optionValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  inquireButton: {
+    backgroundColor: '#FF5722',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  inquireButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+  noDataContainer: {
+    backgroundColor: '#181818',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+  },
+  noDataText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noDataSubtext: {
+    color: '#aaa',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 
-export default PowerSupplyScreen; 
+export default PowerSupplyScreen;
