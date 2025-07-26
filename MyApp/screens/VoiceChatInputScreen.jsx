@@ -105,7 +105,7 @@ const ChatMessage = ({ message, chatHistory }) => {
     const [liked, setLiked] = useState(false);
     const [disliked, setDisliked] = useState(false);
 
-    const handleCopy = () => Clipboard.setString(message.content);
+    const handleCopy = () => Clipboard.setString(message.content || '');
     const handleLike = () => { setLiked(!liked); if (disliked) setDisliked(false); };
     const handleDislike = () => { setDisliked(!disliked); if (liked) setLiked(false); };
 
@@ -149,7 +149,13 @@ const ChatMessage = ({ message, chatHistory }) => {
                 ) : isContext ? (
                     <Text style={styles.contextMessageText}>{message.content || ''}</Text>
                 ) : (
-                    isUser ? <FormattedText text={message.content || ''} /> : <Markdown style={{body: styles.chatMessageText}}>{message.content || ''}</Markdown>
+                    isUser ? <FormattedText text={message.content || ''} /> : (
+                        <View>
+                            <Markdown style={{body: styles.chatMessageText}}>
+                                {message.content || ''}
+                            </Markdown>
+                        </View>
+                    )
                 )}
                 {!isUser && !isDocument && !isImage && (
                     <View style={styles.actionIconContainer}>
@@ -437,7 +443,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             ref={flatListRef}
                             data={chatHistory}
                             renderItem={({ item }) => <ChatMessage message={item} chatHistory={chatHistory} />}
-                            keyExtractor={(_, index) => index.toString()}
+                            keyExtractor={(item, index) => `chat-${index}-${item.type || 'message'}`}
                             style={styles.chatList}
                             contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
                             ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}

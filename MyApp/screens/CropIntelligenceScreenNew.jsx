@@ -813,7 +813,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             <View style={styles.combosSection}>
               <Text style={styles.sectionTitle}>Available Crop Combinations</Text>
               {cropCombos.length > 0 ? (
-                cropCombos.map(renderCropComboCard)
+                cropCombos.map((combo, index) => renderCropComboCard(combo))
               ) : (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="seed-off" size={64} color="#ccc" />
