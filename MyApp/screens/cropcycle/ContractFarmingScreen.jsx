@@ -220,7 +220,8 @@ const ContractFarmingScreen = ({ route }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
   const [selectedBuyer, setSelectedBuyer] = useState(null);
   
-  // Calculator state
+  // Calculator state - all editable
+  const [editableLandSize, setEditableLandSize] = useState(landSize);
   const [contractPrice, setContractPrice] = useState('2200');
   const [marketPrice, setMarketPrice] = useState('1850');
   const [yieldPerAcre, setYieldPerAcre] = useState('25');
@@ -228,7 +229,7 @@ const ContractFarmingScreen = ({ route }) => {
 
   // Get buyers with fallback and additional error handling
   const buyers = CORPORATE_BUYERS[selectedCrop] || CORPORATE_BUYERS['Rice'];
-  const landSizeNum = parseInt(landSize) || 5;
+  const landSizeNum = parseInt(editableLandSize) || 5;
   const yieldPerAcreNum = parseInt(yieldPerAcre) || 25;
   const totalYield = landSizeNum * yieldPerAcreNum;
 
@@ -376,7 +377,12 @@ const ContractFarmingScreen = ({ route }) => {
       <View style={styles.calculatorContainer}>
                  <View style={styles.inputGroup}>
            <Text style={styles.inputLabel}>Land Size (Acres)</Text>
-           <Text style={styles.inputField}>{landSize}</Text>
+           <TextInput
+            style={styles.inputField}
+            keyboardType="numeric"
+            value={editableLandSize}
+            onChangeText={setEditableLandSize}
+          />
          </View>
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Yield per Acre (Quintals)</Text>

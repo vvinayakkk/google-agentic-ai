@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Easing, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -149,17 +149,27 @@ const CreditSourcesScreen = ({ route }) => {
   const [fadeAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
   const [selectedScheme, setSelectedScheme] = useState(null);
+  
+  // Calculator state - all editable
+  const [editableLandSize, setEditableLandSize] = useState(landSize);
   const [loanAmount, setLoanAmount] = useState('50000');
   const [loanTenure, setLoanTenure] = useState('12');
+  const [interestRate, setInterestRate] = useState('7.0');
 
   // Get loan data with fallback and additional error handling
   const loanData = LOAN_DATA[selectedCrop] || LOAN_DATA['Rice'];
-  const landSizeNum = parseInt(landSize) || 5;
+  const landSizeNum = parseInt(editableLandSize) || 5;
   const totalRequirement = loanData.totalRequirement * landSizeNum;
   const loanAmountNum = parseInt(loanAmount) || 50000;
   const tenureNum = parseInt(loanTenure) || 12;
+  const interestRateNum = parseFloat(interestRate) || 7.0;
 
-  const monthlyEMI = (loanAmountNum * (1 + 0.07 / 100)) / 12; // Placeholder interest rate
+  // Calculate EMI using the formula: EMI = P × r × (1 + r)^n / ((1 + r)^n - 1)
+  const monthlyInterestRate = interestRateNum / (12 * 100);
+  const totalInterest = loanAmountNum * (interestRateNum / 100);
+  const totalAmount = loanAmountNum + totalInterest;
+  const monthlyEMI = loanAmountNum * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, tenureNum) / 
+                     (Math.pow(1 + monthlyInterestRate, tenureNum) - 1);
 
   // Additional safety checks
   if (!loanData) {
@@ -278,29 +288,75 @@ const CreditSourcesScreen = ({ route }) => {
       
       <View style={styles.calculatorCard}>
         <Text style={styles.calculatorTitle}>Loan Details for {selectedCrop}</Text>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Loan Amount</Text>
-          <Text style={styles.calcValue}>₹{loanAmountNum.toLocaleString()}</Text>
+        
+        {/* Input Fields */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Land Size (Acres)</Text>
+          <TextInput
+            style={styles.inputField}
+            keyboardType="numeric"
+            value={editableLandSize}
+            onChangeText={setEditableLandSize}
+            placeholder="Enter land size"
+            placeholderTextColor="#666"
+          />
         </View>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Interest Rate</Text>
-          <Text style={styles.calcValue}>7%</Text> {/* Placeholder */}
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Loan Amount (₹)</Text>
+          <TextInput
+            style={styles.inputField}
+            keyboardType="numeric"
+            value={loanAmount}
+            onChangeText={setLoanAmount}
+            placeholder="Enter loan amount"
+            placeholderTextColor="#666"
+          />
         </View>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Repayment Period</Text>
-          <Text style={styles.calcValue}>{tenureNum} months</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Interest Rate (%)</Text>
+          <TextInput
+            style={styles.inputField}
+            keyboardType="numeric"
+            value={interestRate}
+            onChangeText={setInterestRate}
+            placeholder="Enter interest rate"
+            placeholderTextColor="#666"
+          />
         </View>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Monthly EMI</Text>
-          <Text style={styles.calcValue}>₹{monthlyEMI.toLocaleString()}</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Loan Tenure (Months)</Text>
+          <TextInput
+            style={styles.inputField}
+            keyboardType="numeric"
+            value={loanTenure}
+            onChangeText={setLoanTenure}
+            placeholder="Enter tenure"
+            placeholderTextColor="#666"
+          />
         </View>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Total Interest</Text>
-          <Text style={styles.calcValue}>₹{(loanAmountNum * 0.07).toLocaleString()}</Text> {/* Placeholder */}
-        </View>
-        <View style={styles.calcRow}>
-          <Text style={styles.calcLabel}>Success Rate</Text>
-          <Text style={styles.calcValue}>85%</Text> {/* Placeholder */}
+        
+        {/* Results */}
+        <View style={styles.resultsContainer}>
+          <Text style={styles.resultsTitle}>Calculated Results</Text>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcLabel}>Monthly EMI</Text>
+            <Text style={styles.calcValue}>₹{monthlyEMI.toFixed(0).toLocaleString()}</Text>
+          </View>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcLabel}>Total Interest</Text>
+            <Text style={styles.calcValue}>₹{totalInterest.toFixed(0).toLocaleString()}</Text>
+          </View>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcLabel}>Total Amount</Text>
+            <Text style={styles.calcValue}>₹{totalAmount.toFixed(0).toLocaleString()}</Text>
+          </View>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcLabel}>Total Requirement</Text>
+            <Text style={styles.calcValue}>₹{totalRequirement.toLocaleString()}</Text>
+          </View>
         </View>
       </View>
 
@@ -405,7 +461,34 @@ const styles = StyleSheet.create({
   tableHeaderText: { color: '#00BCD4', fontSize: 12, fontWeight: 'bold', flex: 1 },
   tableRow: { flexDirection: 'row', marginBottom: 4 },
   tableCell: { color: '#fff', fontSize: 12, flex: 1 },
-
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    color: '#aaa',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  inputField: {
+    backgroundColor: '#232323',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    color: '#fff',
+    fontSize: 16,
+  },
+  resultsContainer: {
+    marginTop: 20,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  resultsTitle: {
+    color: '#00BCD4',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
   tipsCard: { backgroundColor: '#181818', borderRadius: 16, padding: 20 },
   tipsTitle: { color: '#FFC107', fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
   tipItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
