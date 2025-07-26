@@ -95,59 +95,28 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 
 // --- Simulated API Configuration ---
 const getKissanAIResponse = async (message, context) => {
-    // If not a text message, fallback to simulation
-    if (message.type !== 'text') {
-        // If image has text, treat as text message to backend
-        if (message.type === 'image' && message.content && message.content.text) {
-            // Send to backend with text and image info
-            try {
-                const contextToSend = typeof allContext === 'object' && allContext !== null ? allContext : { weather: '', soil: '', market: '' };
-                const payload = {
-                    user_query: message.content.text,
-                    image: { name: message.content.name, uri: message.content.uri },
-                    chat_history: context ? JSON.stringify(context) : "",
-                    extra_context: contextToSend
-                };
-                console.log('Sending image+text to backend:', payload);
-                const response = await axios.post(`${NetworkConfig.API_BASE}/chat/rag`, payload);
-                if (response.data && response.data.response) {
-                    return response.data.response;
-                }
-                return "Sorry, I couldn't get a response from the server.";
-            } catch (error) {
-                if (error.response) {
-                    console.log('AI error response:', error.response.data);
-                } else {
-                    console.log('AI error:', error.message || error);
-                }
-                return "Sorry, there was an error connecting to the server.";
-            }
-        }
-        // Simulate for image without text
-        console.log("Simulating AI response for:", message);
-        if (message.type === 'image') {
-            return new Promise(resolve => setTimeout(() => resolve(`Image \"${message.content.name}\" received!`), 1500));
-        }
-        if (message.type === 'document') {
-            return new Promise(resolve => setTimeout(() => resolve(`Thank you for uploading '${message.content.name}'. I am analyzing the document and will provide a summary shortly.`), 1500));
-        }
-        // ... handle other types if needed ...
-        return new Promise(resolve => setTimeout(() => resolve("Unsupported message type."), 1500));
+    // Session management
+    let session_id = await AsyncStorage.getItem('chat_session_id');
+    if (!session_id) {
+        session_id = Date.now().toString();
+        await AsyncStorage.setItem('chat_session_id', session_id);
     }
-    // For text messages, call backend RAG endpoint
+    const user_id = 'f001'; // Replace with real user id if available
+    const farmer_id = 'f001'; // Replace with real farmer id if available
+    // Compose payload
+    const payload = {
+        user_prompt: message.type === 'text' ? message.content : (message.content?.text || ''),
+        metadata: { 
+            extra_context: context || [],
+            farmer_id,
+        },
+        user_id,
+        session_id,
+    };
     try {
-        // Ensure allContext is up-to-date
-        const contextToSend = typeof allContext === 'object' && allContext !== null ? allContext : { weather: '', soil: '', market: '' };
-        const payload = {
-            user_query: message.content,
-            chat_history: context ? JSON.stringify(context) : "",
-            extra_context: contextToSend
-        };
-        console.log('Sending to backend:', payload);
-        const response = await axios.post(`${NetworkConfig.API_BASE}/chat/rag`, payload);
-        // Prefer bullet points and links if present
-        if (response.data && response.data.response) {
-            return response.data.response;
+        const response = await axios.post('http://10.215.221.37:8000/agent', payload); // Update to your backend URL
+        if (response.data && response.data.response_text) {
+            return response.data.response_text;
         }
         return "Sorry, I couldn't get a response from the server.";
     } catch (error) {
@@ -640,7 +609,11 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                                 context: allContext // Save context with chat history
                             };
                             try {
-                                await axios.post(`${API_BASE}/farmer/${FARMER_ID}/chat`, newChat);
+                                // Save to AsyncStorage only, or implement remote save via /agent if needed
+                                let history = await AsyncStorage.getItem('chatHistory');
+                                history = history ? JSON.parse(history) : [];
+                                history.unshift(newChat);
+                                await AsyncStorage.setItem('chatHistory', JSON.stringify(history.slice(0, 20)));
                             } catch (e) {
                                 Alert.alert(t('common.error'), t('voicechat.failed_to_save_chat_backend'));
                             }
