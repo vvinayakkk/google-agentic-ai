@@ -23,7 +23,6 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
-import MicOverlay from '../components/MicOverlay';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android') {
@@ -625,47 +624,24 @@ export default function CropDoctorScreen({ navigation }) {
 
             {/* Debug Buttons for Testing (remove in production) */}
             {__DEV__ && (
-                <View style={{
-                    position: 'absolute',
-                    top: 100,
-                    left: 10,
-                    zIndex: 999,
-                    flexDirection: 'row'
-                }}>
+                <View style={styles.tourButtonsContainer}>
                     <TouchableOpacity
+                        style={styles.restartTourButton}
                         onPress={startOnboardingTour}
-                        style={{
-                            backgroundColor: '#34D399',
-                            padding: 8,
-                            borderRadius: 4,
-                            marginRight: 8
-                        }}
                     >
-                        <Text style={{ color: 'black', fontSize: 10 }}>Tour</Text>
+                        <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
+                        <Text style={styles.restartTourText}>Tour</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity
+                        style={styles.resetTourButton}
                         onPress={resetOnboarding}
-                        style={{
-                            backgroundColor: '#EF4444',
-                            padding: 8,
-                            borderRadius: 4
-                        }}
                     >
-                        <Text style={{ color: 'white', fontSize: 10 }}>Reset</Text>
+                        <MaterialCommunityIcons name="refresh" size={16} color="#EF4444" />
+                        <Text style={styles.resetTourText}>Reset</Text>
                     </TouchableOpacity>
                 </View>
             )}
-            
-            {/* Mic Overlay - UI only for now */}
-            <MicOverlay 
-                onPress={() => {
-                    // For now, just navigate to LiveVoiceScreen
-                    navigation.navigate('LiveVoiceScreen');
-                }}
-                isVisible={true}
-                isActive={false}
-            />
         </SafeAreaView>
     );
 }
@@ -737,5 +713,61 @@ const styles = StyleSheet.create({
     sectionTitle: { // Re-used for accordion header
         ...theme.typography.h2,
         color: theme.colors.text,
+    },
+
+    // Onboarding Tour Buttons
+    tourButtonsContainer: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        flexDirection: 'row',
+        gap: 12,
+    },
+    restartTourButton: {
+        backgroundColor: '#1F2937',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#374151',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 140,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    restartTourText: {
+        color: '#10B981',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+        letterSpacing: 0.5,
+    },
+    resetTourButton: {
+        backgroundColor: '#1F2937',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#374151',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    resetTourText: {
+        color: '#EF4444',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+        letterSpacing: 0.5,
     },
 });
