@@ -48,11 +48,19 @@ import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
 import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
+<<<<<<< Updated upstream
 import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
 import SuicidePrevention from './screens/SuicidePrevention';
 import { View } from 'react-native';
+=======
+import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import NetworkConfig from './utils/NetworkConfig';
+>>>>>>> Stashed changes
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
+
+
 
 export default function App() {
   useEffect(() => {
@@ -301,8 +309,13 @@ export default function App() {
                 options={{ headerShown: false }} 
               />
               <Stack.Screen 
+<<<<<<< Updated upstream
                 name="BestOutOfWasteScreen" 
                 component={BestOutOfWasteScreen} 
+=======
+                name="FarmVisualizerScreen" 
+                component={FarmVisualizerScreen} 
+>>>>>>> Stashed changes
                 options={{ headerShown: false }} 
               />
               <Stack.Screen 

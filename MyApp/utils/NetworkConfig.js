@@ -74,7 +74,8 @@ export const NetworkConfig = {
 
   // Enhanced fetch with better error handling
   safeFetch: async (endpoint, options = {}) => {
-    const url = `${NetworkConfig.API_BASE}${endpoint}`;
+    // Check if endpoint is already a full URL
+    const url = endpoint.startsWith('http') ? endpoint : `${NetworkConfig.API_BASE}${endpoint}`;
     
     // For FormData, don't set default headers - let the browser handle it
     const isFormData = options.body instanceof FormData;
