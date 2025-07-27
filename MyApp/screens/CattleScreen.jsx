@@ -22,7 +22,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
-import MicOverlay from '../components/MicOverlay';
+
 
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
@@ -37,7 +37,7 @@ const CattleScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Add state for animal modals and mic
+  // Add state for animal modals
   const [animalModalVisible, setAnimalModalVisible] = useState(false);
   const [animalModalMode, setAnimalModalMode] = useState('add');
   // Default values for new animal, ensuring all expected fields are present
@@ -55,8 +55,6 @@ const CattleScreen = ({ navigation }) => {
   });
   const [animalModalLoading, setAnimalModalLoading] = useState(false);
   const [animalAddOptionSheet, setAnimalAddOptionSheet] = useState(false);
-  const [animalMicModal, setAnimalMicModal] = useState(false);
-  const animalMicAnim = useRef(new Animated.Value(1)).current;
 
   const [imageModalVisible, setImageModalVisible] = useState(false);
 
@@ -413,43 +411,7 @@ const CattleScreen = ({ navigation }) => {
     checkOnboardingStatus(); // Check if onboarding should be shown
   }, []);
 
-  // Mic animation effect
-  useEffect(() => {
-    let timer;
-    if (animalMicModal) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(animalMicAnim, { toValue: 1.2, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(animalMicAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ])
-      ).start();
-      timer = setTimeout(() => {
-        setAnimalMicModal(false);
-        setAnimalModalMode('add');
-        // Pre-fill for demonstration purposes after "mic input"
-        setAnimalModalAnimal({
-          name: 'Bella',
-          breed: 'Jersey',
-          age: '3',
-          type: 'cow',
-          icon: '🐄',
-          color: '#10B981',
-          health: 'Excellent',
-          lastCheckup: '2024-06-01',
-          milkCapacity: '12L/day',
-          eggCapacity: ''
-        });
-        setAnimalModalVisible(true);
-      }, 5000); // Simulate 5 seconds of listening
-    } else {
-      animalMicAnim.setValue(1); // Reset animation scale
-      if (timer) clearTimeout(timer); // Clear timeout if modal is closed prematurely
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-      animalMicAnim.stopAnimation(); // Stop ongoing animation loop
-    };
-  }, [animalMicModal]);
+
 
   // Add animal handlers
   const openAddAnimalModal = () => setAnimalAddOptionSheet(true);
@@ -472,10 +434,7 @@ const CattleScreen = ({ navigation }) => {
     setAnimalModalVisible(true);
   };
 
-  const handleSpeakAddAnimal = () => {
-    setAnimalAddOptionSheet(false);
-    setAnimalMicModal(true);
-  };
+
 
   const openEditAnimalModal = (animal) => {
     setAnimalModalMode('edit');
@@ -880,9 +839,6 @@ const CattleScreen = ({ navigation }) => {
             <TouchableOpacity style={styles.optionButton} onPress={handleManualAddAnimal}>
               <Text style={styles.optionButtonText}>{t('calendar.type_manually')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#3B82F6' }]} onPress={handleSpeakAddAnimal}>
-              <Text style={styles.optionButtonText}>{t('calendar.speak_ai_extract')}</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.cancelOptionButton} onPress={() => setAnimalAddOptionSheet(false)}>
               <Text style={styles.cancelOptionButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
@@ -921,18 +877,7 @@ const CattleScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Mic Modal for Animal */}
-      <Modal visible={animalMicModal} transparent animationType="fade" onRequestClose={() => setAnimalMicModal(false)}>
-        <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.micButtonAnimated, { transform: [{ scale: animalMicAnim }] }]}>
-            <Text style={styles.micIcon}>🎤</Text>
-          </Animated.View>
-          <Text style={styles.micListeningText}>{t('calendar.listening')}</Text>
-          <TouchableOpacity onPress={() => setAnimalMicModal(false)} style={styles.micCancelButton}>
-            <Text style={styles.micCancelButtonText}>{t('common.cancel')}</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+
 
       {/* Image Add Modal */}
       <Modal visible={imageModalVisible} transparent animationType="fade" onRequestClose={() => setImageModalVisible(false)}>
@@ -998,15 +943,7 @@ const CattleScreen = ({ navigation }) => {
         </View>
       )}
       
-      {/* Mic Overlay - UI only for now */}
-      <MicOverlay 
-        onPress={() => {
-          // For now, just navigate to LiveVoiceScreen
-          navigation.navigate('LiveVoiceScreen');
-        }}
-        isVisible={true}
-        isActive={false}
-      />
+
     </View>
   );
 };
@@ -1366,42 +1303,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  // Mic Modal styles
-  micButtonAnimated: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  micIcon: {
-    fontSize: 56,
-    color: '#fff',
-  },
-  micListeningText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    marginBottom: 24,
-  },
-  micCancelButton: {
-    backgroundColor: '#2D3748', // Dark grey for cancel
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    width: 150,
-  },
-  micCancelButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -456,7 +456,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         const context = route.params?.context;
         if (context) {
             setCurrentContext(context);
-            setChatTitle('Chat with Kisaan Sahayak');
+            setChatTitle('Kisaan ki Awaaz');
             setChatHistory([]); // Start with empty chat
         }
     }, [route.params?.context]);
