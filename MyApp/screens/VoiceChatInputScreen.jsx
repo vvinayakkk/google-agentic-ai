@@ -258,6 +258,7 @@ const getFeatureOptions = (t) => [
     { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: t('voicechat.document_builder'), screen: 'DocumentAgentScreen', color: '#f59e0b' },
     { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: t('voicechat.crop_doctor'), screen: 'CropDoctor', color: '#10b981' },
     { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: t('voicechat.equipment_rental'), screen: 'RentalSystemScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="heart-plus" size={20} color="#ef4444" />, label: t('voicechat.suicide_prevention'), screen: 'SuicidePrevention', color: '#ef4444' },
 ];
 
 const FeaturesView = ({ navigation, t }) => {

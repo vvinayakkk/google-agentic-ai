@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert, Dimensions, Modal } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- ASYNC STORAGE IMPORT ---
 // You need to install this library to store the user's mode choice
@@ -10,6 +10,7 @@ import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { setLanguage } from '../i18n';
 
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
@@ -88,11 +89,33 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 
 export default function ChoiceScreen({ navigation }) {
   const [showHelp, setShowHelp] = useState(false);
-  const { t } = useTranslation();
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const { t, i18n } = useTranslation();
   // Onboarding states
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+  // Language options
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'hi', name: 'हिंदी', flag: '🇮🇳' },
+    { code: 'bn', name: 'বাংলা', flag: '🇧🇩' },
+    { code: 'gu', name: 'ગુજરાતી', flag: '🇮🇳' },
+    { code: 'mr', name: 'मराठी', flag: '🇮🇳' },
+    { code: 'ta', name: 'தமிழ்', flag: '🇮🇳' },
+    { code: 'te', name: 'తెలుగు', flag: '🇮🇳' },
+    { code: 'kn', name: 'ಕನ್ನಡ', flag: '🇮🇳' },
+  ];
+
+  const handleLanguageChange = async (languageCode) => {
+    try {
+      await setLanguage(languageCode);
+      setShowLanguageDropdown(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to change language');
+    }
+  };
 
   // Interactive onboarding steps for ChoiceScreen
   const ONBOARDING_STEPS = [
@@ -256,14 +279,26 @@ export default function ChoiceScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      {/* Profile Icon at Top Right */}
-      <TouchableOpacity
-        style={{ position: 'absolute', top: 80, right: 28, zIndex: 10 }}
-        onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="person-circle-outline" size={50} color="#10B981" />
-      </TouchableOpacity>
+      {/* Header Icons at Top Right */}
+      <View style={styles.headerContainer}>
+        {/* Language Menu Button */}
+        <TouchableOpacity
+          style={styles.languageButton}
+          onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="ellipsis-vertical" size={30} color="#10B981" />
+        </TouchableOpacity>
+        
+        {/* Profile Icon */}
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="person-circle-outline" size={50} color="#10B981" />
+        </TouchableOpacity>
+      </View>
       {/* Title and Subtitle */}
       <Text style={styles.title}>{t('choice.title')}</Text>
       <Text style={styles.subtitle}>{t('choice.subtitle')}</Text>
@@ -355,6 +390,45 @@ export default function ChoiceScreen({ navigation }) {
           <MaterialCommunityIcons name="help-circle-outline" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* Language Dropdown Modal */}
+      <Modal
+        visible={showLanguageDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLanguageDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowLanguageDropdown(false)}
+        >
+          <View style={styles.languageDropdown}>
+            <Text style={styles.languageDropdownTitle}>Select Language</Text>
+            {languages.map((language) => (
+              <TouchableOpacity
+                key={language.code}
+                style={[
+                  styles.languageOption,
+                  i18n.language === language.code && styles.selectedLanguage
+                ]}
+                onPress={() => handleLanguageChange(language.code)}
+              >
+                <Text style={styles.languageFlag}>{language.flag}</Text>
+                <Text style={[
+                  styles.languageName,
+                  i18n.language === language.code && styles.selectedLanguageText
+                ]}>
+                  {language.name}
+                </Text>
+                {i18n.language === language.code && (
+                  <Ionicons name="checkmark" size={20} color="#10B981" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Interactive Guide Overlay */}
       {showInteractiveGuide && (
@@ -661,6 +735,85 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: 'white',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+
+  // Language Dropdown Styles
+  headerContainer: {
+    position: 'absolute',
+    top: 80,
+    right: 28,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  languageButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  profileButton: {
+    // No additional styles needed, keeping original positioning
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  languageDropdown: {
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+    borderWidth: 1,
+    borderColor: '#374151',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  languageDropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+    paddingBottom: 12,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginVertical: 4,
+    backgroundColor: '#374151',
+  },
+  selectedLanguage: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  languageFlag: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '500',
+  },
+  selectedLanguageText: {
+    color: '#10B981',
     fontWeight: 'bold',
   },
 });

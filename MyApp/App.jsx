@@ -49,6 +49,7 @@ import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
 import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
+import SuicidePrevention from './screens/SuicidePrevention';
 import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
@@ -302,6 +303,11 @@ export default function App() {
               <Stack.Screen 
                 name="BestOutOfWasteScreen" 
                 component={BestOutOfWasteScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
+                name="SuicidePrevention" 
+                component={SuicidePrevention} 
                 options={{ headerShown: false }} 
               />
             </Stack.Navigator>
