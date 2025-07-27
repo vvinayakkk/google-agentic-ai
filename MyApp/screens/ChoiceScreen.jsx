@@ -98,43 +98,43 @@ export default function ChoiceScreen({ navigation }) {
   const ONBOARDING_STEPS = [
     {
       id: 'welcome',
-      title: 'Welcome to FarmerApp! 🌾',
-      message: 'Let me show you around. This is your main hub for choosing how you want to interact with the AI assistant.',
+      title: t('choice.onboarding.welcome_title'),
+      message: t('choice.onboarding.welcome_message'),
       target: 'screen',
       position: 'center'
     },
     {
       id: 'voice_mode',
-      title: 'Voice Pilot Mode 🎤',
-      message: 'Click here for hands-free voice interaction. Perfect when your hands are busy with farm work!',
+      title: t('choice.onboarding.voice_title'),
+      message: t('choice.onboarding.voice_message'),
       target: 'voiceButton',
       position: 'top'
     },
     {
       id: 'manual_mode',
-      title: 'Manual Mode ✋',
-      message: 'Click here for text-based interaction. Choose this when you prefer typing or need quiet operation.',
+      title: t('choice.onboarding.manual_title'),
+      message: t('choice.onboarding.manual_message'),
       target: 'manualButton',
       position: 'top'
     },
     {
       id: 'profile_access',
-      title: 'Your Profile 👤',
-      message: 'Click here to view and edit your farmer profile, including your farm details and preferences.',
+      title: t('choice.onboarding.profile_title'),
+      message: t('choice.onboarding.profile_message'),
       target: 'profileIcon',
       position: 'bottom'
     },
     {
       id: 'market_prices',
-      title: 'Market Prices 📈',
-      message: 'Check current market prices for your crops to make informed selling decisions.',
+      title: t('choice.onboarding.market_title'),
+      message: t('choice.onboarding.market_message'),
       target: 'marketButton',
       position: 'bottom'
     },
     {
       id: 'help_features',
-      title: 'Need Help? 🤔',
-      message: 'Click this help button anytime for quick tips and guidance on using the app.',
+      title: t('choice.onboarding.help_title'),
+      message: t('choice.onboarding.help_message'),
       target: 'helpButton',
       position: 'bottom'
     }

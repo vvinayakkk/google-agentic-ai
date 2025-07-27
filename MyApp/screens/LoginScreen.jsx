@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Moda
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ const API_BASE = NetworkConfig.API_BASE;
 const OTP_LENGTH = 6;
 
 const LoginScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState('phone'); // 'phone', 'otp', 'done'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -95,7 +97,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleSendOtp = () => {
     if (!/^\d{10}$/.test(phone)) {
-      alert('Please enter a valid 10-digit phone number.');
+      alert(t('login.invalid_phone'));
       return;
     }
     setStep('otp');
@@ -188,13 +190,13 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.titleContainer}>
             {step === 'phone' ? (
               <>
-                <Text style={styles.mainTitle}>Welcome Back</Text>
-                <Text style={styles.subtitle}>Enter your phone number to continue</Text>
+                <Text style={styles.mainTitle}>{t('login.title')}</Text>
+                <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.mainTitle}>Verify Your Number</Text>
-                <Text style={styles.subtitle}>We've sent a 6-digit code to</Text>
+                <Text style={styles.mainTitle}>{t('login.verify_title')}</Text>
+                <Text style={styles.subtitle}>{t('login.verify_subtitle')}</Text>
                 <Text style={styles.phoneNumber}>+91 {phone}</Text>
               </>
             )}
@@ -206,10 +208,10 @@ const LoginScreen = ({ navigation }) => {
           {step === 'phone' && (
             <>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={styles.inputLabel}>{t('login.phone_label')}</Text>
                 <View style={styles.phoneInputWrapper}>
                   <View style={styles.countryCodeContainer}>
-                    <Text style={styles.countryCode}>🇮🇳 +91</Text>
+                    <Text style={styles.countryCode}>{t('login.country_code')}</Text>
                   </View>
                   <TextInput
                     style={styles.phoneInput}
@@ -217,7 +219,7 @@ const LoginScreen = ({ navigation }) => {
                     maxLength={10}
                     value={phone}
                     onChangeText={setPhone}
-                    placeholder="Enter 10-digit number"
+                    placeholder={t('login.phone_placeholder')}
                     placeholderTextColor={theme.gray}
                     autoFocus
                   />
@@ -229,7 +231,7 @@ const LoginScreen = ({ navigation }) => {
                 onPress={handleSendOtp}
                 disabled={!phone.match(/^\d{10}$/)}
               >
-                <Text style={styles.primaryButtonText}>Send Verification Code</Text>
+                <Text style={styles.primaryButtonText}>{t('login.send_code')}</Text>
                 <Ionicons name="arrow-forward" size={20} color={theme.background} style={styles.buttonIcon} />
               </TouchableOpacity>
             </>
@@ -240,7 +242,7 @@ const LoginScreen = ({ navigation }) => {
               {otpLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color={theme.primary} size="large" />
-                  <Text style={styles.loadingText}>Receiving code...</Text>
+                  <Text style={styles.loadingText}>{t('login.receiving_code')}</Text>
                 </View>
               ) : (
                 renderOtpBoxes()
@@ -248,7 +250,7 @@ const LoginScreen = ({ navigation }) => {
 
               {countdownActive && countdown > 0 ? (
                 <Text style={{ color: theme.gray, textAlign: 'center', marginBottom: 8 }}>
-                  Resend available in: {countdown}s
+                  {t('login.resend_available', { countdown })}
                 </Text>
               ) : null}
 
@@ -259,7 +261,7 @@ const LoginScreen = ({ navigation }) => {
                   disabled={resendDisabled || otpLoading}
                 >
                   <Ionicons name="refresh" size={16} color={theme.primary} />
-                  <Text style={styles.secondaryButtonText}>Resend Code</Text>
+                  <Text style={styles.secondaryButtonText}>{t('login.resend_code')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -271,7 +273,7 @@ const LoginScreen = ({ navigation }) => {
                     <ActivityIndicator color={theme.background} size="small" />
                   ) : (
                     <>
-                      <Text style={styles.primaryButtonText}>Continue</Text>
+                      <Text style={styles.primaryButtonText}>{t('login.continue')}</Text>
                       <Ionicons name="checkmark" size={20} color={theme.background} style={styles.buttonIcon} />
                     </>
                   )}
@@ -288,22 +290,22 @@ const LoginScreen = ({ navigation }) => {
               <View style={styles.modalIcon}>
                 <Ionicons name="mail-open" size={28} color={theme.primary} />
               </View>
-              <Text style={styles.modalTitle}>Auto-fill OTP?</Text>
+              <Text style={styles.modalTitle}>{t('login.auto_fill_title')}</Text>
               <Text style={styles.modalText}>
-                Allow the app to read SMS messages to automatically fill the verification code?
+                {t('login.auto_fill_message')}
               </Text>
               <View style={styles.modalActions}>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.modalButtonSecondary]} 
                   onPress={() => setShowAutofillPopup(false)}
                 >
-                  <Text style={styles.modalButtonTextSecondary}>Not Now</Text>
+                  <Text style={styles.modalButtonTextSecondary}>{t('login.not_now')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.modalButtonPrimary]} 
                   onPress={() => setShowAutofillPopup(false)}
                 >
-                  <Text style={styles.modalButtonTextPrimary}>Allow</Text>
+                  <Text style={styles.modalButtonTextPrimary}>{t('login.allow')}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>

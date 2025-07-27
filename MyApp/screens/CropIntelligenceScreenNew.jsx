@@ -21,7 +21,9 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5, Entypo } from '@expo/ve
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { NetworkConfig } from '../utils/NetworkConfig';
-import MicOverlay from '../components/MicOverlay';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
+
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = NetworkConfig.API_BASE;
@@ -36,6 +38,8 @@ const CROP_COMBOS_CACHE_KEY = 'crop-combos-cache';
 const AI_RECOMMENDATIONS_CACHE_KEY = 'ai-recommendations-cache';
 
 const CropIntelligenceScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  
   // State management
   const [weatherData, setWeatherData] = useState(null);
   const [forecastData, setForecastData] = useState(null);
@@ -448,6 +452,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
   };
 
   const getAQIColor = (aqi) => {
+    if (!aqi) return '#757575'; // Unknown
     switch (aqi) {
       case 1: return '#4CAF50'; // Good
       case 2: return '#8BC34A'; // Fair
@@ -459,6 +464,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
   };
 
   const getAQIText = (aqi) => {
+    if (!aqi) return 'Unknown';
     switch (aqi) {
       case 1: return 'Good';
       case 2: return 'Fair';
@@ -626,6 +632,12 @@ const CropIntelligenceScreen = ({ navigation }) => {
     }
   };
 
+  const handleLanguageChange = (newLanguage) => {
+    // Language change is handled automatically by the LanguageSelector component
+    // This function can be used for any additional language-specific logic
+    console.log('Language changed to:', newLanguage);
+  };
+
   // Interactive Guide Tooltip Component
   const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
     const getTooltipStyle = () => {
@@ -755,25 +767,33 @@ const CropIntelligenceScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Crop Intelligence</Text>
+              <Text style={styles.headerTitle}>{t('crop_intelligence.title')}</Text>
               <View style={styles.locationContainer}>
                 <Ionicons name="location-sharp" size={16} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.headerSubtitle}>
-                  {location?.city || 'Fetching location...'}
+                  {location?.city || t('crop_intelligence.location_fetching')}
                 </Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={onRefresh}
-            >
-              {refreshing ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Ionicons name="refresh" size={24} color="white" />
-              )}
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={onRefresh}
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Ionicons name="refresh" size={24} color="white" />
+                )}
+              </TouchableOpacity>
+              
+              <LanguageSelector
+                compact={true}
+                position="top-right"
+                onLanguageChange={handleLanguageChange}
+              />
+            </View>
           </View>
 
           {weatherData && (
@@ -800,27 +820,29 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   <View style={styles.weatherDetailItem}>
                     <MaterialCommunityIcons name="water-percent" size={20} color="#A7FFEB" />
                     <Text style={styles.weatherDetailValue}>{weatherData.main?.humidity || 0}%</Text>
-                    <Text style={styles.weatherDetailLabel}>Humidity</Text>
+                    <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.humidity')}</Text>
                   </View>
                   <View style={styles.weatherDetailItem}>
                     <MaterialCommunityIcons name="weather-windy" size={20} color="#82B1FF" />
-                    <Text style={styles.weatherDetailValue}>{(weatherData.wind?.speed * 3.6).toFixed(1) || 0} km/h</Text> {/* m/s to km/h */}
-                    <Text style={styles.weatherDetailLabel}>Wind</Text>
+                    <Text style={styles.weatherDetailValue}>
+                      {weatherData.wind?.speed ? (weatherData.wind.speed * 3.6).toFixed(1) : '0'} km/h
+                    </Text>
+                    <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.wind')}</Text>
                   </View>
                   {airQualityData?.list?.[0]?.main?.aqi && (
                     <View style={styles.weatherDetailItem}>
                       <MaterialCommunityIcons name="air-filter" size={20} color={getAQIColor(airQualityData.list[0].main.aqi)} />
-                      <Text style={styles.weatherDetailValue}>{getAQIText(airQualityData.list[0].main.aqi)}</Text>
-                      <Text style={styles.weatherDetailLabel}>Air Quality</Text>
+                      <Text style={styles.weatherDetailValue}>{getAQIText(airQualityData.list[0].main.aqi) || 'N/A'}</Text>
+                      <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.air_quality')}</Text>
                     </View>
                   )}
                   {soilData.length > 0 && (
                     <View style={styles.weatherDetailItem}>
                       <MaterialCommunityIcons name="water" size={20} color="#C5E1A5" />
                       <Text style={styles.weatherDetailValue}>
-                        {Math.round(soilData.reduce((sum, item) => sum + (item.moisture || 0), 0) / soilData.length)}%
+                        {Math.round(soilData.reduce((sum, item) => sum + (item.moisture || 0), 0) / soilData.length) || 0}%
                       </Text>
-                      <Text style={styles.weatherDetailLabel}>Soil Moisture</Text>
+                      <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.soil_moisture')}</Text>
                     </View>
                   )}
                 </View>
@@ -848,7 +870,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             styles.tabText,
             activeTab === 'combos' && styles.activeTabText
           ]}>
-            Crop Combos
+            {t('crop_intelligence.tabs.combos')}
           </Text>
         </TouchableOpacity>
 
@@ -866,7 +888,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             styles.tabText,
             activeTab === 'ai' && styles.activeTabText
           ]}>
-            AI Insights
+            {t('crop_intelligence.tabs.ai_recommendations')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -986,9 +1008,318 @@ const CropIntelligenceScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Response Card Component
+  const ResponseCard = ({ response, onPress, isExpanded, onToggleExpand }) => {
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleCardPress = () => {
+      if (onPress) {
+        onPress(response);
+      }
+      if (onToggleExpand) {
+        onToggleExpand();
+      }
+    };
+
+    const getResponseTypeIcon = (type) => {
+      switch (type?.toLowerCase()) {
+        case 'recommendation':
+          return 'lightbulb-outline';
+        case 'analysis':
+          return 'chart-line';
+        case 'warning':
+          return 'alert-circle';
+        case 'success':
+          return 'check-circle';
+        default:
+          return 'information-outline';
+      }
+    };
+
+    const getResponseTypeColor = (type) => {
+      switch (type?.toLowerCase()) {
+        case 'recommendation':
+          return '#00C853';
+        case 'analysis':
+          return '#2196F3';
+        case 'warning':
+          return '#FF9800';
+        case 'success':
+          return '#4CAF50';
+        default:
+          return '#757575';
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[styles.responseCard, isExpanded && styles.responseCardExpanded]}
+        onPress={handleCardPress}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#2A2A2A', '#1A1A1A']}
+          style={styles.responseCardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {/* Header */}
+          <View style={styles.responseCardHeader}>
+            <View style={styles.responseCardTitleRow}>
+              <MaterialCommunityIcons
+                name={getResponseTypeIcon(response.type)}
+                size={24}
+                color={getResponseTypeColor(response.type)}
+              />
+              <View style={styles.responseCardTitleContainer}>
+                <Text style={styles.responseCardTitle}>{response.title}</Text>
+                <Text style={styles.responseCardSubtitle}>{response.type}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.responseCardExpandButton}
+              onPress={onToggleExpand}
+            >
+              <Ionicons
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#E0E0E0"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View style={styles.responseCardContent}>
+            <Text style={styles.responseCardDescription}>{response.description}</Text>
+            
+            {isExpanded && (
+              <View style={styles.responseCardExpandedContent}>
+                {/* Key Points */}
+                {response.keyPoints && response.keyPoints.length > 0 && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Key Points</Text>
+                    {response.keyPoints.map((point, index) => (
+                      <View key={index} style={styles.responseCardBulletPoint}>
+                        <MaterialCommunityIcons name="circle" size={6} color={getResponseTypeColor(response.type)} />
+                        <Text style={styles.responseCardBulletText}>{point}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Actions */}
+                {response.actions && response.actions.length > 0 && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Recommended Actions</Text>
+                    {response.actions.map((action, index) => (
+                      <View key={index} style={styles.responseCardActionItem}>
+                        <View style={[styles.responseCardActionNumber, { backgroundColor: getResponseTypeColor(response.type) }]}>
+                          <Text style={styles.responseCardActionNumberText}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.responseCardActionText}>{action}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                                 {/* Metrics */}
+                 {response.metrics && Object.keys(response.metrics).length > 0 && (
+                   <View style={styles.responseCardSection}>
+                     <Text style={styles.responseCardSectionTitle}>Metrics</Text>
+                     <View style={styles.responseCardMetrics}>
+                       {Object.entries(response.metrics).map(([key, value]) => (
+                         <View key={key} style={styles.responseCardMetric}>
+                           <Text style={styles.responseCardMetricLabel}>{key}</Text>
+                           <Text style={styles.responseCardMetricValue}>{value}</Text>
+                         </View>
+                       ))}
+                     </View>
+                   </View>
+                 )}
+
+                {/* Confidence Score */}
+                {response.confidence && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Confidence Score</Text>
+                    <View style={styles.responseCardConfidence}>
+                      <View style={styles.responseCardConfidenceBar}>
+                        <View
+                          style={[
+                            styles.responseCardConfidenceFill,
+                            {
+                              width: `${response.confidence}%`,
+                              backgroundColor: getResponseTypeColor(response.type)
+                            }
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.responseCardConfidenceText}>{response.confidence}%</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.responseCardFooter}>
+            <Text style={styles.responseCardTimestamp}>
+              {new Date().toLocaleTimeString()}
+            </Text>
+            <View style={styles.responseCardActions}>
+              <TouchableOpacity
+                style={styles.responseCardActionButton}
+                onPress={() => {
+                  // Handle save action
+                  Alert.alert('Saved', 'Response saved to your collection');
+                }}
+              >
+                <Ionicons name="bookmark-outline" size={16} color="#E0E0E0" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.responseCardActionButton}
+                onPress={() => {
+                  // Handle share action
+                  Alert.alert('Share', 'Sharing response...');
+                }}
+              >
+                <Ionicons name="share-outline" size={16} color="#E0E0E0" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
+
+  // State for response cards
+  const [responseCards, setResponseCards] = useState([]);
+  const [expandedCardId, setExpandedCardId] = useState(null);
+
+  // Convert AI recommendations to response cards
+  const convertAIRecommendationsToResponseCards = (aiData) => {
+    if (!aiData || !aiData.recommendations) return [];
+
+    const cards = [];
+
+    // Main recommendations as cards
+    if (aiData.recommendations && Array.isArray(aiData.recommendations)) {
+      aiData.recommendations.forEach((rec, index) => {
+        cards.push({
+          id: `rec-${index}`,
+          type: 'recommendation',
+          title: rec.combo_name || `Crop Recommendation ${index + 1}`,
+          description: `AI-powered recommendation based on current conditions`,
+          keyPoints: rec.key_points || [],
+          actions: rec.action_plan || [],
+          metrics: {
+            'Expected ROI': rec.expected_roi || 'N/A',
+            'Risk Level': rec.risk_level || 'N/A',
+            'Timeline': rec.timeline || 'N/A'
+          },
+          confidence: rec.confidence_score || 0
+        });
+      });
+    }
+
+    // Weather insights as a card
+    if (aiData.weather_insights && Array.isArray(aiData.weather_insights) && aiData.weather_insights.length > 0) {
+      cards.push({
+        id: 'weather-insights',
+        type: 'analysis',
+        title: 'Weather Analysis',
+        description: 'Current weather conditions and their impact on farming',
+        keyPoints: aiData.weather_insights,
+        actions: [],
+        metrics: {},
+        confidence: 85
+      });
+    }
+
+    // Market insights as a card
+    if (aiData.market_insights && Array.isArray(aiData.market_insights) && aiData.market_insights.length > 0) {
+      cards.push({
+        id: 'market-insights',
+        type: 'analysis',
+        title: 'Market Trends',
+        description: 'Current market conditions and price trends',
+        keyPoints: aiData.market_insights,
+        actions: [],
+        metrics: {},
+        confidence: 80
+      });
+    }
+
+    // Action plan as a card
+    if (aiData.action_plan && Array.isArray(aiData.action_plan) && aiData.action_plan.length > 0) {
+      cards.push({
+        id: 'action-plan',
+        type: 'recommendation',
+        title: 'Action Plan',
+        description: 'Step-by-step action plan for optimal farming',
+        keyPoints: [],
+        actions: aiData.action_plan,
+        metrics: {},
+        confidence: 90
+      });
+    }
+
+    return cards;
+  };
+
+  // Update response cards when AI recommendations change
+  useEffect(() => {
+    if (aiRecommendations) {
+      const cards = convertAIRecommendationsToResponseCards(aiRecommendations);
+      setResponseCards(cards);
+    }
+  }, [aiRecommendations]);
+
+  const toggleCardExpansion = (cardId) => {
+    setExpandedCardId(expandedCardId === cardId ? null : cardId);
+  };
+
+  const handleResponseCardPress = (response) => {
+    // Handle card press - could open detailed view, save, etc.
+    console.log('Response card pressed:', response);
+    
+    // Show a quick action menu
+    Alert.alert(
+      response.title,
+      'What would you like to do with this recommendation?',
+      [
+        {
+          text: 'Save to Collection',
+          onPress: () => {
+            // Save response to user's collection
+            Alert.alert('Saved', 'Response saved to your collection');
+          }
+        },
+        {
+          text: 'Share',
+          onPress: () => {
+            // Share response
+            Alert.alert('Share', 'Sharing response...');
+          }
+        },
+        {
+          text: 'View Details',
+          onPress: () => {
+            // Toggle expansion
+            toggleCardExpansion(response.id);
+          }
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   const renderAIRecommendations = () => (
     <View style={styles.aiSection}>
-      <Text style={styles.sectionTitle}>AI-Powered Recommendations</Text>
+      <Text style={styles.sectionTitle}>{t('crop_intelligence.ai_recommendations_title')}</Text>
       
       <View style={styles.aiButtonContainer}>
         <TouchableOpacity
@@ -1002,110 +1333,56 @@ const CropIntelligenceScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="robot" size={20} color="white" />
           )}
           <Text style={styles.aiButtonText}>
-            {aiLoading ? 'Analyzing...' : 'Generate Master Plan'}
+            {aiLoading ? t('crop_intelligence.analyzing') : t('crop_intelligence.generate_master_plan')}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {aiRecommendations ? (
-        <ScrollView style={styles.aiResults} nestedScrollEnabled>
-          <View style={styles.confidenceBar}>
-            <Text style={styles.confidenceText}>
-              Overall Confidence: {Math.round(aiRecommendations.confidence_score * 100)}%
+      {responseCards.length > 0 ? (
+        <View style={styles.responseCardsContainer}>
+          {/* Response Cards Summary */}
+          <View style={styles.responseCardsSummary}>
+            <Text style={styles.responseCardsSummaryText}>
+              {t('crop_intelligence.recommendations_generated', { 
+                count: responseCards.length, 
+                plural: responseCards.length !== 1 ? 's' : '' 
+              })}
             </Text>
-            <View style={styles.confidenceBarTrack}>
-              <View
-                style={[
-                  styles.confidenceBarFill,
-                  { width: `${aiRecommendations.confidence_score * 100}%` }
-                ]}
-              />
+            <View style={styles.responseCardsStats}>
+              <View style={styles.responseCardStat}>
+                <MaterialCommunityIcons name="lightbulb-outline" size={16} color="#00C853" />
+                <Text style={styles.responseCardStatText}>
+                  {responseCards.filter(card => card.type === 'recommendation').length} {t('crop_intelligence.recommendations')}
+                </Text>
+              </View>
+              <View style={styles.responseCardStat}>
+                <MaterialCommunityIcons name="chart-line" size={16} color="#2196F3" />
+                <Text style={styles.responseCardStatText}>
+                  {responseCards.filter(card => card.type === 'analysis').length} {t('crop_intelligence.analysis')}
+                </Text>
+              </View>
             </View>
           </View>
-
-          {(aiRecommendations.recommendations && Array.isArray(aiRecommendations.recommendations) ? aiRecommendations.recommendations : []).map((rec, index) => (
-            <View key={index} style={styles.aiRecommendationCard}>
-              <View style={styles.aiRecHeader}>
-                <Text style={styles.aiRecTitle}>{rec.combo_name}</Text>
-                <View style={[styles.aiConfidenceBadge, { backgroundColor: getROIColor(`${rec.confidence_score}%`) }]}>
-                  <Text style={styles.aiConfidenceText}>{rec.confidence_score}%</Text>
-                </View>
-              </View>
-
-              {/* Key Points in bullet format */}
-              <View style={styles.keyPointsSection}>
-                {(rec.key_points && Array.isArray(rec.key_points) ? rec.key_points : []).map((point, idx) => (
-                  <View key={idx} style={styles.bulletPoint}>
-                    <MaterialCommunityIcons name="circle" size={6} color="#00C853" />
-                    <Text style={styles.bulletText}>{point}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.aiRecDetails}>
-                <View style={styles.aiRecDetail}>
-                  <Text style={styles.aiRecDetailLabel}>Expected ROI:</Text>
-                  <Text style={styles.aiRecDetailValue}>{rec.expected_roi}</Text>
-                </View>
-                <View style={styles.aiRecDetail}>
-                  <Text style={styles.aiRecDetailLabel}>Risk Level:</Text>
-                  <Text style={[
-                    styles.aiRecDetailValue,
-                    { color: rec.risk_level === 'Low' ? '#4CAF50' : rec.risk_level === 'Medium' ? '#FF9800' : '#f44336' }
-                  ]}>
-                    {rec.risk_level}
-                  </Text>
-                </View>
-                <View style={styles.aiRecDetail}>
-                  <Text style={styles.aiRecDetailLabel}>Timeline:</Text>
-                  <Text style={styles.aiRecDetailValue}>{rec.timeline}</Text>
-                </View>
-              </View>
-            </View>
+          
+          {responseCards.map((card) => (
+            <ResponseCard
+              key={card.id}
+              response={card}
+              onPress={handleResponseCardPress}
+              isExpanded={expandedCardId === card.id}
+              onToggleExpand={() => toggleCardExpansion(card.id)}
+            />
           ))}
-
-          {/* Weather & Market Insights in bullet format */}
-          {((aiRecommendations.weather_insights && Array.isArray(aiRecommendations.weather_insights) && aiRecommendations.weather_insights.length > 0) || 
-            (aiRecommendations.market_insights && Array.isArray(aiRecommendations.market_insights) && aiRecommendations.market_insights.length > 0)) && (
-            <View style={styles.insightsCard}>
-              <Text style={styles.analysisTitle}>Key Insights</Text>
-              {aiRecommendations.weather_insights && Array.isArray(aiRecommendations.weather_insights) && 
-                aiRecommendations.weather_insights.map((insight, index) => (
-                  <View key={`weather-${index}`} style={styles.bulletPoint}>
-                    <MaterialCommunityIcons name="weather-partly-cloudy" size={14} color="#82B1FF" />
-                    <Text style={styles.bulletText}>{insight}</Text>
-                  </View>
-                ))
-              }
-              {aiRecommendations.market_insights && Array.isArray(aiRecommendations.market_insights) && 
-                aiRecommendations.market_insights.map((insight, index) => (
-                  <View key={`market-${index}`} style={styles.bulletPoint}>
-                    <MaterialCommunityIcons name="trending-up" size={14} color="#00C853" />
-                    <Text style={styles.bulletText}>{insight}</Text>
-                  </View>
-                ))
-              }
-            </View>
-          )}
-
-          {aiRecommendations.action_plan && Array.isArray(aiRecommendations.action_plan) && aiRecommendations.action_plan.length > 0 && (
-            <View style={styles.actionPlanCard}>
-              <Text style={styles.actionPlanTitle}>Recommended Action Plan</Text>
-              {aiRecommendations.action_plan.map((action, index) => (
-                <View key={index} style={styles.actionItem}>
-                  <View style={styles.actionNumber}>
-                    <Text style={styles.actionNumberText}>{index + 1}</Text>
-                  </View>
-                  <Text style={styles.actionText}>{action}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+        </View>
+      ) : aiRecommendations ? (
+        <View style={styles.emptyState}>
+          <MaterialCommunityIcons name="robot-happy-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyStateText}>{t('crop_intelligence.processing')}</Text>
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="robot-happy-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>Tap "Generate Master Plan" to get AI insights.</Text>
+          <Text style={styles.emptyStateText}>{t('crop_intelligence.tap_generate')}</Text>
         </View>
       )}
     </View>
@@ -1543,45 +1820,25 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
       {/* Debug buttons for testing (remove in production) */}
       {__DEV__ && (
-        <View style={{
-          position: 'absolute',
-          bottom: 20,
-          right: 20,
-          flexDirection: 'column',
-          gap: 10,
-        }}>
+        <View style={styles.tourButtonsContainer}>
           <TouchableOpacity
+            style={styles.restartTourButton}
             onPress={startOnboardingTour}
-            style={{
-              backgroundColor: 'rgba(0,200,83,0.8)',
-              padding: 10,
-              borderRadius: 5,
-            }}
           >
-            <Text style={{ color: 'white', fontSize: 12 }}>Start Tour</Text>
+            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
+            <Text style={styles.restartTourText}>Tour</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={styles.resetTourButton}
             onPress={resetOnboarding}
-            style={{
-              backgroundColor: 'rgba(255,0,0,0.8)',
-              padding: 10,
-              borderRadius: 5,
-            }}
           >
-            <Text style={{ color: 'white', fontSize: 12 }}>Reset Tour</Text>
+            <MaterialCommunityIcons name="refresh" size={16} color="#EF4444" />
+            <Text style={styles.resetTourText}>Reset</Text>
           </TouchableOpacity>
         </View>
       )}
       
-      {/* Mic Overlay - UI only for now */}
-      <MicOverlay 
-        onPress={() => {
-          // For now, just navigate to LiveVoiceScreen
-          navigation.navigate('LiveVoiceScreen');
-        }}
-        isVisible={true}
-        isActive={false}
-      />
+
     </View>
   );
 };
@@ -1651,6 +1908,11 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   currentWeatherMainCard: {
     marginTop: 20,
@@ -2449,6 +2711,313 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginLeft: 8,
+  },
+  // Tour and Reset Button Styles
+  tourButtonsContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  restartTourButton: {
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginLeft:130,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  restartTourText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
+  },
+  resetTourButton: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginLeft:10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  resetTourText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
+  },
+  responseCardsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  responseCard: {
+    marginBottom: 15,
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#E0E0E0', // Light border
+  },
+  responseCardExpanded: {
+    borderWidth: 2,
+    borderColor: '#00C853', // Vibrant green accent
+  },
+  responseCardGradient: {
+    padding: 15,
+  },
+  responseCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  responseCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  responseCardTitleContainer: {
+    marginLeft: 10,
+  },
+  responseCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E0E0E0',
+  },
+  responseCardSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginLeft: 5,
+  },
+  responseCardExpandButton: {
+    padding: 5,
+  },
+  responseCardContent: {
+    paddingBottom: 10,
+  },
+  responseCardDescription: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    lineHeight: 20,
+  },
+  responseCardExpandedContent: {
+    paddingTop: 10,
+  },
+  responseCardSection: {
+    marginBottom: 10,
+  },
+  responseCardSectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#E0E0E0',
+    marginBottom: 5,
+  },
+  responseCardBulletPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 5,
+  },
+  responseCardBulletText: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
+  responseCardActionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 5,
+  },
+  responseCardActionNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#757575', // Grey for numbers
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    flexShrink: 0, // Prevent number circle from shrinking
+  },
+  responseCardActionNumberText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  responseCardActionText: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    flex: 1,
+    lineHeight: 20,
+  },
+  responseCardMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  responseCardMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  responseCardMetricLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+  },
+  responseCardMetricValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E0E0E0',
+  },
+  responseCardConfidence: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  responseCardConfidenceBar: {
+    height: 8,
+    backgroundColor: '#444',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginRight: 5,
+  },
+  responseCardConfidenceFill: {
+    height: '100%',
+    backgroundColor: '#00C853', // Vibrant green
+    borderRadius: 4,
+  },
+  responseCardConfidenceText: {
+    fontSize: 12,
+    color: '#E0E0E0',
+    fontWeight: '600',
+  },
+  responseCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  responseCardTimestamp: {
+    fontSize: 12,
+    color: '#999',
+  },
+  responseCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  responseCardActionButton: {
+    padding: 5,
+    marginLeft: 10,
+  },
+  // Additional response card styles
+  responseCardMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  responseCardMetric: {
+    width: '48%',
+    backgroundColor: '#1A1A1A',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  responseCardMetricLabel: {
+    fontSize: 11,
+    color: '#999',
+    marginBottom: 2,
+  },
+  responseCardMetricValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E0E0E0',
+  },
+  responseCardConfidence: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  responseCardConfidenceBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#444',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginRight: 10,
+  },
+  responseCardConfidenceFill: {
+    height: '100%',
+    backgroundColor: '#00C853',
+    borderRadius: 3,
+  },
+  responseCardConfidenceText: {
+    fontSize: 12,
+    color: '#E0E0E0',
+    fontWeight: '600',
+    minWidth: 35,
+  },
+  // Response Cards Summary Styles
+  responseCardsSummary: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  responseCardsSummaryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E0E0E0',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  responseCardsStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  responseCardStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  responseCardStatText: {
+    fontSize: 13,
+    color: '#E0E0E0',
+    marginLeft: 6,
+    fontWeight: '600',
   },
 });
 
