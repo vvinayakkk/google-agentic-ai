@@ -589,6 +589,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}><Ionicons name="time-outline" size={28} color="white" /></TouchableOpacity>
                 <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || t('voicechat.title')}</Text>
                 <View style={styles.topRightIcons}>
+                    <TouchableOpacity onPress={() => navigation.navigate('FarmVisualizerScreen')}><MaterialCommunityIcons name="sprout" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}><Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
                 </View>
             </View>
