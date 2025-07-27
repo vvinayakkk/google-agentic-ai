@@ -50,7 +50,6 @@ import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
 import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
 import SuicidePrevention from './screens/SuicidePrevention';
-import { View } from 'react-native';
 import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import NetworkConfig from './utils/NetworkConfig';
