@@ -1,0 +1,9 @@
+.venv
+sql_app.db
+creds
+.env
+myenv/
+*pyc
+__pycache
+.env/
+myenv/
