@@ -1,5 +1,0 @@
-myenv/
-.env
-creds_gcp.json
-serviceAccountKey.json
-

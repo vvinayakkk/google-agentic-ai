@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -15,7 +14,7 @@ import MicOverlay from '../components/MicOverlay';
 const { width } = Dimensions.get('window');
 
 // Interactive Guide Tooltip Component for VoiceChatInputScreen
-function InteractiveGuideTooltip({ step, onNext, onSkip, t }) {
+function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'profileIcon':
@@ -75,11 +74,11 @@ function InteractiveGuideTooltip({ step, onNext, onSkip, t }) {
         
         <View style={styles.tooltipButtons}>
           <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>{t('voicechat.onboarding.skip_tour')}</Text>
+            <Text style={styles.skipButtonText}>Skip Tour</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.nextButton} onPress={onNext}>
             <Text style={styles.nextButtonText}>
-              {step.id === 'home_navigation' ? t('voicechat.onboarding.got_it') : t('voicechat.onboarding.next')}
+              {step.id === 'home_navigation' ? 'Got It!' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -89,7 +88,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip, t }) {
 }
 
 // --- Simulated API Configuration ---
-const getKissanAIResponse = async (message, context, t) => {
+const getKissanAIResponse = async (message, context) => {
     // Session management
     let session_id = await AsyncStorage.getItem('chat_session_id');
     if (!session_id) {
@@ -109,7 +108,7 @@ const getKissanAIResponse = async (message, context, t) => {
         session_id,
     };
     try {
-        const response = await axios.post('http://10.215.221.37:8001/agent', payload); // Update to your backend URL
+        const response = await axios.post('http://192.168.0.107:8001/agent', payload); // Update to your backend URL
         if (response.data && response.data.response_text) {
             return response.data.response_text;
         }
@@ -118,7 +117,7 @@ const getKissanAIResponse = async (message, context, t) => {
             console.log('Server returned error:', response.data.error);
             return `Sorry, there was an issue processing your request: ${response.data.error}`;
         }
-        return t('voicechat.error_no_response');
+        return 'Sorry, I didn\'t understand. Please try again.';
     } catch (error) {
         if (error.response) {
             console.log('AI error response:', error.response.data);
@@ -136,7 +135,7 @@ const getKissanAIResponse = async (message, context, t) => {
         } else {
             console.log('AI error:', error.message || error);
         }
-        return t('voicechat.error_server');
+        return 'Server error. Please try again later.';
     }
 };
 
@@ -178,7 +177,7 @@ const ChatMessage = ({ message, chatHistory }) => {
                 const content = msg.type === 'document' ? `[Document: ${msg.content?.name || 'Unknown'}]` : (msg.content || '');
                 shareText += `${sender}: ${content}\n\n`;
             });
-            await Share.share({ message: shareText, title: t('voicechat.title') });
+            await Share.share({ message: shareText, title: 'Voice Chat' });
         } catch (error) {
             console.log('Error sharing:', error);
         }
@@ -241,34 +240,34 @@ const ThinkingIndicator = () => {
     return (
         <View style={styles.thinkingContainer}>
             <Animated.View style={{ transform: [{ rotate: rotation }] }}><MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" /></Animated.View>
-            <Text style={styles.thinkingText}>{t('voicechat.thinking')}</Text>
+            <Text style={styles.thinkingText}>Just a sec...</Text>
         </View>
     );
 };
 
-const getFeatureOptions = (t) => [
-    { icon: <MaterialCommunityIcons name="bank" size={20} color="#f59e0b" />, label: t('voicechat.marketplace'), screen: 'MarketplaceScreen', color: '#f59e0b' },
-    { icon: <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#3b82f6" />, label: t('voicechat.calendar'), screen: 'CalenderScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="cow" size={20} color="#10b981" />, label: t('voicechat.cattle'), screen: 'CattleScreen', color: '#10b981' },
-    { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: t('voicechat.crop_cycle'), screen: 'CropCycle', color: '#f59e0b' },
+const getFeatureOptions = () => [
+    { icon: <MaterialCommunityIcons name="bank" size={20} color="#f59e0b" />, label: 'Marketplace', screen: 'MarketplaceScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#3b82f6" />, label: 'Calendar', screen: 'CalenderScreen', color: '#3b82f6' },
+    { icon: <MaterialCommunityIcons name="cow" size={20} color="#10b981" />, label: 'Cattle', screen: 'CattleScreen', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="recycle-variant" size={20} color="#f59e0b" />, label: 'Crop Cycle', screen: 'CropCycle', color: '#f59e0b' },
     // More options
     // { icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#3b82f6" />, label: 'weather', screen: 'WeatherScreen', color: '#3b82f6' },
-    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: t('voicechat.soil_moisture'), screen: 'CropIntelligenceScreenNew', color: '#38bdf8' },
-    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: t('voicechat.education_finance'), screen: 'UPI', color: '#a78bfa' },
-    { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: t('voicechat.document_builder'), screen: 'DocumentAgentScreen', color: '#f59e0b' },
-    { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: t('voicechat.crop_doctor'), screen: 'CropDoctor', color: '#10b981' },
-    { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: t('voicechat.equipment_rental'), screen: 'RentalSystemScreen', color: '#f59e0b' },
-    { icon: <MaterialCommunityIcons name="heart-plus" size={20} color="#ef4444" />, label: t('voicechat.suicide_prevention'), screen: 'SuicidePrevention', color: '#ef4444' },
+    { icon: <MaterialCommunityIcons name="water" size={20} color="#38bdf8" />, label: 'Soil Moisture', screen: 'CropIntelligenceScreenNew', color: '#38bdf8' },
+    { icon: <MaterialCommunityIcons name="school" size={20} color="#a78bfa" />, label: 'Education & Finance', screen: 'UPI', color: '#a78bfa' },
+    { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: 'Document Builder', screen: 'DocumentAgentScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: 'Crop Doctor', screen: 'CropDoctor', color: '#10b981' },
+    { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: 'Equipment Rental', screen: 'RentalSystemScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="heart-plus" size={20} color="#ef4444" />, label: 'Mental Health Support', screen: 'SuicidePrevention', color: '#ef4444' },
 ];
 
-const FeaturesView = ({ navigation, t }) => {
+const FeaturesView = ({ navigation }) => {
     const [showAll, setShowAll] = useState(false);
-    const featureOptions = getFeatureOptions(t);
+    const featureOptions = getFeatureOptions();
     const mainOptions = featureOptions.slice(0, 4);
     const extraOptions = featureOptions.slice(4);
     return (
         <View style={styles.featuresPillContainer}>
-            <Text style={styles.featuresTitle}>{t('voicechat.quick_features')}</Text>
+            <Text style={styles.featuresTitle}>Quick Features</Text>
             <View style={styles.pillRow}>
                 {mainOptions.map((opt) => (
                     <TouchableOpacity
@@ -283,7 +282,7 @@ const FeaturesView = ({ navigation, t }) => {
                 ))}
                 <TouchableOpacity style={styles.pillButton} onPress={() => setShowAll((v) => !v)}>
                     <MaterialCommunityIcons name="dots-horizontal" size={20} color="#fff" />
-                    <Text style={[styles.pillLabel, { color: '#fff' }]}>{t('voicechat.more')}</Text>
+                    <Text style={[styles.pillLabel, { color: '#fff' }]}>More</Text>
                 </TouchableOpacity>
             </View>
             {showAll && (
@@ -307,7 +306,6 @@ const FeaturesView = ({ navigation, t }) => {
 
 // --- Main Chat Screen Component ---
 export default function VoiceChatInputScreen({ navigation, route }) {
-    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const [inputValue, setInputValue] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
@@ -327,57 +325,57 @@ export default function VoiceChatInputScreen({ navigation, route }) {
     const ONBOARDING_STEPS = [
         {
             id: 'welcome',
-            title: t('voicechat.onboarding.welcome.title'),
-            message: t('voicechat.onboarding.welcome.message'),
+            title: 'Welcome to Chat Mode! 💬',
+            message: 'This is where you can have detailed conversations with your AI farming assistant.',
             target: 'screen',
             position: 'center'
         },
         {
             id: 'profile_access',
-            title: t('voicechat.onboarding.profile.title'),
-            message: t('voicechat.onboarding.profile.message'),
+            title: 'Your Profile 👤',
+            message: 'Access your farmer profile and settings from here.',
             target: 'profileIcon',
             position: 'bottom'
         },
         {
             id: 'chat_history',
-            title: t('voicechat.onboarding.chat_history.title'),
-            message: t('voicechat.onboarding.chat_history.message'),
+            title: 'Chat History 📝',
+            message: 'View all your previous conversations and continue where you left off.',
             target: 'chatHistory',
             position: 'bottom'
         },
         {
             id: 'new_chat',
-            title: t('voicechat.onboarding.new_chat.title'),
-            message: t('voicechat.onboarding.new_chat.message'),
+            title: 'Start New Chat ➕',
+            message: 'Click here to start a fresh conversation anytime.',
             target: 'newChatButton',
             position: 'bottom'
         },
         {
             id: 'features_overview',
-            title: t('voicechat.onboarding.features.title'),
-            message: t('voicechat.onboarding.features.message'),
+            title: 'Quick Features 🚀',
+            message: 'Access farming tools like weather, marketplace, cattle management, and more directly from here.',
             target: 'featuresArea',
             position: 'top'
         },
         {
             id: 'text_input',
-            title: t('voicechat.onboarding.input.title'),
-            message: t('voicechat.onboarding.input.message'),
+            title: 'Type Your Questions ⌨️',
+            message: 'Type your farming questions here. You can ask about crops, weather, diseases, or anything farm-related.',
             target: 'inputArea',
             position: 'bottom'
         },
         {
             id: 'attachments',
-            title: t('voicechat.onboarding.attachments.title'),
-            message: t('voicechat.onboarding.attachments.message'),
+            title: 'Add Files & Images 📎',
+            message: 'Attach documents or images to get help with crop diseases, documents, or visual analysis.',
             target: 'attachButtons',
             position: 'bottom'
         },
         {
             id: 'home_navigation',
-            title: t('voicechat.onboarding.home.title'),
-            message: t('voicechat.onboarding.home.message'),
+            title: 'Return Home 🏠',
+            message: 'Use this button to go back to the main screen and choose between voice or chat modes.',
             target: 'homeButton',
             position: 'bottom'
         }
@@ -450,7 +448,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             await AsyncStorage.removeItem('voiceChatInputScreenOnboardingCompleted');
             setHasSeenOnboarding(false);
             console.log('VoiceChatInputScreen onboarding reset - will show on next app start');
-            Alert.alert(t('common.error'), t('voicechat.reset_message'));
+            Alert.alert('Error', 'Onboarding reset! Restart the app to see it again.');
         } catch (error) {
             console.error('Error resetting onboarding:', error);
         }
@@ -460,14 +458,14 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         const context = route.params?.context;
         if (context) {
             setCurrentContext(context);
-            setChatTitle(t('voicechat.kisaan_ki_awaaz'));
+            setChatTitle('Kisaan ki Awaaz');
             setChatHistory([]); // Start with empty chat
         }
     }, [route.params?.context]);
 
     const saveChatToHistory = async (title, messages) => {
         try {
-            const newChat = { id: Date.now().toString(), title: title || t('voicechat.new_chat'), date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), messages };
+            const newChat = { id: Date.now().toString(), title: title || 'Untitled Chat', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), messages };
             let history = await AsyncStorage.getItem('chatHistory');
             history = history ? JSON.parse(history) : [];
             history.unshift(newChat);
@@ -521,7 +519,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         setInputValue('');
         setAttachedImage(null); // Clear image after sending
         setIsThinking(true);
-        const aiResponseText = await getKissanAIResponse(msgToSend, chatHistory, t);
+        const aiResponseText = await getKissanAIResponse(msgToSend, chatHistory);
         const aiMessage = { sender: 'ai', type: 'text', content: aiResponseText };
         setChatHistory(prev => [...prev, aiMessage]);
         setIsThinking(false);
@@ -548,7 +546,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     handleSendMessage(message);
                 }
             }
-        } catch (err) { Alert.alert(t('common.error'), t('voicechat.error_document_picker')) }
+        } catch (err) { Alert.alert('Error', 'Could not open document picker') }
     };
 
     const handleAttachImage = async () => {
@@ -568,7 +566,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 const dataUrl = `data:image/${mime};base64,${base64}`;
                 setAttachedImage({ name: img.fileName || 'Image', uri: dataUrl });
             }
-        } catch (err) { Alert.alert(t('common.error'), t('voicechat.error_image_picker')) }
+        } catch (err) { Alert.alert('Error', 'Could not open image picker') }
     };
 
     const FARMER_ID = 'f001';
@@ -588,7 +586,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             </TouchableOpacity>
             <View style={[styles.topBar, { paddingTop: insets.top }]}> 
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}><Ionicons name="time-outline" size={28} color="white" /></TouchableOpacity>
-                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || t('voicechat.title')}</Text>
+                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Voice Chat'}</Text>
                 <View style={styles.topRightIcons}>
                     <TouchableOpacity onPress={() => navigation.navigate('FarmVisualizerScreen')}><MaterialCommunityIcons name="sprout" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}><Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} /></TouchableOpacity>
@@ -614,7 +612,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                                 history.unshift(newChat);
                                 await AsyncStorage.setItem('chatHistory', JSON.stringify(history.slice(0, 20)));
                             } catch (e) {
-                                Alert.alert(t('common.error'), t('voicechat.error_backend_save'));
+                                Alert.alert('Error', 'Failed to save chat to backend');
                             }
                         }
                         setChatHistory([]);
@@ -635,7 +633,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             >
                 <View style={{ flex: 1 }}>
                     {chatHistory.length === 0 ? (
-                        <FeaturesView navigation={navigation} t={t} />
+                        <FeaturesView navigation={navigation} />
                     ) : (
                         <FlatList
                             ref={flatListRef}
@@ -660,7 +658,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             </TouchableOpacity>
                         </View>
                     )}
-                    <TextInput style={styles.textInput} placeholder={t('voicechat.type_message_placeholder')} placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
+                    <TextInput style={styles.textInput} placeholder="Type your message..." placeholderTextColor="gray" value={inputValue} onChangeText={setInputValue} onSubmitEditing={() => handleSendMessage()} multiline />
                     <TouchableOpacity onPress={() => handleSendMessage()}><MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" /></TouchableOpacity>
                 </View>
                 {/* Floating Home Button at Bottom Right */}
@@ -680,14 +678,14 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             onPress={startInteractiveGuide}
                         >
                             <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-                            <Text style={styles.restartTourText}>{t('voicechat.tour')}</Text>
+                            <Text style={styles.restartTourText}>Tour</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={styles.resetTourButton} 
                             onPress={resetOnboarding}
                         >
                             <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
-                            <Text style={styles.resetTourText}>{t('voicechat.reset')}</Text>
+                            <Text style={styles.resetTourText}>Reset</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -705,7 +703,6 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                         step={ONBOARDING_STEPS[onboardingStep]}
                         onNext={nextOnboardingStep}
                         onSkip={skipOnboarding}
-                        t={t}
                     />
                 </View>
             )}
