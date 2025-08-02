@@ -1,0 +1,51 @@
+# Ignore Python cache files and folders
+__pycache__/
+*.pyc
+*.pyo
+myenv/
+# Ignore virtual environments
+venv/
+env/
+.env
+.venv/
+.vscode/
+newen
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore temporary files
+*.log
+*.tmp
+*.swp
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Ignore test reports and coverage
+htmlcov/
+.coverage
+*.cover
+*.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.pytest_cache/
+
+# Ignore machine learning checkpoints (if applicable)
+checkpoints/
+*.ckpt
+
+# Specific files to ignore
+userinput.md
+userinput.py
+
+# Ignore any custom temporary files
+*.bak
+
+myenv
+PROJECT_CONTEXT
+.cursor
