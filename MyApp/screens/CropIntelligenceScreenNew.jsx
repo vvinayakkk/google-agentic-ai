@@ -17,19 +17,21 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { NetworkConfig } from '../utils/NetworkConfig';
-import { useTranslation } from 'react-i18next';
-import LanguageSelector from '../components/LanguageSelector';
+import styles from './CropIntelligenceScreenNew.styles';
 
+const safeText = (value, fallback = '') => {
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+};
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = NetworkConfig.API_BASE;
-const FARMER_ID = 'f001'; // Static ID for now, can be made dynamic
+const FARMER_ID = 'f001';
 
-// Cache keys
 const WEATHER_CACHE_KEY = 'weather-cache';
 const FORECAST_CACHE_KEY = 'forecast-cache';
 const AIR_QUALITY_CACHE_KEY = 'air-quality-cache';
@@ -38,9 +40,6 @@ const CROP_COMBOS_CACHE_KEY = 'crop-combos-cache';
 const AI_RECOMMENDATIONS_CACHE_KEY = 'ai-recommendations-cache';
 
 const CropIntelligenceScreen = ({ navigation }) => {
-  const { t } = useTranslation();
-  
-  // State management
   const [weatherData, setWeatherData] = useState(null);
   const [forecastData, setForecastData] = useState(null);
   const [airQualityData, setAirQualityData] = useState(null);
@@ -48,32 +47,31 @@ const CropIntelligenceScreen = ({ navigation }) => {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('combos'); // Default to crop combos
+  const [activeTab, setActiveTab] = useState('combos');
   const [selectedCombo, setSelectedCombo] = useState(null);
   const [showComboModal, setShowComboModal] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [cropCombos, setCropCombos] = useState([]);
 
-  // Edit combo states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCombo, setEditingCombo] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
 
-  // Onboarding states
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
 
-  // Refs for onboarding
   const backButtonRef = useRef(null);
   const weatherSectionRef = useRef(null);
   const tabsSectionRef = useRef(null);
   const comboCardsRef = useRef(null);
   const aiTabRef = useRef(null);
 
-  // Onboarding steps configuration
+  const [responseCards, setResponseCards] = useState([]);
+  const [expandedCardId, setExpandedCardId] = useState(null);
+
   const ONBOARDING_STEPS = [
     {
       id: 'back_button',
@@ -133,7 +131,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
     }
   ];
 
-  // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -155,6 +152,13 @@ const CropIntelligenceScreen = ({ navigation }) => {
     return () => subscription?.remove();
   }, []);
 
+  useEffect(() => {
+    if (aiRecommendations) {
+      const cards = convertAIRecommendationsToResponseCards(aiRecommendations);
+      setResponseCards(cards);
+    }
+  }, [aiRecommendations]);
+
   const animateEntry = () => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -174,7 +178,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        // Fallback to a default location (Shirur, Maharashtra) if permission not granted
         setLocation({ latitude: 18.8237, longitude: 74.3732, city: 'Shirur, Maharashtra' });
         Alert.alert('Permission Denied', 'Location permission was denied. Displaying data for a default location.');
         return;
@@ -190,12 +193,10 @@ const CropIntelligenceScreen = ({ navigation }) => {
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
-        // Prioritize city, then subregion, then region for a good location display
         city: `${address.city || address.subregion || address.region || 'Unknown City'}, ${address.region || ''}`,
       });
     } catch (error) {
       console.error('Error getting location:', error);
-      // Fallback to a default location if any error occurs
       setLocation({ latitude: 18.8237, longitude: 74.3732, city: 'Shirur, Maharashtra' });
       Alert.alert('Location Error', 'Could not get current location. Displaying data for a default location.');
     }
@@ -203,13 +204,11 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
   const loadData = async () => {
     setLoading(true);
-    let weatherCoords = { lat: 18.8237, lon: 74.3732 }; // Default coords for Pune/Shirur area
+    let weatherCoords = { lat: 18.8237, lon: 74.3732 };
 
     try {
-      // Always try to load cached data first for a snappier UI
       await loadCachedData();
 
-      // Get current location (or use default if permission denied) before fetching weather
       let currentLoc = null;
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
@@ -225,17 +224,16 @@ const CropIntelligenceScreen = ({ navigation }) => {
         weatherCoords = { lat: currentLoc.latitude, lon: currentLoc.longitude };
       }
 
-      // Fetch fresh data in background
       const [
         weatherResponse,
         soilResponse,
         combosResponse,
         healthResponse
       ] = await Promise.all([
-        fetch(`${API_BASE}/weather/coords?lat=${weatherCoords.lat}&lon=${weatherCoords.lon}`).catch(() => null), // Use coords for more accurate weather
+        fetch(`${API_BASE}/weather/coords?lat=${weatherCoords.lat}&lon=${weatherCoords.lon}`).catch(() => null),
         fetch(`${API_BASE}/soil-moisture`).catch(() => null),
         fetch(`${API_BASE}/crop-intelligence/combos`).catch(() => null),
-        fetch(`${API_BASE}/crop-intelligence/health`).catch(() => null) // Check backend health
+        fetch(`${API_BASE}/crop-intelligence/health`).catch(() => null)
       ]);
 
       if (weatherResponse && weatherResponse.ok) {
@@ -243,7 +241,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         setWeatherData(weatherData);
         await AsyncStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(weatherData));
 
-        // Fetch forecast and air quality based on current weather coordinates
         const [forecastResponse, airQualityResponse] = await Promise.all([
           fetch(`${API_BASE}/weather/forecast/coords?lat=${weatherData.coord.lat}&lon=${weatherData.coord.lon}`).catch(() => null),
           fetch(`${API_BASE}/weather/air_quality?lat=${weatherData.coord.lat}&lon=${weatherData.coord.lon}`).catch(() => null)
@@ -283,7 +280,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
       }
 
       if (healthResponse && healthResponse.ok) {
-        const health = await healthResponse.json();
+        await healthResponse.json();
       } else {
         console.warn('Failed to fetch backend health or response not OK.');
       }
@@ -291,7 +288,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error during data loading:', error);
       Alert.alert('Network Error', 'Could not fetch the latest data. Displaying cached data if available. Please check your internet connection.');
-      // Fallback to cached data is already handled by loadCachedData being called first.
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -300,7 +296,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData(); // This will also handle setting refreshing to false
+    loadData();
   };
 
   const loadCachedData = async () => {
@@ -311,7 +307,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
       const cachedAirQuality = await AsyncStorage.getItem(AIR_QUALITY_CACHE_KEY);
       const cachedSoil = await AsyncStorage.getItem(SOIL_CACHE_KEY);
       const cachedCombos = await AsyncStorage.getItem(CROP_COMBOS_CACHE_KEY);
-      const cachedAIRecommendations = await AsyncStorage.getItem(AI_RECOMMENDATIONS_CACHE_KEY);
 
       if (cachedWeather) {
         setWeatherData(JSON.parse(cachedWeather));
@@ -333,11 +328,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         setCropCombos(JSON.parse(cachedCombos));
         hasCachedData = true;
       }
-      // Remove AI recommendations caching - user should click generate
-      // if (cachedAIRecommendations) {
-      //   setAiRecommendations(JSON.parse(cachedAIRecommendations));
-      //   hasCachedData = true;
-      // }
     } catch (error) {
       console.error('Error loading cached data:', error);
     }
@@ -354,7 +344,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
     try {
       const avgMoisture = soilData.length > 0
         ? soilData.reduce((sum, item) => sum + (item.moisture || 0), 0) / soilData.length
-        : 75; // Default if no soil data
+        : 75;
 
       const requestData = {
         location: location.city,
@@ -362,9 +352,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
         humidity: weatherData.main?.humidity || 70,
         soil_moisture: avgMoisture,
         season: getCurrentSeason(),
-        farmer_experience: 'intermediate', // This can be dynamic from user profile
-        available_investment: '₹50,000-1,00,000', // This can be dynamic from user input/profile
-        farm_size: '2-3 hectares', // This can be dynamic from user input/profile
+        farmer_experience: 'intermediate',
+        available_investment: '₹50,000-1,00,000',
+        farm_size: '2-3 hectares',
         specific_query: 'Recommend best crop combinations for current conditions based on weather, soil, and market trends.'
       };
 
@@ -391,7 +381,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error getting AI recommendations:', error);
       Alert.alert('Error', 'Failed to get AI recommendations. Please try again. (Details: ' + error.message + ')');
-      // Try to load cached recommendations as fallback if fresh fetch fails
       try {
         const cached = await AsyncStorage.getItem(AI_RECOMMENDATIONS_CACHE_KEY);
         if (cached) {
@@ -407,15 +396,13 @@ const CropIntelligenceScreen = ({ navigation }) => {
   };
 
   const getCurrentSeason = () => {
-    const month = new Date().getMonth() + 1; // getMonth() is 0-indexed
-    // Indian Seasons (approximate)
-    if (month >= 3 && month <= 5) return 'summer'; // March-May
-    if (month >= 6 && month <= 9) return 'monsoon'; // June-September
-    if (month >= 10 && month <= 2) return 'winter'; // October-February
+    const month = new Date().getMonth() + 1;
+    if (month >= 3 && month <= 5) return 'summer';
+    if (month >= 6 && month <= 9) return 'monsoon';
+    if (month >= 10 || month <= 2) return 'winter';
     return 'unknown';
   };
 
-  // Helper functions for weather data and UI logic
   const getWeatherIcon = (icon) => `https://openweathermap.org/img/wn/${icon}@2x.png`;
 
   const formatDate = (dt) => {
@@ -432,15 +419,13 @@ const CropIntelligenceScreen = ({ navigation }) => {
       if (!days[key]) days[key] = [];
       days[key].push(item);
     });
-    // For each day, take the entry closest to midday (e.g., 12 PM or 3 PM) for a representative forecast
     return Object.values(days).slice(0, 5).map(dayEntries => {
-      // Find the entry closest to 12 PM or 3 PM
       let closestEntry = dayEntries[0];
       let minDiff = Infinity;
       dayEntries.forEach(entry => {
         const hour = new Date(entry.dt * 1000).getHours();
         const diff12 = Math.abs(hour - 12);
-        const diff15 = Math.abs(hour - 15); // 3 PM
+        const diff15 = Math.abs(hour - 15);
         const currentDiff = Math.min(diff12, diff15);
         if (currentDiff < minDiff) {
           minDiff = currentDiff;
@@ -452,14 +437,14 @@ const CropIntelligenceScreen = ({ navigation }) => {
   };
 
   const getAQIColor = (aqi) => {
-    if (!aqi) return '#757575'; // Unknown
+    if (!aqi) return '#757575';
     switch (aqi) {
-      case 1: return '#4CAF50'; // Good
-      case 2: return '#8BC34A'; // Fair
-      case 3: return '#FF9800'; // Moderate
-      case 4: return '#FF5722'; // Poor
-      case 5: return '#f44336'; // Very Poor
-      default: return '#757575'; // Unknown
+      case 1: return '#4CAF50';
+      case 2: return '#8BC34A';
+      case 3: return '#FF9800';
+      case 4: return '#FF5722';
+      case 5: return '#f44336';
+      default: return '#757575';
     }
   };
 
@@ -477,25 +462,23 @@ const CropIntelligenceScreen = ({ navigation }) => {
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
-      case 'beginner': case 'easy': return '#4CAF50'; // Green
-      case 'intermediate': case 'medium': return '#FF9800'; // Orange
-      case 'advanced': case 'expert': case 'hard': return '#f44336'; // Red
-      default: return '#2196F3'; // Blue
+      case 'beginner': case 'easy': return '#4CAF50';
+      case 'intermediate': case 'medium': return '#FF9800';
+      case 'advanced': case 'expert': case 'hard': return '#f44336';
+      default: return '#2196F3';
     }
   };
 
   const getROIColor = (roi) => {
     if (!roi) return '#757575';
-    // Extract percentage, assuming format like "80-120%"
     const percentageMatch = roi.match(/(\d+)/);
     const percentage = percentageMatch ? parseInt(percentageMatch[1]) : 0;
 
-    if (percentage >= 80) return '#4CAF50'; // High ROI - Green
-    if (percentage >= 50) return '#FF9800'; // Medium ROI - Orange
-    return '#f44336'; // Low ROI - Red
+    if (percentage >= 80) return '#4CAF50';
+    if (percentage >= 50) return '#FF9800';
+    return '#f44336';
   };
 
-  // Edit combo functions
   const openEditModal = (combo) => {
     setEditingCombo(combo);
     setEditForm({
@@ -548,26 +531,17 @@ const CropIntelligenceScreen = ({ navigation }) => {
         challenges: editForm.challenges.split('\n').map(ch => ch.trim()).filter(ch => ch)
       };
 
-      // Update local state
-      const updatedCombos = cropCombos.map(combo => 
+      const updatedCombos = cropCombos.map(combo =>
         combo.combo_id === editingCombo.combo_id || combo.name === editingCombo.name
           ? updatedCombo
           : combo
       );
       setCropCombos(updatedCombos);
 
-      // Save to cache
       await AsyncStorage.setItem(CROP_COMBOS_CACHE_KEY, JSON.stringify(updatedCombos));
 
-      // TODO: Save to backend
-      // const response = await fetch(`${API_BASE}/farmer/${FARMER_ID}/crop-combos/${editingCombo.combo_id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(updatedCombo)
-      // });
-
       setShowEditModal(false);
-      setSelectedCombo(updatedCombo); // Update selected combo if it's being viewed
+      setSelectedCombo(updatedCombo);
       Alert.alert('Success', 'Crop combo updated successfully!');
     } catch (error) {
       console.error('Error saving combo:', error);
@@ -582,7 +556,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
     setEditingCombo(null);
   };
 
-  // Onboarding functions
   const checkOnboardingStatus = async () => {
     try {
       const completed = await AsyncStorage.getItem('cropIntelligenceOnboardingCompleted');
@@ -633,13 +606,114 @@ const CropIntelligenceScreen = ({ navigation }) => {
   };
 
   const handleLanguageChange = (newLanguage) => {
-    // Language change is handled automatically by the LanguageSelector component
-    // This function can be used for any additional language-specific logic
     console.log('Language changed to:', newLanguage);
   };
 
-  // Interactive Guide Tooltip Component
+  const convertAIRecommendationsToResponseCards = (aiData) => {
+    if (!aiData || !aiData.recommendations) return [];
+
+    const cards = [];
+
+    if (aiData.recommendations && Array.isArray(aiData.recommendations)) {
+      aiData.recommendations.forEach((rec, index) => {
+        cards.push({
+          id: `rec-${index}`,
+          type: 'recommendation',
+          title: rec.combo_name || `Crop Recommendation ${index + 1}`,
+          description: `AI-powered recommendation based on current conditions`,
+          keyPoints: rec.key_points || [],
+          actions: rec.action_plan || [],
+          metrics: {
+            'Expected ROI': rec.expected_roi || 'N/A',
+            'Risk Level': rec.risk_level || 'N/A',
+            'Timeline': rec.timeline || 'N/A'
+          },
+          confidence: rec.confidence_score || 0
+        });
+      });
+    }
+
+    if (aiData.weather_insights && Array.isArray(aiData.weather_insights) && aiData.weather_insights.length > 0) {
+      cards.push({
+        id: 'weather-insights',
+        type: 'analysis',
+        title: 'Weather Analysis',
+        description: 'Current weather conditions and their impact on farming',
+        keyPoints: aiData.weather_insights,
+        actions: [],
+        metrics: {},
+        confidence: 85
+      });
+    }
+
+    if (aiData.market_insights && Array.isArray(aiData.market_insights) && aiData.market_insights.length > 0) {
+      cards.push({
+        id: 'market-insights',
+        type: 'analysis',
+        title: 'Market Trends',
+        description: 'Current market conditions and price trends',
+        keyPoints: aiData.market_insights,
+        actions: [],
+        metrics: {},
+        confidence: 80
+      });
+    }
+
+    if (aiData.action_plan && Array.isArray(aiData.action_plan) && aiData.action_plan.length > 0) {
+      cards.push({
+        id: 'action-plan',
+        type: 'recommendation',
+        title: 'Action Plan',
+        description: 'Step-by-step action plan for optimal farming',
+        keyPoints: [],
+        actions: aiData.action_plan,
+        metrics: {},
+        confidence: 90
+      });
+    }
+
+    return cards;
+  };
+
+  const toggleCardExpansion = (cardId) => {
+    setExpandedCardId(expandedCardId === cardId ? null : cardId);
+  };
+
+  const handleResponseCardPress = (response) => {
+    console.log('Response card pressed:', response);
+    Alert.alert(
+      response.title,
+      'What would you like to do with this recommendation?',
+      [
+        {
+          text: 'Save to Collection',
+          onPress: () => {
+            Alert.alert('Saved', 'Response saved to your collection');
+          }
+        },
+        {
+          text: 'Share',
+          onPress: () => {
+            Alert.alert('Share', 'Sharing response...');
+          }
+        },
+        {
+          text: 'View Details',
+          onPress: () => {
+            toggleCardExpansion(response.id);
+          }
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
+    if (!step) return null;
+
     const getTooltipStyle = () => {
       const style = {
         position: 'absolute',
@@ -697,7 +771,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         default:
           break;
       }
-
       return arrowStyle;
     };
 
@@ -748,10 +821,175 @@ const CropIntelligenceScreen = ({ navigation }) => {
     );
   };
 
+  const ResponseCard = ({ response, onPress, isExpanded, onToggleExpand }) => {
+    if (!response) return null;
+
+    const getResponseTypeIcon = (type) => {
+      switch (type?.toLowerCase()) {
+        case 'recommendation':
+          return 'lightbulb-outline';
+        case 'analysis':
+          return 'chart-line';
+        case 'warning':
+          return 'alert-circle';
+        case 'success':
+          return 'check-circle';
+        default:
+          return 'information-outline';
+      }
+    };
+
+    const getResponseTypeColor = (type) => {
+      switch (type?.toLowerCase()) {
+        case 'recommendation':
+          return '#00C853';
+        case 'analysis':
+          return '#2196F3';
+        case 'warning':
+          return '#FF9800';
+        case 'success':
+          return '#4CAF50';
+        default:
+          return '#757575';
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[styles.responseCard, isExpanded && styles.responseCardExpanded]}
+        onPress={() => onPress && onPress(response)}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#2A2A2A', '#1A1A1A']}
+          style={styles.responseCardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.responseCardHeader}>
+            <View style={styles.responseCardTitleRow}>
+              <MaterialCommunityIcons
+                name={getResponseTypeIcon(response.type)}
+                size={24}
+                color={getResponseTypeColor(response.type)}
+              />
+              <View style={styles.responseCardTitleContainer}>
+                <Text style={styles.responseCardTitle}>{safeText(response?.title, 'Untitled')}</Text>
+                <Text style={styles.responseCardSubtitle}>{safeText(response?.type, 'General')}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.responseCardExpandButton}
+              onPress={onToggleExpand}
+            >
+              <Ionicons
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#E0E0E0"
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.responseCardContent}>
+            <Text style={styles.responseCardDescription}>{safeText(response?.description, 'No description available')}</Text>
+
+            {isExpanded && (
+              <View style={styles.responseCardExpandedContent}>
+                {response.keyPoints && response.keyPoints.length > 0 && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Key Points</Text>
+                    {response.keyPoints.map((point, index) => (
+                      <View key={index} style={styles.responseCardBulletPoint}>
+                        <MaterialCommunityIcons name="circle" size={6} color={getResponseTypeColor(response.type)} />
+                        <Text style={styles.responseCardBulletText}>{point}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {response.actions && response.actions.length > 0 && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Recommended Actions</Text>
+                    {response.actions.map((action, index) => (
+                      <View key={index} style={styles.responseCardActionItem}>
+                        <View style={[styles.responseCardActionNumber, { backgroundColor: getResponseTypeColor(response.type) }]}>
+                          <Text style={styles.responseCardActionNumberText}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.responseCardActionText}>{action}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {response.metrics && Object.keys(response.metrics).length > 0 && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Metrics</Text>
+                    <View style={styles.responseCardMetrics}>
+                      {Object.entries(response.metrics).map(([key, value]) => (
+                        <View key={key} style={styles.responseCardMetric}>
+                          <Text style={styles.responseCardMetricLabel}>{key}</Text>
+                          <Text style={styles.responseCardMetricValue}>{value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {response.confidence && (
+                  <View style={styles.responseCardSection}>
+                    <Text style={styles.responseCardSectionTitle}>Confidence Score</Text>
+                    <View style={styles.responseCardConfidence}>
+                      <View style={styles.responseCardConfidenceBar}>
+                        <View
+                          style={[
+                            styles.responseCardConfidenceFill,
+                            {
+                              width: `${response.confidence}%`,
+                              backgroundColor: getResponseTypeColor(response.type)
+                            }
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.responseCardConfidenceText}>{response.confidence}%</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.responseCardFooter}>
+            <Text style={styles.responseCardTimestamp}>
+              {new Date().toLocaleTimeString()}
+            </Text>
+            <View style={styles.responseCardActions}>
+              <TouchableOpacity
+                style={styles.responseCardActionButton}
+                onPress={() => {
+                  Alert.alert('Saved', 'Response saved to your collection');
+                }}
+              >
+                <Ionicons name="bookmark-outline" size={16} color="#E0E0E0" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.responseCardActionButton}
+                onPress={() => {
+                  Alert.alert('Share', 'Sharing response...');
+                }}
+              >
+                <Ionicons name="share-outline" size={16} color="#E0E0E0" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
+
   const renderHeader = () => (
     <View style={styles.header}>
       <LinearGradient
-        colors={['#000000', '#1A237E', '#0A114A']} // Darker, premium gradient
+        colors={['#000000', '#1A237E', '#0A114A']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -767,11 +1005,11 @@ const CropIntelligenceScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>{t('crop_intelligence.title')}</Text>
+              <Text style={styles.headerTitle}>{'Crop Intelligence'}</Text>
               <View style={styles.locationContainer}>
                 <Ionicons name="location-sharp" size={16} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.headerSubtitle}>
-                  {location?.city || t('crop_intelligence.location_fetching')}
+                  {safeText(location?.city, 'Fetching location...')}
                 </Text>
               </View>
             </View>
@@ -787,12 +1025,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   <Ionicons name="refresh" size={24} color="white" />
                 )}
               </TouchableOpacity>
-              
-              <LanguageSelector
-                compact={true}
-                position="top-right"
-                onLanguageChange={handleLanguageChange}
-              />
             </View>
           </View>
 
@@ -808,10 +1040,14 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   )}
                   <View>
                     <Text style={styles.currentWeatherTemperature}>
-                      {Math.round(weatherData.main?.temp || 0)}°C
+                      {safeText(weatherData?.main?.temp ? Math.round(weatherData.main.temp) : 0)}°C
                     </Text>
                     <Text style={styles.currentWeatherDescription}>
-                      {weatherData.weather?.[0]?.description ? weatherData.weather[0].description.toUpperCase() : 'N/A'}
+                      {safeText(
+                        weatherData?.weather?.[0]?.description
+                          ? weatherData.weather[0].description.toUpperCase()
+                          : 'N/A'
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -820,20 +1056,20 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   <View style={styles.weatherDetailItem}>
                     <MaterialCommunityIcons name="water-percent" size={20} color="#A7FFEB" />
                     <Text style={styles.weatherDetailValue}>{weatherData.main?.humidity || 0}%</Text>
-                    <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.humidity')}</Text>
+                    <Text style={styles.weatherDetailLabel}>{'Humidity'}</Text>
                   </View>
                   <View style={styles.weatherDetailItem}>
                     <MaterialCommunityIcons name="weather-windy" size={20} color="#82B1FF" />
                     <Text style={styles.weatherDetailValue}>
                       {weatherData.wind?.speed ? (weatherData.wind.speed * 3.6).toFixed(1) : '0'} km/h
                     </Text>
-                    <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.wind')}</Text>
+                    <Text style={styles.weatherDetailLabel}>{'Wind'}</Text>
                   </View>
                   {airQualityData?.list?.[0]?.main?.aqi && (
                     <View style={styles.weatherDetailItem}>
                       <MaterialCommunityIcons name="air-filter" size={20} color={getAQIColor(airQualityData.list[0].main.aqi)} />
                       <Text style={styles.weatherDetailValue}>{getAQIText(airQualityData.list[0].main.aqi) || 'N/A'}</Text>
-                      <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.air_quality')}</Text>
+                      <Text style={styles.weatherDetailLabel}>{'Air Quality'}</Text>
                     </View>
                   )}
                   {soilData.length > 0 && (
@@ -842,7 +1078,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
                       <Text style={styles.weatherDetailValue}>
                         {Math.round(soilData.reduce((sum, item) => sum + (item.moisture || 0), 0) / soilData.length) || 0}%
                       </Text>
-                      <Text style={styles.weatherDetailLabel}>{t('crop_intelligence.soil_moisture')}</Text>
+                      <Text style={styles.weatherDetailLabel}>{'Soil Moisture'}</Text>
                     </View>
                   )}
                 </View>
@@ -870,7 +1106,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             styles.tabText,
             activeTab === 'combos' && styles.activeTabText
           ]}>
-            {t('crop_intelligence.tabs.combos')}
+            {'Crop Combos'}
           </Text>
         </TouchableOpacity>
 
@@ -888,7 +1124,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             styles.tabText,
             activeTab === 'ai' && styles.activeTabText
           ]}>
-            {t('crop_intelligence.tabs.ai_recommendations')}
+            {'AI Recommendations'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -954,23 +1190,23 @@ const CropIntelligenceScreen = ({ navigation }) => {
       >
         <View style={styles.comboHeader}>
           <View style={styles.comboTitleContainer}>
-            <Text style={styles.comboTitle}>{combo.name}</Text>
-            <Text style={styles.comboSeason}>{combo.season}</Text>
+            <Text style={styles.comboTitle}>{safeText(combo?.name, 'Unnamed Combo')}</Text>
+            <Text style={styles.comboSeason}>{safeText(combo?.season, 'Unknown Season')}</Text>
           </View>
           <View style={[
             styles.difficultyBadge,
             { backgroundColor: getDifficultyColor(combo.difficulty) }
           ]}>
-            <Text style={styles.difficultyText}>{combo.difficulty}</Text>
+            <Text style={styles.difficultyText}>{combo.difficulty || 'Beginner'}</Text>
           </View>
         </View>
 
-        <Text style={styles.comboDescription}>{combo.description}</Text>
+        <Text style={styles.comboDescription}>{safeText(combo?.description, 'No description available')}</Text>
 
         <View style={styles.cropsList}>
-          {combo.crops?.slice(0, 3).map((crop, index) => (
+          {combo?.crops?.slice(0, 3).map((crop, index) => (
             <View key={index} style={styles.cropTag}>
-              <Text style={styles.cropTagText}>{crop}</Text>
+              <Text style={styles.cropTagText}>{safeText(crop, '')}</Text>
             </View>
           ))}
           {combo.crops?.length > 3 && (
@@ -983,344 +1219,35 @@ const CropIntelligenceScreen = ({ navigation }) => {
         <View style={styles.comboStats}>
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="currency-inr" size={18} color="#00C853" />
-            <Text style={styles.statText}>{combo.total_investment}</Text>
+            <Text style={styles.statText}>{combo.total_investment || 'N/A'}</Text>
           </View>
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="trending-up" size={18} color={getROIColor(combo.roi_percentage)} />
             <Text style={[styles.statText, { color: getROIColor(combo.roi_percentage) }]}>
-              {combo.roi_percentage}
+              {combo.roi_percentage || 'N/A'}
             </Text>
           </View>
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="clock-outline" size={18} color="#757575" />
-            <Text style={styles.statText}>{combo.duration}</Text>
+            <Text style={styles.statText}>{combo.duration || 'N/A'}</Text>
           </View>
         </View>
 
         <View style={styles.comboFooter}>
           <View style={styles.successRate}>
             <MaterialCommunityIcons name="check-circle" size={16} color="#4CAF50" />
-            <Text style={styles.successRateText}>{combo.success_rate} Success</Text>
+            <Text style={styles.successRateText}>{combo.success_rate || 'N/A'} Success</Text>
           </View>
-          <Text style={styles.farmersUsing}>{combo.farmers_using}</Text>
+          <Text style={styles.farmersUsing}>{combo.farmers_using || 'Unknown'}</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 
-  // Response Card Component
-  const ResponseCard = ({ response, onPress, isExpanded, onToggleExpand }) => {
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleCardPress = () => {
-      if (onPress) {
-        onPress(response);
-      }
-      if (onToggleExpand) {
-        onToggleExpand();
-      }
-    };
-
-    const getResponseTypeIcon = (type) => {
-      switch (type?.toLowerCase()) {
-        case 'recommendation':
-          return 'lightbulb-outline';
-        case 'analysis':
-          return 'chart-line';
-        case 'warning':
-          return 'alert-circle';
-        case 'success':
-          return 'check-circle';
-        default:
-          return 'information-outline';
-      }
-    };
-
-    const getResponseTypeColor = (type) => {
-      switch (type?.toLowerCase()) {
-        case 'recommendation':
-          return '#00C853';
-        case 'analysis':
-          return '#2196F3';
-        case 'warning':
-          return '#FF9800';
-        case 'success':
-          return '#4CAF50';
-        default:
-          return '#757575';
-      }
-    };
-
-    return (
-      <TouchableOpacity
-        style={[styles.responseCard, isExpanded && styles.responseCardExpanded]}
-        onPress={handleCardPress}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={['#2A2A2A', '#1A1A1A']}
-          style={styles.responseCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          {/* Header */}
-          <View style={styles.responseCardHeader}>
-            <View style={styles.responseCardTitleRow}>
-              <MaterialCommunityIcons
-                name={getResponseTypeIcon(response.type)}
-                size={24}
-                color={getResponseTypeColor(response.type)}
-              />
-              <View style={styles.responseCardTitleContainer}>
-                <Text style={styles.responseCardTitle}>{response.title}</Text>
-                <Text style={styles.responseCardSubtitle}>{response.type}</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.responseCardExpandButton}
-              onPress={onToggleExpand}
-            >
-              <Ionicons
-                name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#E0E0E0"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <View style={styles.responseCardContent}>
-            <Text style={styles.responseCardDescription}>{response.description}</Text>
-            
-            {isExpanded && (
-              <View style={styles.responseCardExpandedContent}>
-                {/* Key Points */}
-                {response.keyPoints && response.keyPoints.length > 0 && (
-                  <View style={styles.responseCardSection}>
-                    <Text style={styles.responseCardSectionTitle}>Key Points</Text>
-                    {response.keyPoints.map((point, index) => (
-                      <View key={index} style={styles.responseCardBulletPoint}>
-                        <MaterialCommunityIcons name="circle" size={6} color={getResponseTypeColor(response.type)} />
-                        <Text style={styles.responseCardBulletText}>{point}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Actions */}
-                {response.actions && response.actions.length > 0 && (
-                  <View style={styles.responseCardSection}>
-                    <Text style={styles.responseCardSectionTitle}>Recommended Actions</Text>
-                    {response.actions.map((action, index) => (
-                      <View key={index} style={styles.responseCardActionItem}>
-                        <View style={[styles.responseCardActionNumber, { backgroundColor: getResponseTypeColor(response.type) }]}>
-                          <Text style={styles.responseCardActionNumberText}>{index + 1}</Text>
-                        </View>
-                        <Text style={styles.responseCardActionText}>{action}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                                 {/* Metrics */}
-                 {response.metrics && Object.keys(response.metrics).length > 0 && (
-                   <View style={styles.responseCardSection}>
-                     <Text style={styles.responseCardSectionTitle}>Metrics</Text>
-                     <View style={styles.responseCardMetrics}>
-                       {Object.entries(response.metrics).map(([key, value]) => (
-                         <View key={key} style={styles.responseCardMetric}>
-                           <Text style={styles.responseCardMetricLabel}>{key}</Text>
-                           <Text style={styles.responseCardMetricValue}>{value}</Text>
-                         </View>
-                       ))}
-                     </View>
-                   </View>
-                 )}
-
-                {/* Confidence Score */}
-                {response.confidence && (
-                  <View style={styles.responseCardSection}>
-                    <Text style={styles.responseCardSectionTitle}>Confidence Score</Text>
-                    <View style={styles.responseCardConfidence}>
-                      <View style={styles.responseCardConfidenceBar}>
-                        <View
-                          style={[
-                            styles.responseCardConfidenceFill,
-                            {
-                              width: `${response.confidence}%`,
-                              backgroundColor: getResponseTypeColor(response.type)
-                            }
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.responseCardConfidenceText}>{response.confidence}%</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.responseCardFooter}>
-            <Text style={styles.responseCardTimestamp}>
-              {new Date().toLocaleTimeString()}
-            </Text>
-            <View style={styles.responseCardActions}>
-              <TouchableOpacity
-                style={styles.responseCardActionButton}
-                onPress={() => {
-                  // Handle save action
-                  Alert.alert('Saved', 'Response saved to your collection');
-                }}
-              >
-                <Ionicons name="bookmark-outline" size={16} color="#E0E0E0" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.responseCardActionButton}
-                onPress={() => {
-                  // Handle share action
-                  Alert.alert('Share', 'Sharing response...');
-                }}
-              >
-                <Ionicons name="share-outline" size={16} color="#E0E0E0" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  };
-
-  // State for response cards
-  const [responseCards, setResponseCards] = useState([]);
-  const [expandedCardId, setExpandedCardId] = useState(null);
-
-  // Convert AI recommendations to response cards
-  const convertAIRecommendationsToResponseCards = (aiData) => {
-    if (!aiData || !aiData.recommendations) return [];
-
-    const cards = [];
-
-    // Main recommendations as cards
-    if (aiData.recommendations && Array.isArray(aiData.recommendations)) {
-      aiData.recommendations.forEach((rec, index) => {
-        cards.push({
-          id: `rec-${index}`,
-          type: 'recommendation',
-          title: rec.combo_name || `Crop Recommendation ${index + 1}`,
-          description: `AI-powered recommendation based on current conditions`,
-          keyPoints: rec.key_points || [],
-          actions: rec.action_plan || [],
-          metrics: {
-            'Expected ROI': rec.expected_roi || 'N/A',
-            'Risk Level': rec.risk_level || 'N/A',
-            'Timeline': rec.timeline || 'N/A'
-          },
-          confidence: rec.confidence_score || 0
-        });
-      });
-    }
-
-    // Weather insights as a card
-    if (aiData.weather_insights && Array.isArray(aiData.weather_insights) && aiData.weather_insights.length > 0) {
-      cards.push({
-        id: 'weather-insights',
-        type: 'analysis',
-        title: 'Weather Analysis',
-        description: 'Current weather conditions and their impact on farming',
-        keyPoints: aiData.weather_insights,
-        actions: [],
-        metrics: {},
-        confidence: 85
-      });
-    }
-
-    // Market insights as a card
-    if (aiData.market_insights && Array.isArray(aiData.market_insights) && aiData.market_insights.length > 0) {
-      cards.push({
-        id: 'market-insights',
-        type: 'analysis',
-        title: 'Market Trends',
-        description: 'Current market conditions and price trends',
-        keyPoints: aiData.market_insights,
-        actions: [],
-        metrics: {},
-        confidence: 80
-      });
-    }
-
-    // Action plan as a card
-    if (aiData.action_plan && Array.isArray(aiData.action_plan) && aiData.action_plan.length > 0) {
-      cards.push({
-        id: 'action-plan',
-        type: 'recommendation',
-        title: 'Action Plan',
-        description: 'Step-by-step action plan for optimal farming',
-        keyPoints: [],
-        actions: aiData.action_plan,
-        metrics: {},
-        confidence: 90
-      });
-    }
-
-    return cards;
-  };
-
-  // Update response cards when AI recommendations change
-  useEffect(() => {
-    if (aiRecommendations) {
-      const cards = convertAIRecommendationsToResponseCards(aiRecommendations);
-      setResponseCards(cards);
-    }
-  }, [aiRecommendations]);
-
-  const toggleCardExpansion = (cardId) => {
-    setExpandedCardId(expandedCardId === cardId ? null : cardId);
-  };
-
-  const handleResponseCardPress = (response) => {
-    // Handle card press - could open detailed view, save, etc.
-    console.log('Response card pressed:', response);
-    
-    // Show a quick action menu
-    Alert.alert(
-      response.title,
-      'What would you like to do with this recommendation?',
-      [
-        {
-          text: 'Save to Collection',
-          onPress: () => {
-            // Save response to user's collection
-            Alert.alert('Saved', 'Response saved to your collection');
-          }
-        },
-        {
-          text: 'Share',
-          onPress: () => {
-            // Share response
-            Alert.alert('Share', 'Sharing response...');
-          }
-        },
-        {
-          text: 'View Details',
-          onPress: () => {
-            // Toggle expansion
-            toggleCardExpansion(response.id);
-          }
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        }
-      ]
-    );
-  };
-
   const renderAIRecommendations = () => (
     <View style={styles.aiSection}>
-      <Text style={styles.sectionTitle}>{t('crop_intelligence.ai_recommendations_title')}</Text>
-      
+      <Text style={styles.sectionTitle}>{'AI Recommendations'}</Text>
+
       <View style={styles.aiButtonContainer}>
         <TouchableOpacity
           style={[styles.aiButton, aiLoading && styles.aiButtonDisabled]}
@@ -1333,37 +1260,33 @@ const CropIntelligenceScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="robot" size={20} color="white" />
           )}
           <Text style={styles.aiButtonText}>
-            {aiLoading ? t('crop_intelligence.analyzing') : t('crop_intelligence.generate_master_plan')}
+            {aiLoading ? 'Analyzing...' : 'Generate Master Plan'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {responseCards.length > 0 ? (
         <View style={styles.responseCardsContainer}>
-          {/* Response Cards Summary */}
           <View style={styles.responseCardsSummary}>
             <Text style={styles.responseCardsSummaryText}>
-              {t('crop_intelligence.recommendations_generated', { 
-                count: responseCards.length, 
-                plural: responseCards.length !== 1 ? 's' : '' 
-              })}
+              {`${responseCards.length} recommendation${responseCards.length !== 1 ? 's' : ''} generated`}
             </Text>
             <View style={styles.responseCardsStats}>
               <View style={styles.responseCardStat}>
                 <MaterialCommunityIcons name="lightbulb-outline" size={16} color="#00C853" />
                 <Text style={styles.responseCardStatText}>
-                  {responseCards.filter(card => card.type === 'recommendation').length} {t('crop_intelligence.recommendations')}
+                  {responseCards.filter(card => card.type === 'recommendation').length} {'Recommendations'}
                 </Text>
               </View>
               <View style={styles.responseCardStat}>
                 <MaterialCommunityIcons name="chart-line" size={16} color="#2196F3" />
                 <Text style={styles.responseCardStatText}>
-                  {responseCards.filter(card => card.type === 'analysis').length} {t('crop_intelligence.analysis')}
+                  {responseCards.filter(card => card.type === 'analysis').length} {'Analysis'}
                 </Text>
               </View>
             </View>
           </View>
-          
+
           {responseCards.map((card) => (
             <ResponseCard
               key={card.id}
@@ -1377,18 +1300,18 @@ const CropIntelligenceScreen = ({ navigation }) => {
       ) : aiRecommendations ? (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="robot-happy-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>{t('crop_intelligence.processing')}</Text>
+          <Text style={styles.emptyStateText}>{'Processing recommendations...'}</Text>
         </View>
       ) : (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="robot-happy-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>{t('crop_intelligence.tap_generate')}</Text>
+          <Text style={styles.emptyStateText}>{'Tap the button above to generate AI recommendations'}</Text>
         </View>
       )}
     </View>
   );
 
-  if (loading && !weatherData && !cropCombos.length) { // Only show full screen loader if no cached data either
+  if (loading && !weatherData && !cropCombos.length) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00C853" />
@@ -1416,14 +1339,14 @@ const CropIntelligenceScreen = ({ navigation }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#00C853" // iOS loading spinner color
-              colors={['#00C853', '#1A237E']} // Android loading spinner colors
+              tintColor="#00C853"
+              colors={['#00C853', '#1A237E']}
             />
           }
           showsVerticalScrollIndicator={false}
         >
           {renderHeader()}
-          {renderForecastSection()} {/* Render forecast always below header */}
+          {renderForecastSection()}
           {renderTabBar()}
 
           {activeTab === 'combos' && (
@@ -1447,11 +1370,10 @@ const CropIntelligenceScreen = ({ navigation }) => {
         </ScrollView>
       </Animated.View>
 
-      {/* Combo Details Modal */}
       <Modal
         visible={showComboModal}
         animationType="slide"
-        presentationStyle="pageSheet" // Looks good on iOS, full screen on Android
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowComboModal(false)}
       >
         {selectedCombo && (
@@ -1470,11 +1392,11 @@ const CropIntelligenceScreen = ({ navigation }) => {
                   >
                     <Ionicons name="arrow-back" size={26} color="white" />
                   </TouchableOpacity>
-                  
+
                   <View style={styles.modalTitleContainer}>
-                    <Text style={styles.modalTitle}>{selectedCombo.name}</Text>
+                    <Text style={styles.modalTitle}>{safeText(selectedCombo?.name, 'Crop Combo Details')}</Text>
                   </View>
-                  
+
                   <TouchableOpacity
                     style={styles.modalEditButton}
                     onPress={() => {
@@ -1489,16 +1411,18 @@ const CropIntelligenceScreen = ({ navigation }) => {
             </LinearGradient>
 
             <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalDescription}>{selectedCombo.description}</Text>
+              <Text style={styles.modalDescription}>{safeText(selectedCombo?.description, 'No description available')}</Text>
 
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Crops Included</Text>
                 <View style={styles.modalCropsList}>
-                  {selectedCombo.crops?.map((crop, index) => (
+                  {selectedCombo?.crops?.map((crop, index) => (
                     <View key={index} style={styles.modalCropTag}>
-                      <Text style={styles.modalCropTagText}>{crop}</Text>
+                      <Text style={styles.modalCropTagText}>{safeText(crop, '')}</Text>
                     </View>
-                  ))}
+                  )) || (
+                      <Text style={styles.modalDescription}>No crops specified</Text>
+                    )}
                 </View>
               </View>
 
@@ -1551,7 +1475,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         )}
       </Modal>
 
-      {/* Edit Combo Modal */}
       <Modal
         visible={showEditModal}
         animationType="slide"
@@ -1596,10 +1519,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </LinearGradient>
 
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            {/* Basic Information */}
             <View style={styles.editSection}>
               <Text style={styles.editSectionTitle}>Basic Information</Text>
-              
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Combo Name *</Text>
                 <TextInput
@@ -1635,7 +1557,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
                     placeholderTextColor="#666"
                   />
                 </View>
-                
+
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
                   <Text style={styles.inputLabel}>Difficulty</Text>
                   <TouchableOpacity
@@ -1660,10 +1582,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Financial Information */}
             <View style={styles.editSection}>
               <Text style={styles.editSectionTitle}>Financial Details</Text>
-              
+
               <View style={styles.inputRow}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                   <Text style={styles.inputLabel}>Total Investment</Text>
@@ -1675,7 +1596,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
                     placeholderTextColor="#666"
                   />
                 </View>
-                
+
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
                   <Text style={styles.inputLabel}>Expected Returns</Text>
                   <TextInput
@@ -1699,7 +1620,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
                     placeholderTextColor="#666"
                   />
                 </View>
-                
+
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
                   <Text style={styles.inputLabel}>Duration</Text>
                   <TextInput
@@ -1713,10 +1634,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Performance Metrics */}
             <View style={styles.editSection}>
               <Text style={styles.editSectionTitle}>Performance Metrics</Text>
-              
+
               <View style={styles.inputRow}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                   <Text style={styles.inputLabel}>Success Rate</Text>
@@ -1728,7 +1648,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
                     placeholderTextColor="#666"
                   />
                 </View>
-                
+
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
                   <Text style={styles.inputLabel}>Farmers Using</Text>
                   <TextInput
@@ -1742,10 +1662,9 @@ const CropIntelligenceScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Crops Information */}
             <View style={styles.editSection}>
               <Text style={styles.editSectionTitle}>Crops & Details</Text>
-              
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Crops (comma-separated)</Text>
                 <TextInput
@@ -1786,7 +1705,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Save Button */}
             <View style={styles.saveButtonContainer}>
               <TouchableOpacity
                 style={[styles.saveButton, saveLoading && styles.saveButtonDisabled]}
@@ -1809,7 +1727,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Onboarding Tooltip */}
       {showOnboarding && ONBOARDING_STEPS[currentOnboardingStep] && (
         <InteractiveGuideTooltip
           step={ONBOARDING_STEPS[currentOnboardingStep]}
@@ -1818,7 +1735,6 @@ const CropIntelligenceScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Debug buttons for testing (remove in production) */}
       {__DEV__ && (
         <View style={styles.tourButtonsContainer}>
           <TouchableOpacity
@@ -1837,1188 +1753,8 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-      
-
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1C1C1C', // Dark background for the entire screen
-    paddingTop: 10, // Added top padding
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1C1C1C',
-    paddingTop: 10, // Added top padding to loading container as well
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 18,
-    color: '#E0E0E0', // Light grey text
-    fontWeight: '500',
-  },
-  header: {
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  headerGradient: {
-    paddingBottom: 25,
-    borderBottomLeftRadius: 30, // Rounded bottom corners for the gradient header
-    borderBottomRightRadius: 30,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 10,
-  },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    letterSpacing: 0.5,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-  refreshButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  currentWeatherMainCard: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)', // Slightly transparent white
-    borderRadius: 15,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  currentWeatherMainInfo: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  currentWeatherVisual: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  currentWeatherBigIcon: {
-    width: 80,
-    height: 80,
-    marginRight: 15,
-  },
-  currentWeatherTemperature: {
-    fontSize: 48,
-    fontWeight: '200',
-    color: 'white',
-    lineHeight: 50,
-  },
-  currentWeatherDescription: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'capitalize',
-    marginTop: 5,
-  },
-  currentWeatherDetailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  weatherDetailItem: {
-    alignItems: 'center',
-    width: '48%', // Approx half width
-    marginBottom: 15,
-    paddingVertical: 8,
-  },
-  weatherDetailValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: 'white',
-    marginTop: 5,
-  },
-  weatherDetailLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 2,
-  },
-  forecastSection: {
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  subSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E0E0E0', // Light text for dark background
-    marginLeft: 10,
-  },
-  forecastScroll: {
-    paddingLeft: 20,
-  },
-  forecastCard: {
-    borderRadius: 15,
-    padding: 15,
-    marginRight: 15,
-    alignItems: 'center',
-    minWidth: 120,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    borderWidth: 1,
-    borderColor: '#E0E0E0', // Light border
-  },
-  forecastDate: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  forecastIcon: {
-    width: 45,
-    height: 45,
-    marginBottom: 8,
-  },
-  forecastTemp: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A237E',
-    marginBottom: 4,
-  },
-  forecastDesc: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8,
-  },
-  forecastDetails: {
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 8,
-    width: '100%',
-  },
-  forecastLabel: {
-    fontSize: 11,
-    color: '#999',
-    marginBottom: 2,
-  },
-  forecastValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-  },
-  tabBarContainer: {
-    backgroundColor: '#1C1C1C', // Match container background
-    paddingBottom: 5,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#2C2C2C', // Darker background for tabs
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    borderTopWidth: 1,
-    borderTopColor: '#444',
-    marginHorizontal: 0,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-  },
-  activeTab: {
-    borderBottomColor: '#00C853', // Vibrant green accent
-    backgroundColor: '#3A3A3A', // Slightly lighter dark for active tab
-  },
-  tabText: {
-    marginLeft: 10,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#E0E0E0', // Light text for inactive tabs
-  },
-  activeTabText: {
-    color: '#00C853', // Vibrant green for active tab text
-    fontWeight: '700',
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#1C1C1C', // Match container background
-  },
-  scrollView: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  combosSection: {
-    paddingVertical: 20,
-  },
-  comboCard: {
-    marginHorizontal: 20,
-    marginBottom: 18,
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    overflow: 'hidden', // Ensures gradient respects border radius
-  },
-  comboCardGradient: {
-    padding: 20,
-    borderRadius: 15,
-  },
-  comboHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  comboTitleContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  comboTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  comboSeason: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 3,
-    fontWeight: '500',
-  },
-  difficultyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-    alignSelf: 'flex-start',
-  },
-  difficultyText: {
-    fontSize: 11,
-    color: 'white',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  comboDescription: {
-    fontSize: 15,
-    color: '#555',
-    lineHeight: 22,
-    marginBottom: 18,
-  },
-  cropsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 18,
-  },
-  cropTag: {
-    backgroundColor: '#E8F5E9', // Light green
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  cropTagText: {
-    fontSize: 13,
-    color: '#2E7D32', // Darker green
-    fontWeight: '600',
-  },
-  comboStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 18,
-    paddingHorizontal: 5,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  statText: {
-    fontSize: 13,
-    color: '#555',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  comboFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#ECEFF1',
-  },
-  successRate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  successRateText: {
-    fontSize: 13,
-    color: '#4CAF50',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  farmersUsing: {
-    fontSize: 13,
-    color: '#777',
-    fontWeight: '500',
-  },
-  aiSection: {
-    paddingVertical: 20,
-  },
-  aiButtonContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
-    alignItems: 'center',
-  },
-  aiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#00C853', // Vibrant green for AI button
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    minWidth: 200,
-    justifyContent: 'center',
-  },
-  aiButtonDisabled: {
-    backgroundColor: '#666',
-  },
-  aiButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 10,
-  },
-  aiResults: {
-    // maxHeight: height * 0.7, // Adjust as needed, but ScrollView handles full content
-  },
-  confidenceBar: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: '#2A2A2A', // Dark background for bar
-    borderRadius: 8,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  confidenceText: {
-    fontSize: 15,
-    color: '#E0E0E0',
-    marginBottom: 10,
-    fontWeight: '600',
-  },
-  confidenceBarTrack: {
-    height: 8,
-    backgroundColor: '#444',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  confidenceBarFill: {
-    height: '100%',
-    backgroundColor: '#00C853', // Vibrant green
-    borderRadius: 4,
-  },
-  aiRecommendationCard: {
-    backgroundColor: '#2A2A2A', // Dark card background
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  aiRecHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  aiRecTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    flex: 1,
-    marginRight: 10,
-  },
-  aiConfidenceBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-  },
-  aiConfidenceText: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: '700',
-  },
-  aiRecJustification: {
-    fontSize: 15,
-    color: '#B0B0B0', // Lighter grey for main text
-    lineHeight: 22,
-    marginBottom: 18,
-  },
-  keyPointsSection: {
-    marginBottom: 18,
-  },
-  bulletPoint: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    paddingLeft: 5,
-  },
-  bulletText: {
-    fontSize: 14,
-    color: '#B0B0B0',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 20,
-  },
-  aiRecDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 18,
-    borderTopWidth: 1,
-    borderTopColor: '#3A3A3A',
-    paddingTop: 15,
-  },
-  aiRecDetail: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  aiRecDetailLabel: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 5,
-  },
-  aiRecDetailValue: {
-    fontSize: 15,
-    color: '#E0E0E0',
-    fontWeight: '600',
-  },
-  advantagesSection: {
-    marginTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#3A3A3A',
-    paddingTop: 15,
-  },
-  advantagesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E0E0E0',
-    marginBottom: 10,
-  },
-  advantageItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  advantageText: {
-    fontSize: 14,
-    color: '#B0B0B0',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 20,
-  },
-  analysisCard: {
-    backgroundColor: '#2A2A2A',
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  insightsCard: {
-    backgroundColor: '#2A2A2A',
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  analysisTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 10,
-  },
-  analysisText: {
-    fontSize: 15,
-    color: '#B0B0B0',
-    lineHeight: 22,
-  },
-  actionPlanCard: {
-    backgroundColor: '#2A2A2A',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  actionPlanTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 15,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 15,
-  },
-  actionNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#00C853', // Green for numbers
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-    flexShrink: 0, // Prevent number circle from shrinking
-  },
-  actionNumberText: {
-    fontSize: 14,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  actionText: {
-    fontSize: 15,
-    color: '#B0B0B0',
-    flex: 1,
-    lineHeight: 22,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 15,
-    marginBottom: 20,
-    textAlign: 'center',
-    paddingHorizontal: 30,
-  },
-  retryButton: {
-    backgroundColor: '#00C853',
-    paddingHorizontal: 25,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#1C1C1C', // Dark background for modal
-  },
-  modalHeaderGradient: {
-    paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  modalHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  modalCloseButton: {
-    padding: 5,
-    marginRight: 15,
-  },
-  modalTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#B0B0B0',
-    lineHeight: 24,
-    marginBottom: 25,
-  },
-  modalSection: {
-    marginBottom: 30,
-  },
-  modalSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3A3A',
-    paddingBottom: 8,
-  },
-  modalCropsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  modalCropTag: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  modalCropTagText: {
-    fontSize: 14,
-    color: '#2E7D32',
-    fontWeight: '600',
-  },
-  modalAdvantageItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  modalAdvantageText: {
-    fontSize: 15,
-    color: '#B0B0B0',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 22,
-  },
-  modalChallengeItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  modalChallengeText: {
-    fontSize: 15,
-    color: '#B0B0B0',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 22,
-  },
-  modalStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 15,
-  },
-  modalStatCard: {
-    width: '48%',
-    backgroundColor: '#2A2A2A',
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  modalStatLabel: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 8,
-  },
-  modalStatValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-  },
-
-  // Edit Modal Styles
-  modalEditButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSaveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editSection: {
-    marginBottom: 24,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    padding: 16,
-  },
-  editSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#00C853',
-    marginBottom: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E0E0E0',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#444',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#FFFFFF',
-    minHeight: 48,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  pickerButton: {
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#444',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 48,
-  },
-  pickerButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  saveButtonContainer: {
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  saveButton: {
-    backgroundColor: '#00C853',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#00C853',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#666',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    marginLeft: 8,
-  },
-  // Tour and Reset Button Styles
-  tourButtonsContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  restartTourButton: {
-    backgroundColor: 'rgba(16,185,129,0.1)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginLeft:130,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  restartTourText: {
-    color: '#10B981',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-    letterSpacing: 0.5,
-  },
-  resetTourButton: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginLeft:10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  resetTourText: {
-    color: '#EF4444',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-    letterSpacing: 0.5,
-  },
-  responseCardsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  responseCard: {
-    marginBottom: 15,
-    borderRadius: 10,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    borderWidth: 1,
-    borderColor: '#E0E0E0', // Light border
-  },
-  responseCardExpanded: {
-    borderWidth: 2,
-    borderColor: '#00C853', // Vibrant green accent
-  },
-  responseCardGradient: {
-    padding: 15,
-  },
-  responseCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  responseCardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  responseCardTitleContainer: {
-    marginLeft: 10,
-  },
-  responseCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-  },
-  responseCardSubtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginLeft: 5,
-  },
-  responseCardExpandButton: {
-    padding: 5,
-  },
-  responseCardContent: {
-    paddingBottom: 10,
-  },
-  responseCardDescription: {
-    fontSize: 14,
-    color: '#CBD5E1',
-    lineHeight: 20,
-  },
-  responseCardExpandedContent: {
-    paddingTop: 10,
-  },
-  responseCardSection: {
-    marginBottom: 10,
-  },
-  responseCardSectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 5,
-  },
-  responseCardBulletPoint: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-  },
-  responseCardBulletText: {
-    fontSize: 14,
-    color: '#CBD5E1',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 20,
-  },
-  responseCardActionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-  },
-  responseCardActionNumber: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#757575', // Grey for numbers
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    flexShrink: 0, // Prevent number circle from shrinking
-  },
-  responseCardActionNumberText: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  responseCardActionText: {
-    fontSize: 14,
-    color: '#CBD5E1',
-    flex: 1,
-    lineHeight: 20,
-  },
-  responseCardMetrics: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
-  },
-  responseCardMetric: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  responseCardMetricLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 2,
-  },
-  responseCardMetricValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E0E0E0',
-  },
-  responseCardConfidence: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  responseCardConfidenceBar: {
-    height: 8,
-    backgroundColor: '#444',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginRight: 5,
-  },
-  responseCardConfidenceFill: {
-    height: '100%',
-    backgroundColor: '#00C853', // Vibrant green
-    borderRadius: 4,
-  },
-  responseCardConfidenceText: {
-    fontSize: 12,
-    color: '#E0E0E0',
-    fontWeight: '600',
-  },
-  responseCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  responseCardTimestamp: {
-    fontSize: 12,
-    color: '#999',
-  },
-  responseCardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  responseCardActionButton: {
-    padding: 5,
-    marginLeft: 10,
-  },
-  // Additional response card styles
-  responseCardMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  responseCardMetric: {
-    width: '48%',
-    backgroundColor: '#1A1A1A',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  responseCardMetricLabel: {
-    fontSize: 11,
-    color: '#999',
-    marginBottom: 2,
-  },
-  responseCardMetricValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#E0E0E0',
-  },
-  responseCardConfidence: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  responseCardConfidenceBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#444',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginRight: 10,
-  },
-  responseCardConfidenceFill: {
-    height: '100%',
-    backgroundColor: '#00C853',
-    borderRadius: 3,
-  },
-  responseCardConfidenceText: {
-    fontSize: 12,
-    color: '#E0E0E0',
-    fontWeight: '600',
-    minWidth: 35,
-  },
-  // Response Cards Summary Styles
-  responseCardsSummary: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  responseCardsSummaryText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E0E0E0',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  responseCardsStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  responseCardStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  responseCardStatText: {
-    fontSize: 13,
-    color: '#E0E0E0',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-});
 
 export default CropIntelligenceScreen;

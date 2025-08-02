@@ -223,7 +223,7 @@ export default function LiveVoiceScreen({ navigation }) {
         );
       }
     } catch (error) {
-      console.error('❌ Network test failed:', error.message);
+      // console.error('❌ Network test failed:', error.message);
       setNetworkStatus('error');
       // Don't show alert immediately on app start, just log the error
     }
