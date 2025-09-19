@@ -72,7 +72,7 @@ export default function App() {
       <Suspense fallback={null}>
         <View style={{ flex: 1 }}>
           <NavigationContainer>
-            <Stack.Navigator initialRouteName="ChoiceScreen"
+            <Stack.Navigator initialRouteName="LanguageSelectScreen"
               screenOptions={{
                 headerShown: false,
               }}
