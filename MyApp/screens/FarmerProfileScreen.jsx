@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -20,19 +21,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setLanguage } from '../i18n';
 import { Picker } from '@react-native-picker/picker';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
-// Theme for consistent styling
-const theme = {
-  primaryGreen: '#4CAF50',
-  darkGreen: '#2E7D32',
-  lightGray: '#18181b', // Background for cards/sections
-  mediumGray: '#23232a', // Borders and input backgrounds
-  white: '#FFFFFF',
-  gray: '#9E9E9E', // Secondary text
-  darkGray: '#616161',
-  black: '#000000', // Main background
-  red: '#f87171', // Error messages
-};
+// Note: Theming handled via useTheme tokens in styles below
 
 const DEFAULT_PROFILE_IMAGE = 'https://placehold.co/100x100/EFEFEF/333?text=F';
 
@@ -47,70 +38,12 @@ const LANGUAGE_OPTIONS = [
   { code: 'kn', label: 'Kannada' },
 ];
 
-// Reusable component for displaying static profile fields
-const ProfileField = ({ label, value }) => (
-  <View style={styles.fieldRow}>
-    <Text style={styles.fieldLabel}>{label}</Text>
-    <Text style={styles.fieldValue}>{value || '-'}</Text>
-  </View>
-);
-
-// Reusable component for editable input fields within modals
-const EditableField = ({ label, value, onChangeText, keyboardType = 'default', multiline = false, ...props }) => (
-  <View style={styles.editableFieldContainer}>
-    <Text style={styles.editableFieldLabel}>{label}</Text>
-    <TextInput
-      style={[styles.editableFieldInput, multiline && styles.multilineInput]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={`Enter ${label.toLowerCase()}`}
-      placeholderTextColor={theme.gray}
-      keyboardType={keyboardType}
-      multiline={multiline}
-      {...props}
-    />
-  </View>
-);
-
-// Reusable section header with an optional edit button
-const Section = ({ title, children, onEdit, onAdd }) => (
-  <View style={styles.sectionOuter}>
-    <View style={styles.sectionHeaderContainer}>
-      <Text style={styles.sectionHeader}>{title}</Text>
-      <View style={styles.sectionHeaderActions}>
-        {onAdd && (
-          <TouchableOpacity onPress={onAdd} style={styles.sectionActionButton}>
-            <Ionicons name="add-circle-outline" size={24} color={theme.primaryGreen} />
-          </TouchableOpacity>
-        )}
-        {onEdit && (
-          <TouchableOpacity onPress={onEdit} style={styles.sectionActionButton}>
-            <Ionicons name="create-outline" size={22} color={theme.primaryGreen} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-    <View style={styles.section}>{children}</View>
-  </View>
-);
-
-// Custom Button component for consistency
-const CustomButton = ({ title, onPress, color, disabled }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.customButton, { backgroundColor: color || theme.primaryGreen }, disabled && styles.disabledButton]}
-    disabled={disabled}
-  >
-    {disabled ? (
-      <ActivityIndicator size="small" color={theme.white} />
-    ) : (
-      <Text style={styles.customButtonText}>{title}</Text>
-    )}
-  </TouchableOpacity>
-);
+// Helper components are defined within the screen to access themed styles
 
 const FarmerProfileScreen = ({ route, navigation }) => {
   const { farmerId } = route.params;
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -131,6 +64,64 @@ const FarmerProfileScreen = ({ route, navigation }) => {
 
   const insets = useSafeAreaInsets();
   const API_BASE = NetworkConfig.API_BASE;
+  // Inner components (themed)
+  const ProfileField = ({ label, value }) => (
+    <View style={styles.fieldRow}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value || '-'}</Text>
+    </View>
+  );
+
+  const EditableField = ({ label, value, onChangeText, keyboardType = 'default', multiline = false, ...props }) => (
+    <View style={styles.editableFieldContainer}>
+      <Text style={styles.editableFieldLabel}>{label}</Text>
+      <TextInput
+        style={[styles.editableFieldInput, multiline && styles.multilineInput]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={`Enter ${label.toLowerCase()}`}
+        placeholderTextColor={theme.colors.textSecondary}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        {...props}
+      />
+    </View>
+  );
+
+  const Section = ({ title, children, onEdit, onAdd }) => (
+    <View style={styles.sectionOuter}>
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionHeader}>{title}</Text>
+        <View style={styles.sectionHeaderActions}>
+          {onAdd && (
+            <TouchableOpacity onPress={onAdd} style={styles.sectionActionButton}>
+              <Ionicons name="add-circle-outline" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+          )}
+          {onEdit && (
+            <TouchableOpacity onPress={onEdit} style={styles.sectionActionButton}>
+              <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      <View style={styles.section}>{children}</View>
+    </View>
+  );
+
+  const CustomButton = ({ title, onPress, color, disabled }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.customButton, { backgroundColor: color || theme.colors.primary }, disabled && styles.disabledButton]}
+      disabled={disabled}
+    >
+      {disabled ? (
+        <ActivityIndicator size="small" color={theme.colors.background} />
+      ) : (
+        <Text style={styles.customButtonText}>{title}</Text>
+      )}
+    </TouchableOpacity>
+  );
 
   const PROFILE_CACHE_KEY = `farmer-profile-cache-${farmerId}`;
 
@@ -269,6 +260,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
         Alert.alert('Success', 'Crop updated successfully!');
       } else {
         // Add new crop
+        const res = await axios.post(`${API_BASE}/farmer/${farmerId}/crops`, currentCrop);
         setCrops([...crops, res.data]); // Assuming API returns the new crop with an ID
         Alert.alert('Success', 'Crop added successfully!');
       }
@@ -420,8 +412,8 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   // --- Loading and Error States ---
   if (loading && !isCacheLoaded) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.black }]}>
-        <ActivityIndicator size="large" color={theme.primaryGreen} />
+      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
@@ -429,27 +421,28 @@ const FarmerProfileScreen = ({ route, navigation }) => {
 
   if (error) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.black }]}>
+      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
         <Text style={styles.errorText}>{error}</Text>
-        <CustomButton title="Retry" onPress={fetchProfile} color={theme.primaryGreen} />
+        <CustomButton title="Retry" onPress={fetchProfile} />
       </View>
     );
   }
 
   if (!profile) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.black }]}>
-        <Text style={{ color: theme.white, fontSize: 16 }}>No profile data found.</Text>
-        <CustomButton title="Go Back" onPress={() => navigation.goBack()} color={theme.primaryGreen} />
+      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text, fontSize: 16 }}>No profile data found.</Text>
+        <CustomButton title="Go Back" onPress={() => navigation.goBack()} />
       </View>
     );
   }
 
   return (
     <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle || 'light-content'} />
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={28} color={theme.white} />
+          <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint || theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Farmer Profile</Text>
       </View>
@@ -474,7 +467,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
               <Picker
                 selectedValue={profile.language}
                 style={styles.languagePicker}
-                dropdownIconColor={theme.primaryGreen}
+                dropdownIconColor={theme.colors.primary}
                 onValueChange={async (lang) => {
                   // Optimistically update UI
                   const updated = { ...profile, language: lang };
@@ -484,11 +477,11 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   await axios.put(`${API_BASE}/farmer/${farmerId}`, updated);
                   await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(updated));
                 }}
-                itemStyle={{ color: theme.white }} // For iOS
+                itemStyle={{ color: theme.colors.text }} // For iOS
                 mode="dropdown"
               >
                 {LANGUAGE_OPTIONS.map((opt) => (
-                  <Picker.Item key={opt.code} label={opt.label} value={opt.code} color={theme.black} /> // For Android
+                  <Picker.Item key={opt.code} label={opt.label} value={opt.code} color={theme.colors.text} /> // For Android
                 ))}
               </Picker>
             </View>
@@ -516,7 +509,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   <Text style={styles.itemSub}>Planting Date: {crop.plantingDate}</Text>
                   <Text style={styles.itemSub}>Duration: {crop.totalDuration}</Text>
                 </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.gray} />
+                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -538,7 +531,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   <Text style={styles.itemSub}>Breed: {animal.breed}</Text>
                   <Text style={styles.itemSub}>Age: {animal.age}</Text>
                 </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.gray} />
+                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -559,7 +552,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   <Text style={styles.itemTitle}>{event.task}</Text>
                   <Text style={styles.itemSub}>{event.date} at {event.time} - {event.type}</Text>
                 </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.gray} />
+                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -582,7 +575,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
             {/* Note: Farm Location and Farmer ID are typically not editable by the user directly */}
 
             <View style={styles.modalButtonContainer}>
-              <CustomButton title="Cancel" onPress={() => setEditProfileVisible(false)} color={theme.darkGray} />
+              <CustomButton title="Cancel" onPress={() => setEditProfileVisible(false)} color={theme.colors.card} />
               <CustomButton title="Save Changes" onPress={handleSubmitEditProfile} disabled={editProfileLoading} />
             </View>
           </View>
@@ -603,11 +596,11 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                 <CustomButton
                   title="Delete"
                   onPress={() => handleDeleteCrop(currentCrop.cropId)}
-                  color={theme.red}
+                  color={'#f87171'}
                   disabled={cropLoading}
                 />
               )}
-              <CustomButton title="Cancel" onPress={() => setCropModalVisible(false)} color={theme.darkGray} />
+              <CustomButton title="Cancel" onPress={() => setCropModalVisible(false)} color={theme.colors.card} />
               <CustomButton
                 title={cropLoading ? 'Saving...' : 'Save'}
                 onPress={handleSubmitCrop}
@@ -634,11 +627,11 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                 <CustomButton
                   title="Delete"
                   onPress={() => handleDeleteLivestock(currentLivestock.id)}
-                  color={theme.red}
+                  color={'#f87171'}
                   disabled={livestockLoadingState}
                 />
               )}
-              <CustomButton title="Cancel" onPress={() => setLivestockModalVisible(false)} color={theme.darkGray} />
+              <CustomButton title="Cancel" onPress={() => setLivestockModalVisible(false)} color={theme.colors.card} />
               <CustomButton
                 title={livestockLoadingState ? 'Saving...' : 'Save'}
                 onPress={handleSubmitLivestock}
@@ -666,11 +659,11 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                 <CustomButton
                   title="Delete"
                   onPress={() => handleDeleteEvent(currentEvent.task)}
-                  color={theme.red}
+                  color={'#f87171'}
                   disabled={eventLoadingState}
                 />
               )}
-              <CustomButton title="Cancel" onPress={() => setEventModalVisible(false)} color={theme.darkGray} />
+              <CustomButton title="Cancel" onPress={() => setEventModalVisible(false)} color={theme.colors.card} />
               <CustomButton
                 title={eventLoadingState ? 'Saving...' : 'Save'}
                 onPress={handleSubmitEvent}
@@ -683,263 +676,263 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.black,
-  },
-  container: {
-    padding: 20,
-    backgroundColor: theme.black,
-    paddingBottom: 40, // Add some padding at the bottom for scroll
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.black,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.mediumGray,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
-  },
-  backBtn: {
-    padding: 6,
-    marginRight: 12,
-  },
-  headerTitle: {
-    color: theme.white,
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    backgroundColor: theme.lightGray,
-    borderRadius: 16,
-    alignItems: 'center',
-    padding: 24,
-    marginBottom: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: theme.primaryGreen,
-    marginBottom: 16,
-  },
-  name: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.white,
-    marginBottom: 4,
-  },
-  village: {
-    fontSize: 18,
-    color: theme.gray,
-    marginBottom: 8,
-  },
-  sectionOuter: {
-    marginTop: 28,
-  },
-  sectionHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4, // Aligns with section padding
-  },
-  sectionHeader: {
-    color: theme.white,
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  sectionHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionActionButton: {
-    marginLeft: 15,
-    padding: 2,
-  },
-  section: {
-    backgroundColor: theme.lightGray,
-    borderRadius: 16,
-    padding: 18,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.mediumGray,
-  },
-  fieldLabel: {
-    fontSize: 16,
-    color: theme.gray,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: theme.white,
-    fontWeight: '500',
-    flexShrink: 1, // Allow text to wrap
-    textAlign: 'right', // Align value to the right
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.mediumGray,
-  },
-  itemTitle: {
-    color: theme.white,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  itemType: {
-    color: theme.gray,
-    fontSize: 14,
-    fontWeight: 'normal',
-  },
-  itemSub: {
-    color: theme.gray,
-    fontSize: 14,
-    marginTop: 2,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: theme.gray,
-    marginTop: 10,
-    fontSize: 16,
-  },
-  errorText: {
-    color: theme.red,
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  emptyStateText: {
-    color: theme.gray,
-    fontSize: 15,
-    textAlign: 'center',
-    paddingVertical: 10,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: theme.lightGray,
-    borderRadius: 20,
-    padding: 24,
-    width: '90%',
-    maxHeight: '80%', // Limit height for larger forms
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.black,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-      },
-      android: {
-        elevation: 10,
-      },
-    }),
-  },
-  modalTitle: {
-    color: theme.white,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  editableFieldContainer: {
-    marginBottom: 16,
-  },
-  editableFieldLabel: {
-    color: theme.gray,
-    marginBottom: 6,
-    fontSize: 14,
-  },
-  editableFieldInput: {
-    backgroundColor: theme.mediumGray,
-    color: theme.white,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 10, // Adjust padding for different platforms
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: theme.darkGray,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: 'top', // For Android multiline input alignment
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly', // Evenly distribute buttons
-    marginTop: 24,
-  },
-  customButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    minWidth: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customButtonText: {
-    color: theme.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  pickerWrapper: { backgroundColor: theme.mediumGray, borderRadius: 8, marginTop: 4 },
-  languagePicker: { color: theme.white, height: 54, width: '100%' },
-});
+const createStyles = (theme) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    container: {
+      padding: 20,
+      backgroundColor: theme.colors.background,
+      paddingBottom: 40, // Add some padding at the bottom for scroll
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.colors.headerBackground || theme.colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+        },
+        android: {
+          elevation: 5,
+        },
+      }),
+    },
+    backBtn: {
+      padding: 6,
+      marginRight: 12,
+    },
+    headerTitle: {
+      color: theme.colors.headerTitle || theme.colors.text,
+      fontSize: 24,
+      fontWeight: 'bold',
+    },
+    profileCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      alignItems: 'center',
+      padding: 24,
+      marginBottom: 24,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+        },
+        android: {
+          elevation: 8,
+        },
+      }),
+    },
+    profileImage: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      borderWidth: 4,
+      borderColor: theme.colors.primary,
+      marginBottom: 16,
+    },
+    name: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    village: {
+      fontSize: 18,
+      color: theme.colors.textSecondary,
+      marginBottom: 8,
+    },
+    sectionOuter: {
+      marginTop: 28,
+    },
+    sectionHeaderContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+      paddingHorizontal: 4, // Aligns with section padding
+    },
+    sectionHeader: {
+      color: theme.colors.text,
+      fontSize: 20,
+      fontWeight: 'bold',
+    },
+    sectionHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    sectionActionButton: {
+      marginLeft: 15,
+      padding: 2,
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      padding: 18,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 6,
+        },
+        android: {
+          elevation: 4,
+        },
+      }),
+    },
+    fieldRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    fieldLabel: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+    },
+    fieldValue: {
+      fontSize: 16,
+      color: theme.colors.text,
+      fontWeight: '500',
+      flexShrink: 1, // Allow text to wrap
+      textAlign: 'right', // Align value to the right
+    },
+    itemRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    itemTitle: {
+      color: theme.colors.text,
+      fontSize: 17,
+      fontWeight: '600',
+    },
+    itemType: {
+      color: theme.colors.textSecondary,
+      fontSize: 14,
+      fontWeight: 'normal',
+    },
+    itemSub: {
+      color: theme.colors.textSecondary,
+      fontSize: 14,
+      marginTop: 2,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: theme.colors.textSecondary,
+      marginTop: 10,
+      fontSize: 16,
+    },
+    errorText: {
+      color: '#f87171',
+      fontSize: 16,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    emptyStateText: {
+      color: theme.colors.textSecondary,
+      fontSize: 15,
+      textAlign: 'center',
+      paddingVertical: 10,
+    },
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      padding: 24,
+      width: '90%',
+      maxHeight: '80%', // Limit height for larger forms
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.4,
+          shadowRadius: 15,
+        },
+        android: {
+          elevation: 10,
+        },
+      }),
+    },
+    modalTitle: {
+      color: theme.colors.text,
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    editableFieldContainer: {
+      marginBottom: 16,
+    },
+    editableFieldLabel: {
+      color: theme.colors.textSecondary,
+      marginBottom: 6,
+      fontSize: 14,
+    },
+    editableFieldInput: {
+      backgroundColor: theme.colors.card,
+      color: theme.colors.text,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: Platform.OS === 'ios' ? 12 : 10, // Adjust padding for different platforms
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    multilineInput: {
+      minHeight: 80,
+      textAlignVertical: 'top', // For Android multiline input alignment
+    },
+    modalButtonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-evenly', // Evenly distribute buttons
+      marginTop: 24,
+    },
+    customButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 10,
+      minWidth: 100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    customButtonText: {
+      color: theme.colors.background,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    pickerWrapper: { backgroundColor: theme.colors.card, borderRadius: 8, marginTop: 4 },
+    languagePicker: { color: theme.colors.text, height: 54, width: '100%' },
+  });
 
 export default FarmerProfileScreen;

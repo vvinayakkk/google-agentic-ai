@@ -28,7 +28,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform, Animated, Easing, Alert, Clipboard, Share, Image, Dimensions, StatusBar } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -39,11 +39,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 // Interactive Guide Tooltip Component for VoiceChatInputScreen
 function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+    const { theme } = useTheme();
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'profileIcon':
@@ -90,21 +92,21 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
     }
   };
 
-  return (
-    <View style={[styles.tooltip, getTooltipPosition()]}>
-      {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
-      {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
+    return (
+        <View style={[styles.tooltip, getTooltipPosition(), { backgroundColor: theme.colors.surface }]}>
+    {step.position === 'bottom' && <View style={[styles.tooltipArrowDown, { borderTopColor: theme.colors.surface }]} />}
+    {step.position === 'top' && <View style={[styles.tooltipArrowUp, { borderBottomColor: theme.colors.surface }]} />}
       
-      <View style={styles.tooltipContent}>
-        <Text style={styles.tooltipTitle}>{step.title}</Text>
-        <Text style={styles.tooltipMessage}>{step.message}</Text>
+            <View style={styles.tooltipContent}>
+                <Text style={[styles.tooltipTitle, { color: theme.colors.text }]}>{step.title}</Text>
+                <Text style={[styles.tooltipMessage, { color: theme.colors.textSecondary }]}>{step.message}</Text>
         
-        <View style={styles.tooltipButtons}>
-          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>Skip Tour</Text>
+                <View style={styles.tooltipButtons}>
+                    <TouchableOpacity style={[styles.skipButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1 }]} onPress={onSkip}>
+                        <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>Skip Tour</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.nextButton} onPress={onNext}>
-            <Text style={styles.nextButtonText}>
+                    <TouchableOpacity style={[styles.nextButton, { backgroundColor: theme.colors.primary }]} onPress={onNext}>
+                        <Text style={[styles.nextButtonText, { color: theme.colors.headerTitle }]}>
               {step.id === 'home_navigation' ? 'Got It!' : 'Next'}
             </Text>
           </TouchableOpacity>
@@ -166,16 +168,17 @@ const getKissanAIResponse = async (message, context) => {
 
 // --- Helper to render bold text ---
 const FormattedText = ({ text }) => {
+    const { theme } = useTheme();
     if (!text || typeof text !== 'string') {
-        return <Text style={styles.chatMessageText}>{/* Empty text */}</Text>;
+        return <Text style={[styles.chatMessageText, { color: theme.colors.text }]}>{/* Empty text */}</Text>;
     }
     const parts = text.split(/\*\*(.*?)\*\*/g);
     return (
-        <Text style={styles.chatMessageText}>
+        <Text style={[styles.chatMessageText, { color: theme.colors.text }]}>
             {parts.map((part, index) => 
                 index % 2 === 1 
-                    ? <Text key={index} style={{ fontWeight: 'bold' }}>{part}</Text> 
-                    : <Text key={index}>{part}</Text>
+                    ? <Text key={index} style={{ fontWeight: 'bold', color: theme.colors.text }}>{part}</Text> 
+                    : <Text key={index} style={{ color: theme.colors.text }}>{part}</Text>
             )}
         </Text>
     );
@@ -183,6 +186,7 @@ const FormattedText = ({ text }) => {
 
 // --- Chat Message Component ---
 const ChatMessage = ({ message, chatHistory }) => {
+    const { theme } = useTheme();
     const isUser = message.sender === 'user';
     const isDocument = message.type === 'document';
     const isImage = message.type === 'image';
@@ -210,33 +214,33 @@ const ChatMessage = ({ message, chatHistory }) => {
 
     return (
         <View style={styles.chatMessageWrapper}>
-            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" style={styles.aiIcon}/>} 
+            {!isUser && <MaterialCommunityIcons name="star-four-points" size={24} color={theme.colors.primary} style={styles.aiIcon}/>} 
             <View style={[
                 styles.chatMessageContainer, 
-                isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-                isContext && styles.contextMessageContainer
+                isUser ? [styles.userMessageContainer, { backgroundColor: theme.colors.card }] : styles.aiMessageContainer,
+                isContext && [styles.contextMessageContainer, { borderColor: theme.colors.border }]
             ]}>
                 {isDocument ? (
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                        <MaterialCommunityIcons name="file-check" size={20} color="white" style={{marginRight: 8}}/>
-                        <Text style={styles.chatMessageText}>Attached: {message.content?.name || 'Unknown file'}</Text>
+                        <MaterialCommunityIcons name="file-check" size={20} color={theme.colors.text} style={{marginRight: 8}}/>
+                        <Text style={[styles.chatMessageText, { color: theme.colors.text }]}>Attached: {message.content?.name || 'Unknown file'}</Text>
                     </View>
                 ) : isImage ? (
                     <View style={{flexDirection: 'column', alignItems: 'flex-start'}}>
                         <View style={{flexDirection: 'row', alignItems: 'center'}}>
                             <Image source={{ uri: message.content?.uri || '' }} style={{ width: 120, height: 120, borderRadius: 10, marginRight: 8 }} />
-                            <Text style={styles.chatMessageText}>{message.content?.name || 'Image attached'}</Text>
+                            <Text style={[styles.chatMessageText, { color: theme.colors.text }]}>{message.content?.name || 'Image attached'}</Text>
                         </View>
                         {message.content?.text && (
-                            <Text style={[styles.chatMessageText, {marginTop: 6}]}>{message.content.text}</Text>
+                            <Text style={[styles.chatMessageText, { marginTop: 6, color: theme.colors.text }]}>{message.content.text}</Text>
                         )}
                     </View>
                 ) : isContext ? (
-                    <Text style={styles.contextMessageText}>{message.content || ''}</Text>
+                    <Text style={[styles.contextMessageText, { color: theme.colors.textSecondary }]}>{message.content || ''}</Text>
                 ) : (
                     isUser ? <FormattedText text={message.content || ''} /> : (
                         <View>
-                            <Markdown style={{body: styles.chatMessageText}}>
+                            <Markdown style={{ body: [styles.chatMessageText, { color: theme.colors.text }] }}>
                                 {message.content || ''}
                             </Markdown>
                         </View>
@@ -245,16 +249,16 @@ const ChatMessage = ({ message, chatHistory }) => {
                 {!isUser && !isDocument && !isImage && (
                     <View style={styles.actionIconContainer}>
                         <TouchableOpacity onPress={handleLike}>
-                            <MaterialCommunityIcons name={liked ? "thumb-up" : "thumb-up-outline"} size={20} color={liked ? "#4CAF50" : "gray"} style={styles.actionIcon} />
+                            <MaterialCommunityIcons name={liked ? "thumb-up" : "thumb-up-outline"} size={20} color={liked ? theme.colors.primary : theme.colors.textSecondary} style={styles.actionIcon} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleDislike}>
-                            <MaterialCommunityIcons name={disliked ? "thumb-down" : "thumb-down-outline"} size={20} color={disliked ? "#4CAF50" : "gray"} style={styles.actionIcon} />
+                            <MaterialCommunityIcons name={disliked ? "thumb-down" : "thumb-down-outline"} size={20} color={disliked ? theme.colors.primary : theme.colors.textSecondary} style={styles.actionIcon} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleShare}>
-                            <MaterialCommunityIcons name="share-variant-outline" size={20} color="gray" style={styles.actionIcon} />
+                            <MaterialCommunityIcons name="share-variant-outline" size={20} color={theme.colors.textSecondary} style={styles.actionIcon} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleCopy}>
-                            <MaterialCommunityIcons name="content-copy" size={20} color="gray" style={styles.actionIcon} />
+                            <MaterialCommunityIcons name="content-copy" size={20} color={theme.colors.textSecondary} style={styles.actionIcon} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -265,6 +269,7 @@ const ChatMessage = ({ message, chatHistory }) => {
 
 // --- Thinking Indicator Component ---
 const ThinkingIndicator = () => {
+    const { theme } = useTheme();
     const rotateAnim = useRef(new Animated.Value(0)).current;
     
     useEffect(() => {
@@ -284,9 +289,9 @@ const ThinkingIndicator = () => {
     return (
         <View style={styles.thinkingContainer}>
             <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-                <MaterialCommunityIcons name="star-four-points" size={24} color="#4CAF50" />
+                <MaterialCommunityIcons name="star-four-points" size={24} color={theme.colors.primary} />
             </Animated.View>
-            <Text style={styles.thinkingText}>Just a sec...</Text>
+            <Text style={[styles.thinkingText, { color: theme.colors.textSecondary }]}>Just a sec...</Text>
         </View>
     );
 };
@@ -305,6 +310,7 @@ const getFeatureOptions = () => [
 ];
 
 const FeaturesView = ({ navigation }) => {
+    const { theme } = useTheme();
     const [showAll, setShowAll] = useState(false);
     const featureOptions = getFeatureOptions();
     const mainOptions = featureOptions.slice(0, 4);
@@ -315,12 +321,12 @@ const FeaturesView = ({ navigation }) => {
             return icon;
         }
         console.warn('Invalid icon for label:', label, icon);
-        return <MaterialCommunityIcons name="help-circle-outline" size={20} color="#bbb" />;
+        return <MaterialCommunityIcons name="help-circle-outline" size={20} color={theme.colors.textSecondary} />;
     };
 
     return (
         <View style={styles.featuresPillContainer}>
-            <Text style={styles.featuresTitle}>Quick Features</Text>
+            <Text style={[styles.featuresTitle, { color: theme.colors.text }]}>Quick Features</Text>
             <View style={styles.pillRow}>
                 {mainOptions.map((opt, idx) => {
                     if (!opt || typeof opt !== 'object' || typeof opt.label !== 'string') {
@@ -330,18 +336,18 @@ const FeaturesView = ({ navigation }) => {
                     return (
                         <TouchableOpacity
                             key={`${opt.label}-${idx}`}
-                            style={styles.pillButton}
+                            style={[styles.pillButton, { borderColor: theme.colors.border }]}
                             onPress={() => navigation.navigate(opt.screen)}
                             activeOpacity={0.85}
                         >
                             {renderIcon(opt.icon, opt.label)}
-                            <Text style={styles.pillLabel}>{opt.label}</Text>
+                            <Text style={[styles.pillLabel, { color: theme.colors.textSecondary }]}>{opt.label}</Text>
                         </TouchableOpacity>
                     );
                 })}
-                <TouchableOpacity style={styles.pillButton} onPress={() => setShowAll((v) => !v)}>
-                    <MaterialCommunityIcons name="dots-horizontal" size={20} color="#fff" />
-                    <Text style={[styles.pillLabel, { color: '#fff' }]}>More</Text>
+                <TouchableOpacity style={[styles.pillButton, { borderColor: theme.colors.border }]} onPress={() => setShowAll((v) => !v)}>
+                    <MaterialCommunityIcons name="dots-horizontal" size={20} color={theme.colors.text} />
+                    <Text style={[styles.pillLabel, { color: theme.colors.text }]}>More</Text>
                 </TouchableOpacity>
             </View>
             {showAll && (
@@ -354,12 +360,12 @@ const FeaturesView = ({ navigation }) => {
                         return (
                             <TouchableOpacity
                                 key={`${opt.label}-more-${idx}`}
-                                style={styles.pillButton}
+                                style={[styles.pillButton, { borderColor: theme.colors.border }]}
                                 onPress={() => navigation.navigate(opt.screen)}
                                 activeOpacity={0.85}
                             >
                                 {renderIcon(opt.icon, opt.label)}
-                                <Text style={styles.pillLabel}>{opt.label}</Text>
+                                <Text style={[styles.pillLabel, { color: theme.colors.textSecondary }]}>{opt.label}</Text>
                             </TouchableOpacity>
                         );
                     })}
@@ -372,6 +378,7 @@ const FeaturesView = ({ navigation }) => {
 // --- Main Chat Screen Component ---
 export default function VoiceChatInputScreen({ navigation, route }) {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
     const [inputValue, setInputValue] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [chatTitle, setChatTitle] = useState('');
@@ -656,26 +663,27 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 
     return (
       <ErrorBoundary>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar barStyle={theme.colors.statusBarStyle} />
             <TouchableOpacity
                 style={{ position: 'absolute', top: 68, right: 2, zIndex: 10 }}
                 onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
                 activeOpacity={0.5}
             >
-                <Ionicons name="person-circle-outline" size={44} color="#10B981" />
+                <Ionicons name="person-circle-outline" size={44} color={theme.colors.primary} />
             </TouchableOpacity>
             
-            <View style={[styles.topBar, { paddingTop: insets.top }]}> 
+            <View style={[styles.topBar, { paddingTop: insets.top, borderBottomColor: theme.colors.border }]}> 
                 <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}>
-                    <Ionicons name="time-outline" size={28} color="white" />
+                    <Ionicons name="time-outline" size={28} color={theme.colors.headerTint} />
                 </TouchableOpacity>
-                <Text style={styles.topBarTitle} numberOfLines={1}>{chatTitle || 'Voice Chat'}</Text>
+                <Text style={[styles.topBarTitle, { color: theme.colors.headerTitle }]} numberOfLines={1}>{chatTitle || 'Voice Chat'}</Text>
                 <View style={styles.topRightIcons}>
                     <TouchableOpacity onPress={() => navigation.navigate('FarmVisualizerScreen')}>
-                        <MaterialCommunityIcons name="sprout" size={28} color="white" style={styles.topRightIcon} />
+                        <MaterialCommunityIcons name="sprout" size={28} color={theme.colors.headerTint} style={styles.topRightIcon} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
-                        <Ionicons name="star-outline" size={28} color="white" style={styles.topRightIcon} />
+                        <Ionicons name="star-outline" size={28} color={theme.colors.headerTint} style={styles.topRightIcon} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -710,7 +718,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                         navigation.navigate('ChatHistory');
                     }}
                 >
-                    <Ionicons name="add-circle" size={38} color="#10b981" />
+                    <Ionicons name="add-circle" size={38} color={theme.colors.primary} />
                 </TouchableOpacity>
             </View>
             
@@ -728,19 +736,19 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             data={chatHistory}
                             renderItem={({ item }) => <ChatMessage message={item} chatHistory={chatHistory} />}
                             keyExtractor={(item, index) => `chat-${index}-${item.type || 'message'}`}
-                            style={styles.chatList}
+                            style={[styles.chatList, { backgroundColor: theme.colors.background }]}
                             contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 10 }}
                             ListFooterComponent={isThinking ? <ThinkingIndicator /> : null}
                         />
                     )}
                 </View>
                 
-                <View style={[styles.inputContainer, { marginRight: 70, marginBottom: 10 }]}>
+                <View style={[styles.inputContainer, { marginRight: 70, marginBottom: 10, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }] }>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachDocument}>
-                        <Ionicons name="add" size={28} color="gray" />
+                        <Ionicons name="add" size={28} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.plusButton} onPress={handleAttachImage}>
-                        <MaterialCommunityIcons name="image-plus" size={28} color="gray" />
+                        <MaterialCommunityIcons name="image-plus" size={28} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                     
                     {/* Image preview above input */}
@@ -751,22 +759,22 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                                 style={{ width: 50, height: 50, borderRadius: 8, marginRight: 6 }} 
                             />
                             <TouchableOpacity onPress={() => setAttachedImage(null)} style={{ marginLeft: 2 }}>
-                                <MaterialCommunityIcons name="close-circle" size={24} color="#f87171" />
+                                <MaterialCommunityIcons name="close-circle" size={24} color={theme.colors.danger} />
                             </TouchableOpacity>
                         </View>
                     )}
                     
                     <TextInput 
-                        style={styles.textInput} 
+                        style={[styles.textInput, { color: theme.colors.text }]} 
                         placeholder="Type your message..." 
-                        placeholderTextColor="gray" 
+                        placeholderTextColor={theme.colors.textSecondary} 
                         value={inputValue} 
                         onChangeText={setInputValue} 
                         onSubmitEditing={() => handleSendMessage()} 
                         multiline 
                     />
                     <TouchableOpacity onPress={() => handleSendMessage()}>
-                        <MaterialCommunityIcons name="send-circle" size={34} color="#4CAF50" />
+                        <MaterialCommunityIcons name="send-circle" size={34} color={theme.colors.primary} />
                     </TouchableOpacity>
                 </View>
                 
@@ -777,7 +785,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                         bottom: 10, 
                         right: 9, 
                         zIndex: 20, 
-                        backgroundColor: '#18181b', 
+                        backgroundColor: theme.colors.surface, 
                         borderRadius: 32, 
                         padding: 10, 
                         elevation: 8 
@@ -785,7 +793,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                     onPress={() => navigation.navigate('ChoiceScreen')}
                     activeOpacity={0.85}
                 >
-                    <Ionicons name="home-outline" size={38} color="#10B981" />
+                    <Ionicons name="home-outline" size={38} color={theme.colors.primary} />
                 </TouchableOpacity>
 
                 {/* Onboarding debug buttons for testing */}
@@ -795,25 +803,25 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             style={styles.restartTourButton} 
                             onPress={startInteractiveGuide}
                         >
-                            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-                            <Text style={styles.restartTourText}>Tour</Text>
+                            <MaterialCommunityIcons name="replay" size={20} color={theme.colors.primary} />
+                            <Text style={[styles.restartTourText, { color: theme.colors.primary }]}>Tour</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={styles.resetTourButton} 
                             onPress={resetOnboarding}
                         >
-                            <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
-                            <Text style={styles.resetTourText}>Reset</Text>
+                            <MaterialCommunityIcons name="refresh" size={16} color={theme.colors.danger} />
+                            <Text style={[styles.resetTourText, { color: theme.colors.danger }]}>Reset</Text>
                         </TouchableOpacity>
                     </View>
                 )}
             </KeyboardAvoidingView>
 
             {/* Interactive Guide Overlay */}
-            {showInteractiveGuide && (
-                <View style={styles.guideOverlay}>
+                {showInteractiveGuide && (
+                    <View style={styles.guideOverlay}>
                     <TouchableOpacity 
-                        style={styles.guideOverlayBackground}
+                            style={[styles.guideOverlayBackground, { backgroundColor: theme.colors.overlay }]}
                         onPress={nextOnboardingStep}
                         activeOpacity={1}
                     />
@@ -832,8 +840,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { 
-        flex: 1, 
-        backgroundColor: '#121212' 
+        flex: 1 
     },
     topBar: { 
         width: '100%', 
@@ -847,7 +854,6 @@ const styles = StyleSheet.create({
         borderBottomColor: '#222' 
     },
     topBarTitle: { 
-        color: 'white', 
         fontSize: 30, 
         fontWeight: 'bold', 
         flex: 1, 
@@ -869,7 +875,6 @@ const styles = StyleSheet.create({
     inputContainer: { 
         flexDirection: 'row', 
         alignItems: 'center', 
-        backgroundColor: '#1e1e1e', 
         borderRadius: 35, 
         paddingHorizontal: 20, 
         marginHorizontal: '5%', 
@@ -882,7 +887,6 @@ const styles = StyleSheet.create({
     },
     textInput: { 
         flex: 1, 
-        color: 'white', 
         fontSize: 18, 
         marginRight: 10, 
         maxHeight: 120 
@@ -909,7 +913,6 @@ const styles = StyleSheet.create({
         maxWidth: '85%' 
     },
     userMessageContainer: { 
-        backgroundColor: '#333333', 
         alignSelf: 'flex-end', 
         marginLeft: 'auto', 
         borderBottomRightRadius: 5 
@@ -919,19 +922,15 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start' 
     },
     contextMessageContainer: { 
-        backgroundColor: 'transparent', 
         borderWidth: 1, 
-        borderColor: '#444', 
         alignSelf: 'center', 
         marginLeft: 0 
     },
     chatMessageText: { 
-        color: 'white', 
         fontSize: 16, 
         lineHeight: 22 
     },
     contextMessageText: { 
-        color: '#888', 
         fontSize: 14, 
         fontStyle: 'italic' 
     },
@@ -950,7 +949,6 @@ const styles = StyleSheet.create({
         paddingLeft: 15 
     },
     thinkingText: { 
-        color: 'gray', 
         fontStyle: 'italic', 
         marginLeft: 10 
     },
@@ -963,25 +961,21 @@ const styles = StyleSheet.create({
     keyFeatureBox: {
         width: '90%',
         alignSelf: 'center',
-        backgroundColor: '#1e1e1e',
         borderRadius: 18,
         paddingVertical: 22,
         paddingHorizontal: 18,
         marginBottom: 22,
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#888',
         elevation: 8,
     },
     keyFeatureTitle: {
-        color: '#fff',
         fontWeight: 'bold',
         fontSize: 20,
         marginBottom: 2,
         letterSpacing: 0.2,
     },
     keyFeatureSubtitle: {
-        color: '#fff',
         fontSize: 14,
         marginTop: 2,
         textAlign: 'center',
@@ -993,7 +987,6 @@ const styles = StyleSheet.create({
         marginBottom: 20 
     },
     featureBox: { 
-        backgroundColor: '#1e1e1e', 
         borderRadius: 15, 
         padding: 20, 
         alignItems: 'center', 
@@ -1001,10 +994,9 @@ const styles = StyleSheet.create({
         width: '45%', 
         height: 120, 
         borderWidth: 1, 
-        borderColor: '#333' 
+        
     },
     featureText: { 
-        color: 'white', 
         marginTop: 10, 
         fontSize: 14, 
         fontWeight: '600' 
@@ -1016,7 +1008,6 @@ const styles = StyleSheet.create({
     cropDoctorCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1e1e1e',
         borderRadius: 18,
         paddingVertical: 22,
         paddingHorizontal: 18,
@@ -1024,27 +1015,23 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         width: '90%',
         borderWidth: 2,
-        borderColor: '#888',
         elevation: 8,
     },
     cropDoctorIcon: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#3b82f6',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
     },
     cropDoctorTitle: {
-        color: '#fff',
         fontWeight: 'bold',
         fontSize: 20,
         marginBottom: 2,
         letterSpacing: 0.2,
     },
     cropDoctorSubtitle: {
-        color: '#fff',
         fontSize: 14,
         marginTop: 2,
         textAlign: 'center',
@@ -1055,7 +1042,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center' 
     },
     featuresTitle: { 
-        color: 'white', 
         fontSize: 22, 
         fontWeight: 'bold', 
         marginBottom: 24 
@@ -1070,7 +1056,6 @@ const styles = StyleSheet.create({
     featureGridBox: {
         width: 120, 
         height: 60, 
-        backgroundColor: '#232323', 
         borderRadius: 16, 
         alignItems: 'center', 
         justifyContent: 'center', 
@@ -1079,7 +1064,6 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
     },
     featureGridLabel: { 
-        color: '#fff', 
         fontSize: 14, 
         marginTop: 6, 
         textAlign: 'center' 
@@ -1115,14 +1099,13 @@ const styles = StyleSheet.create({
         paddingVertical: 8, 
         marginHorizontal: 4, 
         marginVertical: 4, 
-        backgroundColor: 'transparent', 
-        borderColor: '#bbb',
+        backgroundColor: 'transparent'
     },
     pillLabel: { 
         fontSize: 15, 
         fontWeight: '500', 
         marginLeft: 6, 
-        color: '#bbb' 
+        
     },
     centeredNewChatRow: { 
         alignItems: 'center', 
@@ -1145,47 +1128,45 @@ const styles = StyleSheet.create({
         zIndex: 15,
     },
     restartTourButton: {
-        backgroundColor: 'rgba(16,185,129,0.1)',
+        backgroundColor: 'transparent',
         borderRadius: 20,
         borderWidth: 1.5,
-        borderColor: '#10B981',
+        
         paddingHorizontal: 16,
         paddingVertical: 10,
         marginLeft: 140,
         marginBottom: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#10B981',
+        shadowColor: 'transparent',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
     restartTourText: {
-        color: '#10B981',
         fontSize: 14,
         fontWeight: '700',
         marginLeft: 6,
         letterSpacing: 0.5,
     },
     resetTourButton: {
-        backgroundColor: 'rgba(255,87,34,0.1)',
+        backgroundColor: 'transparent',
         borderRadius: 20,
         borderWidth: 1.5,
-        borderColor: '#FF5722',
+        
         paddingHorizontal: 16,
         paddingVertical: 10,
         marginBottom: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#FF5722',
+        shadowColor: 'transparent',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
     resetTourText: {
-        color: '#FF5722',
         fontSize: 14,
         fontWeight: '700',
         marginLeft: 6,
@@ -1203,11 +1184,10 @@ const styles = StyleSheet.create({
     },
     guideOverlayBackground: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        
     },
     tooltip: {
         position: 'absolute',
-        backgroundColor: 'white',
         borderRadius: 10,
         padding: 14,
         marginHorizontal: 15,
@@ -1229,7 +1209,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 7,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderTopColor: 'white',
+        
     },
     tooltipArrowUp: {
         position: 'absolute',
@@ -1242,7 +1222,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 7,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderBottomColor: 'white',
+        
     },
     tooltipContent: {
         alignItems: 'center',
@@ -1250,13 +1230,11 @@ const styles = StyleSheet.create({
     tooltipTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
         marginBottom: 6,
         textAlign: 'center',
     },
     tooltipMessage: {
         fontSize: 13,
-        color: '#666',
         textAlign: 'center',
         lineHeight: 18,
         marginBottom: 14,
@@ -1272,10 +1250,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 6,
         borderRadius: 6,
-        backgroundColor: '#f5f5f5',
+        
     },
     skipButtonText: {
-        color: '#666',
         fontSize: 13,
         fontWeight: '500',
     },
@@ -1285,10 +1262,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginLeft: 6,
         borderRadius: 6,
-        backgroundColor: '#10B981',
+        
     },
     nextButtonText: {
-        color: 'white',
         fontSize: 13,
         fontWeight: 'bold',
     },

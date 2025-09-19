@@ -22,6 +22,7 @@ import Markdown from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE = NetworkConfig.API_BASE;
@@ -36,6 +37,7 @@ const WEATHER_ANALYSIS_CACHE_KEY = 'weather-ai-analysis-f001';
 const WeatherScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [profile, setProfile] = useState(null);
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
@@ -270,56 +272,58 @@ const WeatherScreen = ({ navigation }) => {
     return Object.values(days).slice(0, 5); // 5 days
   };
 
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]} />
+      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor="transparent" translucent />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.colors.background }]} />
       <LinearGradient
-        colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
+        colors={[theme.colors.background, theme.colors.surface, theme.colors.background]}
         style={StyleSheet.absoluteFillObject}
       />
       <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>  
         {/* Search Bar */}
         <View style={{ flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 0 }}>
           <TextInput
-            style={{ flex: 1, backgroundColor: '#23232a', borderRadius: 12, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginRight: 8 }}
+            style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 12, color: theme.colors.text, fontSize: 15, borderWidth: 1, borderColor: theme.colors.border, marginRight: 8 }}
             placeholder={t('weather.search_placeholder')}
-            placeholderTextColor="#64748B"
+            placeholderTextColor={theme.colors.textSecondary}
             value={searchValue}
             onChangeText={setSearchValue}
             editable={!searching && !loading}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
           />
-          <TouchableOpacity onPress={handleSearch} disabled={searching || loading} style={{ backgroundColor: '#3B82F6', borderRadius: 10, padding: 12, opacity: searching || loading ? 0.6 : 1 }}>
-            <Ionicons name="search" size={22} color="#fff" />
+          <TouchableOpacity onPress={handleSearch} disabled={searching || loading} style={{ backgroundColor: theme.colors.info, borderRadius: 10, padding: 12, opacity: searching || loading ? 0.6 : 1 }}>
+            <Ionicons name="search" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           {isCustomLocation && (
-            <TouchableOpacity onPress={handleBackToFarm} style={{ backgroundColor: '#10b981', borderRadius: 10, padding: 12, marginLeft: 8 }}>
-              <Ionicons name="home" size={22} color="#fff" />
+            <TouchableOpacity onPress={handleBackToFarm} style={{ backgroundColor: theme.colors.primary, borderRadius: 10, padding: 12, marginLeft: 8 }}>
+              <Ionicons name="home" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           )}
           {!isCustomLocation && (
-            <TouchableOpacity onPress={handleUpdate} disabled={loading} style={{ backgroundColor: '#64748B', borderRadius: 10, padding: 12, marginLeft: 8, opacity: loading ? 0.6 : 1 }}>
-              <Ionicons name="refresh" size={22} color="#fff" />
+            <TouchableOpacity onPress={handleUpdate} disabled={loading} style={{ backgroundColor: theme.colors.card, borderRadius: 10, padding: 12, marginLeft: 8, opacity: loading ? 0.6 : 1, borderWidth: 1, borderColor: theme.colors.border }}>
+              <Ionicons name="refresh" size={22} color={theme.colors.text} />
             </TouchableOpacity>
           )}
         </View>
         {/* Header */}
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>  
-          <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
+          <BlurView intensity={20} tint={theme.name === 'dark' ? 'dark' : 'light'} style={styles.headerBlur}>
             <View style={styles.headerContent}>
               <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                  colors={[theme.colors.card, theme.colors.surface]}
                   style={styles.backButtonGradient}
                 >
-                  <Ionicons name="chevron-back" size={24} color="white" />
+                  <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
                 </LinearGradient>
               </TouchableOpacity>
               <View style={styles.headerCenter}>
                 <View style={styles.headerTitleContainer}>
-                  <Ionicons name="cloudy-night" size={20} color="#3B82F6" />
+                  <Ionicons name="cloudy-night" size={20} color={theme.colors.info} />
                   <Text style={styles.headerTitle}>{t('weather.title')}</Text>
                 </View>
                 <Text style={styles.headerSubtitle}>{t('weather.subtitle')}</Text>
@@ -333,26 +337,26 @@ const WeatherScreen = ({ navigation }) => {
         </Animated.View>
         {/* AI Weather Analysis Section (above weather card) */}
         <View style={{
-          backgroundColor: '#18181b',
+          backgroundColor: theme.colors.card,
           borderRadius: 16,
           padding: 16,
           marginHorizontal: 16,
           marginTop: 4,
           marginBottom: 0,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: theme.colors.border,
           elevation: 10,
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <MaterialCommunityIcons name="robot-excited" size={22} color="#10b981" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 17 }}>{t('weather.ai_insights_title')}</Text>
-            <TouchableOpacity onPress={updateWeatherAnalysis} style={{ marginLeft: 12, backgroundColor: '#3B82F6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('weather.update_analysis')}</Text>
+            <MaterialCommunityIcons name="robot-excited" size={22} color={theme.colors.primary} style={{ marginRight: 8 }} />
+            <Text style={{ color: theme.colors.primary, fontWeight: 'bold', fontSize: 17 }}>{t('weather.ai_insights_title')}</Text>
+            <TouchableOpacity onPress={updateWeatherAnalysis} style={{ marginLeft: 12, backgroundColor: theme.colors.info, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{t('weather.update_analysis')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 250 }}>
             {analysisLoading ? (
-              <Text style={{ color: '#fff' }}>{t('weather.loading_analysis')}</Text>
+              <Text style={{ color: theme.colors.text }}>{t('weather.loading_analysis')}</Text>
             ) : (
               (() => {
                 const lines = weatherAnalysis.split(/\n|\r/).filter(l => l.trim() !== '');
@@ -360,12 +364,12 @@ const WeatherScreen = ({ navigation }) => {
                 const isLong = lines.length > 4;
                 return (
                   <>
-                    <Markdown style={{ body: { color: '#fff', fontSize: 15} }}>
+                    <Markdown style={{ body: { color: theme.colors.text, fontSize: 15} }}>
                       {showFullAnalysis ? weatherAnalysis : previewLines.join('\n')}
                     </Markdown>
                     {isLong && (
                       <TouchableOpacity onPress={() => setShowFullAnalysis(v => !v)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>{showFullAnalysis ? t('weather.show_less') : t('weather.show_more')}</Text>
+                        <Text style={{ color: theme.colors.info, fontWeight: 'bold' }}>{showFullAnalysis ? t('weather.show_less') : t('weather.show_more')}</Text>
                       </TouchableOpacity>
                     )}
                   </>
@@ -378,18 +382,18 @@ const WeatherScreen = ({ navigation }) => {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {(loading && !weather && !forecast) ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80 }}>
-              <ActivityIndicator size="large" color="#3B82F6" />
-              <Text style={{ color: '#fff', marginTop: 16 }}>{t('weather.loading')}</Text>
+              <ActivityIndicator size="large" color={theme.colors.info} />
+              <Text style={{ color: theme.colors.text, marginTop: 16 }}>{t('weather.loading')}</Text>
             </View>
           ) : error ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80 }}>
-              <Text style={{ color: 'red' }}>{t('weather.error')}</Text>
+              <Text style={{ color: theme.colors.danger }}>{t('weather.error')}</Text>
             </View>
           ) : (
             <>
               {/* Current Weather Card */}
               <Animated.View style={[styles.weatherCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>  
-                <LinearGradient colors={["#23232a", "#18181b"]} style={styles.weatherCardGradient}>
+                <LinearGradient colors={[theme.colors.card, theme.colors.surface]} style={styles.weatherCardGradient}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {weather?.weather && weather.weather[0] && (
                       <Image source={{ uri: getWeatherIcon(weather.weather[0].icon) }} style={styles.weatherIcon} />
@@ -414,7 +418,7 @@ const WeatherScreen = ({ navigation }) => {
               </Animated.View>
               {/* Forecast Section */}
               <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="weather-partly-cloudy" size={22} color="#3B82F6" style={{ marginRight: 8 }} />
+                <MaterialCommunityIcons name="weather-partly-cloudy" size={22} color={theme.colors.info} style={{ marginRight: 8 }} />
                 <Text style={styles.sectionTitle}>{t('weather.5_day_forecast')}</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
@@ -422,7 +426,7 @@ const WeatherScreen = ({ navigation }) => {
                   // Pick the midday forecast for icon/temp
                   const midday = day[Math.floor(day.length / 2)];
                   return (
-                    <LinearGradient key={idx} colors={["#23232a", "#18181b"]} style={styles.forecastCard}>
+                    <LinearGradient key={idx} colors={[theme.colors.card, theme.colors.surface]} style={styles.forecastCard}>
                       <Text style={styles.forecastDate}>{formatDate(midday.dt)}</Text>
                       <Image source={{ uri: getWeatherIcon(midday.weather[0].icon) }} style={styles.forecastIcon} />
                       <Text style={styles.forecastTemp}>{Math.round(midday.main.temp)}°C</Text>
@@ -435,11 +439,11 @@ const WeatherScreen = ({ navigation }) => {
               </ScrollView>
               {/* --- Air Quality Section --- */}
               {airQuality && airQuality.list && airQuality.list[0] && (
-                <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#23232a', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.1)' }}>
-                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{t('weather.air_quality')}</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.aqi')}: {airQuality.list[0].main.aqi}</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.co')}: {airQuality.list[0].components.co} | {t('weather.no2')}: {airQuality.list[0].components.no2} | {t('weather.o3')}: {airQuality.list[0].components.o3}</Text>
-                  <Text style={{ color: '#fff', fontSize: 13 }}>{t('weather.pm25')}: {airQuality.list[0].components.pm2_5} | {t('weather.pm10')}: {airQuality.list[0].components.pm10}</Text>
+                <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: theme.colors.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.colors.border }}>
+                  <Text style={{ color: theme.colors.primary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{t('weather.air_quality')}</Text>
+                  <Text style={{ color: theme.colors.text, fontSize: 13 }}>{t('weather.aqi')}: {airQuality.list[0].main.aqi}</Text>
+                  <Text style={{ color: theme.colors.text, fontSize: 13 }}>{t('weather.co')}: {airQuality.list[0].components.co} | {t('weather.no2')}: {airQuality.list[0].components.no2} | {t('weather.o3')}: {airQuality.list[0].components.o3}</Text>
+                  <Text style={{ color: theme.colors.text, fontSize: 13 }}>{t('weather.pm25')}: {airQuality.list[0].components.pm2_5} | {t('weather.pm10')}: {airQuality.list[0].components.pm10}</Text>
                 </View>
               )}
             </>
@@ -460,8 +464,8 @@ const WeatherScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'black' },
+const createStyles = (theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   header: { paddingHorizontal: 16, paddingBottom: 8 },
   headerBlur: { borderRadius: 20, overflow: 'hidden' },
@@ -470,29 +474,29 @@ const styles = StyleSheet.create({
   backButtonGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { alignItems: 'center' },
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerTitle: { color: 'white', fontSize: 25, fontWeight: '700' },
-  headerSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 15, marginTop: 2 },
-  syncIndicator: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderRadius: 12 },
-  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' },
-  syncText: { color: '#3B82F6', fontSize: 10, fontWeight: '600' },
+  headerTitle: { color: theme.colors.text, fontSize: 25, fontWeight: '700' },
+  headerSubtitle: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 2 },
+  syncIndicator: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: theme.colors.overlay, borderRadius: 12 },
+  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.info },
+  syncText: { color: theme.colors.info, fontSize: 10, fontWeight: '600' },
   weatherCard: { margin: 16, borderRadius: 20, elevation: 8 },
-  weatherCardGradient: { borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  weatherCardGradient: { borderRadius: 20, padding: 20, borderWidth: 1, borderColor: theme.colors.border },
   weatherIcon: { width: 80, height: 80, marginRight: 16 },
-  weatherMain: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  weatherDesc: { color: '#3B82F6', fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  weatherTemp: { color: '#10b981', fontSize: 38, fontWeight: '900', marginTop: 2 },
-  weatherLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 4 },
-  weatherValue: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  weatherLocation: { color: '#fff', fontSize: 13, opacity: 0.7 },
+  weatherMain: { color: theme.colors.text, fontSize: 22, fontWeight: 'bold' },
+  weatherDesc: { color: theme.colors.info, fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  weatherTemp: { color: theme.colors.primary, fontSize: 38, fontWeight: '900', marginTop: 2 },
+  weatherLabel: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 4 },
+  weatherValue: { color: theme.colors.text, fontSize: 15, fontWeight: '600' },
+  weatherLocation: { color: theme.colors.textSecondary, fontSize: 13 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginTop: 18, marginBottom: 8 },
-  sectionTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
-  forecastCard: { width: 120, borderRadius: 16, marginHorizontal: 8, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,24,27,0.7)' },
-  forecastDate: { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  sectionTitle: { color: theme.colors.text, fontSize: 17, fontWeight: 'bold' },
+  forecastCard: { width: 120, borderRadius: 16, marginHorizontal: 8, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+  forecastDate: { color: theme.colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 },
   forecastIcon: { width: 48, height: 48, marginBottom: 4 },
-  forecastTemp: { color: '#10b981', fontSize: 22, fontWeight: 'bold' },
-  forecastDesc: { color: '#3B82F6', fontSize: 13, fontWeight: '600', marginBottom: 2 },
-  forecastLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
-  forecastValue: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  forecastTemp: { color: theme.colors.primary, fontSize: 22, fontWeight: 'bold' },
+  forecastDesc: { color: theme.colors.info, fontSize: 13, fontWeight: '600', marginBottom: 2 },
+  forecastLabel: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  forecastValue: { color: theme.colors.text, fontSize: 13, fontWeight: '600' },
 });
 
 export default WeatherScreen; 

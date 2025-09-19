@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 const HistoryItem = ({ title, date, onPress }) => (
   <TouchableOpacity style={styles.historyItem} onPress={onPress}>
@@ -20,6 +21,7 @@ const FARMER_ID = 'f001';
 const CHAT_CACHE_KEY = 'chat-history-cache';
 
 export default function ChatHistoryScreen({ navigation }) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [history, setHistory] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -63,7 +65,7 @@ export default function ChatHistoryScreen({ navigation }) {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'black' }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       {/* Background Gradients */}
       <LinearGradient
         colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
@@ -79,15 +81,15 @@ export default function ChatHistoryScreen({ navigation }) {
                   colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
                   style={styles.backButtonGradient}
                 >
-                  <Ionicons name="chevron-back" size={24} color="#10b981" />
+                  <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
                 </LinearGradient>
               </TouchableOpacity>
               <View style={styles.headerCenter}>
                 <View style={styles.headerTitleContainer}>
-                  <Ionicons name="chatbubble-ellipses" size={20} color="#3b82f6" />
-                  <Text style={styles.topBarTitle}>Chat History</Text>
+                  <Ionicons name="chatbubble-ellipses" size={20} color={theme.colors.info} />
+                  <Text style={[styles.topBarTitle, { color: theme.colors.text }]}>Chat History</Text>
                 </View>
-                <Text style={styles.headerSubtitle}>Your recent conversations</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>Your recent conversations</Text>
               </View>
               <View style={{ width: 28 }} />
             </View>
@@ -111,11 +113,11 @@ export default function ChatHistoryScreen({ navigation }) {
                     colors={['#3b82f6', '#10b981']}
                     style={styles.historyIconContainer}
                   >
-                    <Ionicons name="chatbubble-outline" size={18} color="white" />
+                    <Ionicons name="chatbubble-outline" size={18} color={theme.colors.text} />
                   </LinearGradient>
                   <View style={styles.historyItemContent}>
-                    <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.historyDate}>{item.date}</Text>
+                    <Text style={[styles.historyTitle, { color: theme.colors.text }]} numberOfLines={1}>{item.title}</Text>
+                    <Text style={[styles.historyDate, { color: theme.colors.primary }]}>{item.date}</Text>
                   </View>
                 </View>
               </TouchableOpacity>

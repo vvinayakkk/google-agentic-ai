@@ -10,6 +10,7 @@ import axios from 'axios';
 import AnimatedLoading from '../components/AnimatedLoading';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 import { setLanguage } from '../i18n';
 
 const API_BASE = NetworkConfig.API_BASE;
@@ -88,6 +89,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 // REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect
 
 export default function ChoiceScreen({ navigation }) {
+  const { theme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const { t, i18n } = useTranslation();
@@ -277,8 +279,8 @@ export default function ChoiceScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
       {/* Header Icons at Top Right */}
       <View style={styles.headerContainer}>
         {/* Language Menu Button */}
@@ -298,49 +300,57 @@ export default function ChoiceScreen({ navigation }) {
         >
           <Ionicons name="person-circle-outline" size={50} color="#10B981" />
         </TouchableOpacity>
+        {/* Settings Icon */}
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('Settings')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="settings-outline" size={28} color={theme.colors.primary} />
+        </TouchableOpacity>
       </View>
       {/* Title and Subtitle */}
-      <Text style={styles.title}>{t('choice.title')}</Text>
-      <Text style={styles.subtitle}>{t('choice.subtitle')}</Text>
+  <Text style={[styles.title, { color: theme.colors.primary }]}>{t('choice.title')}</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('choice.subtitle')}</Text>
       
       <View style={styles.optionsContainer}>
         <TouchableOpacity 
-          style={styles.optionButton} 
+          style={[styles.optionButton, { backgroundColor: theme.colors.background, borderColor: theme.colors.text, shadowColor: theme.colors.text }]} 
           onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
           // REMOVED: disabled={loading}
         >
-          <MaterialCommunityIcons name="microphone-outline" size={60} color="#fff" />
-          <Text style={styles.optionText}>{t('choice.voice_pilot')}</Text>
+          <MaterialCommunityIcons name="microphone-outline" size={60} color={theme.colors.text} />
+          <Text style={[styles.optionText, { color: theme.colors.text }]}>{t('choice.voice_pilot')}</Text>
         </TouchableOpacity>
         
         <Text style={styles.orText}>{t('choice.or')}</Text>
         
         <TouchableOpacity 
-          style={styles.optionButton} 
+          style={[styles.optionButton, { backgroundColor: theme.colors.background, borderColor: theme.colors.text, shadowColor: theme.colors.text }]} 
           onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
           // REMOVED: disabled={loading}
         >
-          <Ionicons name="hand-right-outline" size={60} color="#fff" />
-          <Text style={styles.optionText}>{t('choice.manual_mode')}</Text>
+          <Ionicons name="hand-right-outline" size={60} color={theme.colors.text} />
+          <Text style={[styles.optionText, { color: theme.colors.text }]}>{t('choice.manual_mode')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Feature Buttons */}
       <View style={styles.featureButtonsContainer}>
         <TouchableOpacity 
-          style={styles.featureButton} 
+          style={[styles.featureButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]} 
           onPress={() => navigation.navigate('BestOutOfWasteScreen')}
         >
-          <Ionicons name="reload-circle-outline" size={24} color="#10B981" />
-          <Text style={styles.featureButtonText}>♻️ Best Out of Waste</Text>
+          <Ionicons name="reload-circle-outline" size={24} color={theme.colors.primary} />
+          <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>♻️ Best Out of Waste</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.featureButton} 
+          style={[styles.featureButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]} 
           onPress={() => navigation.navigate('MarketplaceScreen')}
         >
-          <Ionicons name="trending-up-outline" size={24} color="#10B981" />
-          <Text style={styles.featureButtonText}>{t('choice.view_market_prices')}</Text>
+          <Ionicons name="trending-up-outline" size={24} color={theme.colors.primary} />
+          <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>{t('choice.view_market_prices')}</Text>
         </TouchableOpacity>
       </View>
       {/* <TouchableOpacity 
@@ -399,30 +409,32 @@ export default function ChoiceScreen({ navigation }) {
         onRequestClose={() => setShowLanguageDropdown(false)}
       >
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}
           activeOpacity={1}
           onPress={() => setShowLanguageDropdown(false)}
         >
-          <View style={styles.languageDropdown}>
-            <Text style={styles.languageDropdownTitle}>Select Language</Text>
+          <View style={[styles.languageDropdown, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+            <Text style={[styles.languageDropdownTitle, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}>Select Language</Text>
             {languages.map((language) => (
               <TouchableOpacity
                 key={language.code}
                 style={[
                   styles.languageOption,
-                  i18n.language === language.code && styles.selectedLanguage
+                  { backgroundColor: theme.colors.surface },
+                  i18n.language === language.code && { borderColor: theme.colors.primary, backgroundColor: 'rgba(16, 185, 129, 0.15)' }
                 ]}
                 onPress={() => handleLanguageChange(language.code)}
               >
                 <Text style={styles.languageFlag}>{language.flag}</Text>
                 <Text style={[
                   styles.languageName,
-                  i18n.language === language.code && styles.selectedLanguageText
+                  { color: theme.colors.text },
+                  i18n.language === language.code && { color: theme.colors.primary, fontWeight: '700' }
                 ]}>
                   {language.name}
                 </Text>
                 {i18n.language === language.code && (
-                  <Ionicons name="checkmark" size={20} color="#10B981" />
+                  <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -454,7 +466,7 @@ export default function ChoiceScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#121212', // overridden by theme in component
     justifyContent: 'center',
     alignItems: 'center',
     backgroundImage: 'linear-gradient(to bottom, #0f172a, #121212)',

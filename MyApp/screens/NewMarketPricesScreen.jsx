@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -47,6 +48,8 @@ const AnimatedListItem = ({ children, index }) => {
 
 const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState(null);
   const [searchCommodity, setSearchCommodity] = useState('');
@@ -181,7 +184,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
     return (
       <AnimatedListItem index={index} key={key}>
         <View style={styles.marketCard}>
-          <LinearGradient colors={['#1C1C1E', '#1C1C1E']} style={styles.marketCardGradient}>
+          <LinearGradient colors={[theme.colors.surface, theme.colors.surface]} style={styles.marketCardGradient}>
             <View style={styles.marketHeader}>
               <View style={styles.marketInfo}>
                 <Text style={styles.cropEmoji}>🌾</Text>
@@ -196,9 +199,9 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
               </View>
             </View>
             <View style={styles.marketStats}>
-              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.variety')}</Text><Text style={styles.statValue}>{item.Variety}</Text></View>
-              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.min_price')}</Text><Text style={styles.statValue}>₹{minPrice.toFixed(2)}</Text></View>
-              <View className={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.max_price')}</Text><Text style={styles.statValue}>₹{maxPrice.toFixed(2)}</Text></View>
+              <View style={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.variety')}</Text><Text style={styles.statValue}>{item.Variety}</Text></View>
+              <View style={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.min_price')}</Text><Text style={styles.statValue}>₹{minPrice.toFixed(2)}</Text></View>
+              <View style={styles.statItem}><Text style={styles.statLabel}>{t('marketprices.max_price')}</Text><Text style={styles.statValue}>₹{maxPrice.toFixed(2)}</Text></View>
             </View>
           </LinearGradient>
         </View>
@@ -208,29 +211,29 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {!embedded && <StatusBar barStyle="light-content" backgroundColor="#000" />}
+      {!embedded && <StatusBar barStyle={theme.colors.statusBarStyle || 'light-content'} />}
       {!embedded && (
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={24} color={theme.colors.headerTint || theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('marketprices.title')}</Text>
           <TouchableOpacity style={styles.refreshButton} onPress={() => fetchTopCommodities(true)} disabled={loading}>
-              <Ionicons name="refresh" size={24} color={loading ? '#555' : '#FFFFFF'} />
+              <Ionicons name="refresh" size={24} color={loading ? theme.colors.textSecondary : theme.colors.headerTint || theme.colors.text} />
           </TouchableOpacity>
         </View>
       )}
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.searchContainer}>
-            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity" placeholderTextColor="#555" />
+            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity" placeholderTextColor={theme.colors.textSecondary} />
           </View>
           <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
-            {isSearching ? <ActivityIndicator color="#000" /> : <Text style={styles.searchButtonText}>Search Prices</Text>}
+            {isSearching ? <ActivityIndicator color={theme.colors.background} /> : <Text style={styles.searchButtonText}>Search Prices</Text>}
           </TouchableOpacity>
           {error && <Text style={styles.errorText}>{error}</Text>}
           {loading ? (
-             <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
+             <ActivityIndicator color={theme.colors.text} style={{ marginTop: 40 }} size="large" />
           ) : filteredData.length > 0 ? (
             filteredData.map((item, index) => renderMarketItem(item, index))
           ) : (
@@ -246,35 +249,36 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
   );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000000' },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 62, borderBottomWidth: 1, borderBottomColor: '#2C2C2E', paddingBottom:10 },
-    backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2C2C2E'},
-    headerTitle: { flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+const createStyles = (theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 62, borderBottomWidth: 1, borderBottomColor: theme.colors.border, paddingBottom:10 },
+    backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.card},
+    headerTitle: { flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
     refreshButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     scrollView: { flex: 1, paddingHorizontal: 16 },
     section: { marginBottom: 24 },
     searchContainer: { flexDirection: 'column', marginBottom: 16, gap: 12 },
-    searchInput: { backgroundColor: '#1C1C1E', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: '#fff', borderWidth: 1, borderColor: '#3A3A3C' },
-    searchButton: { paddingVertical: 14, backgroundColor: '#FFFFFF', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-    searchButtonText: { color: '#000000', fontSize: 16, fontWeight: 'bold' },
-    disabledButton: { backgroundColor: '#3A3A3C' },
-    errorText: { color: '#FFD580', textAlign: 'center', marginBottom: 12, fontSize: 14 },
-    marketCard: { borderRadius: 16, marginBottom: 12, overflow: 'hidden', backgroundColor: '#1C1C1E'},
-    marketCardGradient: { padding: 16, borderWidth: 1, borderColor: '#3A3A3C' },
+    searchInput: { backgroundColor: theme.colors.surface, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: theme.colors.text, borderWidth: 1, borderColor: theme.colors.border },
+    searchButton: { paddingVertical: 14, backgroundColor: theme.colors.primary, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+    searchButtonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold' },
+    disabledButton: { backgroundColor: theme.colors.card },
+    errorText: { color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 12, fontSize: 14 },
+    marketCard: { borderRadius: 16, marginBottom: 12, overflow: 'hidden', backgroundColor: theme.colors.surface},
+    marketCardGradient: { padding: 16, borderWidth: 1, borderColor: theme.colors.border },
     marketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     marketInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 8 },
     cropEmoji: { fontSize: 28, marginRight: 12 },
-    cropName: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
-    volume: { fontSize: 12, color: '#8E8E93', marginTop: 2 },
+    cropName: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text },
+    volume: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 },
     priceInfo: { alignItems: 'flex-end' },
-    price: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
-    marketStats: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#3A3A3C' },
+    price: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
+    marketStats: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.border },
     statItem: { flex: 1, alignItems: 'center' },
-    statLabel: { fontSize: 12, color: '#8E8E93', marginBottom: 4 },
-    statValue: { fontSize: 14, fontWeight: '500', color: '#FFFFFF' },
+    statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
+    statValue: { fontSize: 14, fontWeight: '500', color: theme.colors.text },
     emptyContainer: { marginTop: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-    emptyText: { color: '#8E8E93', textAlign: 'center', fontSize: 16, lineHeight: 24 },
+    emptyText: { color: theme.colors.textSecondary, textAlign: 'center', fontSize: 16, lineHeight: 24 },
   });
   
-  export default NewMarketPricesScreen; 
+export default NewMarketPricesScreen; 

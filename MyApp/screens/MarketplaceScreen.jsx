@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
 import CropMarketplaceService from '../services/CropMarketplaceService';
+import { useTheme } from '../context/ThemeContext';
 import { REAL_MANDI_DATA, AI_STRATEGIC_PLANS, findMandisByCrop, findMandisByLocation, getMandiById, getCropPriceInMandi, formatPhoneNumber, getMandisByDistance, calculateDistance } from '../data/mandiData';
 
 // Enable LayoutAnimation for Android
@@ -139,6 +140,7 @@ const AnimatedListItem = ({ children, index }) => {
 // --- Main Screen ---
 const MarketplaceScreen = ({ navigation }) => {
   const { t } = useTranslation();
+  const { theme, isDark } = useTheme();
   const [selectedTab, setSelectedTab] = useState('market');
   const [marketData, setMarketData] = useState([]);
   const [myListings, setMyListings] = useState([]);
@@ -747,32 +749,32 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   const renderLocationHeader = () => (
-    <View style={styles.locationHeader}>
+    <View style={[styles.locationHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <View style={styles.locationInfo}>
-        <Ionicons name="location" size={20} color="#10B981" />
+        <Ionicons name="location" size={20} color={theme.colors.primary} />
         {locationLoading ? (
           <View style={styles.locationLoading}>
-            <ActivityIndicator size="small" color="#10B981" />
-            <Text style={styles.locationText}>Getting location...</Text>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={[styles.locationText, { color: theme.colors.textSecondary }]}>Getting location...</Text>
           </View>
         ) : (
           <View>
-            <Text style={styles.locationText}>
+            <Text style={[styles.locationText, { color: theme.colors.text }]}>
               📍 {currentLocation?.city}, {currentLocation?.state}
             </Text>
             {currentLocation?.state === 'Karnataka' && (
-              <Text style={styles.localLabel}>🏠 Local Market</Text>
+              <Text style={[styles.localLabel, { color: theme.colors.primary }]}>🏠 Local Market</Text>
             )}
           </View>
         )}
       </View>
       <View style={styles.headerButtonsContainer}>
         <TouchableOpacity 
-          style={styles.filtersButton}
+          style={[styles.filtersButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => setShowFilters(true)}
         >
-          <Ionicons name="options" size={20} color="#FFFFFF" />
-          <Text style={styles.filtersButtonText}>Filters</Text>
+          <Ionicons name="options" size={20} color={theme.colors.headerTitle} />
+          <Text style={[styles.filtersButtonText, { color: theme.colors.headerTitle }]}>Filters</Text>
         </TouchableOpacity>
         
         {selectedCrops.length > 0 && (
@@ -781,11 +783,11 @@ const MarketplaceScreen = ({ navigation }) => {
             onPress={() => setShowExportModal(true)}
           >
             <LinearGradient
-              colors={['#EF4444', '#DC2626']}
+              colors={[theme.colors.primary, theme.colors.headerBackground]}
               style={styles.exportButtonGradient}
             >
-              <Ionicons name="download" size={20} color="#FFFFFF" />
-              <Text style={styles.exportButtonText}>Export</Text>
+              <Ionicons name="download" size={20} color={theme.colors.headerTitle} />
+              <Text style={[styles.exportButtonText, { color: theme.colors.headerTitle }]}>Export</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -800,22 +802,22 @@ const MarketplaceScreen = ({ navigation }) => {
       transparent={true}
       onRequestClose={() => setShowFilters(false)}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.filtersModal}>
+      <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+        <View style={[styles.filtersModal, { backgroundColor: theme.colors.background, borderColor: theme.colors.primary }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>🔍 Filter Markets</Text>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>🔍 Filter Markets</Text>
             <TouchableOpacity 
               style={styles.modalCloseButton}
               onPress={() => setShowFilters(false)}
             >
-              <Ionicons name="close" size={24} color="#FFFFFF" />
+              <Ionicons name="close" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.filtersContent}>
             {/* State Selection */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>📍 State</Text>
+              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>📍 State</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterOptions}>
                 {states.map(state => (
                   <TouchableOpacity
@@ -827,11 +829,11 @@ const MarketplaceScreen = ({ navigation }) => {
                     ]}
                     onPress={() => setSelectedState(state)}
                   >
-                    {state === 'Karnataka' && <Text style={styles.priorityBadge}>🏠</Text>}
+                    {state === 'Karnataka' && <Text style={[styles.priorityBadge, { color: theme.colors.text } ]}>🏠</Text>}
                     <Text style={[
                       styles.filterOptionText,
                       selectedState === state && styles.selectedFilterText
-                    ]}>
+                    , { color: theme.colors.text }] }>
                       {state}
                     </Text>
                   </TouchableOpacity>
@@ -842,7 +844,7 @@ const MarketplaceScreen = ({ navigation }) => {
             {/* District Selection (only for Karnataka) */}
             {selectedState === 'Karnataka' && (
               <View style={styles.filterSection}>
-                <Text style={styles.filterTitle}>🏛️ District</Text>
+                <Text style={[styles.filterTitle, { color: theme.colors.text }]}>🏛️ District</Text>
                 <View style={styles.districtGrid}>
                   {karnatakaDistricts.map(district => (
                     <TouchableOpacity
@@ -855,7 +857,8 @@ const MarketplaceScreen = ({ navigation }) => {
                     >
                       <Text style={[
                         styles.districtOptionText,
-                        selectedDistrict === district && styles.selectedDistrictText
+                        selectedDistrict === district && styles.selectedDistrictText,
+                        { color: theme.colors.text }
                       ]}>
                         {district}
                       </Text>
@@ -867,23 +870,23 @@ const MarketplaceScreen = ({ navigation }) => {
 
             {/* Price Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>💰 Price Range (per quintal)</Text>
+              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>💰 Price Range (per quintal)</Text>
               <View style={styles.priceRangeContainer}>
                 <TextInput
-                  style={styles.priceInput}
+                  style={[styles.priceInput, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
                   value={priceRange.min.toString()}
                   onChangeText={(text) => setPriceRange({...priceRange, min: parseInt(text) || 0})}
                   placeholder="Min"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="numeric"
                 />
-                <Text style={styles.priceRangeSeparator}>to</Text>
+                <Text style={[styles.priceRangeSeparator, { color: theme.colors.textSecondary }]}>to</Text>
                 <TextInput
-                  style={styles.priceInput}
+                  style={[styles.priceInput, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
                   value={priceRange.max.toString()}
                   onChangeText={(text) => setPriceRange({...priceRange, max: parseInt(text) || 10000})}
                   placeholder="Max"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="numeric"
                 />
               </View>
@@ -892,20 +895,20 @@ const MarketplaceScreen = ({ navigation }) => {
 
           <View style={styles.filterButtons}>
             <TouchableOpacity 
-              style={styles.clearFiltersButton}
+              style={[styles.clearFiltersButton, { backgroundColor: theme.colors.surface }]}
               onPress={() => {
                 setSelectedState('Karnataka');
                 setSelectedDistrict('All');
                 setPriceRange({ min: 0, max: 10000 });
               }}
             >
-              <Text style={styles.clearFiltersText}>Clear All</Text>
+              <Text style={[styles.clearFiltersText, { color: theme.colors.text }]}>Clear All</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.applyFiltersButton}
+              style={[styles.applyFiltersButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => setShowFilters(false)}
             >
-              <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              <Text style={[styles.applyFiltersText, { color: theme.colors.headerTitle }]}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2354,19 +2357,19 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.headerTint} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>🤖 Smart Marketplace</Text>
-          <Text style={styles.headerSubtitle}>AI-powered crop selling made easy</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.headerTitle }]}>🤖 Smart Marketplace</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>AI-powered crop selling made easy</Text>
         </View>
         <View style={styles.liveIndicator}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
+          <Text style={[styles.liveText, { color: theme.colors.primary }]}>LIVE</Text>
         </View>
       </View>
 
@@ -2381,7 +2384,7 @@ const MarketplaceScreen = ({ navigation }) => {
         transparent={true}
         onRequestClose={() => setShowStrategicPlans(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
           <View style={styles.enhancedAIModal}>
             {/* AI Loading Overlay */}
             {aiLoading && (
@@ -2404,22 +2407,22 @@ const MarketplaceScreen = ({ navigation }) => {
 
             {!aiLoading && (
               <>
-                <LinearGradient colors={['#000000', '#1C1C1E']} style={styles.aiModalGradient}>
+                <LinearGradient colors={[theme.colors.background, theme.colors.surface]} style={styles.aiModalGradient}>
                   <View style={styles.aiModalHeader}>
                     <View style={styles.aiHeaderContent}>
                       <View style={styles.aiIconBadge}>
-                        <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+                        <Ionicons name="sparkles" size={24} color={theme.colors.headerTitle} />
                       </View>
                       <View>
-                        <Text style={styles.aiModalTitle}>🤖 AI Crop Advisor</Text>
-                        <Text style={styles.aiModalSubtitle}>Smart strategies for better profits</Text>
+                        <Text style={[styles.aiModalTitle, { color: theme.colors.text }]}>🤖 AI Crop Advisor</Text>
+                        <Text style={[styles.aiModalSubtitle, { color: theme.colors.textSecondary }]}>Smart strategies for better profits</Text>
                       </View>
                     </View>
                     <TouchableOpacity 
                       style={styles.aiModalCloseButton}
                       onPress={() => setShowStrategicPlans(false)}
                     >
-                      <Ionicons name="close" size={24} color="#FFFFFF" />
+                      <Ionicons name="close" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
                   </View>
 
@@ -2451,7 +2454,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
                   {/* AI Strategies */}
                   <ScrollView style={styles.aiStrategiesContainer} showsVerticalScrollIndicator={false}>
-                    <Text style={styles.sectionHeaderText}>🌟 Recommended Strategies</Text>
+                    <Text style={[styles.sectionHeaderText, { color: theme.colors.text }]}>🌟 Recommended Strategies</Text>
                     {(AI_STRATEGIC_PLANS || []).map((plan, index) => {
                       // Filter crops based on selected mandi
                       let filteredCrops = plan.crops;

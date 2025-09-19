@@ -7,6 +7,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { CardStyleInterpolators } from '@react-navigation/stack';
 
 import Toast from 'react-native-toast-message';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { buildNavigationTheme } from './theme';
 import ChoiceScreen from './screens/ChoiceScreen';
 import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
@@ -50,6 +52,7 @@ import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
 import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
 import SuicidePrevention from './screens/SuicidePrevention';
+import SettingsScreen from './screens/SettingsScreen';
 import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import NetworkConfig from './utils/NetworkConfig';
@@ -58,7 +61,8 @@ const Stack = createStackNavigator();
 
 
 
-export default function App() {
+function AppInner() {
+  const { theme } = useTheme();
   useEffect(() => {
     getStoredLanguage().then((lang) => {
       if (i18n.language !== lang) {
@@ -70,8 +74,8 @@ export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
-        <View style={{ flex: 1 }}>
-          <NavigationContainer>
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <NavigationContainer theme={buildNavigationTheme(theme)}>
             <Stack.Navigator initialRouteName="LanguageSelectScreen"
               screenOptions={{
                 headerShown: false,
@@ -318,12 +322,25 @@ export default function App() {
                 component={SuicidePrevention} 
                 options={{ headerShown: false }} 
               />
+              <Stack.Screen 
+                name="Settings" 
+                component={SettingsScreen} 
+                options={{ headerShown: false }} 
+              />
             </Stack.Navigator>
           </NavigationContainer>
           <Toast />
         </View>
       </Suspense>
     </I18nextProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }
 

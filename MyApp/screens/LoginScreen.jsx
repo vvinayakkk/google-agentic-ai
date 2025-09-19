@@ -1,26 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Modal, ActivityIndicator, Dimensions, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Modal, ActivityIndicator, Dimensions, Animated, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
-
-const theme = {
-  background: '#0a0a0a',
-  surface: '#1a1a1a',
-  surfaceLight: '#2a2a2a',
-  primary: '#10b981', // match VoiceChatInputScreen
-  primaryDark: '#0e9e6e', // a slightly darker shade of #10b981
-  white: '#ffffff',
-  gray: '#8a8a8a',
-  lightGray: '#c4c4c4',
-  error: '#ff4444',
-  success: '#10b981',
-  border: '#333333',
-  activeBorder: '#10b981',
-};
 
 const FARMER_ID = 'f001';
 const API_BASE = NetworkConfig.API_BASE;
@@ -28,6 +14,8 @@ const OTP_LENGTH = 6;
 
 const LoginScreen = ({ navigation }) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [step, setStep] = useState('phone'); // 'phone', 'otp', 'done'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -178,12 +166,13 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={theme.colors.statusBarStyle || (theme.isDark ? 'light-content' : 'dark-content')} />
       <View style={styles.container}>
         {/* Header with gradient effect */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Ionicons name="leaf" size={32} color={theme.primary} />
+              <Ionicons name="leaf" size={32} color={theme.colors.primary} />
             </View>
           </View>
           
@@ -232,7 +221,7 @@ const LoginScreen = ({ navigation }) => {
                 disabled={!phone.match(/^\d{10}$/)}
               >
                 <Text style={styles.primaryButtonText}>{t('login.send_code')}</Text>
-                <Ionicons name="arrow-forward" size={20} color={theme.background} style={styles.buttonIcon} />
+                <Ionicons name="arrow-forward" size={20} color={theme.colors.background} style={styles.buttonIcon} />
               </TouchableOpacity>
             </>
           )}
@@ -241,7 +230,7 @@ const LoginScreen = ({ navigation }) => {
             <>
               {otpLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={theme.primary} size="large" />
+                  <ActivityIndicator color={theme.colors.primary} size="large" />
                   <Text style={styles.loadingText}>{t('login.receiving_code')}</Text>
                 </View>
               ) : (
@@ -260,7 +249,7 @@ const LoginScreen = ({ navigation }) => {
                   onPress={handleSendAgain} 
                   disabled={resendDisabled || otpLoading}
                 >
-                  <Ionicons name="refresh" size={16} color={theme.primary} />
+                  <Ionicons name="refresh" size={16} color={theme.colors.primary} />
                   <Text style={styles.secondaryButtonText}>{t('login.resend_code')}</Text>
                 </TouchableOpacity>
 
@@ -270,11 +259,11 @@ const LoginScreen = ({ navigation }) => {
                   disabled={!canProceed || loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color={theme.background} size="small" />
+                    <ActivityIndicator color={theme.colors.background} size="small" />
                   ) : (
                     <>
                       <Text style={styles.primaryButtonText}>{t('login.continue')}</Text>
-                      <Ionicons name="checkmark" size={20} color={theme.background} style={styles.buttonIcon} />
+                      <Ionicons name="checkmark" size={20} color={theme.colors.background} style={styles.buttonIcon} />
                     </>
                   )}
                 </TouchableOpacity>
@@ -288,7 +277,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.modalOverlay}>
             <Animated.View style={styles.modalContent}>
               <View style={styles.modalIcon}>
-                <Ionicons name="mail-open" size={28} color={theme.primary} />
+                <Ionicons name="mail-open" size={28} color={theme.colors.primary} />
               </View>
               <Text style={styles.modalTitle}>{t('login.auto_fill_title')}</Text>
               <Text style={styles.modalText}>
@@ -316,247 +305,248 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  titleContainer: {
-    alignItems: 'center',
-  },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.gray,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  phoneNumber: {
-    fontSize: 18,
-    color: theme.primary,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-  inputContainer: {
-    marginBottom: 32,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: theme.lightGray,
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  phoneInputWrapper: {
-    flexDirection: 'row',
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
-    overflow: 'hidden',
-  },
-  countryCodeContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    backgroundColor: theme.surfaceLight,
-    borderRightWidth: 1,
-    borderRightColor: theme.border,
-  },
-  countryCode: {
-    fontSize: 16,
-    color: theme.white,
-    fontWeight: '500',
-  },
-  phoneInput: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.white,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-  },
-  primaryButton: {
-    backgroundColor: theme.primary,
-    borderRadius: 16,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.background,
-  },
-  buttonIcon: {
-    marginLeft: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  // OTP Styles
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: theme.gray,
-    marginTop: 16,
-  },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 32,
-    gap: 12,
-  },
-  otpBox: {
-    width: 50,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: theme.surface,
-    borderWidth: 2,
-    borderColor: theme.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  otpBoxActive: {
-    borderColor: theme.primary,
-    backgroundColor: theme.surfaceLight,
-  },
-  otpBoxFilled: {
-    borderColor: theme.primary,
-    backgroundColor: theme.surfaceLight,
-  },
-  otpDigit: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: theme.gray,
-  },
-  otpDigitFilled: {
-    color: theme.white,
-  },
-  otpActions: {
-    gap: 16,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    color: theme.primary,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalContent: {
-    backgroundColor: theme.surface,
-    borderRadius: 20,
-    padding: 28,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  modalIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.white,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalText: {
-    fontSize: 15,
-    color: theme.gray,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalButtonSecondary: {
-    backgroundColor: theme.surfaceLight,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  modalButtonPrimary: {
-    backgroundColor: theme.primary,
-  },
-  modalButtonTextSecondary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.lightGray,
-  },
-  modalButtonTextPrimary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.background,
-  },
-});
+const createStyles = (theme) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      paddingTop: 60,
+      paddingHorizontal: 24,
+      paddingBottom: 40,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    logo: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: theme.colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    titleContainer: {
+      alignItems: 'center',
+    },
+    mainTitle: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    phoneNumber: {
+      fontSize: 18,
+      color: theme.colors.primary,
+      fontWeight: '600',
+      marginTop: 8,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 24,
+    },
+    inputContainer: {
+      marginBottom: 32,
+    },
+    inputLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 8,
+      fontWeight: '500',
+    },
+    phoneInputWrapper: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      overflow: 'hidden',
+    },
+    countryCodeContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 18,
+      backgroundColor: theme.colors.card,
+      borderRightWidth: 1,
+      borderRightColor: theme.colors.border,
+    },
+    countryCode: {
+      fontSize: 16,
+      color: theme.colors.text,
+      fontWeight: '500',
+    },
+    phoneInput: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.colors.text,
+      paddingHorizontal: 16,
+      paddingVertical: 18,
+    },
+    primaryButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 16,
+      paddingVertical: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 24,
+    },
+    primaryButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.background,
+    },
+    buttonIcon: {
+      marginLeft: 8,
+    },
+    buttonDisabled: {
+      opacity: 0.4,
+    },
+    // OTP Styles
+    loadingContainer: {
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      marginTop: 16,
+    },
+    otpContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginVertical: 32,
+      gap: 12,
+    },
+    otpBox: {
+      width: 50,
+      height: 60,
+      borderRadius: 12,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    otpBoxActive: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.card,
+    },
+    otpBoxFilled: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.card,
+    },
+    otpDigit: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: theme.colors.textSecondary,
+    },
+    otpDigitFilled: {
+      color: theme.colors.text,
+    },
+    otpActions: {
+      gap: 16,
+    },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      borderRadius: 12,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    secondaryButtonText: {
+      fontSize: 16,
+      color: theme.colors.primary,
+      fontWeight: '500',
+      marginLeft: 8,
+    },
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      padding: 28,
+      width: '100%',
+      maxWidth: 320,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    modalIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    modalText: {
+      fontSize: 15,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12,
+      width: '100%',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    modalButtonSecondary: {
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    modalButtonPrimary: {
+      backgroundColor: theme.colors.primary,
+    },
+    modalButtonTextSecondary: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+    },
+    modalButtonTextPrimary: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.background,
+    },
+  });
 
 export default LoginScreen;

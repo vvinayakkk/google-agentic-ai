@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
 import schemesData from '../data/schemes.json';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'react-native';
 
 const API_BASE = NetworkConfig.API_BASE;
 
@@ -198,6 +200,7 @@ const ENHANCED_SCHEMES = [
 
 export default function DocumentAgentScreen({ navigation }) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   
   // Loading states
   const [initialLoading, setInitialLoading] = useState(true);
@@ -503,12 +506,13 @@ export default function DocumentAgentScreen({ navigation }) {
   // Render loading screen
   if (initialLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar barStyle={theme.colors.statusBarStyle} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
+            <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
           </TouchableOpacity>
-          <Text style={styles.headerText}>🤖 Smart Document Assistant</Text>
+          <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>🤖 Smart Document Assistant</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -541,18 +545,19 @@ export default function DocumentAgentScreen({ navigation }) {
 
   // Render main scheme display
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+          <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
         </TouchableOpacity>
-        <Text style={styles.headerText}>🤖 Smart Document Assistant</Text>
+        <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>🤖 Smart Document Assistant</Text>
         <TouchableOpacity onPress={() => {
           setInitialLoading(true);
           setShowSchemes(false);
           simulateInitialLoading();
         }}>
-          <Ionicons name="refresh" size={24} color="#22c55e" />
+          <Ionicons name="refresh" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -611,12 +616,12 @@ export default function DocumentAgentScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setShowAllSchemes(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.allSchemesModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>All Available Schemes</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.allSchemesModalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>All Available Schemes</Text>
               <TouchableOpacity onPress={() => setShowAllSchemes(false)}>
-                <Ionicons name="close" size={24} color="#6366f1" />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
             
@@ -638,26 +643,26 @@ export default function DocumentAgentScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setShowSchemeModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <TouchableOpacity 
                 style={styles.applyWithAIBtn}
                 onPress={handleApplyWithAI}
               >
                 <MaterialIcons name="psychology" size={20} color="#fff" />
-                <Text style={styles.applyWithAIText}>Apply with AI</Text>
+                <Text style={[styles.applyWithAIText, { color: theme.colors.headerTitle }]}>Apply with AI</Text>
               </TouchableOpacity>
               
-              <Text style={styles.modalTitle}>{selectedScheme?.scheme_name}</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{selectedScheme?.scheme_name}</Text>
               
               <TouchableOpacity onPress={() => setShowSchemeModal(false)}>
-                <Ionicons name="close" size={24} color="#6366f1" />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
             
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.modalDescription}>{selectedScheme?.description}</Text>
+              <Text style={[styles.modalDescription, { color: theme.colors.textSecondary }]}>{selectedScheme?.description}</Text>
               
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Eligibility Criteria</Text>
@@ -699,12 +704,12 @@ export default function DocumentAgentScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setShowApplicationForm(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.formModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>PM-KISAN Application</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.formModalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>PM-KISAN Application</Text>
               <TouchableOpacity onPress={() => setShowApplicationForm(false)}>
-                <Ionicons name="close" size={24} color="#6366f1" />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -913,11 +918,11 @@ export default function DocumentAgentScreen({ navigation }) {
         transparent={true}
         animationType="fade"
       >
-        <View style={styles.confirmationOverlay}>
-                  <View style={styles.confirmationContent}>
-          <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.confirmationTitle}>Generating Document...</Text>
-          <Text style={styles.confirmationText}>
+        <View style={[styles.confirmationOverlay, { backgroundColor: theme.colors.overlay }]}>
+                  <View style={[styles.confirmationContent, { backgroundColor: theme.colors.background, borderColor: theme.colors.primary }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.confirmationTitle, { color: theme.colors.primary }]}>Generating Document...</Text>
+          <Text style={[styles.confirmationText, { color: theme.colors.textSecondary }]}>
             Creating your PM-KISAN application and sending to WhatsApp
           </Text>
         </View>

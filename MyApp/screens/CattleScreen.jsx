@@ -22,6 +22,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 
 const API_BASE = NetworkConfig.API_BASE;
@@ -31,6 +32,7 @@ const CALENDAR_CACHE_KEY = 'cattle-calendar-cache';
 const SPACE_SUGGESTIONS_CACHE_KEY = 'space-suggestions-cache';
 
 const CattleScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const [expandedCard, setExpandedCard] = useState(null);
   const [cattleData, setCattleData] = useState([]);
   const [calendarUpdates, setCalendarUpdates] = useState([]);
@@ -691,41 +693,41 @@ const CattleScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.headerBackground, borderBottomColor: theme.colors.border }]}> 
         <TouchableOpacity 
           ref={ref => ref && (ref._reactInternalInstance = 'back-button')}
           style={styles.backButton} 
           onPress={() => navigation.goBack()}
         >
-          <ChevronLeft color="#FFFFFF" size={24} />
+          <ChevronLeft color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>{t('cattle.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('cattle.suggestions')}</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('cattle.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>{t('cattle.suggestions')}</Text>
         </View>
         <View 
           ref={ref => ref && (ref._reactInternalInstance = 'live-indicator')}
-          style={styles.liveIndicator}
+          style={[styles.liveIndicator, { borderColor: theme.colors.border }]}
         >
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
+          <Text style={[styles.liveText, { color: theme.colors.text }]}>LIVE</Text>
         </View>
       </View>
 
       {loading && cattleData.length === 0 ? ( // Show full loading screen only if no cached data
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>{t('cattle.loading')}</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>{t('cattle.loading')}</Text>
         </View>
       ) : error ? ( // Show error if fetching failed and no data in cache
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('cattle.error')}</Text>
+          <Text style={[styles.errorText, { color: theme.colors.text }]}>{t('cattle.error')}</Text>
           <TouchableOpacity onPress={fetchCattleData} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>{t('common.refresh')}</Text>
+            <Text style={[styles.retryButtonText, { color: theme.colors.text }]}>{t('common.refresh')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

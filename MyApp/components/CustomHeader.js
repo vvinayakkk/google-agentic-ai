@@ -1,14 +1,24 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-const CustomHeader = ({ title = 'Plantix', small = false }) => (
-  <View style={[styles.headerContainer, small && styles.headerContainerSmall]}>
-    <Text style={[styles.headerTitle, small && styles.headerTitleSmall]}>{title}</Text>
-    <TouchableOpacity style={styles.menuButton}>
-      <Text style={[styles.menuIcon, small && styles.menuIconSmall]}>⋮</Text>
-    </TouchableOpacity>
-  </View>
-);
+const CustomHeader = ({ title = 'Plantix', small = false }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.headerContainer,
+        small && styles.headerContainerSmall,
+        { backgroundColor: theme.colors.headerBackground, shadowColor: theme.colors.text, borderBottomColor: theme.colors.border },
+      ]}
+    >
+      <Text style={[styles.headerTitle, small && styles.headerTitleSmall, { color: theme.colors.headerTitle }]}>{title}</Text>
+      <TouchableOpacity style={styles.menuButton}>
+        <Text style={[styles.menuIcon, small && styles.menuIconSmall, { color: theme.colors.headerTint }]}>⋮</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   headerContainer: {
@@ -18,12 +28,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 64,
     paddingBottom: 6,
-    backgroundColor: '#fff',
     elevation: 2,
-    shadowColor: '#000',
+    // shadowColor via theme
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerContainerSmall: {
     paddingTop: 32,
@@ -32,7 +42,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#222',
   },
   headerTitleSmall: {
     fontSize: 18,
@@ -42,7 +51,6 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 28,
-    color: '#555',
     fontWeight: 'bold',
   },
   menuIconSmall: {

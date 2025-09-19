@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,7 @@ const AI_INSIGHTS = [
 ];
 
 const SmartCalendar = ({ navigation }) => {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -404,12 +406,12 @@ const SmartCalendar = ({ navigation }) => {
 
   if (dataLoading) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="black" />
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar barStyle={theme.colors.statusBarStyle} />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingContainer}>
-            <Ionicons name="calendar" size={48} color="#10b981" />
-            <Text style={styles.loadingText}>Loading your farm calendar...</Text>
+            <Ionicons name="calendar" size={48} color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.text }]}>Loading your farm calendar...</Text>
           </View>
         </SafeAreaView>
       </View>
@@ -417,8 +419,8 @@ const SmartCalendar = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="black" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
       <SafeAreaView style={styles.safeArea}>
         
         {/* Header */}
@@ -427,12 +429,12 @@ const SmartCalendar = ({ navigation }) => {
             style={styles.backButton} 
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="chevron-back" size={24} color="#10b981" />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
           
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Farm Calendar</Text>
-            <Text style={styles.headerSubtitle}>Plan your farming activities</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Farm Calendar</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>Plan your farming activities</Text>
           </View>
           
           <View style={styles.headerRight}>
@@ -448,7 +450,7 @@ const SmartCalendar = ({ navigation }) => {
                 style={styles.navButton} 
                 onPress={() => changeMonth(-1)}
               >
-                <Ionicons name="chevron-back" size={20} color="#10b981" />
+                <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
               
               <Text style={styles.monthText}>
@@ -459,7 +461,7 @@ const SmartCalendar = ({ navigation }) => {
                 style={styles.navButton} 
                 onPress={() => changeMonth(1)}
               >
-                <Ionicons name="chevron-forward" size={20} color="#10b981" />
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -469,7 +471,7 @@ const SmartCalendar = ({ navigation }) => {
                 style={styles.addTaskButton}
                 onPress={openAddMethodModal}
               >
-                <Ionicons name="add" size={20} color="white" />
+                <Ionicons name="add" size={20} color={theme.colors.text} />
               </TouchableOpacity>
 
               <View style={styles.weekHeader}>
@@ -494,8 +496,8 @@ const SmartCalendar = ({ navigation }) => {
                   color="#10b981" 
                 />
                 <View style={styles.eventDetailsText}>
-                  <Text style={styles.eventDetailsTitle}>{selectedEventDetails.task}</Text>
-                  <Text style={styles.eventDetailsTime}>{selectedEventDetails.time}</Text>
+                  <Text style={[styles.eventDetailsTitle, { color: theme.colors.text }]}>{selectedEventDetails.task}</Text>
+                  <Text style={[styles.eventDetailsTime, { color: theme.colors.textSecondary }]}>{selectedEventDetails.time}</Text>
                 </View>
               </View>
             </Animated.View>
@@ -504,18 +506,18 @@ const SmartCalendar = ({ navigation }) => {
           {/* Next Upcoming Task */}
           {nextTask && (
             <View style={styles.upcomingSection}>
-              <Text style={styles.upcomingSectionTitle}>Next Upcoming Task</Text>
+              <Text style={[styles.upcomingSectionTitle, { color: theme.colors.text }]}>Next Upcoming Task</Text>
               <View style={styles.upcomingTaskCard}>
                 <View style={styles.upcomingTaskIcon}>
                   <Ionicons 
                     name={getTaskIcon(nextTask.type)} 
                     size={24} 
-                    color="#10b981" 
+                    color={theme.colors.primary} 
                   />
                 </View>
                 <View style={styles.upcomingTaskContent}>
-                  <Text style={styles.upcomingTaskTitle}>{nextTask.task}</Text>
-                  <Text style={styles.upcomingTaskDate}>
+                  <Text style={[styles.upcomingTaskTitle, { color: theme.colors.text }]}>{nextTask.task}</Text>
+                  <Text style={[styles.upcomingTaskDate, { color: theme.colors.textSecondary }]}>
                     {new Date(nextTask.date).toLocaleDateString('default', {
                       weekday: 'long',
                       month: 'short',
@@ -523,7 +525,7 @@ const SmartCalendar = ({ navigation }) => {
                     })} at {nextTask.time}
                   </Text>
                   {nextTask.details && (
-                    <Text style={styles.upcomingTaskDetails}>{nextTask.details}</Text>
+                    <Text style={[styles.upcomingTaskDetails, { color: theme.colors.textSecondary }]}>{nextTask.details}</Text>
                   )}
                 </View>
                 <View style={[
@@ -538,8 +540,8 @@ const SmartCalendar = ({ navigation }) => {
           {/* AI Analysis Carousel */}
           <View style={styles.aiAnalysisSection}>
             <View style={styles.aiAnalysisHeader}>
-              <MaterialCommunityIcons name="brain" size={24} color="#10b981" />
-              <Text style={styles.aiAnalysisTitle}>AI Farm Insights</Text>
+              <MaterialCommunityIcons name="brain" size={24} color={theme.colors.primary} />
+              <Text style={[styles.aiAnalysisTitle, { color: theme.colors.text }]}>AI Farm Insights</Text>
             </View>
 
             <ScrollView
@@ -558,8 +560,8 @@ const SmartCalendar = ({ navigation }) => {
                   <View style={[styles.insightIconContainer, { backgroundColor: `${insight.color}20` }]}>
                     <Ionicons name={insight.icon} size={28} color={insight.color} />
                   </View>
-                  <Text style={styles.insightTitle}>{insight.title}</Text>
-                  <Text style={styles.insightDescription}>{insight.description}</Text>
+                  <Text style={[styles.insightTitle, { color: theme.colors.text }]}>{insight.title}</Text>
+                  <Text style={[styles.insightDescription, { color: theme.colors.textSecondary }]}>{insight.description}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -588,23 +590,23 @@ const SmartCalendar = ({ navigation }) => {
                   <Ionicons 
                     name={currentEvent ? getTaskIcon(currentEvent.type) : 'calendar'} 
                     size={24} 
-                    color="#10b981" 
+                    color={theme.colors.primary} 
                   />
                 </View>
                 <View style={styles.currentEventTextContainer}>
-                  <Text style={styles.currentEventTitle}>Current Task</Text>
-                  <Text style={styles.currentEventTask}>{currentEvent?.task}</Text>
-                  <Text style={styles.currentEventTime}>Scheduled: {currentEvent?.time}</Text>
+                  <Text style={[styles.currentEventTitle, { color: theme.colors.text }]}>Current Task</Text>
+                  <Text style={[styles.currentEventTask, { color: theme.colors.text }]}>{currentEvent?.task}</Text>
+                  <Text style={[styles.currentEventTime, { color: theme.colors.textSecondary }]}>Scheduled: {currentEvent?.time}</Text>
                 </View>
                 <TouchableOpacity 
                   style={styles.currentEventCloseButton}
                   onPress={() => setCurrentEventPopupVisible(false)}
                 >
-                  <Ionicons name="close" size={20} color="#666" />
+                  <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               {currentEvent?.details && (
-                <Text style={styles.currentEventDetails}>{currentEvent.details}</Text>
+                <Text style={[styles.currentEventDetails, { color: theme.colors.textSecondary }]}>{currentEvent.details}</Text>
               )}
             </Animated.View>
           </View>
@@ -612,19 +614,19 @@ const SmartCalendar = ({ navigation }) => {
 
         {/* Add Method Selection Modal */}
         <Modal visible={addMethodModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
             <View style={styles.addMethodModal}>
-              <Text style={styles.addMethodTitle}>Add New Task</Text>
-              <Text style={styles.addMethodSubtitle}>Choose how you'd like to add your farming task</Text>
+              <Text style={[styles.addMethodTitle, { color: theme.colors.text }]}>Add New Task</Text>
+              <Text style={[styles.addMethodSubtitle, { color: theme.colors.textSecondary }]}>Choose how you'd like to add your farming task</Text>
               
               <TouchableOpacity 
                 style={styles.addMethodOption}
                 onPress={handleManualAdd}
               >
-                <Ionicons name="create-outline" size={24} color="#10b981" />
+                <Ionicons name="create-outline" size={24} color={theme.colors.primary} />
                 <View style={styles.addMethodOptionContent}>
-                  <Text style={styles.addMethodOptionTitle}>Fill Manually</Text>
-                  <Text style={styles.addMethodOptionDesc}>Enter task details yourself</Text>
+                  <Text style={[styles.addMethodOptionTitle, { color: theme.colors.text }]}>Fill Manually</Text>
+                  <Text style={[styles.addMethodOptionDesc, { color: theme.colors.textSecondary }]}>Enter task details yourself</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#666" />
               </TouchableOpacity>
@@ -633,10 +635,10 @@ const SmartCalendar = ({ navigation }) => {
                 style={styles.addMethodOption}
                 onPress={handleAIAdd}
               >
-                <MaterialCommunityIcons name="brain" size={24} color="#3b82f6" />
+                <MaterialCommunityIcons name="brain" size={24} color={theme.colors.info} />
                 <View style={styles.addMethodOptionContent}>
-                  <Text style={styles.addMethodOptionTitle}>Fill with AI</Text>
-                  <Text style={styles.addMethodOptionDesc}>Let AI suggest optimal tasks</Text>
+                  <Text style={[styles.addMethodOptionTitle, { color: theme.colors.text }]}>Fill with AI</Text>
+                  <Text style={[styles.addMethodOptionDesc, { color: theme.colors.textSecondary }]}>Let AI suggest optimal tasks</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#666" />
               </TouchableOpacity>
@@ -645,7 +647,7 @@ const SmartCalendar = ({ navigation }) => {
                 style={styles.addMethodCancel}
                 onPress={() => setAddMethodModalVisible(false)}
               >
-                <Text style={styles.addMethodCancelText}>Cancel</Text>
+                <Text style={[styles.addMethodCancelText, { color: theme.colors.text }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -653,13 +655,13 @@ const SmartCalendar = ({ navigation }) => {
 
         {/* AI Generation Loading Modal */}
         <Modal visible={aiGenerating} animationType="fade" transparent>
-          <View style={styles.modalOverlay}>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
             <View style={styles.aiLoadingModal}>
               <Animated.View style={styles.aiLoadingAnimation}>
-                <MaterialCommunityIcons name="brain" size={48} color="#3b82f6" />
+                <MaterialCommunityIcons name="brain" size={48} color={theme.colors.info} />
               </Animated.View>
-              <Text style={styles.aiLoadingTitle}>Generating using Reinforcement Learning</Text>
-              <Text style={styles.aiLoadingSubtitle}>Analyzing your farm data and weather patterns...</Text>
+              <Text style={[styles.aiLoadingTitle, { color: theme.colors.text }]}>Generating using Reinforcement Learning</Text>
+              <Text style={[styles.aiLoadingSubtitle, { color: theme.colors.textSecondary }]}>Analyzing your farm data and weather patterns...</Text>
               <View style={styles.loadingBar}>
                 <Animated.View style={styles.loadingBarFill} />
               </View>
@@ -669,47 +671,47 @@ const SmartCalendar = ({ navigation }) => {
 
         {/* Add/Edit Event Modal */}
         <Modal visible={eventModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
             <View style={styles.modalContainer}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Farm Task</Text>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Add Farm Task</Text>
                 <TouchableOpacity 
                   onPress={() => setEventModalVisible(false)}
                   style={styles.modalCloseButton}
                 >
-                  <Ionicons name="close" size={24} color="#666" />
+                  <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.modalContent}>
                 <TextInput
-                  style={styles.modalInput}
+                  style={[styles.modalInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
                   placeholder="What needs to be done?"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={theme.colors.textSecondary}
                   value={eventModalEvent.task}
                   onChangeText={(text) => setEventModalEvent({...eventModalEvent, task: text})}
                 />
                 
                 <TextInput
-                  style={styles.modalInput}
+                  style={[styles.modalInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
                   placeholder="Time (e.g., 09:00)"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={theme.colors.textSecondary}
                   value={eventModalEvent.time}
                   onChangeText={(text) => setEventModalEvent({...eventModalEvent, time: text})}
                 />
                 
                 <TextInput
-                  style={styles.modalInput}
+                  style={[styles.modalInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
                   placeholder="Type (irrigation, planting, etc.)"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={theme.colors.textSecondary}
                   value={eventModalEvent.type}
                   onChangeText={(text) => setEventModalEvent({...eventModalEvent, type: text})}
                 />
                 
                 <TextInput
-                  style={[styles.modalInput, styles.modalTextArea]}
+                  style={[styles.modalInput, styles.modalTextArea, { color: theme.colors.text, borderColor: theme.colors.border }]}
                   placeholder="Additional details (optional)"
-                  placeholderTextColor="#666"
+                   placeholderTextColor={theme.colors.textSecondary}
                   value={eventModalEvent.details}
                   onChangeText={(text) => setEventModalEvent({...eventModalEvent, details: text})}
                   multiline
@@ -722,14 +724,14 @@ const SmartCalendar = ({ navigation }) => {
                   style={styles.modalCancelButton}
                   onPress={() => setEventModalVisible(false)}
                 >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={[styles.modalCancelText, { color: theme.colors.text }]}>Cancel</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.modalSaveButton}
                   onPress={handleSaveEvent}
                 >
-                  <Text style={styles.modalSaveText}>Save Task</Text>
+                  <Text style={[styles.modalSaveText, { color: theme.colors.text }]}>Save Task</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -743,7 +745,7 @@ const SmartCalendar = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000', // will be overridden by theme where applied inline
   },
   safeArea: {
     flex: 1,

@@ -4,12 +4,14 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../context/ThemeContext';
 
 const FARMER_ID = 'f001';
 const { width } = Dimensions.get('window');
 
 // Interactive Guide Tooltip Component for FeaturedScreen
 function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+  const { theme } = useTheme();
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'backButton':
@@ -67,22 +69,22 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   };
 
   return (
-    <View style={[styles.tooltip, getTooltipPosition()]}>
+    <View style={[styles.tooltip, getTooltipPosition(), { backgroundColor: theme.colors.surface }]}>
       {/* Pointer Arrow */}
-      {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
-      {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
+      {step.position === 'bottom' && <View style={[styles.tooltipArrowDown, { borderTopColor: theme.colors.surface }]} />}
+      {step.position === 'top' && <View style={[styles.tooltipArrowUp, { borderBottomColor: theme.colors.surface }]} />}
       {/* No arrow for center position */}
       
       <View style={styles.tooltipContent}>
-        <Text style={styles.tooltipTitle}>{step.title}</Text>
-        <Text style={styles.tooltipMessage}>{step.message}</Text>
+        <Text style={[styles.tooltipTitle, { color: theme.colors.text }]}>{step.title}</Text>
+        <Text style={[styles.tooltipMessage, { color: theme.colors.textSecondary }]}>{step.message}</Text>
         
         <View style={styles.tooltipButtons}>
-          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>Skip Tour</Text>
+          <TouchableOpacity style={[styles.skipButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1 }]} onPress={onSkip}>
+            <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>Skip Tour</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.nextButton} onPress={onNext}>
-            <Text style={styles.nextButtonText}>
+          <TouchableOpacity style={[styles.nextButton, { backgroundColor: theme.colors.primary }]} onPress={onNext}>
+            <Text style={[styles.nextButtonText, { color: theme.colors.headerTitle }]}>
               {step.id === 'tools_exploration' ? 'Got it!' : 'Next'}
             </Text>
           </TouchableOpacity>
@@ -118,6 +120,7 @@ const tools = [
 export default function Featured({ navigation }) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   
   // Onboarding states
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
@@ -271,69 +274,69 @@ export default function Featured({ navigation }) {
     }
   };
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}> 
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
       {/* Header */}
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackBtn}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerBackBtn, { backgroundColor: theme.colors.surface }]}>
+          <Ionicons name="arrow-back" size={26} color={theme.colors.headerTint} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('featured.title')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.headerTitle }]}>{t('featured.title')}</Text>
         <TouchableOpacity onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })} style={{ marginLeft: 'auto', marginRight: 2 }}>
-          <Ionicons name="person-circle-outline" size={45} color="#10B981" />
+          <Ionicons name="person-circle-outline" size={45} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {/* Crop Doctor Card */}
-        <TouchableOpacity style={styles.cropDoctorCard} activeOpacity={0.9} onPress={() => navigation.navigate('CropDoctor')}>
+        <TouchableOpacity style={[styles.cropDoctorCard, { backgroundColor: theme.colors.surface }]} activeOpacity={0.9} onPress={() => navigation.navigate('CropDoctor')}>
           <View style={styles.cropDoctorIcon}><MaterialCommunityIcons name="leaf" size={32} color="#22c55e" /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cropDoctorTitle}>{t('featured.crop_doctor')}</Text>
-            <Text style={styles.cropDoctorSubtitle}>{t('featured.crop_doctor_subtitle')}</Text>
+            <Text style={[styles.cropDoctorTitle, { color: theme.colors.text }]}>{t('featured.crop_doctor')}</Text>
+            <Text style={[styles.cropDoctorSubtitle, { color: theme.colors.textSecondary }]}>{t('featured.crop_doctor_subtitle')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#64748B" />
+          <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
         </TouchableOpacity>
         {/* Crop Cycle Card */}
-        <TouchableOpacity style={styles.cropDoctorCard} activeOpacity={0.9} onPress={() => navigation.navigate('CropCycle')}>
+        <TouchableOpacity style={[styles.cropDoctorCard, { backgroundColor: theme.colors.surface }]} activeOpacity={0.9} onPress={() => navigation.navigate('CropCycle')}>
           <View style={styles.cropDoctorIcon}><MaterialCommunityIcons name="progress-clock" size={32} color="#a78bfa" /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cropDoctorTitle}>{t('featured.crop_cycle')}</Text>
-            <Text style={styles.cropDoctorSubtitle}>{t('featured.crop_cycle_subtitle')}</Text>
+            <Text style={[styles.cropDoctorTitle, { color: theme.colors.text }]}>{t('featured.crop_cycle')}</Text>
+            <Text style={[styles.cropDoctorSubtitle, { color: theme.colors.textSecondary }]}>{t('featured.crop_cycle_subtitle')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#64748B" />
+          <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
         </TouchableOpacity>
         {/* Weather Card */}
-        <TouchableOpacity style={styles.cropDoctorCard} activeOpacity={0.9} onPress={() => navigation.navigate('WeatherScreen')}>
+        <TouchableOpacity style={[styles.cropDoctorCard, { backgroundColor: theme.colors.surface }]} activeOpacity={0.9} onPress={() => navigation.navigate('WeatherScreen')}>
           <View style={styles.cropDoctorIcon}><MaterialCommunityIcons name="weather-partly-cloudy" size={32} color="#3b82f6" /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cropDoctorTitle}>{t('featured.weather')}</Text>
-            <Text style={styles.cropDoctorSubtitle}>{t('featured.weather_subtitle')}</Text>
+            <Text style={[styles.cropDoctorTitle, { color: theme.colors.text }]}>{t('featured.weather')}</Text>
+            <Text style={[styles.cropDoctorSubtitle, { color: theme.colors.textSecondary }]}>{t('featured.weather_subtitle')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#64748B" />
+          <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
         </TouchableOpacity>
         {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>{t('featured.quick_actions')}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t('featured.quick_actions')}</Text>
         <View style={styles.quickActionsRow}>
-          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('MarketplaceScreen')}>
+          <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]} onPress={() => navigation.navigate('MarketplaceScreen')}>
             <MaterialCommunityIcons name="trending-up" size={28} color="#60a5fa" />
-            <Text style={styles.quickActionText}>{t('featured.market_prices')}</Text>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t('featured.market_prices')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('CalenderScreen')}>
+          <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]} onPress={() => navigation.navigate('CalenderScreen')}>
             <MaterialCommunityIcons name="calendar" size={28} color="#f472b6" />
-            <Text style={styles.quickActionText}>{t('featured.farming_calendar')}</Text>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t('featured.farming_calendar')}</Text>
           </TouchableOpacity>
         </View>
         {/* All Farming Tools */}
-        <Text style={styles.sectionTitle}>{t('featured.all_tools')}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t('featured.all_tools')}</Text>
         <View style={styles.toolsList}>
           {tools.map(tool => (
-            <TouchableOpacity key={tool.id} style={styles.toolCard} onPress={() => navigation.navigate(tool.id === 'rental-system' ? 'Rental' : tool.screen)}>
+            <TouchableOpacity key={tool.id} style={[styles.toolCard, { backgroundColor: theme.colors.surface }]} onPress={() => navigation.navigate(tool.id === 'rental-system' ? 'Rental' : tool.screen)}>
               <View style={[styles.toolIcon, { backgroundColor: tool.bg }]}>{tool.icon}</View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.toolTitle}>{t(tool.titleKey)}</Text>
-                <Text style={styles.toolSubtitle}>{t(tool.subtitleKey)}</Text>
+                <Text style={[styles.toolTitle, { color: theme.colors.text }]}>{t(tool.titleKey)}</Text>
+                <Text style={[styles.toolSubtitle, { color: theme.colors.textSecondary }]}>{t(tool.subtitleKey)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={22} color="#64748B" />
+              <Ionicons name="chevron-forward" size={22} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -346,8 +349,8 @@ export default function Featured({ navigation }) {
             style={styles.restartTourButton} 
             onPress={startInteractiveGuide}
           >
-            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-            <Text style={styles.restartTourText}>Tour</Text>
+            <MaterialCommunityIcons name="replay" size={20} color={theme.colors.primary} />
+            <Text style={[styles.restartTourText, { color: theme.colors.primary }]}>Tour</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.resetTourButton} 
@@ -363,7 +366,7 @@ export default function Featured({ navigation }) {
       {showInteractiveGuide && (
         <View style={styles.guideOverlay}>
           <TouchableOpacity 
-            style={styles.guideOverlayBackground}
+            style={[styles.guideOverlayBackground, { backgroundColor: theme.colors.overlay }]}
             onPress={nextOnboardingStep}
             activeOpacity={1}
           />

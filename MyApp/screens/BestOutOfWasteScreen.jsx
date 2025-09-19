@@ -21,10 +21,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import WasteRecyclingService from '../services/WasteRecyclingService';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const BestOutOfWasteScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -296,31 +298,31 @@ const BestOutOfWasteScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} />
 
       {/* Header */}
       <LinearGradient
-        colors={['#000000', '#1C1C1E']}
+        colors={[theme.colors.background, theme.colors.surface]}
         style={styles.header}
       >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>♻️ Best Out of Waste</Text>
-          <Text style={styles.headerSubtitle}>AI-powered recycling suggestions</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>♻️ Best Out of Waste</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>AI-powered recycling suggestions</Text>
         </View>
 
         <TouchableOpacity
           style={styles.historyButton}
           onPress={() => setShowHistory(!showHistory)}
         >
-          <Ionicons name="time" size={24} color="#10B981" />
+          <Ionicons name="time" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </LinearGradient>
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Alert, ScrollView, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -7,6 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 const API_BASE = NetworkConfig.API_BASE;
 
@@ -94,6 +95,7 @@ function VoiceWaveform({ isActive }) {
 
 // Interactive Guide Tooltip Component
 function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+  const { theme } = useTheme();
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'voiceButton':
@@ -116,21 +118,21 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   };
 
   return (
-    <View style={[styles.tooltip, getTooltipPosition()]}>
+    <View style={[styles.tooltip, getTooltipPosition(), { backgroundColor: theme.colors.surface }]}>
       {/* Pointer Arrow */}
-      {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
-      {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
+      {step.position === 'bottom' && <View style={[styles.tooltipArrowDown, { borderTopColor: theme.colors.surface }]} />}
+      {step.position === 'top' && <View style={[styles.tooltipArrowUp, { borderBottomColor: theme.colors.surface }]} />}
       
       <View style={styles.tooltipContent}>
-        <Text style={styles.tooltipTitle}>{step.title}</Text>
-        <Text style={styles.tooltipMessage}>{step.message}</Text>
+        <Text style={[styles.tooltipTitle, { color: theme.colors.text }]}>{step.title}</Text>
+        <Text style={[styles.tooltipMessage, { color: theme.colors.textSecondary }]}>{step.message}</Text>
         
         <View style={styles.tooltipButtons}>
-          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>Skip</Text>
+          <TouchableOpacity style={[styles.skipButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1 }]} onPress={onSkip}>
+            <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>Skip</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.nextButton} onPress={onNext}>
-            <Text style={styles.nextButtonText}>
+          <TouchableOpacity style={[styles.nextButton, { backgroundColor: theme.colors.primary }]} onPress={onNext}>
+            <Text style={[styles.nextButtonText, { color: theme.colors.headerTitle }]}>
               {step.id === 'continue_conversation' || step.id === 'first_question' ? 'Got it!' : 'Next'}
             </Text>
           </TouchableOpacity>
@@ -141,6 +143,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 }
 
 export default function LiveVoiceScreen({ navigation }) {
+  const { theme } = useTheme();
   const [isListening, setIsListening] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
@@ -736,7 +739,8 @@ export default function LiveVoiceScreen({ navigation }) {
 
   return (
     <View style={styles.outerGlowContainer}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar barStyle={theme.colors.statusBarStyle} />
         {/* Header with Network Status and Help */}
         <View style={styles.headerContainer}>
           <View style={styles.networkStatusContainer}>
@@ -744,7 +748,7 @@ export default function LiveVoiceScreen({ navigation }) {
               styles.networkIndicator, 
               { backgroundColor: networkStatus === 'connected' ? '#4CAF50' : '#FF9800' }
             ]} />
-            <Text style={styles.networkStatusText}>
+            <Text style={[styles.networkStatusText, { color: theme.colors.text }]}>
               {networkStatus === 'connected' ? '🟢 Connected' : '🟡 Connecting...'}
             </Text>
             {networkStatus !== 'connected' && (
@@ -939,7 +943,7 @@ export default function LiveVoiceScreen({ navigation }) {
           </ScrollView>
           
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,1)']}
+            colors={['transparent', theme.colors.overlay, theme.colors.background]}
             style={styles.gradientOverlay}
             locations={[0, 0.8, 1]}
           />
@@ -985,7 +989,7 @@ export default function LiveVoiceScreen({ navigation }) {
         {showInteractiveGuide && (
           <View style={styles.guideOverlay}>
             <TouchableOpacity 
-              style={styles.guideOverlayBackground}
+              style={[styles.guideOverlayBackground, { backgroundColor: theme.colors.overlay }]}
               onPress={nextOnboardingStep}
               activeOpacity={1}
             />
@@ -999,70 +1003,70 @@ export default function LiveVoiceScreen({ navigation }) {
         
         {/* Onboarding Modal */}
         {showOnboarding && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.onboardingModal}>
-              <View style={styles.onboardingHeader}>
-                <Text style={styles.onboardingTitle}>🎤 Voice Assistant Guide</Text>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+            <View style={[styles.onboardingModal, { backgroundColor: theme.colors.background }]}>
+              <View style={[styles.onboardingHeader, { borderBottomColor: theme.colors.border }]}>
+                <Text style={[styles.onboardingTitle, { color: theme.colors.text }]}>🎤 Voice Assistant Guide</Text>
                 <TouchableOpacity 
                   style={styles.closeButton}
                   onPress={() => setShowOnboarding(false)}
                 >
-                  <Ionicons name="close" size={24} color="#666" />
+                  <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               
               <ScrollView style={styles.onboardingContent}>
                 <View style={styles.guideSection}>
-                  <Text style={styles.guideSectionTitle}>🚀 How to Use:</Text>
-                  <Text style={styles.guideText}>1. Tap the microphone button 🎤</Text>
-                  <Text style={styles.guideText}>2. Speak your question clearly</Text>
-                  <Text style={styles.guideText}>3. Wait for AI response</Text>
-                  <Text style={styles.guideText}>4. Tap action buttons to navigate</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🚀 How to Use:</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>1. Tap the microphone button 🎤</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>2. Speak your question clearly</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>3. Wait for AI response</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>4. Tap action buttons to navigate</Text>
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={styles.guideSectionTitle}>💬 Sample Questions:</Text>
-                  <Text style={styles.guideExample}>"What's the weather today?"</Text>
-                  <Text style={styles.guideExample}>"What crops should I grow now?"</Text>
-                  <Text style={styles.guideExample}>"Show me modern farming techniques"</Text>
-                  <Text style={styles.guideExample}>"Check soil moisture levels"</Text>
-                  <Text style={styles.guideExample}>"Find equipment for rent"</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>💬 Sample Questions:</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"What's the weather today?"</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"What crops should I grow now?"</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"Show me modern farming techniques"</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"Check soil moisture levels"</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"Find equipment for rent"</Text>
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={styles.guideSectionTitle}>🔄 Follow-up Questions:</Text>
-                  <Text style={styles.guideText}>You can ask follow-up questions and the AI will remember the context of your conversation!</Text>
-                  <Text style={styles.guideExample}>Example: "What's the weather?" → "Should I water my crops?"</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🔄 Follow-up Questions:</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>You can ask follow-up questions and the AI will remember the context of your conversation!</Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>Example: "What's the weather?" → "Should I water my crops?"</Text>
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={styles.guideSectionTitle}>🎯 Action Buttons:</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🎯 Action Buttons:</Text>
                   <View style={styles.actionExamples}>
                     <View style={styles.actionExample}>
                       <Ionicons name="cloud" size={20} color="#4FC3F7" />
-                      <Text style={styles.actionExampleText}>Weather</Text>
+                      <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Weather</Text>
                     </View>
                     <View style={styles.actionExample}>
                       <Ionicons name="leaf" size={20} color="#4CAF50" />
-                      <Text style={styles.actionExampleText}>Crop Intelligence</Text>
+                      <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Crop Intelligence</Text>
                     </View>
                     <View style={styles.actionExample}>
                       <Ionicons name="water" size={20} color="#8BC34A" />
-                      <Text style={styles.actionExampleText}>Soil Check</Text>
+                      <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Soil Check</Text>
                     </View>
                     <View style={styles.actionExample}>
                       <Ionicons name="paw" size={20} color="#FF9800" />
-                      <Text style={styles.actionExampleText}>Livestock</Text>
+                      <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Livestock</Text>
                     </View>
                   </View>
                 </View>
               </ScrollView>
               
               <TouchableOpacity 
-                style={styles.gotItButton}
+                style={[styles.gotItButton, { backgroundColor: theme.colors.primary }]}
                 onPress={() => setShowOnboarding(false)}
               >
-                <Text style={styles.gotItText}>Got it! Let's start 🚀</Text>
+                <Text style={[styles.gotItText, { color: theme.colors.headerTitle }]}>Got it! Let's start 🚀</Text>
               </TouchableOpacity>
             </View>
           </View>
