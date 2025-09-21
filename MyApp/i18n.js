@@ -28,8 +28,9 @@ const LANGUAGE_STORAGE_KEY = 'appLanguage';
 
 export const setLanguage = async (lang) => {
   if (LANGUAGE_CODES.includes(lang)) {
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-    i18n.changeLanguage(lang);
+  await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  // wait for i18n to finish changing language before returning
+  await i18n.changeLanguage(lang);
   }
 };
 

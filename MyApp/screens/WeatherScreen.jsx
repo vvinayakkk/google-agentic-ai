@@ -276,7 +276,7 @@ const WeatherScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor="transparent" translucent />
+      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.colors.background }]} />
       <LinearGradient
         colors={[theme.colors.background, theme.colors.surface, theme.colors.background]}
@@ -296,11 +296,11 @@ const WeatherScreen = ({ navigation }) => {
             onSubmitEditing={handleSearch}
           />
           <TouchableOpacity onPress={handleSearch} disabled={searching || loading} style={{ backgroundColor: theme.colors.info, borderRadius: 10, padding: 12, opacity: searching || loading ? 0.6 : 1 }}>
-            <Ionicons name="search" size={22} color="#FFFFFF" />
+            <Ionicons name="search" size={22} color={theme.colors.onPrimary} />
           </TouchableOpacity>
           {isCustomLocation && (
             <TouchableOpacity onPress={handleBackToFarm} style={{ backgroundColor: theme.colors.primary, borderRadius: 10, padding: 12, marginLeft: 8 }}>
-              <Ionicons name="home" size={22} color="#FFFFFF" />
+              <Ionicons name="home" size={22} color={theme.colors.onPrimary} />
             </TouchableOpacity>
           )}
           {!isCustomLocation && (
@@ -351,7 +351,7 @@ const WeatherScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="robot-excited" size={22} color={theme.colors.primary} style={{ marginRight: 8 }} />
             <Text style={{ color: theme.colors.primary, fontWeight: 'bold', fontSize: 17 }}>{t('weather.ai_insights_title')}</Text>
             <TouchableOpacity onPress={updateWeatherAnalysis} style={{ marginLeft: 12, backgroundColor: theme.colors.info, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{t('weather.update_analysis')}</Text>
+              <Text style={{ color: theme.colors.onPrimary, fontWeight: 'bold' }}>{t('weather.update_analysis')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 250 }}>

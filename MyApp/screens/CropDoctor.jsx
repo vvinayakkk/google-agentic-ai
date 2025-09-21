@@ -1,773 +1,1092 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    StyleSheet,
-    Text,
-    View,
-    SafeAreaView,
-    Image,
-    TouchableOpacity,
-    ScrollView,
-    Animated,
-    Easing,
-    ImageBackground,
-    LayoutAnimation, // Import LayoutAnimation
-    Platform, // Import Platform for LayoutAnimation
-    UIManager, // Import UIManager for LayoutAnimation
-    Dimensions,
-    Alert,
+  StyleSheet,
+  Text,
+  View,
+  ImageBackground,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  Easing,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  Dimensions,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTranslation } from 'react-i18next';
 
 // Enable LayoutAnimation for Android
-if (Platform.OS === 'android') {
-    if (UIManager.setLayoutAnimationEnabledExperimental) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// --- THEME (Updated to Black Background) ---
-const theme = {
-    colors: {
-        background: '#000000',
-        surface: '#1E293B',
-        primary: '#34D399',
-        text: '#E2E8F0',
-        textSecondary: '#94A3B8',
-        white: '#FFFFFF',
-        error: '#F87171',
-    },
-    spacing: { small: 8, medium: 16, large: 24 },
-    typography: {
-        h1: { fontSize: 28, fontWeight: 'bold', color: '#E2E8F0' },
-        h2: { fontSize: 22, fontWeight: 'bold', color: '#E2E8F0' },
-        body: { fontSize: 16, lineHeight: 24, color: '#94A3B8' },
-    },
+// Simplified Animated Wrapper with clean effect
+const AnimatedView = ({ children, style, delay = 0, direction = 'up' }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animValue, {
+      toValue: 1,
+      duration: 400,
+      delay,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const translateY = direction === 'up' ? 20 : -20;
+
+  return (
+    <Animated.View
+      style={[
+        {
+          opacity: animValue,
+          transform: [
+            {
+              translateY: animValue.interpolate({
+                inputRange: [0, 1],
+                outputRange: [translateY, 0],
+              }),
+            },
+          ],
+        },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 };
 
-// --- Reusable Animated Components ---
-const AnimatedView = ({ children, style, delay = 0 }) => {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }).start();
-    }, []);
-    return <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }, style]}>{children}</Animated.View>;
-};
-
-// --- New Spinning Star Loader ---
+// Simplified Loader with optimized animations
 const LoadingAnimator = () => {
-    const spinAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const [loadingText, setLoadingText] = useState(0);
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const styles = makeStyles(theme);
 
-    useEffect(() => {
-        Animated.loop(
-            Animated.timing(spinAnim, {
-                toValue: 1,
-                duration: 1500,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
-        ).start();
-    }, [spinAnim]);
+  const loadingSteps = [
+    t('cropdoctor.analyzing_image', 'Analyzing image...'),
+    t('cropdoctor.detecting_patterns', 'Detecting patterns...'),
+    t('cropdoctor.identifying_disease', 'Identifying disease...'),
+    t('cropdoctor.generating_report', 'Generating report...')
+  ];
 
-    const rotation = spinAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-    });
+  useEffect(() => {
+    // Simple rotation animation
+    Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
 
-    return (
-        <View style={styles.centered}>
-            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-                <MaterialCommunityIcons name="star-four-points" size={60} color={theme.colors.primary} />
-            </Animated.View>
-            <Text style={styles.loadingText}>Analyzing your crop...</Text>
+    // Text cycling
+    const textInterval = setInterval(() => {
+      setLoadingText(prev => (prev + 1) % loadingSteps.length);
+    }, 1500);
+
+    return () => clearInterval(textInterval);
+  }, []);
+
+  const rotation = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.loadingContainer}>
+      <View style={styles.loadingContent}>
+        {/* Simple Circle Background */}
+        <View style={styles.backgroundCircles}>
+          <View style={[styles.backgroundCircle, styles.circle1]} />
         </View>
-    );
-};
-
-// --- Accordion Component ---
-const Accordion = ({ title, children, initialExpanded = false }) => {
-    const [expanded, setExpanded] = useState(initialExpanded);
-    const animatedHeight = useRef(new Animated.Value(initialExpanded ? 1 : 0)).current;
-
-    const toggleExpansion = () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setExpanded(!expanded);
-        Animated.timing(animatedHeight, {
-            toValue: expanded ? 0 : 1,
-            duration: 300,
-            useNativeDriver: false, // Must be false for height animations
-        }).start();
-    };
-
-    // Use a large max height for interpolation
-    const maxContentHeight = 1000;
-    const heightInterpolate = animatedHeight.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, maxContentHeight],
-    });
-
-    return (
-        <View style={styles.accordionContainer}>
-            <TouchableOpacity onPress={toggleExpansion} style={styles.accordionHeader}>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                <Feather name={expanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-            <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
-                {expanded && (
-                    <View style={styles.accordionContent}>
-                        {children}
-                    </View>
-                )}
-            </Animated.View>
-        </View>
-    );
-};
-
-const imageDisplayWidth = 300; // Reduced width
-const imageDisplayHeight = 300; // Reduced height
-
-const getBoxStyle = (box) => {
-    if (!box) return {};
-    // Ensure all values are numbers
-    const x = typeof box.x === 'string' ? parseFloat(box.x) : box.x;
-    const y = typeof box.y === 'string' ? parseFloat(box.y) : box.y;
-    const width = typeof box.width === 'string' ? parseFloat(box.width) : box.width;
-    const height = typeof box.height === 'string' ? parseFloat(box.height) : box.height;
-    return {
-        top: (y / 100) * imageDisplayHeight,
-        left: (x / 100) * imageDisplayWidth,
-        width: (width / 100) * imageDisplayWidth,
-        height: (height / 100) * imageDisplayHeight,
-    };
-};
-
-
-// --- Main Screen Component ---
-export default function CropDoctorScreen({ navigation }) {
-    const insets = useSafeAreaInsets();
-    const [status, setStatus] = useState('upload');
-    const [analysis, setAnalysis] = useState(null);
-
-    // Onboarding states
-    const [showOnboarding, setShowOnboarding] = useState(false);
-    const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
-
-    const screenDimensions = Dimensions.get('window');
-
-    // Onboarding steps configuration
-    const ONBOARDING_STEPS = [
-        {
-            id: 'back_button',
-            title: 'Navigation',
-            content: 'Tap here to go back to the previous screen anytime.',
-            targetElement: 'back-button',
-            position: { top: 60, left: 20 },
-            arrowPosition: 'top'
-        },
-        {
-            id: 'refresh_button',
-            title: 'Reset Analysis',
-            content: 'After analyzing, tap here to start over with a new image.',
-            targetElement: 'refresh-button',
-            position: { top: 60, right: 20 },
-            arrowPosition: 'top',
-            showOnlyInState: 'result'
-        },
-        {
-            id: 'upload_area',
-            title: 'Upload Your Crop Image',
-            content: 'This is where you start! Upload an image of your crop to get instant disease diagnosis.',
-            targetElement: 'upload-area',
-            position: { top: 200, alignSelf: 'center' },
-            arrowPosition: 'top'
-        },
-        {
-            id: 'take_photo',
-            title: 'Take Photo',
-            content: 'Use your camera to capture a photo of your crop directly.',
-            targetElement: 'take-photo-button',
-            position: { bottom: 180, alignSelf: 'center' },
-            arrowPosition: 'bottom'
-        },
-        {
-            id: 'gallery_photo',
-            title: 'Choose from Gallery',
-            content: 'Select an existing photo of your crop from your device gallery.',
-            targetElement: 'gallery-button',
-            position: { bottom: 120, alignSelf: 'center' },
-            arrowPosition: 'bottom'
-        },
-        {
-            id: 'result_image',
-            title: 'Analysis Results',
-            content: 'Your crop image with detected disease areas highlighted.',
-            targetElement: 'result-image',
-            position: { top: 400, alignSelf: 'center' },
-            arrowPosition: 'top',
-            showOnlyInState: 'result'
-        },
-        {
-            id: 'disease_info',
-            title: 'Disease Information',
-            content: 'Detailed information about the detected disease with confidence level.',
-            targetElement: 'disease-info',
-            position: { top: 500, left: 20 },
-            arrowPosition: 'top',
-            showOnlyInState: 'result'
-        },
-        {
-            id: 'accordions',
-            title: 'Detailed Analysis',
-            content: 'Expand these sections to see symptoms, solutions, and more details.',
-            targetElement: 'accordion-sections',
-            position: { top: 600, left: 20 },
-            arrowPosition: 'top',
-            showOnlyInState: 'result'
-        },
-        {
-            id: 'followup_chat',
-            title: 'Ask Follow-up Questions',
-            content: 'Tap here to ask additional questions about your crop diagnosis.',
-            targetElement: 'followup-button',
-            position: { bottom: 100, alignSelf: 'center' },
-            arrowPosition: 'bottom',
-            showOnlyInState: 'result'
-        }
-    ];
-
-    useEffect(() => { return () => Speech.stop(); }, []);
-
-    // Onboarding functions
-    const checkOnboardingStatus = async () => {
-        try {
-            const completed = await AsyncStorage.getItem('cropDoctorOnboardingCompleted');
-            if (!completed) {
-                setTimeout(() => {
-                    setShowOnboarding(true);
-                    setCurrentOnboardingStep(0);
-                }, 1000);
-            }
-        } catch (error) {
-            console.log('Error checking onboarding status:', error);
-            // Show onboarding anyway if there's an error
-            setTimeout(() => {
-                setShowOnboarding(true);
-                setCurrentOnboardingStep(0);
-            }, 1000);
-        }
-    };
-
-    const nextOnboardingStep = () => {
-        const availableSteps = getAvailableSteps();
-        const currentIndex = availableSteps.findIndex(step => step.id === ONBOARDING_STEPS[currentOnboardingStep].id);
         
-        if (currentIndex < availableSteps.length - 1) {
-            const nextStep = availableSteps[currentIndex + 1];
-            const nextStepIndex = ONBOARDING_STEPS.findIndex(step => step.id === nextStep.id);
-            setCurrentOnboardingStep(nextStepIndex);
-        } else {
-            completeOnboarding();
-        }
-    };
+        {/* Main Loading Icon with optimized animation */}
+        <Animated.View
+          style={[
+            styles.loadingIconContainer,
+            { transform: [{ rotate: rotation }] },
+          ]}
+        >
+          <MaterialCommunityIcons name="leaf" size={72} color={theme.colors.primary} />
+        </Animated.View>
 
-    const completeOnboarding = async () => {
-        setShowOnboarding(false);
-        try {
-            await AsyncStorage.setItem('cropDoctorOnboardingCompleted', 'true');
-        } catch (error) {
-            console.log('Error saving onboarding completion:', error);
-        }
-    };
+        <View style={styles.loadingTextContainer}>
+          <Text style={styles.loadingTitle}>{t('cropdoctor.analyzing_title', 'Analyzing Your Crop')}</Text>
+          <Text style={styles.loadingSubtitle}>{loadingSteps[loadingText]}</Text>
+          
+          {/* Progress Dots with simplified animation */}
+          <View style={styles.progressDots}>
+            {[0, 1, 2, 3].map((index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressDot,
+                  {
+                    backgroundColor: index <= loadingText ? theme.colors.primary : theme.colors.surface,
+                    width: index === loadingText ? 24 : 8,
+                  }
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
 
-    const startOnboardingTour = () => {
-        setCurrentOnboardingStep(0);
-        setShowOnboarding(true);
-    };
+// Simplified Accordion with optimized animations
+const Accordion = ({ title, children, initialExpanded = false, icon }) => {
+  const [expanded, setExpanded] = useState(initialExpanded);
+  const rotateAnim = useRef(new Animated.Value(initialExpanded ? 1 : 0)).current;
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
 
-    const resetOnboarding = async () => {
-        try {
-            await AsyncStorage.removeItem('cropDoctorOnboardingCompleted');
-            Alert.alert('Reset Complete', 'Onboarding has been reset. Restart the app to see the tour again.');
-        } catch (error) {
-            console.log('Error resetting onboarding:', error);
-        }
-    };
+  const toggleExpansion = () => {
+    // Using LayoutAnimation for height changes (simpler and more efficient)
+    LayoutAnimation.configureNext({
+      ...LayoutAnimation.Presets.easeInEaseOut,
+      duration: 250,
+    });
+    setExpanded(!expanded);
+    
+    // Animate just the rotation
+    Animated.timing(rotateAnim, {
+      toValue: expanded ? 0 : 1,
+      duration: 250,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
 
-    const getAvailableSteps = () => {
-        return ONBOARDING_STEPS.filter(step => {
-            if (!step.showOnlyInState) return true;
-            return step.showOnlyInState === status;
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  return (
+    <View style={styles.accordionContainer}>
+      <TouchableOpacity 
+        onPress={toggleExpansion} 
+        style={styles.accordionHeader} 
+        activeOpacity={0.7}
+      >
+        <View style={styles.accordionHeaderLeft}>
+          {icon && (
+            <MaterialCommunityIcons 
+              name={icon} 
+              size={20} 
+              color={theme.colors.primary} 
+              style={styles.accordionIcon} 
+            />
+          )}
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+          <Feather name="chevron-down" size={20} color={theme.colors.textSecondary} />
+        </Animated.View>
+      </TouchableOpacity>
+      
+      {/* Content with layout animation */}
+      {expanded && (
+        <View style={styles.accordionContent}>
+          <View style={styles.accordionDivider} />
+          {children}
+        </View>
+      )}
+    </View>
+  );
+};
+
+// Enhanced Bounding Box with better visualization
+const imageDisplayWidth = 320;
+const imageDisplayHeight = 320;
+const getBoxStyle = (box) => {
+  if (!box) return {};
+  const x = parseFloat(box.x);
+  const y = parseFloat(box.y);
+  const width = parseFloat(box.width);
+  const height = parseFloat(box.height);
+  return {
+    top: (y / 100) * imageDisplayHeight,
+    left: (x / 100) * imageDisplayWidth,
+    width: (width / 100) * imageDisplayWidth,
+    height: (height / 100) * imageDisplayHeight,
+  };
+};
+
+// Main Screen Component
+export default function CropDoctorScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = makeStyles(theme, insets);
+  const { t } = useTranslation();
+
+  const [status, setStatus] = useState('upload');
+  const [analysis, setAnalysis] = useState(null);
+
+  useEffect(() => {
+    return () => Speech.stop();
+  }, []);
+
+  const speakAnalysis = (analysisData) => {
+    if (!analysisData?.diseaseName) return;
+    const summary = t('cropdoctor.speech_summary', { 
+      diseaseName: analysisData.diseaseName, 
+      confidence: analysisData.confidence 
+    }, `Analysis complete. The detected disease is ${analysisData.diseaseName} with a confidence of ${analysisData.confidence}.`);
+    Speech.speak(summary, { language: 'en-US' });
+  };
+
+  const handleImageResult = async (result) => {
+    if (!result?.canceled) {
+      const userImageUri = result.assets[0].uri;
+      setStatus('loading');
+      try {
+        const formData = new FormData();
+        formData.append('image', {
+          uri: userImageUri,
+          name: 'crop.jpg',
+          type: 'image/jpeg',
         });
-    };
 
-    // Check onboarding status on mount
-    useEffect(() => {
-        checkOnboardingStatus();
-    }, []);
+        const response = await axios.post(`${NetworkConfig.API_BASE}/crop-disease/detect`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
 
-    // Interactive Guide Tooltip Component
-    const InteractiveGuideTooltip = ({ step, onNext, onClose }) => {
-        const getTooltipStyle = () => {
-            const style = {
-                position: 'absolute',
-                backgroundColor: '#1E293B',
-                borderRadius: 12,
-                padding: 16,
-                maxWidth: 280,
-                zIndex: 1000,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8,
-            };
-
-            if (step.position.top !== undefined) style.top = step.position.top;
-            if (step.position.bottom !== undefined) style.bottom = step.position.bottom;
-            if (step.position.left !== undefined) style.left = step.position.left;
-            if (step.position.right !== undefined) style.right = step.position.right;
-            if (step.position.alignSelf) style.alignSelf = step.position.alignSelf;
-
-            return style;
+        const backendAnalysis = response.data || {};
+        const analysisWithUserImage = {
+          diseaseName: backendAnalysis.diseaseName || 'Unknown',
+          confidence: backendAnalysis.confidence || 'N/A',
+          description: backendAnalysis.description || 'No description available.',
+          symptoms: backendAnalysis.symptoms || [],
+          solutions: backendAnalysis.solutions || [],
+          boundingBoxes: backendAnalysis.boundingBoxes || [],
+          userImageUri,
+          processedImageUrl: backendAnalysis.processedImageUrl || userImageUri,
         };
 
-        const getArrowStyle = () => {
-            const arrowStyle = {
-                position: 'absolute',
-                width: 0,
-                height: 0,
-                backgroundColor: 'transparent',
-                borderStyle: 'solid',
-            };
-
-            switch (step.arrowPosition) {
-                case 'top':
-                    arrowStyle.top = -8;
-                    arrowStyle.left = 20;
-                    arrowStyle.borderLeftWidth = 8;
-                    arrowStyle.borderRightWidth = 8;
-                    arrowStyle.borderBottomWidth = 8;
-                    arrowStyle.borderLeftColor = 'transparent';
-                    arrowStyle.borderRightColor = 'transparent';
-                    arrowStyle.borderBottomColor = '#1E293B';
-                    break;
-                case 'bottom':
-                    arrowStyle.bottom = -8;
-                    arrowStyle.left = 20;
-                    arrowStyle.borderLeftWidth = 8;
-                    arrowStyle.borderRightWidth = 8;
-                    arrowStyle.borderTopWidth = 8;
-                    arrowStyle.borderLeftColor = 'transparent';
-                    arrowStyle.borderRightColor = 'transparent';
-                    arrowStyle.borderTopColor = '#1E293B';
-                    break;
-                default:
-                    break;
-            }
-
-            return arrowStyle;
-        };
-
-        const availableSteps = getAvailableSteps();
-        const currentIndex = availableSteps.findIndex(s => s.id === step.id);
-
-        return (
-            <>
-                <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    zIndex: 999,
-                }} />
-                <View style={getTooltipStyle()}>
-                    <View style={getArrowStyle()} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
-                        {step.title}
-                    </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
-                        {step.content}
-                    </Text>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                            {currentIndex + 1} of {availableSteps.length}
-                        </Text>
-                        <View style={{ flexDirection: 'row' }}>
-                            <TouchableOpacity onPress={onClose} style={{ marginRight: 16 }}>
-                                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Skip</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={onNext}
-                                style={{
-                                    backgroundColor: '#34D399',
-                                    paddingHorizontal: 16,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                }}
-                            >
-                                <Text style={{ color: '#000000', fontSize: 14, fontWeight: '600' }}>
-                                    {currentIndex === availableSteps.length - 1 ? 'Finish' : 'Next'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </>
-        );
-    };
-
-    const speakAnalysis = (analysisData) => {
-        const summary = `Analysis complete. The detected disease is ${analysisData.diseaseName} with a confidence of ${analysisData.confidence}.`;
-        Speech.speak(summary, { language: 'en-US' });
-    };
-
-    // --- Replace handleImageResult ---
-    const handleImageResult = async (result) => {
-        if (!result.canceled) {
-            const userImageUri = result.assets[0].uri;
-            setStatus('loading');
-            try {
-                // Prepare image for upload
-                const formData = new FormData();
-                formData.append('image', {
-                    uri: userImageUri,
-                    name: 'crop.jpg',
-                    type: 'image/jpeg',
-                });
-                // Call backend
-                const response = await axios.post(
-                    `${NetworkConfig.API_BASE}/crop-disease/detect`,
-                    formData,
-                    {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                        },
-                    }
-                );
-                const backendAnalysis = response.data;
-                // Compose analysis object for UI
-                const analysisWithUserImage = {
-                    ...backendAnalysis,
-                    userImageUri,
-                    processedImageUrl: userImageUri, // Optionally update if backend returns processed image
-                };
-                setAnalysis(analysisWithUserImage);
-                setStatus('result');
-                speakAnalysis(analysisWithUserImage);
-            } catch (error) {
-                setStatus('upload');
-                alert('Failed to analyze image: ' + (error?.response?.data?.detail || error.message));
-            }
-        }
-    };
-
-    const pickFromGallery = async () => {
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-        let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 1 });
-        handleImageResult(result);
-    };
-
-    const takePhoto = async () => {
-        await ImagePicker.requestCameraPermissionsAsync();
-        let result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 1 });
-        handleImageResult(result);
-    };
-
-    const handleReset = () => {
-        Speech.stop();
+        setAnalysis(analysisWithUserImage);
+        setStatus('result');
+        speakAnalysis(analysisWithUserImage);
+      } catch (error) {
+        console.error('Analysis Error:', error.message);
         setStatus('upload');
-        setAnalysis(null);
-    };
+        Alert.alert(
+          t('common.error', 'Error'),
+          t('cropdoctor.analyze_failed', 'Failed to analyze image. Please try again.')
+        );
+      }
+    }
+  };
 
-    const promptFollowUp = () => {
-        Speech.stop();
-        navigation.navigate('FollowUpScreen', { context: analysis });
-    };
+  const pickFromGallery = async () => {
+    await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    handleImageResult(result);
+  };
 
-    const renderContent = () => {
-        switch (status) {
-            case 'loading':
-                return <LoadingAnimator />; // Using the new spinning loader
-            case 'result':
-                return (
-                    <View style={{ flex: 1 }}> {/* Changed to View to allow sticky footer */}
-                        <ScrollView style={{ flex: 1 }}>
-                            <AnimatedView 
-                                delay={0} 
-                                ref={ref => ref && (ref._reactInternalInstance = 'result-image')}
-                                style={styles.resultImageContainer}
-                            >
-                                <ImageBackground source={{ uri: analysis.processedImageUrl }} style={styles.resultImage}>
-                                    {Array.isArray(analysis.boundingBoxes) && analysis.boundingBoxes.map((box, idx) => (
-                                        <View key={idx} style={[styles.boundingBox, getBoxStyle(box)]} />
-                                    ))}
-                                </ImageBackground>
-                            </AnimatedView>
-                            <View 
-                                ref={ref => ref && (ref._reactInternalInstance = 'disease-info')}
-                                style={styles.analysisContainer}
-                            >
-                                <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
-                                <Text style={styles.confidenceText}>Confidence: {analysis.confidence}</Text>
+  const takePhoto = async () => {
+    await ImagePicker.requestCameraPermissionsAsync();
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    handleImageResult(result);
+  };
 
-                                <View 
-                                    ref={ref => ref && (ref._reactInternalInstance = 'accordion-sections')}
-                                >
-                                    <Accordion title="Description" initialExpanded={true}>
-                                        <Text style={theme.typography.body}>{analysis.description}</Text>
-                                    </Accordion>
+  const handleReset = () => {
+    Speech.stop();
+    setStatus('upload');
+    setAnalysis(null);
+  };
 
-                                    <Accordion title="Symptoms">
-                                        {analysis.symptoms.map((symptom, index) => (
-                                            <View key={index} style={styles.listItem}>
-                                                <Text style={styles.bullet}>•</Text>
-                                                <Text style={styles.listItemText}>{symptom}</Text>
-                                            </View>
-                                        ))}
-                                    </Accordion>
+  const promptFollowUp = () => {
+    Speech.stop();
+    navigation.navigate('FollowUpScreen', { context: analysis });
+  };
 
-                                    <Accordion title="Solutions">
-                                        {analysis.solutions.map((solution, index) => (
-                                            <View key={index} style={styles.solutionCard}>
-                                                <Text style={styles.solutionTitle}>{solution.title}</Text>
-                                                <Text style={theme.typography.body}>{solution.details}</Text>
-                                            </View>
-                                        ))}
-                                    </Accordion>
-                                </View>
-                            </View>
-                        </ScrollView>
-                        <View style={styles.chatInputContainer}>
-                            <TouchableOpacity 
-                                ref={ref => ref && (ref._reactInternalInstance = 'followup-button')}
-                                style={styles.chatButton} 
-                                onPress={promptFollowUp}
-                            >
-                                <Feather name="mic" size={24} color={theme.colors.background} />
-                                <Text style={styles.chatButtonText}>Ask a follow-up question</Text>
-                            </TouchableOpacity>
+  const renderContent = () => {
+    switch (status) {
+      case 'loading':
+        return <LoadingAnimator />;
+      case 'result':
+        return (
+          <View style={styles.resultContainer}>
+            <ScrollView
+              style={styles.resultScrollView}
+              contentContainerStyle={styles.resultScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Enhanced Result Image */}
+              <AnimatedView delay={0} style={styles.resultImageWrapper}>
+                <View style={styles.resultImageContainer}>
+                  <View style={styles.imageFrame}>
+                    <ImageBackground
+                      source={{ uri: analysis.processedImageUrl }}
+                      style={styles.resultImage}
+                      imageStyle={styles.resultImageStyle}
+                    >
+                      {/* Enhanced Bounding Boxes */}
+                      {Array.isArray(analysis.boundingBoxes) &&
+                        analysis.boundingBoxes.map((box, idx) => (
+                          <View key={idx}>
+                            <View style={[styles.boundingBox, getBoxStyle(box)]} />
+                            <View style={[styles.boundingBoxCorner, styles.topLeft, getBoxStyle(box)]} />
+                            <View style={[styles.boundingBoxCorner, styles.topRight, getBoxStyle(box)]} />
+                            <View style={[styles.boundingBoxCorner, styles.bottomLeft, getBoxStyle(box)]} />
+                            <View style={[styles.boundingBoxCorner, styles.bottomRight, getBoxStyle(box)]} />
+                          </View>
+                        ))}
+                    </ImageBackground>
+                  </View>
+                  <View style={styles.imageOverlay}>
+                    <View style={styles.analysisCompleteBadge}>
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" />
+                      <Text style={styles.analysisCompleteBadgeText}>{t('cropdoctor.analysis_complete', 'Analysis Complete')}</Text>
+                    </View>
+                  </View>
+                </View>
+              </AnimatedView>
+
+              {/* Improved Analysis Info */}
+              <View style={styles.analysisContainer}>
+                {/* Disease Card with highlighted information */}
+                <View style={styles.diseaseCard}>
+                  <View style={styles.diseaseCardHeader}>
+                    <MaterialCommunityIcons 
+                      name="virus" 
+                      size={28} 
+                      color={theme.colors.primary} 
+                    />
+                    <Text style={styles.diseaseLabel}>
+                      {t('cropdoctor.detected_disease', 'Detected Disease')}
+                    </Text>
+                  </View>
+                  <Text style={styles.diseaseTitle}>{analysis.diseaseName}</Text>
+                  <View style={styles.confidenceBadge}>
+                    <MaterialCommunityIcons name="target" size={16} color={theme.colors.primary} />
+                    <Text style={styles.confidenceText}>
+                      {t('cropdoctor.confidence', 'Confidence')}: {analysis.confidence}
+                    </Text>
+                  </View>
+                </View>
+
+                <Accordion 
+                  title={t('cropdoctor.description', 'Description')} 
+                  initialExpanded={true}
+                  icon="information-outline"
+                >
+                  <Text style={styles.accordionBodyText}>{analysis.description}</Text>
+                </Accordion>
+
+                <Accordion 
+                  title={t('cropdoctor.symptoms', 'Symptoms')}
+                  icon="alert-circle-outline"
+                >
+                  <View style={styles.symptomsContainer}>
+                    {analysis.symptoms.map((symptom, index) => (
+                      <View key={index} style={styles.symptomItem}>
+                        <MaterialCommunityIcons 
+                          name="check-circle" 
+                          size={16} 
+                          color={theme.colors.primary} 
+                        />
+                        <Text style={styles.listItemText}>{symptom}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </Accordion>
+
+                <Accordion 
+                  title={t('cropdoctor.solutions', 'Solutions')}
+                  icon="lightbulb-outline"
+                >
+                  <View style={styles.solutionsContainer}>
+                    {analysis.solutions.map((solution, index) => (
+                      <View key={index} style={styles.solutionCard}>
+                        <View style={styles.solutionHeader}>
+                          <MaterialCommunityIcons 
+                            name="check-circle" 
+                            size={18} 
+                            color={theme.colors.primary} 
+                          />
+                          <Text style={styles.solutionTitle}>{solution.title}</Text>
                         </View>
-                    </View>
-                );
-            default:
-                return (
-                    <View 
-                        ref={ref => ref && (ref._reactInternalInstance = 'upload-area')}
-                        style={styles.centered}
-                    >
-                        <Feather name="upload-cloud" size={80} color={theme.colors.textSecondary} />
-                        <Text style={styles.uploadTitle}>Upload a Crop Image</Text>
-                        <Text style={styles.uploadSubtitle}>Get an instant diagnosis of any potential diseases.</Text>
-                        <TouchableOpacity 
-                            ref={ref => ref && (ref._reactInternalInstance = 'take-photo-button')}
-                            style={styles.button} 
-                            onPress={takePhoto}
-                        >
-                            <Feather name="camera" size={20} color={theme.colors.background} />
-                            <Text style={styles.buttonText}>Take Photo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            ref={ref => ref && (ref._reactInternalInstance = 'gallery-button')}
-                            style={styles.button} 
-                            onPress={pickFromGallery}
-                        >
-                            <Feather name="image" size={20} color={theme.colors.background} />
-                            <Text style={styles.buttonText}>Choose from Gallery</Text>
-                        </TouchableOpacity>
-                    </View>
-                );
-        }
-    };
+                        <Text style={styles.accordionBodyText}>{solution.details}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </Accordion>
+              </View>
+            </ScrollView>
 
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <View style={{ width: 40, alignItems: 'flex-start' }}>
+            {/* Enhanced Chat Input */}
+            <SafeAreaView style={styles.chatInputSafeArea} edges={['bottom']}>
+              <TouchableOpacity style={styles.chatButton} onPress={promptFollowUp} activeOpacity={0.8}>
+                <View style={styles.chatButtonContent}>
+                  <MaterialCommunityIcons name="microphone" size={24} color={theme.colors.background} />
+                  <Text style={styles.chatButtonText}>{t('cropdoctor.ask_follow_up', 'Ask a follow-up question')}</Text>
+                </View>
+                <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.background} />
+              </TouchableOpacity>
+            </SafeAreaView>
+          </View>
+        );
+      default:
+        return (
+          <ScrollView
+            style={styles.uploadScrollView}
+            contentContainerStyle={styles.uploadScrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.uploadContainer}>
+              <AnimatedView delay={0}>
+                <View style={styles.uploadCard}>
+                  <View style={styles.uploadIconContainer}>
+                    <MaterialCommunityIcons name="cloud-upload" size={80} color={theme.colors.primary} />
+                    <View style={styles.uploadIconOverlay}>
+                      <MaterialCommunityIcons name="leaf" size={24} color={theme.colors.background} />
+                    </View>
+                  </View>
+                  <Text style={styles.uploadTitle}>{t('cropdoctor.upload_title', 'Upload Crop Image')}</Text>
+                  <Text style={styles.uploadSubtitle}>
+                    {t('cropdoctor.upload_subtitle', 'Get instant AI-powered diagnosis for crop diseases and expert recommendations')}
+                  </Text>
+                  
+                  <View style={styles.featuresContainer}>
+                    <View style={styles.featureItem}>
+                      <MaterialCommunityIcons name="lightning-bolt" size={20} color={theme.colors.primary} />
+                      <Text style={styles.featureText}>Instant Analysis</Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                      <MaterialCommunityIcons name="brain" size={20} color={theme.colors.primary} />
+                      <Text style={styles.featureText}>AI-Powered</Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                      <MaterialCommunityIcons name="shield-check" size={20} color={theme.colors.primary} />
+                      <Text style={styles.featureText}>Expert Solutions</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.uploadButtonsContainer}>
                     <TouchableOpacity 
-                        ref={ref => ref && (ref._reactInternalInstance = 'back-button')}
-                        onPress={() => navigation.goBack()}
+                      style={[styles.button, styles.primaryButton]} 
+                      onPress={takePhoto}
+                      activeOpacity={0.8}
                     >
-                        <Feather name="arrow-left" size={34} color={theme.colors.textSecondary} />
+                      <MaterialCommunityIcons name="camera" size={24} color={theme.colors.background} />
+                      <Text style={[styles.buttonText, { color: theme.colors.background }]}>
+                        {t('cropdoctor.take_photo', 'Take Photo')}
+                      </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.secondaryButton]}
+                      onPress={pickFromGallery}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons name="image" size={24} color={theme.colors.primary} />
+                      <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+                        {t('cropdoctor.pick_image', 'Choose from Gallery')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.supportedFormatsContainer}>
+                    <MaterialCommunityIcons name="file-image" size={16} color={theme.colors.textSecondary} />
+                    <Text style={styles.supportedFormatsText}>{t('cropdoctor.supported_formats', 'Supported: JPG, PNG, HEIC')}</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={styles.headerTitle}>Crop Doctor</Text>
-                </View>
-                <View style={{ width: 50, alignItems: 'flex-end' }}>
-                    {status === 'result' && (
-                        <TouchableOpacity 
-                            ref={ref => ref && (ref._reactInternalInstance = 'refresh-button')}
-                            onPress={handleReset}
-                        >
-                            <Feather name="refresh-cw" size={22} color={theme.colors.textSecondary} />
-                        </TouchableOpacity>
-                    )}
-                </View>
+              </AnimatedView>
             </View>
-            {renderContent()}
+          </ScrollView>
+        );
+    }
+  };
 
-            {/* Onboarding Tooltip */}
-            {showOnboarding && (
-                <InteractiveGuideTooltip
-                    step={ONBOARDING_STEPS[currentOnboardingStep]}
-                    onNext={nextOnboardingStep}
-                    onClose={completeOnboarding}
-                />
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Enhanced Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons name="medical-bag" size={24} color={theme.colors.primary} />
+              <Text style={styles.headerTitle}>{t('cropdoctor.title', 'Crop Doctor')}</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>AI-Powered Disease Detection</Text>
+          </View>
+          <View style={styles.headerRightContainer}>
+            {status === 'result' && (
+              <TouchableOpacity 
+                style={styles.headerButton} 
+                onPress={handleReset}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="refresh" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
             )}
+          </View>
+        </View>
 
-            {/* Debug Buttons for Testing (remove in production) */}
-            {__DEV__ && (
-                <View style={styles.tourButtonsContainer}>
-                    <TouchableOpacity
-                        style={styles.restartTourButton}
-                        onPress={startOnboardingTour}
-                    >
-                        <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-                        <Text style={styles.restartTourText}>Tour</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                        style={styles.resetTourButton}
-                        onPress={resetOnboarding}
-                    >
-                        <MaterialCommunityIcons name="refresh" size={16} color="#EF4444" />
-                        <Text style={styles.resetTourText}>Reset</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </SafeAreaView>
-    );
+        {/* Main Content */}
+        {renderContent()}
+      </View>
+    </SafeAreaView>
+  );
 }
 
-// --- Stylesheet ---
-const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: theme.colors.background },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing.medium, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
-    headerTitle: { ...theme.typography.h1 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.large },
-    loadingText: { ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.large }, // Increased margin
-    uploadTitle: { ...theme.typography.h2, marginTop: theme.spacing.medium, textAlign: 'center' },
-    uploadSubtitle: { ...theme.typography.body, textAlign: 'center', marginVertical: theme.spacing.small, paddingHorizontal: theme.spacing.medium },
-    button: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30, marginTop: theme.spacing.medium },
-    buttonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
-    resultImageContainer: {
-        height: imageDisplayHeight, // Use new reduced height
-        width: imageDisplayWidth,   // Use new reduced width
-        alignSelf: 'center',
-        marginVertical: theme.spacing.medium, // Added margin for spacing
-        borderRadius: 12, // Rounded corners for the image container
-        overflow: 'hidden', // Ensure image respects border radius
+// Enhanced Styles
+const makeStyles = (theme, insets = {}) =>
+  StyleSheet.create({
+    safeArea: { 
+      flex: 1, 
+      backgroundColor: theme.colors.background 
     },
-    resultImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-    boundingBox: {
-        position: 'absolute',
-        borderWidth: 3,
-        borderColor: '#39FF14', // Neon green
-        backgroundColor: 'rgba(57,255,20,0.18)', // Neon green with higher opacity
-        borderRadius: 6,
-        shadowColor: '#39FF14',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 6,
-        elevation: 8,
-    },
-    analysisContainer: { padding: theme.spacing.medium },
-    diseaseTitle: { ...theme.typography.h1, color: theme.colors.primary },
-    confidenceText: { ...theme.typography.body, color: theme.colors.textSecondary, marginBottom: theme.spacing.large },
-    // Removed direct section styles as they are now part of accordion
-    listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.small },
-    bullet: { fontSize: 16, color: theme.colors.primary, marginRight: theme.spacing.small, lineHeight: 24 },
-    listItemText: { ...theme.typography.body, flex: 1 },
-    solutionCard: { backgroundColor: theme.colors.surface, padding: theme.spacing.medium, borderRadius: 12, marginBottom: theme.spacing.small }, // Reduced marginBottom
-    solutionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text, marginBottom: theme.spacing.small },
-    chatInputContainer: { padding: theme.spacing.medium, backgroundColor: theme.colors.background, borderTopWidth: 1, borderColor: theme.colors.surface },
-    chatButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primary, padding: theme.spacing.medium, borderRadius: 12 },
-    chatButtonText: { color: theme.colors.background, fontSize: 16, fontWeight: 'bold', marginLeft: theme.spacing.small },
-
-    // Accordion Styles
-    accordionContainer: {
-        marginBottom: theme.spacing.medium,
-        borderWidth: 1,
-        borderColor: theme.colors.surface,
-        borderRadius: 12,
-        overflow: 'hidden', // Crucial for animation
-    },
-    accordionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: theme.spacing.medium,
-        backgroundColor: theme.colors.surface,
-    },
-    accordionContent: {
-        padding: theme.spacing.medium,
-        backgroundColor: theme.colors.background,
-    },
-    sectionTitle: { // Re-used for accordion header
-        ...theme.typography.h2,
-        color: theme.colors.text,
+    container: { 
+      flex: 1, 
+      backgroundColor: theme.colors.background 
     },
 
-    // Onboarding Tour Buttons
-    tourButtonsContainer: {
-        position: 'absolute',
-        bottom: 20,
-        left: 20,
-        flexDirection: 'row',
-        gap: 12,
+    // Enhanced Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 20,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
     },
-    restartTourButton: {
-        backgroundColor: '#1F2937',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#374151',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginLeft: 140,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+    headerButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
-    restartTourText: {
-        color: '#10B981',
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 8,
-        letterSpacing: 0.5,
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: 16,
     },
-    resetTourButton: {
-        backgroundColor: '#1F2937',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#374151',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
-    resetTourText: {
-        color: '#EF4444',
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 8,
-        letterSpacing: 0.5,
+    headerTitle: { 
+      fontSize: 20, 
+      fontWeight: '700', 
+      color: theme.colors.text,
+      marginLeft: 8,
     },
-});
+    headerSubtitle: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+      marginTop: 2,
+    },
+    headerRightContainer: {
+      width: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // Enhanced Upload Screen
+    uploadScrollView: { flex: 1 },
+    uploadScrollContainer: { 
+      flexGrow: 1, 
+      justifyContent: 'center',
+      padding: 20,
+    },
+    uploadContainer: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center' 
+    },
+    uploadCard: { 
+      padding: 32, 
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      borderRadius: 24,
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      maxWidth: 400,
+      width: '100%',
+    },
+    uploadIconContainer: {
+      position: 'relative',
+      marginBottom: 24,
+    },
+    uploadIconOverlay: {
+      position: 'absolute',
+      bottom: -8,
+      right: -8,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 2,
+    },
+    uploadTitle: { 
+      fontSize: 24, 
+      fontWeight: '700', 
+      marginBottom: 12, 
+      color: theme.colors.text,
+      textAlign: 'center',
+    },
+    uploadSubtitle: { 
+      fontSize: 16, 
+      textAlign: 'center', 
+      marginBottom: 24, 
+      color: theme.colors.textSecondary,
+      lineHeight: 24,
+    },
+    featuresContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+      marginBottom: 32,
+      paddingHorizontal: 16,
+    },
+    featureItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    featureText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    uploadButtonsContainer: { 
+      width: '100%',
+      gap: 16,
+      marginBottom: 20,
+    },
+    button: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: 16, 
+      borderRadius: 16,
+      minHeight: 56,
+    },
+    primaryButton: { 
+      backgroundColor: theme.colors.primary,
+      elevation: 3,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    secondaryButton: { 
+      borderWidth: 2, 
+      borderColor: theme.colors.primary,
+      backgroundColor: 'transparent',
+    },
+    buttonText: { 
+      marginLeft: 12, 
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    secondaryButtonText: { 
+      color: theme.colors.primary 
+    },
+    supportedFormatsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    supportedFormatsText: { 
+      marginLeft: 8, 
+      fontSize: 14, 
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+
+    // Simplified Loader
+    loadingContainer: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      padding: 20,
+    },
+    loadingContent: { 
+      alignItems: 'center',
+      position: 'relative',
+    },
+    backgroundCircles: {
+      position: 'absolute',
+      width: 200,
+      height: 200,
+    },
+    backgroundCircle: {
+      position: 'absolute',
+      borderRadius: 100,
+      opacity: 0.1,
+    },
+    circle1: {
+      width: 160,
+      height: 160,
+      backgroundColor: theme.colors.primary,
+      top: 20,
+      left: 20,
+    },
+    loadingIconContainer: { 
+      marginBottom: 32,
+      position: 'relative',
+      backgroundColor: theme.colors.surface,
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    loadingTextContainer: {
+      alignItems: 'center',
+      marginTop: 24,
+    },
+    loadingTitle: { 
+      fontSize: 22, 
+      fontWeight: '700', 
+      color: theme.colors.text,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    loadingSubtitle: { 
+      fontSize: 16, 
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+      height: 24, // Fixed height to prevent layout shifts
+    },
+    progressDots: {
+      flexDirection: 'row',
+      gap: 6,
+      height: 8,
+      alignItems: 'center',
+    },
+    progressDot: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.surface,
+      transition: 'width 0.3s ease',
+    },
+
+    // Enhanced Result Screen
+    resultContainer: { flex: 1 },
+    resultScrollView: { flex: 1 },
+    resultScrollContent: { 
+      padding: 20,
+      paddingBottom: 100,
+    },
+    resultImageWrapper: { 
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    resultImageContainer: { 
+      position: 'relative',
+      borderRadius: 20,
+      overflow: 'hidden',
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+    },
+    imageFrame: {
+      padding: 4,
+      backgroundColor: theme.colors.background,
+      borderRadius: 20,
+    },
+    resultImage: { 
+      width: imageDisplayWidth, 
+      height: imageDisplayHeight,
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    resultImageStyle: { 
+      resizeMode: 'cover',
+      borderRadius: 16,
+    },
+    boundingBox: { 
+      position: 'absolute', 
+      borderWidth: 2, 
+      borderColor: '#FF4444',
+      borderStyle: 'dashed',
+      backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    },
+    boundingBoxCorner: {
+      position: 'absolute',
+      width: 12,
+      height: 12,
+      borderColor: '#FF4444',
+      backgroundColor: '#FF4444',
+      borderRadius: 6,
+    },
+    topLeft: { top: -6, left: -6 },
+    topRight: { top: -6, right: -6 },
+    bottomLeft: { bottom: -6, left: -6 },
+    bottomRight: { bottom: -6, right: -6 },
+    imageOverlay: { 
+      position: 'absolute', 
+      top: 12, 
+      right: 12,
+    },
+    analysisCompleteBadge: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+      paddingHorizontal: 12,
+      paddingVertical: 8, 
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#10B981',
+    },
+    analysisCompleteBadgeText: { 
+      marginLeft: 6, 
+      color: '#10B981', 
+      fontWeight: '600',
+      fontSize: 12,
+    },
+
+    // Improved Analysis Section
+    analysisContainer: { 
+      flex: 1,
+    },
+    diseaseCard: {
+      marginBottom: 24,
+      padding: 20,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.primary,
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+    },
+    diseaseCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    diseaseLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+      marginLeft: 12,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    diseaseTitle: { 
+      fontSize: 26, 
+      fontWeight: '700', 
+      color: theme.colors.text,
+      marginBottom: 16,
+      lineHeight: 32,
+    },
+    confidenceBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary + '15',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    confidenceText: { 
+      fontSize: 14, 
+      color: theme.colors.primary,
+      fontWeight: '700',
+      marginLeft: 8,
+    },
+
+    // Improved Accordion
+    accordionContainer: { 
+      marginBottom: 16,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      overflow: 'hidden',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.05)',
+    },
+    accordionHeader: { 
+      flexDirection: 'row', 
+      justifyContent: 'space-between', 
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+      backgroundColor: theme.colors.surface,
+    },
+    accordionHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    accordionIcon: {
+      marginRight: 12,
+      opacity: 0.9,
+    },
+    accordionContent: { 
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+    },
+    accordionDivider: {
+      height: 1,
+      backgroundColor: theme.colors.background,
+      marginBottom: 16,
+    },
+    sectionTitle: { 
+      fontSize: 17, 
+      fontWeight: '600', 
+      color: theme.colors.text,
+      flex: 1,
+    },
+    accordionBodyText: { 
+      fontSize: 15, 
+      color: theme.colors.textSecondary,
+      lineHeight: 22,
+    },
+
+    // Improved Symptoms
+    symptomsContainer: {
+      gap: 12,
+    },
+    symptomItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(0,0,0,0.04)',
+      paddingBottom: 12,
+    },
+    listItemText: { 
+      fontSize: 15, 
+      color: theme.colors.textSecondary,
+      marginLeft: 12,
+      flex: 1,
+      lineHeight: 22,
+    },
+
+    // Improved Solutions
+    solutionsContainer: {
+      gap: 16,
+    },
+    solutionCard: { 
+      padding: 16, 
+      backgroundColor: theme.colors.background,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.primary,
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      marginBottom: 4,
+    },
+    solutionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    solutionTitle: { 
+      fontSize: 16, 
+      fontWeight: '600', 
+      color: theme.colors.text,
+      marginLeft: 10,
+      flex: 1,
+    },
+
+    // Enhanced Chat Input
+    chatInputSafeArea: { 
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 16,
+      borderTopWidth: 1, 
+      borderTopColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
+    },
+    chatButton: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.primary, 
+      paddingHorizontal: 20,
+      paddingVertical: 16, 
+      borderRadius: 16,
+      elevation: 4,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    chatButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    chatButtonText: { 
+      marginLeft: 12, 
+      fontSize: 16, 
+      color: theme.colors.background, 
+      fontWeight: '600',
+      flex: 1,
+    },
+  });

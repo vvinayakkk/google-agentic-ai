@@ -12,7 +12,7 @@ import time
 router = APIRouter(prefix="/waste-recycling", tags=["Waste Recycling"])
 
 # Gemini 2.5 Flash API Configuration
-GEMINI_API_KEY = "AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs"
+GEMINI_API_KEY = "AIzaSyBhI1O9Bj_oUsM9HP1u7FlOLYIlKK9Dgt4"
 GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY
 
 # Hardcoded common recycling practices for carousel
@@ -123,33 +123,32 @@ def analyze_waste_with_gemini(image_base64: str, location: str = "farm") -> List
     """Analyze waste image using Gemini 2.5 Flash and return recycling suggestions with YouTube videos"""
     
     prompt = f"""
-    You are an expert agricultural waste management specialist. Analyze this image of agricultural waste or field debris and provide 5 innovative, practical recycling suggestions specifically for farmers.
+    System: You are an expert in "waste-to-best" conversion for farms and rural households. Your goal is to convert the waste shown in the image into the "best" practical, low-cost, and environmentally-friendly uses available to small and medium farmers.
 
-    Location context: {location}
-    
-    Focus on:
-    1. Practical and cost-effective solutions
-    2. Environmentally friendly practices
-    3. Methods that improve soil health
-    4. Techniques suitable for small to medium farms
-    5. Solutions that can be implemented immediately
+    Image context: The user submitted an image of agricultural or household waste. Location context: {location}
 
-    For each suggestion, provide:
-    - A concise, actionable description (3-4 sentences)
-    - A relevant new direct link to a YouTube video URL that demonstrates the technique or provides educational content about the practice not a search result.
+    Required output: Provide exactly 5 distinct, prioritized "waste-to-best" conversion suggestions. For each suggestion include:
+    - title: a short 4-6 word title summarizing the conversion (e.g., "Compost for Soil Amendment")
+    - description: 2-4 concise sentences explaining how to implement it on a small/medium farm and expected benefits
+    - difficulty: one word (Easy/Medium/Hard)
+    - time_required: short estimate (e.g., "Immediate", "2-3 months")
+    - youtube_url: a direct YouTube video link that demonstrably shows or explains the technique (must be different for each suggestion)
 
-    Format your response as JSON with this exact structure:
+    Keep the response strictly as valid JSON using this exact structure:
     {{
         "suggestions": [
             {{
-                "description": "Your suggestion description here",
+                "title": "...",
+                "description": "...",
+                "difficulty": "...",
+                "time_required": "...",
                 "youtube_url": "https://www.youtube.com/watch?v=VIDEO_ID"
             }},
-            ...
+            ... (total 5 items)
         ]
     }}
 
-    Make sure the YouTube URLs are real and different, educational videos about agricultural waste management, composting, recycling, or sustainable farming practices. Choose videos that are informative and practical for farmers.
+    Prioritize immediate, low-cost, and soil-health-improving options. If the image is ambiguous, infer the most likely waste type and still provide five useful, distinct conversions. Do not include any extra text outside the JSON.
     """
     
     parts = [

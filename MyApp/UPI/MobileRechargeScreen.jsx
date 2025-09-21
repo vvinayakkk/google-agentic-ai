@@ -17,6 +17,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -167,10 +168,11 @@ const MobileRechargeScreen = ({ navigation, route }) => {
 
   const selectedOperator = operators.find(op => op.value === operator);
   const isFormValid = mobile.replace(/\s/g, '').length === 10 && operator && amount;
+  const { theme } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme?.colors?.background }]}>
+      <StatusBar barStyle={theme?.colors?.statusBarStyle || 'light-content'} backgroundColor={'transparent'} translucent />
       
       {/* Animated Background Elements */}
       <View style={styles.backgroundContainer}>
@@ -255,9 +257,9 @@ const MobileRechargeScreen = ({ navigation, route }) => {
             style={styles.headerIconBtn}
             activeOpacity={0.7}
           >
-            <BlurView intensity={20} style={styles.blurButton}>
-              <Icon name="arrow-back" size={24} color="#FFF" />
-            </BlurView>
+              <BlurView intensity={20} style={styles.blurButton}>
+                <Icon name="arrow-back" size={24} color={theme?.colors?.text} />
+              </BlurView>
           </TouchableOpacity>
           
           <View style={styles.headerTitleContainer}>

@@ -1,7 +1,7 @@
 import requests
 import os
 
-GEMINI_API_KEY = "AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs"
+GEMINI_API_KEY = "AIzaSyCxfjfJWFW49Fsvp6R_u4B9nh-LhlpTr2k"
 if not GEMINI_API_KEY:
     raise RuntimeError("GOOGLE_API_KEY environment variable not set. Please set it before running the backend.")
 GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY

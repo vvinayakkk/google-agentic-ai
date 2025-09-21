@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet, TextInput, StatusBar } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
 
@@ -16,22 +17,23 @@ const PaymentAmountScreen = ({ navigation, route }) => {
   // { name: 'Vivek Bhatia', phone: '+91 91234 56789', bankingName: 'VIVEK PREM BHATIA', initial: 'VB', color: '#f59e42' }
   const [amount, setAmount] = useState('0');
   const [note, setNote] = useState('');
+  const { theme } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme?.colors?.background }]}>
+      <StatusBar barStyle={theme?.colors?.statusBarStyle || 'light-content'} backgroundColor={theme?.colors?.background} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.headerIconBtn}>
-          <IonIcon name="arrow-back" size={26} color="#FFF" />
+          <IonIcon name="arrow-back" size={26} color={theme?.colors?.text} />
         </TouchableOpacity>
         <View style={[styles.headerAvatar, {backgroundColor: recipient.color}]}> 
-          <Text style={styles.headerAvatarText}>{recipient.initial}</Text>
+          <Text style={[styles.headerAvatarText, { color: theme?.colors?.onSurface }]}>{recipient.initial}</Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>Paying {recipient.name}</Text>
-          <Text style={styles.headerBankingName}>Banking name: {recipient.bankingName}</Text>
-          <Text style={styles.headerPhone}>{recipient.phone}</Text>
+          <Text style={[styles.headerName, { color: theme?.colors?.text }]}>Paying {recipient.name}</Text>
+          <Text style={[styles.headerBankingName, { color: theme?.colors?.success } ]}>Banking name: {recipient.bankingName}</Text>
+          <Text style={[styles.headerPhone, { color: theme?.colors?.textSecondary }]}>{recipient.phone}</Text>
         </View>
       </View>
       {/* Amount Input */}

@@ -1,27 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from './Icon';
+import { useTheme } from '../context/ThemeContext';
 
-const AnalysisCard = ({ icon, title, value, details, color = '#58D68D', metrics = [] }) => (
-  <View style={styles.analysisCard}>
-    <View style={styles.analysisCardHeader}>
-      <Icon name={icon} style={{ fontSize: 24, color }} />
-      <Text style={styles.analysisCardTitle}>{title}</Text>
-    </View>
-    <Text style={[styles.analysisCardValue, { color }]}>{value}</Text>
-    {details && <Text style={styles.analysisCardDetails}>{details}</Text>}
-    {metrics.length > 0 && (
-      <View style={styles.metricsContainer}>
-        {metrics.map((metric, index) => (
-          <View key={index} style={styles.metricItem}>
-            <Text style={styles.metricLabel}>{metric.label}</Text>
-            <Text style={[styles.metricText, { color: metric.color || '#58D68D' }]}>{metric.value}</Text>
-          </View>
-        ))}
+const AnalysisCard = ({ icon, title, value, details, color, metrics = [] }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.analysisCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+      <View style={styles.analysisCardHeader}>
+        <Icon name={icon} style={{ fontSize: 24, color: color || theme.colors.primary }} />
+        <Text style={[styles.analysisCardTitle, { color: theme.colors.text }]}>{title}</Text>
       </View>
-    )}
-  </View>
-);
+      <Text style={[styles.analysisCardValue, { color: color || theme.colors.text }]}>{value}</Text>
+      {details && <Text style={[styles.analysisCardDetails, { color: theme.colors.textSecondary }]}>{details}</Text>}
+      {metrics.length > 0 && (
+        <View style={styles.metricsContainer}>
+          {metrics.map((metric, index) => (
+            <View key={index} style={styles.metricItem}>
+              <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>{metric.label}</Text>
+              <Text style={[styles.metricText, { color: metric.color || theme.colors.primary }]}>{metric.value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   analysisCard: {

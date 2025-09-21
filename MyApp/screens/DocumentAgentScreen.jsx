@@ -11,7 +11,8 @@ import {
   Modal,
   Animated,
   FlatList,
-  Linking
+  Linking,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,7 @@ import MicOverlay from '../components/MicOverlay';
 import schemesData from '../data/schemes.json';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_BASE = NetworkConfig.API_BASE;
 
@@ -201,7 +203,8 @@ const ENHANCED_SCHEMES = [
 export default function DocumentAgentScreen({ navigation }) {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(theme);
   // Loading states
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingStage, setLoadingStage] = useState('analyzing');
@@ -291,10 +294,10 @@ export default function DocumentAgentScreen({ navigation }) {
       await new Promise(resolve => setTimeout(resolve, duration));
     }
 
-    setInitialLoading(false);
-    setShowSchemes(true);
+  setInitialLoading(false);
+  setShowSchemes(true);
     
-    // Animate scheme appearance
+  // Animate scheme appearance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -308,6 +311,8 @@ export default function DocumentAgentScreen({ navigation }) {
       }),
     ]).start();
   };
+
+  // temporary: use inline theme styles where needed to avoid creating extra stylesheet here
 
   // Auto-fill form with farmer profile data and show input fields
   const handleApplyWithAI = () => {
@@ -355,9 +360,9 @@ export default function DocumentAgentScreen({ navigation }) {
         console.log('✅ Document generation successful:', result);
         setShowConfirmation(false);
         Alert.alert(
-          'Success!', 
-          'Your application document has been generated and sent to WhatsApp!',
-          [{ text: 'Great!', onPress: () => setShowApplicationForm(false) }]
+          t('document.success_title', 'Success!'), 
+          t('document.success_message', 'Your application document has been generated and sent to WhatsApp!'),
+          [{ text: t('common.great', 'Great!'), onPress: () => setShowApplicationForm(false) }]
         );
       } else {
         const errorText = await response.text();
@@ -368,9 +373,9 @@ export default function DocumentAgentScreen({ navigation }) {
       console.error('❌ Error generating document:', error);
       setShowConfirmation(false);
       Alert.alert(
-        'Error', 
-        `Failed to generate document: ${error.message}`,
-        [{ text: 'OK' }]
+        t('common.error', 'Error'), 
+        t('document.generate_failed', `Failed to generate document: ${error.message}`),
+        [{ text: t('common.ok', 'OK') }]
       );
     }
   };
@@ -425,15 +430,14 @@ export default function DocumentAgentScreen({ navigation }) {
     
     if (missingFields.length > 0) {
       Alert.alert(
-        'Missing Information', 
-        `Please fill in the following required fields:\n\n${missingFields.join('\n')}`,
-        [{ text: 'OK' }]
+        t('document.missing_title', 'Missing Information'), 
+        t('document.missing_fields', `Please fill in the following required fields:\n\n${missingFields.join('\n')}`),
+        [{ text: t('common.ok', 'OK') }]
       );
       return;
     }
-    
-    // Generate and send document
     generateAndSendDocument();
+
   };
 
   // Handle phone number click
@@ -453,7 +457,7 @@ export default function DocumentAgentScreen({ navigation }) {
       {isTop && (
         <View style={styles.topSuggestionBadge}>
           <MaterialIcons name="star" size={16} color="#6366f1" />
-          <Text style={styles.topSuggestionText}>TOP SUGGESTION</Text>
+          <Text style={styles.topSuggestionText}>{t('document.top_suggestion', 'TOP SUGGESTION')}</Text>
         </View>
       )}
       
@@ -461,7 +465,7 @@ export default function DocumentAgentScreen({ navigation }) {
         <Text style={styles.schemeName}>{scheme.scheme_name}</Text>
         <View style={styles.schemeTypeTag}>
           <Text style={styles.schemeTypeText}>
-            {scheme.scheme_type === 'central_government' ? 'Central' : 'State'}
+            {scheme.scheme_type === 'central_government' ? t('document.scheme_type.central', 'Central') : t('document.scheme_type.state', 'State')}
           </Text>
         </View>
       </View>
@@ -476,7 +480,7 @@ export default function DocumentAgentScreen({ navigation }) {
         </View>
         <View style={styles.statItem}>
           <MaterialIcons name="event" size={16} color="#6366f1" />
-          <Text style={styles.statText}>Since {scheme.metadata.launch_date}</Text>
+          <Text style={styles.statText}>{t('document.since', 'Since {{year}}', { year: scheme.metadata.launch_date })}</Text>
         </View>
       </View>
 
@@ -489,7 +493,7 @@ export default function DocumentAgentScreen({ navigation }) {
           }}
         >
           <MaterialIcons name="info" size={16} color="#6366f1" />
-          <Text style={styles.viewDetailsText}>Details</Text>
+          <Text style={styles.viewDetailsText}>{t('document.details', 'Details')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -497,7 +501,7 @@ export default function DocumentAgentScreen({ navigation }) {
           onPress={handleApplyWithAI}
         >
           <MaterialIcons name="psychology" size={16} color="#fff" />
-          <Text style={styles.applyText}>Apply with AI</Text>
+          <Text style={styles.applyText}>{t('document.apply_with_ai', 'Apply with AI')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -506,52 +510,52 @@ export default function DocumentAgentScreen({ navigation }) {
   // Render loading screen
   if (initialLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
         <StatusBar barStyle={theme.colors.statusBarStyle} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
           </TouchableOpacity>
-          <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>🤖 Smart Document Assistant</Text>
+          <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>{t('document.header', '🤖 Smart Document Assistant')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
         <View style={styles.loadingContainer}>
-          <View style={styles.loadingContent}>
-            <ActivityIndicator size="large" color="#22c55e" />
-            <Text style={styles.loadingTitle}>Loading Schemes</Text>
-            <Text style={styles.loadingSubtitle}>Based on your activity</Text>
-            <Text style={styles.loadingText}>{loadingText}</Text>
+          <View style={[styles.loadingContent, { backgroundColor: theme.colors.card }] }>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>{t('document.loading_schemes', 'Loading Schemes')}</Text>
+            <Text style={[styles.loadingSubtitle, { color: theme.colors.textSecondary }]}>{t('document.based_on_activity', 'Based on your activity')}</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{loadingText}</Text>
             
             <View style={styles.loadingSteps}>
               <View style={[styles.loadingStep, loadingStage === 'analyzing' && styles.activeStep]}>
-                <MaterialIcons name="analytics" size={20} color={loadingStage === 'analyzing' ? '#22c55e' : '#666'} />
-                <Text style={[styles.stepText, loadingStage === 'analyzing' && styles.activeStepText]}>Analyzing</Text>
+                <MaterialIcons name="analytics" size={20} color={loadingStage === 'analyzing' ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.stepText, loadingStage === 'analyzing' && styles.activeStepText, { color: loadingStage === 'analyzing' ? theme.colors.text : theme.colors.textSecondary }]}>{t('document.loading_stage.analyzing', 'Analyzing')}</Text>
               </View>
               <View style={[styles.loadingStep, loadingStage === 'matching' && styles.activeStep]}>
-                <MaterialIcons name="search" size={20} color={loadingStage === 'matching' ? '#22c55e' : '#666'} />
-                <Text style={[styles.stepText, loadingStage === 'matching' && styles.activeStepText]}>Matching</Text>
+                <MaterialIcons name="search" size={20} color={loadingStage === 'matching' ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.stepText, loadingStage === 'matching' && styles.activeStepText, { color: loadingStage === 'matching' ? theme.colors.text : theme.colors.textSecondary }]}>{t('document.loading_stage.matching', 'Matching')}</Text>
               </View>
               <View style={[styles.loadingStep, loadingStage === 'validating' && styles.activeStep]}>
-                <MaterialIcons name="verified" size={20} color={loadingStage === 'validating' ? '#22c55e' : '#666'} />
-                <Text style={[styles.stepText, loadingStage === 'validating' && styles.activeStepText]}>Validating</Text>
+                <MaterialIcons name="verified" size={20} color={loadingStage === 'validating' ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.stepText, loadingStage === 'validating' && styles.activeStepText, { color: loadingStage === 'validating' ? theme.colors.text : theme.colors.textSecondary }]}>{t('document.loading_stage.validating', 'Validating')}</Text>
               </View>
             </View>
           </View>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // Render main scheme display
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
       <StatusBar barStyle={theme.colors.statusBarStyle} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
         </TouchableOpacity>
-        <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>🤖 Smart Document Assistant</Text>
+  <Text style={[styles.headerText, { color: theme.colors.headerTitle }]}>{t('document.header', '🤖 Smart Document Assistant')}</Text>
         <TouchableOpacity onPress={() => {
           setInitialLoading(true);
           setShowSchemes(false);
@@ -579,14 +583,14 @@ export default function DocumentAgentScreen({ navigation }) {
             {profileLoading && (
               <View style={styles.profileStatus}>
                 <ActivityIndicator size="small" color="#6366f1" />
-                <Text style={styles.profileStatusText}>Loading your profile...</Text>
+                <Text style={styles.profileStatusText}>{t('document.loading_profile', 'Loading your profile...')}</Text>
               </View>
             )}
             
             {profileError && (
               <View style={styles.profileStatus}>
                 <MaterialIcons name="info" size={16} color="#6366f1" />
-                <Text style={styles.profileStatusText}>Using default profile data</Text>
+                <Text style={styles.profileStatusText}>{t('document.using_default_profile', 'Using default profile data')}</Text>
                 <TouchableOpacity 
                   style={styles.retryButton}
                   onPress={fetchFarmerProfile}
@@ -935,33 +939,33 @@ export default function DocumentAgentScreen({ navigation }) {
         isVisible={true}
         isActive={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: theme.colors.card,
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: theme.colors.border,
     justifyContent: 'space-between',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow || '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   headerText: {
-    color: '#ffffff',
+    color: theme.colors.headerTitle || theme.colors.text,
     fontWeight: '600',
     fontSize: 18,
   },
@@ -987,19 +991,19 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   loadingTitle: {
-    color: '#ffffff',
+    color: theme.colors.text,
     fontSize: 24,
     fontWeight: '600',
     marginTop: 20,
     marginBottom: 8,
   },
   loadingSubtitle: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 16,
     marginBottom: 20,
   },
   loadingText: {
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
@@ -1034,26 +1038,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   topSuggestionText: {
-    color: '#ffffff',
+    color: theme.colors.onPrimary || '#ffffff',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
   },
   schemeCard: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: theme.colors.card,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: theme.colors.border,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow || '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1092,10 +1096,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   keyBenefit: {
-    color: '#ffffff',
+    color: theme.colors.onPrimary || '#fff',
     fontSize: 18,
     fontWeight: '600',
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.primary,
     alignSelf: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1111,7 +1115,7 @@ const styles = StyleSheet.create({
   schemeStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: theme.colors.card,
     borderRadius: 8,
     paddingVertical: 12,
     marginBottom: 16,
@@ -1169,15 +1173,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: theme.colors.card,
     borderRadius: 8,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: theme.colors.primary,
     borderStyle: 'dashed',
   },
   viewAllSchemesText: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginHorizontal: 12,
@@ -1186,14 +1190,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: theme.colors.card,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   profileStatusText: {
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     marginLeft: 8,
     flex: 1,
@@ -1206,19 +1210,19 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: (theme.colors.overlay || 'rgba(0,0,0,0.6)'),
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     margin: 20,
     maxHeight: '80%',
     width: '90%',
     borderWidth: 1,
-    borderColor: '#2a2a2a',
-    shadowColor: '#000',
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow || '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -1263,19 +1267,19 @@ const styles = StyleSheet.create({
   applyWithAIBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.primary,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   applyWithAIText: {
-    color: '#fff',
+    color: theme.colors.onPrimary || '#fff',
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
   },
   modalTitle: {
-    color: '#ffffff',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '600',
     flex: 1,
@@ -1297,13 +1301,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   detailSectionTitle: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
   detailItem: {
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 6,
@@ -1314,7 +1318,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   clickableContactInfo: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 14,
     marginBottom: 6,
     textDecorationLine: 'underline',
@@ -1322,21 +1326,21 @@ const styles = StyleSheet.create({
 
   // User Input Section Styles
   userInputSection: {
-    backgroundColor: '#10b98110',
+    backgroundColor: (theme.colors.primary + '10') || '#10b98110',
     padding: 16,
     margin: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
+    borderLeftColor: theme.colors.primary,
   },
   userInputSectionTitle: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   userInputSectionSubtitle: {
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
 
@@ -1345,13 +1349,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b98120',
+    backgroundColor: (theme.colors.primary + '20') || '#10b98120',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: theme.colors.border,
   },
   autoFillText: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
@@ -1374,7 +1378,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputLabel: {
-    color: '#ffffff',
+    color: theme.colors.text,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -1383,12 +1387,12 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    color: '#ffffff',
+    backgroundColor: theme.colors.card,
+    color: theme.colors.text,
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: theme.colors.border,
     fontSize: 16,
   },
   filledInput: {
@@ -1406,13 +1410,13 @@ const styles = StyleSheet.create({
   confirmBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
   confirmBtnText: {
-    color: '#fff',
+    color: theme.colors.onPrimary || '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
@@ -1421,27 +1425,27 @@ const styles = StyleSheet.create({
   // Confirmation Modal
   confirmationOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
+    backgroundColor: (theme.colors.overlay || 'rgba(0,0,0,0.9)'),
     justifyContent: 'center',
     alignItems: 'center',
   },
   confirmationContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: 40,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#10b981',
+    borderColor: theme.colors.primary,
   },
   confirmationTitle: {
-    color: '#10b981',
+    color: theme.colors.primary,
     fontSize: 20,
     fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,
   },
   confirmationText: {
-    color: '#9ca3af',
+    color: theme.colors.textSecondary,
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,

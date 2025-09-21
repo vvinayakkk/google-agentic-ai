@@ -11,5 +11,11 @@ def detect_crop_disease(image: UploadFile = File(...)):
         image_bytes = image.file.read()
         result = analyze_crop_image(image_bytes)
         return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        # Known failure from analysis pipeline
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        # Generic fallback without leaking internals
+        raise HTTPException(status_code=500, detail="Internal server error during crop analysis")

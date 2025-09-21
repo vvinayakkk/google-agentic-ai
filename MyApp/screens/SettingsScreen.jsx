@@ -1,6 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, StatusBar, SafeAreaView, Alert, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { setLanguage, getStoredLanguage } from '../i18n';
+import { Picker } from '@react-native-picker/picker';
 
 const Row = ({ label, control }) => (
   <View style={styles.row}>
@@ -11,11 +14,50 @@ const Row = ({ label, control }) => (
 
 export default function SettingsScreen({ navigation }) {
   const { theme, mode, setMode } = useTheme();
+  const { t, i18n } = useTranslation();
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+
+  const LANGUAGES = [
+    { label: 'English', value: 'en' },
+    { label: 'हिन्दी (Hindi)', value: 'hi' },
+    { label: 'বাংলা (Bengali)', value: 'bn' },
+    { label: 'తెలుగు (Telugu)', value: 'te' },
+    { label: 'मराठी (Marathi)', value: 'mr' },
+    { label: 'தமிழ் (Tamil)', value: 'ta' },
+    { label: 'ગુજરાતી (Gujarati)', value: 'gu' },
+    { label: 'ಕನ್ನಡ (Kannada)', value: 'kn' },
+  ];
+
+  useEffect(() => {
+    let mounted = true;
+    getStoredLanguage().then((lang) => {
+      if (mounted && lang) setSelectedLanguage(lang);
+    });
+    return () => (mounted = false);
+  }, []);
+
+  const onChangeLanguage = async (lang) => {
+    try {
+      setSelectedLanguage(lang);
+      await setLanguage(lang);
+      // i18n.changeLanguage is invoked inside setLanguage via i18n.js, but ensure t updates
+      if (i18n && i18n.changeLanguage) {
+        i18n.changeLanguage(lang);
+      }
+      // optional feedback
+      if (Platform.OS === 'web') {
+        // no native Toast - use alert
+        Alert.alert(t('common.success') || 'Success', t('crop_intelligence.language_changed_message', { language: lang }) || 'Language changed');
+      }
+    } catch (e) {
+      Alert.alert(t('common.error') || 'Error', t('crop_intelligence.language_error_message') || 'Failed to change language');
+    }
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
-      <StatusBar barStyle={theme.colors.statusBarStyle} />
-      <View style={[styles.header, { backgroundColor: theme.colors.headerBackground, borderBottomColor: theme.colors.border }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.headerBackground} />
+  <View style={[styles.header, { backgroundColor: theme.colors.headerBackground, borderBottomColor: theme.colors.border }]}> 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={[styles.backText, { color: theme.colors.headerTitle }]}>{'<'}</Text>
         </TouchableOpacity>
@@ -32,8 +74,8 @@ export default function SettingsScreen({ navigation }) {
             <Switch
               value={mode === 'system'}
               onValueChange={(v) => setMode(v ? 'system' : 'light')}
-              trackColor={{ false: '#bbb', true: theme.colors.primary }}
-              thumbColor={'#fff'}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                thumbColor={theme.colors.onPrimary}
             />
           }
         />
@@ -45,13 +87,30 @@ export default function SettingsScreen({ navigation }) {
               value={mode === 'dark'}
               onValueChange={(v) => setMode(v ? 'dark' : 'light')}
               disabled={mode === 'system'}
-              trackColor={{ false: '#bbb', true: theme.colors.primary }}
-              thumbColor={'#fff'}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                thumbColor={theme.colors.onPrimary}
             />
           }
         />
       </View>
-    </View>
+      
+      <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Language</Text>
+        {/* Platform-friendly picker for language selection */}
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={selectedLanguage}
+            onValueChange={(val) => onChangeLanguage(val)}
+            style={{ color: theme.colors.text }}
+            itemStyle={{ color: theme.colors.text }}
+          >
+            {LANGUAGES.map((l) => (
+              <Picker.Item key={l.value} label={l.label} value={l.value} />
+            ))}
+          </Picker>
+        </View>
+      </View>
+  </SafeAreaView>
   );
 }
 

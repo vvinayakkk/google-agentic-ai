@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 const PayAnyoneScreen = ({ navigation }) => {
   const [payAnyoneInput, setPayAnyoneInput] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const { theme } = useTheme();
   
   // Animation refs
   const slideAnim = useRef(new Animated.Value(-30)).current;
@@ -174,8 +176,8 @@ const PayAnyoneScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme?.colors?.background }]}>
+      <StatusBar barStyle={theme?.colors?.statusBarStyle || 'light-content'} backgroundColor={theme?.colors?.background} translucent={false} />
       
       {/* Header */}
       <Animated.View
@@ -192,20 +194,20 @@ const PayAnyoneScreen = ({ navigation }) => {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <IonIcon name="arrow-back" size={24} color="#ffffff" />
+          <IonIcon name="arrow-back" size={24} color={theme?.colors?.text} />
         </TouchableOpacity>
         
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Pay Anyone</Text>
+          <Text style={[styles.headerTitle, { color: theme?.colors?.text } ]}>Pay Anyone</Text>
           <View style={styles.headerSubtitleContainer}>
             <View style={styles.liveDot} />
-            <Text style={styles.headerSubtitle}>UPI Enabled</Text>
+            <Text style={[styles.headerSubtitle, { color: theme?.colors?.primary } ]}>UPI Enabled</Text>
           </View>
         </View>
       </Animated.View>
 
       {/* Content */}
-      <View style={styles.content}>
+  <View style={[styles.content, { backgroundColor: theme?.colors?.background }]}>
         {/* Subtitle */}
         <Animated.View
           style={[
@@ -213,23 +215,23 @@ const PayAnyoneScreen = ({ navigation }) => {
             { opacity: fadeAnim },
           ]}
         >
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: theme?.colors?.textSecondary } ]}>
             Pay using UPI ID, mobile number or scan QR code
           </Text>
         </Animated.View>
 
         {/* Search Input */}
         <Animated.View
-          style={[
+            style={[
             styles.searchContainer,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
               borderColor: searchAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['#e5e7eb', '#6366f1'],
+                outputRange: [theme?.colors?.border || '#e5e7eb', theme?.colors?.primary || '#6366f1'],
               }),
-              backgroundColor: isSearchFocused ? '#f8fafc' : '#ffffff',
+              backgroundColor: isSearchFocused ? theme?.colors?.card : theme?.colors?.surface,
             },
           ]}
         >
@@ -237,13 +239,13 @@ const PayAnyoneScreen = ({ navigation }) => {
             <Icon 
               name="search" 
               size={20} 
-              color={isSearchFocused ? '#6366f1' : '#9ca3af'} 
+              color={isSearchFocused ? (theme?.colors?.primary || '#6366f1') : (theme?.colors?.textSecondary || '#9ca3af')} 
               style={styles.searchIcon}
             />
             <TextInput
               style={styles.searchInput}
               placeholder="Enter UPI ID, mobile number or name"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={theme?.colors?.textSecondary}
               value={payAnyoneInput}
               onChangeText={setPayAnyoneInput}
               onFocus={handleSearchFocus}
@@ -252,7 +254,7 @@ const PayAnyoneScreen = ({ navigation }) => {
             
             {/* QR Scanner button */}
             <TouchableOpacity style={styles.qrButton} activeOpacity={0.7}>
-              <Icon name="qr-code-scanner" size={20} color="#6366f1" />
+              <Icon name="qr-code-scanner" size={20} color={theme?.colors?.primary} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -265,24 +267,24 @@ const PayAnyoneScreen = ({ navigation }) => {
           ]}
         >
           <TouchableOpacity
-            style={styles.quickActionBtn}
+            style={[styles.quickActionBtn, { backgroundColor: theme?.colors?.card, borderColor: theme?.colors?.border }]}
             onPress={() => navigation.navigate('BankTransferScreen')}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionContent}>
-              <Icon name="account-balance" size={20} color="#6366f1" />
-              <Text style={styles.quickActionText}>Bank Transfer</Text>
+              <Icon name="account-balance" size={20} color={theme?.colors?.primary} />
+              <Text style={[styles.quickActionText, { color: theme?.colors?.text }]}>Bank Transfer</Text>
             </View>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={styles.quickActionBtn}
+            style={[styles.quickActionBtn, { backgroundColor: theme?.colors?.card, borderColor: theme?.colors?.border }]}
             onPress={() => navigation.navigate('MobileRechargeScreen')}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionContent}>
-              <Icon name="phone-android" size={20} color="#10b981" />
-              <Text style={styles.quickActionText}>Recharge</Text>
+              <Icon name="phone-android" size={20} color={theme?.colors?.success} />
+              <Text style={[styles.quickActionText, { color: theme?.colors?.text }]}>Recharge</Text>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -302,7 +304,7 @@ const PayAnyoneScreen = ({ navigation }) => {
               ]}
             >
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent</Text>
+                <Text style={[styles.sectionTitle, { color: theme?.colors?.text }]}>Recent</Text>
                 <Text style={styles.sectionCount}>{payAnyoneRecents.length}</Text>
               </View>
               {payAnyoneRecents.map((item, index) => renderContactItem(item, index, true))}
@@ -317,7 +319,7 @@ const PayAnyoneScreen = ({ navigation }) => {
             ]}
           >
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>All contacts</Text>
+                <Text style={[styles.sectionTitle, { color: theme?.colors?.text }]}>All contacts</Text>
               <Text style={styles.sectionCount}>{payAnyoneAll.length}</Text>
             </View>
             {payAnyoneAll.map((item, index) => renderContactItem(item, index))}

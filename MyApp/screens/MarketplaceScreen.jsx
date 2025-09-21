@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  SafeAreaView,
   StyleSheet,
   TextInput,
   Alert,
@@ -28,7 +29,10 @@ import { NetworkConfig } from '../utils/NetworkConfig';
 import MicOverlay from '../components/MicOverlay';
 import CropMarketplaceService from '../services/CropMarketplaceService';
 import { useTheme } from '../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { REAL_MANDI_DATA, AI_STRATEGIC_PLANS, findMandisByCrop, findMandisByLocation, getMandiById, getCropPriceInMandi, formatPhoneNumber, getMandisByDistance, calculateDistance } from '../data/mandiData';
+import { setLanguage } from '../i18n';
+
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -139,8 +143,10 @@ const AnimatedListItem = ({ children, index }) => {
 
 // --- Main Screen ---
 const MarketplaceScreen = ({ navigation }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(theme);
   const [selectedTab, setSelectedTab] = useState('market');
   const [marketData, setMarketData] = useState([]);
   const [myListings, setMyListings] = useState([]);
@@ -352,17 +358,17 @@ const MarketplaceScreen = ({ navigation }) => {
       const response = await CropMarketplaceService.createOrder(FARMER_ID, orderData);
       
       if (response && response.success) {
-        Alert.alert('Success', 'Order created successfully!');
+        Alert.alert(t('common.success') || 'Success', t('marketplace.order_created'));
         setShowOrderModal(false);
         fetchMyOrders(); // Refresh orders
       } else {
         // Fallback: Show generic success message even if API response is unclear
-        Alert.alert('Order Submitted', 'Your order has been submitted successfully!');
+        Alert.alert(t('marketplace.order_submitted_title') || 'Order Submitted', t('marketplace.order_submitted'));
         setShowOrderModal(false);
       }
     } catch (error) {
       // Fallback: Show success message instead of error to avoid user confusion
-      Alert.alert('Order Submitted', 'Your order has been submitted for processing!');
+      Alert.alert(t('marketplace.order_submitted_title') || 'Order Submitted', t('marketplace.order_processing'));
       setShowOrderModal(false);
     }
   };
@@ -376,17 +382,17 @@ const MarketplaceScreen = ({ navigation }) => {
       const response = await CropMarketplaceService.addItem(FARMER_ID, itemData);
       
       if (response && response.success) {
-        Alert.alert('Success', 'Item added to marketplace successfully!');
+        Alert.alert(t('common.success') || 'Success', t('marketplace.item_added'));
         fetchMarketplaceData(); // Refresh marketplace
         setIsModalVisible(false);
       } else {
         // Fallback: Show success message even if API response is unclear
-        Alert.alert('Item Added', 'Your item has been added to the marketplace!');
+        Alert.alert(t('marketplace.item_added_title') || 'Item Added', t('marketplace.item_submitted'));
         setIsModalVisible(false);
       }
     } catch (error) {
       // Fallback: Show success message instead of error
-      Alert.alert('Item Submitted', 'Your item has been submitted to the marketplace!');
+      Alert.alert(t('marketplace.item_submitted_title') || 'Item Submitted', t('marketplace.item_submitted'));
       setIsModalVisible(false);
     }
   };
@@ -486,7 +492,7 @@ const MarketplaceScreen = ({ navigation }) => {
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload proof images.');
+        Alert.alert(t('marketplace.permission_needed') || 'Permission needed', t('marketplace.permission_message_upload'));
         return;
       }
 
@@ -508,29 +514,29 @@ const MarketplaceScreen = ({ navigation }) => {
             uploaded: true
           }
         }));
-        Alert.alert('Success', `Proof for ${crop} has been uploaded successfully!`);
+        Alert.alert(t('common.success') || 'Success', t('marketplace.proof_uploaded', { crop }));
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to upload proof image. Please try again.');
+      Alert.alert(t('common.error') || 'Error', t('marketplace.upload_failed'));
     }
   };
 
   const proceedToPriceComparison = () => {
     if (!selectedMandi) {
-      Alert.alert('Error', 'Please select a mandi first');
+      Alert.alert(t('common.error') || 'Error', t('marketplace.select_mandi_first'));
       return;
     }
     
     if ((selectedCrops || []).length === 0) {
-      Alert.alert('Error', 'Please select at least one crop');
+      Alert.alert(t('common.error') || 'Error', t('marketplace.select_at_least_one_crop'));
       return;
     }
 
     // Check if all crops have details set
     const missingDetails = selectedCrops.filter(crop => !cropDetails[crop]?.quantity);
     if (missingDetails.length > 0) {
-      Alert.alert('Error', 'Please set details for all selected crops');
+      Alert.alert(t('common.error') || 'Error', t('marketplace.set_details_for_all'));
       return;
     }
 
@@ -602,7 +608,7 @@ const MarketplaceScreen = ({ navigation }) => {
   const proceedToServiceInfo = () => {
     const allCropsDecided = selectedCrops.every(crop => priceDecisions[crop]);
     if (!allCropsDecided) {
-      Alert.alert('Error', 'Please make price decisions for all crops');
+      Alert.alert(t('common.error') || 'Error', t('marketplace.make_price_decisions') || 'Please make price decisions for all crops');
       return;
     }
     setCurrentStep('serviceInfo');
@@ -671,9 +677,9 @@ const MarketplaceScreen = ({ navigation }) => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       Alert.alert(
-        '📄 PDF Generated!',
-        `Your crop sales report has been generated!\n\nFile: CropSalesReport_${data.exportDate}.pdf\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}\n\nThe file has been saved to your Downloads folder.`,
-        [{ text: 'Great!', onPress: () => setShowExportModal(false) }]
+        t('marketplace.pdf_generated_title') || '📄 PDF Generated!',
+        t('marketplace.pdf_generated_message', { file: `CropSalesReport_${data.exportDate}.pdf`, total: `₹${data.totalEstimatedValue.toLocaleString()}` }) || `Your crop sales report has been generated!\n\nFile: CropSalesReport_${data.exportDate}.pdf\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}\n\nThe file has been saved to your Downloads folder.`,
+        [{ text: t('common.ok') || 'Great!', onPress: () => setShowExportModal(false) }]
       );
     } catch (error) {
       Alert.alert('Export Error', 'Failed to generate PDF. Please try again.');
@@ -690,9 +696,9 @@ const MarketplaceScreen = ({ navigation }) => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       Alert.alert(
-        '📊 Excel Generated!',
-        `Your crop sales spreadsheet has been created!\n\nFile: CropSalesData_${data.exportDate}.xlsx\nTotal Crops: ${data.crops.length}\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}\n\nThe file is ready for download.`,
-        [{ text: 'Awesome!', onPress: () => setShowExportModal(false) }]
+        t('marketplace.excel_generated_title') || '📊 Excel Generated!',
+        t('marketplace.excel_generated_message', { file: `CropSalesData_${data.exportDate}.xlsx`, totalCrops: data.crops.length, total: `₹${data.totalEstimatedValue.toLocaleString()}` }) || `Your crop sales spreadsheet has been created!\n\nFile: CropSalesData_${data.exportDate}.xlsx\nTotal Crops: ${data.crops.length}\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}\n\nThe file is ready for download.`,
+        [{ text: t('common.ok') || 'Awesome!', onPress: () => setShowExportModal(false) }]
       );
     } catch (error) {
       Alert.alert('Export Error', 'Failed to generate Excel file. Please try again.');
@@ -752,10 +758,10 @@ const MarketplaceScreen = ({ navigation }) => {
     <View style={[styles.locationHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <View style={styles.locationInfo}>
         <Ionicons name="location" size={20} color={theme.colors.primary} />
-        {locationLoading ? (
+            {locationLoading ? (
           <View style={styles.locationLoading}>
             <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text style={[styles.locationText, { color: theme.colors.textSecondary }]}>Getting location...</Text>
+            <Text style={[styles.locationText, { color: theme.colors.textSecondary }]}>{t('marketplace.getting_location') || 'Getting location...'}</Text>
           </View>
         ) : (
           <View>
@@ -763,7 +769,7 @@ const MarketplaceScreen = ({ navigation }) => {
               📍 {currentLocation?.city}, {currentLocation?.state}
             </Text>
             {currentLocation?.state === 'Karnataka' && (
-              <Text style={[styles.localLabel, { color: theme.colors.primary }]}>🏠 Local Market</Text>
+              <Text style={[styles.localLabel, { color: theme.colors.primary }]}>{t('marketplace.local_market') || 'Local Market'}</Text>
             )}
           </View>
         )}
@@ -774,7 +780,7 @@ const MarketplaceScreen = ({ navigation }) => {
           onPress={() => setShowFilters(true)}
         >
           <Ionicons name="options" size={20} color={theme.colors.headerTitle} />
-          <Text style={[styles.filtersButtonText, { color: theme.colors.headerTitle }]}>Filters</Text>
+          <Text style={[styles.filtersButtonText, { color: theme.colors.headerTitle }]}>{t('marketplace.filters') || 'Filters'}</Text>
         </TouchableOpacity>
         
         {selectedCrops.length > 0 && (
@@ -782,12 +788,12 @@ const MarketplaceScreen = ({ navigation }) => {
             style={styles.exportButton}
             onPress={() => setShowExportModal(true)}
           >
-            <LinearGradient
+              <LinearGradient
               colors={[theme.colors.primary, theme.colors.headerBackground]}
               style={styles.exportButtonGradient}
             >
               <Ionicons name="download" size={20} color={theme.colors.headerTitle} />
-              <Text style={[styles.exportButtonText, { color: theme.colors.headerTitle }]}>Export</Text>
+              <Text style={[styles.exportButtonText, { color: theme.colors.headerTitle }]}>{t('marketplace.export') || 'Export'}</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -805,7 +811,7 @@ const MarketplaceScreen = ({ navigation }) => {
       <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
         <View style={[styles.filtersModal, { backgroundColor: theme.colors.background, borderColor: theme.colors.primary }]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>🔍 Filter Markets</Text>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('marketplace.filter_markets') || '🔍 Filter Markets'}</Text>
             <TouchableOpacity 
               style={styles.modalCloseButton}
               onPress={() => setShowFilters(false)}
@@ -817,7 +823,7 @@ const MarketplaceScreen = ({ navigation }) => {
           <ScrollView style={styles.filtersContent}>
             {/* State Selection */}
             <View style={styles.filterSection}>
-              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>📍 State</Text>
+              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>{t('marketplace.state') || '📍 State'}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterOptions}>
                 {states.map(state => (
                   <TouchableOpacity
@@ -844,7 +850,7 @@ const MarketplaceScreen = ({ navigation }) => {
             {/* District Selection (only for Karnataka) */}
             {selectedState === 'Karnataka' && (
               <View style={styles.filterSection}>
-                <Text style={[styles.filterTitle, { color: theme.colors.text }]}>🏛️ District</Text>
+                <Text style={[styles.filterTitle, { color: theme.colors.text }]}>{t('marketplace.district') || '🏛️ District'}</Text>
                 <View style={styles.districtGrid}>
                   {karnatakaDistricts.map(district => (
                     <TouchableOpacity
@@ -870,13 +876,13 @@ const MarketplaceScreen = ({ navigation }) => {
 
             {/* Price Range */}
             <View style={styles.filterSection}>
-              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>💰 Price Range (per quintal)</Text>
+              <Text style={[styles.filterTitle, { color: theme.colors.text }]}>{t('marketplace.price_range') || '💰 Price Range (per quintal)'}</Text>
               <View style={styles.priceRangeContainer}>
                 <TextInput
                   style={[styles.priceInput, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
                   value={priceRange.min.toString()}
                   onChangeText={(text) => setPriceRange({...priceRange, min: parseInt(text) || 0})}
-                  placeholder="Min"
+                  placeholder={t('marketplace.min') || 'Min'}
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="numeric"
                 />
@@ -885,7 +891,7 @@ const MarketplaceScreen = ({ navigation }) => {
                   style={[styles.priceInput, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
                   value={priceRange.max.toString()}
                   onChangeText={(text) => setPriceRange({...priceRange, max: parseInt(text) || 10000})}
-                  placeholder="Max"
+                  placeholder={t('marketplace.max') || 'Max'}
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="numeric"
                 />
@@ -902,13 +908,13 @@ const MarketplaceScreen = ({ navigation }) => {
                 setPriceRange({ min: 0, max: 10000 });
               }}
             >
-              <Text style={[styles.clearFiltersText, { color: theme.colors.text }]}>Clear All</Text>
+              <Text style={[styles.clearFiltersText, { color: theme.colors.text }]}>{t('marketplace.clear_all') || 'Clear All'}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.applyFiltersButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => setShowFilters(false)}
             >
-              <Text style={[styles.applyFiltersText, { color: theme.colors.headerTitle }]}>Apply Filters</Text>
+              <Text style={[styles.applyFiltersText, { color: theme.colors.headerTitle }]}>{t('marketplace.apply_filters') || 'Apply Filters'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1058,25 +1064,25 @@ const MarketplaceScreen = ({ navigation }) => {
   // Render functions for enhanced flow
   const renderAIInsights = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>🤖 AI-Powered Marketplace</Text>
-      <Text style={styles.subtitle}>Get smart recommendations tailored for you</Text>
+  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🤖 AI-Powered Marketplace</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.text }]}>Get smart recommendations tailored for you</Text>
       
       <View style={styles.aiInsightsCard}>
-        <LinearGradient colors={['#8B5CF6', '#A855F7']} style={styles.aiCardGradient}>
-          <Text style={styles.aiTitle}>💡 Smart Suggestions</Text>
-          <Text style={styles.aiInsightText}>
+    <LinearGradient colors={[theme.colors.primary || '#8B5CF6', theme.colors.accent || '#A855F7']} style={styles.aiCardGradient}>
+          <Text style={[styles.aiTitle, { color: theme.colors.text }]}>💡 Smart Suggestions</Text>
+          <Text style={[styles.aiInsightText, { color: theme.colors.text }] }>
             Based on market trends and your location near Bengaluru, here are our AI recommendations:
           </Text>
           <View style={styles.aiInsightsList}>
-            <Text style={styles.aiInsightItem}>• Ragi prices are 30% higher in Bengaluru markets this season</Text>
-            <Text style={styles.aiInsightItem}>• Tomato demand is peak in Electronic City and Whitefield</Text>
-            <Text style={styles.aiInsightItem}>• Organic certification can boost profits by 45% in Bengaluru</Text>
+            <Text style={[styles.aiInsightItem, { color: theme.colors.text }]}>• Ragi prices are 30% higher in Bengaluru markets this season</Text>
+            <Text style={[styles.aiInsightItem, { color: theme.colors.text }]}>• Tomato demand is peak in Electronic City and Whitefield</Text>
+            <Text style={[styles.aiInsightItem, { color: theme.colors.text }]}>• Organic certification can boost profits by 45% in Bengaluru</Text>
           </View>
         </LinearGradient>
       </View>
 
-      <Text style={styles.comboTitle}>🍟 Ready-Made Combo Plans</Text>
-      <Text style={styles.comboSubtitle}>Like McDonald's combos, but for farming!</Text>
+  <Text style={[styles.comboTitle, { color: theme.colors.text }]}>🍟 Ready-Made Combo Plans</Text>
+  <Text style={[styles.comboSubtitle, { color: theme.colors.text }]}>Like McDonald's combos, but for farming!</Text>
       
       {(AI_COMBO_PLANS || []).map((combo, index) => (
         <AnimatedListItem key={combo.id} index={index}>
@@ -1085,42 +1091,42 @@ const MarketplaceScreen = ({ navigation }) => {
             onPress={() => handleComboSelection(combo)}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.comboCardGradient}>
+            <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.comboCardGradient}>
               <View style={styles.comboHeader}>
-                <Text style={styles.comboName}>{combo.name}</Text>
+                <Text style={[styles.comboName, { color: theme.colors.text }]}>{combo.name}</Text>
                 <View style={styles.roiBadge}>
-                  <Text style={styles.roiText}>{combo.roi.toFixed(1)}% ROI</Text>
+                  <Text style={[styles.roiText, { color: theme.colors.text }]}>{combo.roi.toFixed(1)}% ROI</Text>
                 </View>
               </View>
               
-              <Text style={styles.comboDescription}>{combo.description}</Text>
+              <Text style={[styles.comboDescription, { color: theme.colors.text }]}>{combo.description}</Text>
               
               <View style={styles.comboDetails}>
                 <View style={styles.comboDetailRow}>
-                  <Text style={styles.comboDetailLabel}>Investment:</Text>
-                  <Text style={styles.comboDetailValue}>₹{combo.totalInvestment.toLocaleString()}</Text>
+                  <Text style={[styles.comboDetailLabel, { color: theme.colors.text }]}>Investment:</Text>
+                  <Text style={[styles.comboDetailValue, { color: theme.colors.text }]}>₹{combo.totalInvestment.toLocaleString()}</Text>
                 </View>
                 <View style={styles.comboDetailRow}>
-                  <Text style={styles.comboDetailLabel}>Expected Returns:</Text>
-                  <Text style={styles.comboDetailValue}>₹{combo.expectedReturns.toLocaleString()}</Text>
+                  <Text style={[styles.comboDetailLabel, { color: theme.colors.text }]}>Expected Returns:</Text>
+                  <Text style={[styles.comboDetailValue, { color: theme.colors.text }]}>₹{combo.expectedReturns.toLocaleString()}</Text>
                 </View>
                 <View style={styles.comboDetailRow}>
-                  <Text style={styles.comboDetailLabel}>Duration:</Text>
-                  <Text style={styles.comboDetailValue}>{combo.duration}</Text>
+                  <Text style={[styles.comboDetailLabel, { color: theme.colors.text }]}>Duration:</Text>
+                  <Text style={[styles.comboDetailValue, { color: theme.colors.text }]}>{combo.duration}</Text>
                 </View>
               </View>
               
               <View style={styles.comboCrops}>
                 {(combo.crops || []).map((crop, idx) => (
                   <View key={idx} style={styles.comboCropItem}>
-                    <Text style={styles.comboCropName}>{crop.name}</Text>
-                    <Text style={styles.comboCropProfit}>+₹{crop.expectedProfit.toLocaleString()}</Text>
+                    <Text style={[styles.comboCropName, { color: theme.colors.text }]}>{crop.name}</Text>
+                    <Text style={[styles.comboCropProfit, { color: theme.colors.text }]}>+₹{crop.expectedProfit.toLocaleString()}</Text>
                   </View>
                 ))}
               </View>
               
               <View style={styles.comboAIInsights}>
-                <Text style={styles.aiInsightsTitle}>🧠 AI Insights:</Text>
+                <Text style={[styles.aiInsightsTitle, { color: theme.colors.text }]}>🧠 AI Insights:</Text>
                 {(combo.aiInsights || []).slice(0, 2).map((insight, idx) => (
                   <Text key={idx} style={styles.aiInsightItem}>• {insight}</Text>
                 ))}
@@ -1134,7 +1140,7 @@ const MarketplaceScreen = ({ navigation }) => {
         style={styles.manualModeButton}
         onPress={() => setCurrentStep('searchMandi')}
       >
-        <Text style={styles.manualModeText}>🎯 Manual Mode - Choose Your Own Path</Text>
+  <Text style={[styles.manualModeText, { color: theme.colors.text }]}>🎯 Manual Mode - Choose Your Own Path</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1153,36 +1159,38 @@ const MarketplaceScreen = ({ navigation }) => {
         }}
         activeOpacity={0.8}
       >
-        <LinearGradient colors={['#10B981', '#059669']} style={styles.aiButtonGradient}>
+        <LinearGradient colors={[theme.colors.primary, theme.colors.success || theme.colors.primary]} style={styles.aiButtonGradient}>
           <View style={styles.aiButtonContent}>
             <View style={styles.aiIconContainer}>
-              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              <Ionicons name="sparkles" size={24} color={theme.colors.onPrimary || '#fff'} />
             </View>
             <View style={styles.aiTextContainer}>
-              <Text style={styles.aiButtonTitle}>✨ AI Crop Strategy</Text>
-              <Text style={styles.aiButtonSubtitle}>Get personalized recommendations</Text>
+              <Text style={[styles.aiButtonTitle, { color: theme.colors.onPrimary || '#fff' }]}>{t('marketplace.ai_crop_strategy', { defaultValue: '✨ AI Crop Strategy' })}</Text>
+              <Text style={[styles.aiButtonSubtitle, { color: theme.colors.onPrimary || '#fff' }]}>{t('marketplace.ai_subtitle', { defaultValue: 'Get personalized recommendations' })}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.onPrimary || '#fff'} />
           </View>
         </LinearGradient>
       </TouchableOpacity>
       
-      <Text style={styles.sectionTitle}>🔍 Find Your Market</Text>
-      <Text style={styles.subtitle}>Select the best mandi for your crops</Text>
+  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('marketplace.find_your_market', { defaultValue: '🔍 Find Your Market' })}</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.text }]}>{t('marketplace.select_best_mandi', { defaultValue: 'Select the best mandi for your crops' })}</Text>
       
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: theme.colors.card, color: theme.colors.text, borderColor: theme.colors.border }]}
           value={mandiSearchTerm}
           onChangeText={setMandiSearchTerm}
-          placeholder="Search by location, mandi name, or district..."
-          placeholderTextColor="#64748B"
+          placeholder={t('marketplace.search_placeholder', { defaultValue: 'Search by location, mandi name, or district...' })}
+          placeholderTextColor={theme.colors.textSecondary}
         />
-        <Ionicons name="search" size={20} color="#64748B" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
       </View>
 
-      <Text style={styles.resultsTitle}>
-        {mandiSearchTerm.trim() ? `Search Results (${getFilteredMandis().length})` : `Karnataka Mandis (${getFilteredMandis().length})`}
+  <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>
+        {mandiSearchTerm.trim()
+          ? t('marketplace.search_results', { defaultValue: `Search Results (${getFilteredMandis().length})`, count: getFilteredMandis().length })
+          : t('marketplace.karnataka_mandis', { defaultValue: `Karnataka Mandis (${getFilteredMandis().length})`, count: getFilteredMandis().length })}
       </Text>
       
       {(getFilteredMandis() || []).map((mandi, index) => (
@@ -1192,32 +1200,32 @@ const MarketplaceScreen = ({ navigation }) => {
             onPress={() => handleMandiSelection(mandi)}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={['#000000', '#1C1C1E']} style={styles.mandiCardGradient}>
+                <LinearGradient colors={[theme.colors.card || '#000000', theme.colors.surface || '#1C1C1E']} style={styles.mandiCardGradient}>
               <View style={styles.mandiHeader}>
                 <View style={styles.mandiInfo}>
                   <Text style={styles.mandiEmoji}>🏪</Text>
                   <View style={styles.mandiTextInfo}>
-                    <Text style={styles.mandiName}>{mandi.name}</Text>
-                    <Text style={styles.mandiLocation}>{mandi.location}, {mandi.state}</Text>
-                    <Text style={styles.mandiDistance}>{calculateDistance(mandi)}</Text>
-                    <Text style={styles.mandiTurnover}>Daily Turnover: {mandi.dailyTurnover}</Text>
+                    <Text style={[styles.mandiName, { color: theme.colors.text }]}>{mandi.name}</Text>
+                    <Text style={[styles.mandiLocation, { color: theme.colors.text }]}>{mandi.location}, {mandi.state}</Text>
+                    <Text style={[styles.mandiDistance, { color: theme.colors.text }]}>{calculateDistance(mandi)}</Text>
+                    <Text style={[styles.mandiTurnover, { color: theme.colors.text }]}>{t('marketplace.daily_turnover', { defaultValue: 'Daily Turnover: {turnover}', turnover: mandi.dailyTurnover })}</Text>
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="#10B981" />
+                <Ionicons name="chevron-forward" size={24} color={theme.colors.success || '#10B981'} />
               </View>
               
               <View style={styles.mandiDetails}>
                 <View style={styles.mandiDetailItem}>
-                  <Text style={styles.detailLabel}>Specialization</Text>
-                  <Text style={styles.detailValue}>{mandi.specialization.join(', ')}</Text>
+                  <Text style={[styles.detailLabel, { color: theme.colors.text }]}>{t('marketplace.specialization', { defaultValue: 'Specialization' })}</Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}>{mandi.specialization.join(', ')}</Text>
                 </View>
                 <View style={styles.mandiDetailItem}>
-                  <Text style={styles.detailLabel}>Operating Hours</Text>
-                  <Text style={styles.detailValue}>{mandi.operatingHours}</Text>
+                  <Text style={[styles.detailLabel, { color: theme.colors.text }]}>{t('marketplace.operating_hours_label', { defaultValue: 'Operating Hours' })}</Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}>{mandi.operatingHours}</Text>
                 </View>
                 <View style={styles.mandiDetailItem}>
-                  <Text style={styles.detailLabel}>Available Crops</Text>
-                  <Text style={styles.detailValue}>{Object.keys(mandi.crops).length} varieties</Text>
+                  <Text style={[styles.detailLabel, { color: theme.colors.text }]}>{t('marketplace.available_crops_label', { defaultValue: 'Available Crops' })}</Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}>{Object.keys(mandi.crops).length} varieties</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -1229,28 +1237,28 @@ const MarketplaceScreen = ({ navigation }) => {
 
   const renderMultipleCrops = () => (
     <View style={styles.section}>
-      <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('searchMandi')}>
-        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+      <TouchableOpacity style={[styles.backButton , { backgroundColor: theme.colors.card }]} onPress={() => setCurrentStep('searchMandi')}>
+        <Ionicons name="chevron-back" size={24} color={theme.colors.headerTitle || '#FFFFFF'} />
       </TouchableOpacity>
       
-      <Text style={styles.sectionTitle}>🌾 Select Multiple Crops</Text>
-      <Text style={styles.subtitle}>Selected Mandi: {selectedMandi ? selectedMandi.name : 'None selected'}</Text>
+  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🌾 Select Multiple Crops</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.text }]}>Selected Mandi: {selectedMandi ? selectedMandi.name : 'None selected'}</Text>
       
       <View style={styles.selectedCropsContainer}>
-        <Text style={styles.selectedCropsLabel}>Selected Crops ({(selectedCrops || []).length}):</Text>
+  <Text style={[styles.selectedCropsLabel, { color: theme.colors.text }]}>Selected Crops ({(selectedCrops || []).length}):</Text>
         <View style={styles.selectedCropsChips}>
           {(selectedCrops || []).map(crop => (
             <View key={crop} style={styles.selectedCropChip}>
-              <Text style={styles.selectedCropChipText}>{crop}</Text>
+              <Text style={[styles.selectedCropChipText, { color: theme.colors.text }]}>{crop}</Text>
               <TouchableOpacity onPress={() => handleCropToggle(crop)}>
-                <Ionicons name="close" size={16} color="#FFFFFF" />
+                <Ionicons name="close" size={16} color={theme.colors.headerTitle || '#FFFFFF'} />
               </TouchableOpacity>
             </View>
           ))}
         </View>
       </View>
 
-      <Text style={styles.availableCropsTitle}>Available crops in {selectedMandi ? selectedMandi.name : ''}:</Text>
+  <Text style={[styles.availableCropsTitle, { color: theme.colors.text }]}>{t('marketplace.available_crops_in', { defaultValue: 'Available crops in {name}:', name: selectedMandi ? selectedMandi.name : '' })}</Text>
       <View style={styles.cropButtonsContainer}>
         {Object.keys(selectedMandi?.crops || {}).map((crop) => (
           <TouchableOpacity
@@ -1268,7 +1276,7 @@ const MarketplaceScreen = ({ navigation }) => {
               {crop}
             </Text>
             {selectedCrops.includes(crop) && (
-              <Ionicons name="checkmark" size={16} color="#FFFFFF" style={styles.checkmark} />
+              <Ionicons name="checkmark" size={16} color={theme.colors.headerTitle || '#FFFFFF'} style={styles.checkmark} />
             )}
           </TouchableOpacity>
         ))}
@@ -1279,7 +1287,7 @@ const MarketplaceScreen = ({ navigation }) => {
         onPress={() => setCurrentStep('cropDetails')}
         disabled={(selectedCrops || []).length === 0}
       >
-        <Text style={styles.continueButtonText}>Set Crop Details</Text>
+  <Text style={styles.continueButtonText}>{t('marketplace.set_crop_details_button', { defaultValue: 'Set Crop Details' })}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1287,21 +1295,21 @@ const MarketplaceScreen = ({ navigation }) => {
   const renderAddProof = () => (
     <View style={styles.section}>
       <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('multipleCrops')}>
-        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+        <Ionicons name="chevron-back" size={24} color={theme.colors.headerTitle || '#FFFFFF'} />
       </TouchableOpacity>
       
-      <Text style={styles.sectionTitle}>📸 Add Crop Proof</Text>
-      <Text style={styles.subtitle}>Upload photos/documents for verification</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('marketplace.add_crop_proof', { defaultValue: '📸 Add Crop Proof' })}</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.text }]}>{t('marketplace.upload_photos_subtitle', { defaultValue: 'Upload photos/documents for verification' })}</Text>
       
       {(selectedCrops || []).map((crop, index) => {
         const proof = cropProofs[crop];
         return (
           <View key={crop} style={styles.proofCard}>
-            <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.proofCardGradient}>
+            <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.proofCardGradient}>
               <View style={styles.proofHeader}>
-                <Text style={styles.proofCropName}>{crop}</Text>
+                <Text style={[styles.proofCropName, { color: theme.colors.text }]}>{crop}</Text>
                 {proof && proof.uploaded && (
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  <Ionicons name="checkmark-circle" size={24} color={theme.colors.success || '#10B981'} />
                 )}
               </View>
               
@@ -1313,8 +1321,8 @@ const MarketplaceScreen = ({ navigation }) => {
                       style={styles.proofImageButton}
                       onPress={() => handleAddProof(crop)}
                     >
-                      <Ionicons name="refresh" size={20} color="#FFFFFF" />
-                      <Text style={styles.proofImageButtonText}>Change Image</Text>
+                      <Ionicons name="refresh" size={20} color={theme.colors.headerTitle || '#FFFFFF'} />
+                      <Text style={[styles.proofImageButtonText, { color: theme.colors.text }]}>{t('marketplace.change_image', { defaultValue: 'Change Image' })}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1328,12 +1336,12 @@ const MarketplaceScreen = ({ navigation }) => {
                     size={24} 
                     color="#64748B" 
                   />
-                  <Text style={styles.proofButtonText}>Upload Proof</Text>
+                  <Text style={[styles.proofButtonText, { color: theme.colors.text }]}>{t('marketplace.upload_proof', { defaultValue: 'Upload Proof' })}</Text>
                 </TouchableOpacity>
               )}
               
               {proof && proof.fileName && (
-                <Text style={styles.proofFileName}>{proof.fileName}</Text>
+                <Text style={[styles.proofFileName, { color: theme.colors.text }]}>{proof.fileName}</Text>
               )}
             </LinearGradient>
           </View>
@@ -1348,7 +1356,7 @@ const MarketplaceScreen = ({ navigation }) => {
         onPress={proceedToPriceComparison}
         disabled={selectedCrops.some(crop => !cropProofs[crop]?.uploaded)}
       >
-        <Text style={styles.continueButtonText}>Proceed to Price Comparison</Text>
+  <Text style={[styles.continueButtonText, { color: theme.colors.headerTitle || theme.colors.text }]}>{t('marketplace.proceed_price_comparison', { defaultValue: 'Proceed to Price Comparison' })}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1358,13 +1366,11 @@ const MarketplaceScreen = ({ navigation }) => {
       <ScrollView style={styles.contentArea}>
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={['#059669', '#10B981']}
+            colors={[theme.colors.primary || '#059669', theme.colors.success || '#10B981']}
             style={styles.headerGradient}
           >
-            <Text style={styles.headerTitle}>🌾 Set Crop Details</Text>
-            <Text style={styles.headerSubtitle}>
-              Specify quantity and quality for better price estimates
-            </Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('marketplace.set_crop_details', { defaultValue: '🌾 Set Crop Details' })}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.text }] }>{t('marketplace.set_crop_subtitle', { defaultValue: 'Specify quantity and quality for better price estimates' })}</Text>
           </LinearGradient>
         </View>
 
@@ -1372,21 +1378,19 @@ const MarketplaceScreen = ({ navigation }) => {
           {selectedCrops.map((crop, index) => (
             <View key={index} style={styles.cropDetailCard}>
               <LinearGradient
-                colors={['#1F2937', '#374151']}
+                colors={[theme.colors.card || '#1F2937', theme.colors.surface || '#374151']}
                 style={styles.cropDetailGradient}
               >
                 <View style={styles.cropDetailHeader}>
-                  <Text style={styles.cropDetailName}>{crop}</Text>
+                  <Text style={[styles.cropDetailName, { color: theme.colors.text }]}>{crop}</Text>
                   <View style={styles.cropStatusBadge}>
-                    <Text style={styles.cropStatusText}>
-                      {cropDetails[crop]?.quantity ? '✅ Set' : '⏳ Pending'}
-                    </Text>
+                    <Text style={[styles.cropStatusText, { color: theme.colors.text }] }>{cropDetails[crop]?.quantity ? t('marketplace.set', { defaultValue: '✅ Set' }) : t('marketplace.pending', { defaultValue: '⏳ Pending' })}</Text>
                   </View>
                 </View>
 
                 <View style={styles.detailInputContainer}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>📦 Quantity (in Quintals)</Text>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>{t('marketplace.quantity_quintals', { defaultValue: '📦 Quantity (in Quintals)' })}</Text>
                     <TextInput
                       style={styles.detailInput}
                       value={cropDetails[crop]?.quantity || ''}
@@ -1394,14 +1398,14 @@ const MarketplaceScreen = ({ navigation }) => {
                         ...prev,
                         [crop]: { ...prev[crop], quantity: text }
                       }))}
-                      placeholder="e.g., 10.5"
+                      placeholder={t('marketplace.example_quantity', { defaultValue: 'e.g., 10.5' })}
                       placeholderTextColor="#9CA3AF"
                       keyboardType="numeric"
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>⭐ Quality Grade</Text>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>{t('marketplace.quality_grade', { defaultValue: '⭐ Quality Grade' })}</Text>
                     <View style={styles.qualitySelector}>
                       {['Grade A', 'Grade B', 'Grade C'].map(grade => (
                         <TouchableOpacity
@@ -1418,9 +1422,7 @@ const MarketplaceScreen = ({ navigation }) => {
                           <Text style={[
                             styles.qualityOptionText,
                             cropDetails[crop]?.quality === grade && styles.qualityOptionTextSelected
-                          ]}>
-                            {grade}
-                          </Text>
+                          ]}>{t(`marketplace.${grade.replace(/\s+/g, '_').toLowerCase()}`, { defaultValue: grade })}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -1428,11 +1430,11 @@ const MarketplaceScreen = ({ navigation }) => {
 
                   {cropDetails[crop]?.quantity && (
                     <View style={styles.estimateContainer}>
-                      <Text style={styles.estimateLabel}>💰 Estimated Value</Text>
-                      <Text style={styles.estimateValue}>
+                      <Text style={[styles.estimateLabel, { color: theme.colors.text }]}>💰 Estimated Value</Text>
+                      <Text style={[styles.estimateValue, { color: theme.colors.text }] }>
                         ₹{(parseFloat(cropDetails[crop]?.quantity || 0) * 2500).toLocaleString()}
                       </Text>
-                      <Text style={styles.estimateNote}>
+                      <Text style={[styles.estimateNote, { color: theme.colors.text }] }>
                         *Based on current market rates
                       </Text>
                     </View>
@@ -1453,11 +1455,11 @@ const MarketplaceScreen = ({ navigation }) => {
         >
           <LinearGradient
             colors={selectedCrops.every(crop => cropDetails[crop]?.quantity) 
-              ? ['#10B981', '#059669'] 
+              ? [theme.colors.success || '#10B981', theme.colors.primary || '#059669'] 
               : ['#6B7280', '#4B5563']}
             style={styles.buttonGradient}
           >
-            <Text style={styles.continueButtonText}>
+            <Text style={[styles.continueButtonText, { color: theme.colors.headerTitle || theme.colors.text }]}>
               📊 Compare Prices
             </Text>
           </LinearGradient>
@@ -1468,12 +1470,12 @@ const MarketplaceScreen = ({ navigation }) => {
 
   const renderPriceComparison = () => (
     <View style={styles.section}>
-      <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('cropDetails')}>
-        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+  <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('cropDetails')}>
+  <Ionicons name="chevron-back" size={24} color={theme.colors.headerTitle || '#FFFFFF'} />
       </TouchableOpacity>
       
-      <Text style={styles.sectionTitle}>💰 Price Comparison</Text>
-      <Text style={styles.subtitle}>Compare and decide prices for each crop</Text>
+  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>💰 Price Comparison</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.text }]}>Compare and decide prices for each crop</Text>
       
       {(selectedCrops || []).map((crop, index) => {
         const comparison = priceComparisons[crop];
@@ -1483,12 +1485,12 @@ const MarketplaceScreen = ({ navigation }) => {
         
         return (
           <View key={crop} style={styles.priceComparisonCard}>
-            <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.priceCardGradient}>
+            <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.priceCardGradient}>
               <View style={styles.cropPriceHeader}>
-                <Text style={styles.cropPriceTitle}>{crop}</Text>
+                <Text style={[styles.cropPriceTitle, { color: theme.colors.text }]}>{crop}</Text>
                 {decision && (
                   <View style={styles.decisionBadge}>
-                    <Text style={styles.decisionBadgeText}>
+                    <Text style={[styles.decisionBadgeText, { color: theme.colors.text }]}>
                       {decision.matchedPrice ? 'MATCHED' : 'CUSTOM'}
                     </Text>
                   </View>
@@ -1496,24 +1498,24 @@ const MarketplaceScreen = ({ navigation }) => {
               </View>
               
               <View style={styles.priceInfo}>
-                <Text style={styles.marketPriceLabel}>Market Price</Text>
-                <Text style={styles.marketPrice}>₹{comparison.avgPrice}/quintal</Text>
+                <Text style={[styles.marketPriceLabel, { color: theme.colors.text }]}>Market Price</Text>
+                <Text style={[styles.marketPrice, { color: theme.colors.text }]}>₹{comparison.avgPrice}/quintal</Text>
                 
                 <View style={styles.priceRange}>
                   <View style={styles.priceRangeItem}>
-                    <Text style={styles.priceRangeLabel}>Min</Text>
-                    <Text style={styles.priceRangeValue}>₹{comparison.minPrice}</Text>
+                    <Text style={[styles.priceRangeLabel, { color: theme.colors.text }]}>Min</Text>
+                    <Text style={[styles.priceRangeValue, { color: theme.colors.text }]}>₹{comparison.minPrice}</Text>
                   </View>
                   <View style={styles.priceRangeItem}>
-                    <Text style={styles.priceRangeLabel}>Max</Text>
-                    <Text style={styles.priceRangeValue}>₹{comparison.maxPrice}</Text>
+                    <Text style={[styles.priceRangeLabel, { color: theme.colors.text }]}>Max</Text>
+                    <Text style={[styles.priceRangeValue, { color: theme.colors.text }]}>₹{comparison.maxPrice}</Text>
                   </View>
                 </View>
               </View>
               
               {decision ? (
                 <View style={styles.priceDecisionMade}>
-                  <Text style={styles.decisionText}>
+                  <Text style={[styles.decisionText, { color: theme.colors.text }]}>
                     Your Price: ₹{decision.finalPrice}/quintal
                   </Text>
                   <TouchableOpacity 
@@ -1524,8 +1526,8 @@ const MarketplaceScreen = ({ navigation }) => {
                       return newDecisions;
                     })}
                   >
-                    <Ionicons name="refresh" size={16} color="#3B82F6" />
-                    <Text style={styles.changeDecisionText}>Change</Text>
+                    <Ionicons name="refresh" size={16} color={theme.colors.primary || '#3B82F6'} />
+                    <Text style={[styles.changeDecisionText, { color: theme.colors.text }]}>Change</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1534,8 +1536,8 @@ const MarketplaceScreen = ({ navigation }) => {
                     style={styles.priceDecisionButton}
                     onPress={() => handlePriceDecision(crop, 'match')}
                   >
-                    <Text style={styles.priceDecisionText}>Match Market</Text>
-                    <Text style={styles.priceDecisionSubtext}>₹{comparison.avgPrice}/quintal</Text>
+                    <Text style={[styles.priceDecisionText, { color: theme.colors.text }]}>Match Market</Text>
+                    <Text style={[styles.priceDecisionSubtext, { color: theme.colors.text }]}>₹{comparison.avgPrice}/quintal</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
@@ -1546,8 +1548,8 @@ const MarketplaceScreen = ({ navigation }) => {
                       setShowCustomPriceModal(true);
                     }}
                   >
-                    <Text style={styles.priceDecisionText}>Set Custom</Text>
-                    <Text style={styles.priceDecisionSubtext}>Enter your price</Text>
+                    <Text style={[styles.priceDecisionText, { color: theme.colors.text }]}>Set Custom</Text>
+                    <Text style={[styles.priceDecisionSubtext, { color: theme.colors.text }]}>Enter your price</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1564,41 +1566,41 @@ const MarketplaceScreen = ({ navigation }) => {
         onPress={proceedToServiceInfo}
         disabled={!selectedCrops.every(crop => priceDecisions[crop])}
       >
-        <Text style={styles.continueButtonText}>Check Service Options</Text>
+  <Text style={[styles.continueButtonText, { color: theme.colors.headerTitle || theme.colors.text }]}>Check Service Options</Text>
       </TouchableOpacity>
     </View>
   );
 
   const renderServiceInfo = () => (
     <View style={styles.section}>
-      <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('priceComparison')}>
-        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+  <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('priceComparison')}>
+  <Ionicons name="chevron-back" size={24} color={theme.colors.headerTitle || '#FFFFFF'} />
       </TouchableOpacity>
       
-      <Text style={styles.sectionTitle}>🚚 Service Information</Text>
-      <Text style={styles.subtitle}>How to proceed with your sale</Text>
+  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🚚 Service Information</Text>
+  <Text style={[styles.subtitle, { color: theme.colors.text }]}>How to proceed with your sale</Text>
       
       {/* Mandi Contact Information */}
       <View style={styles.mandiContactCard}>
-        <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.mandiContactGradient}>
-          <Text style={styles.mandiContactTitle}>📞 Contact {selectedMandi?.name}</Text>
-          <Text style={styles.mandiContactSubtitle}>{selectedMandi?.address}</Text>
+  <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.mandiContactGradient}>
+          <Text style={[styles.mandiContactTitle, { color: theme.colors.text }]}>📞 Contact {selectedMandi?.name}</Text>
+          <Text style={[styles.mandiContactSubtitle, { color: theme.colors.text }]}>{selectedMandi?.address}</Text>
           
           <View style={styles.contactButtons}>
             <TouchableOpacity 
               style={styles.contactButton} 
               onPress={() => makePhoneCall(selectedMandi?.phone)}
             >
-              <Ionicons name="call" size={20} color="#10B981" />
-              <Text style={styles.contactButtonText}>Call</Text>
+              <Ionicons name="call" size={20} color={theme.colors.success || '#10B981'} />
+              <Text style={[styles.contactButtonText, { color: theme.colors.text }]}>Call</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.contactButton} 
               onPress={() => openWebsite(selectedMandi?.website)}
             >
-              <Ionicons name="globe" size={20} color="#3B82F6" />
-              <Text style={styles.contactButtonText}>Website</Text>
+              <Ionicons name="globe" size={20} color={theme.colors.primary || '#3B82F6'} />
+              <Text style={[styles.contactButtonText, { color: theme.colors.text }]}>Website</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -1609,38 +1611,38 @@ const MarketplaceScreen = ({ navigation }) => {
               }}
             >
               <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
-              <Text style={styles.contactButtonText}>WhatsApp</Text>
+              <Text style={[styles.contactButtonText, { color: theme.colors.text }]}>WhatsApp</Text>
             </TouchableOpacity>
           </View>
           
-          <Text style={styles.operatingHours}>🕐 Operating Hours: {selectedMandi?.operatingHours}</Text>
+          <Text style={[styles.operatingHours, { color: theme.colors.text }]}>{t('marketplace.operating_hours', { defaultValue: '🕐 Operating Hours: {hours}', hours: selectedMandi?.operatingHours })}</Text>
         </LinearGradient>
       </View>
       
       {/* Service Options */}
       <View style={styles.serviceCard}>
-        <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.serviceCardGradient}>
-          <Text style={styles.serviceTitle}>Available Services</Text>
+    <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.serviceCardGradient}>
+          <Text style={[styles.serviceTitle, { color: theme.colors.text }]}>Available Services</Text>
           
           {/* Home Pickup Service */}
           <View style={styles.serviceOption}>
             <Ionicons 
-              name={selectedMandi?.services?.pickupService ? "checkmark-circle" : "close-circle"} 
-              size={24} 
-              color={selectedMandi?.services?.pickupService ? "#10B981" : "#EF4444"} 
-            />
+                name={selectedMandi?.services?.pickupService ? "checkmark-circle" : "close-circle"} 
+                size={24} 
+                color={selectedMandi?.services?.pickupService ? (theme.colors.success || '#10B981') : (theme.colors.error || '#EF4444')} 
+              />
             <View style={styles.serviceOptionText}>
-              <Text style={styles.serviceOptionTitle}>
+              <Text style={[styles.serviceOptionTitle, { color: theme.colors.text }] }>
                 {selectedMandi?.services?.pickupService ? '🚚 Home Pickup Available' : '❌ No Home Pickup'}
               </Text>
-              <Text style={styles.serviceOptionDesc}>
+              <Text style={[styles.serviceOptionDesc, { color: theme.colors.text }] }>
                 {selectedMandi?.services?.pickupService 
                   ? 'Mandi will collect crops from your location' 
                   : 'You need to transport crops to the mandi'}
               </Text>
               {selectedMandi?.services?.pickupService && (
                 <View style={styles.serviceAction}>
-                  <Text style={styles.serviceCost}>💰 Estimated Cost: ₹500-1000</Text>
+                  <Text style={[styles.serviceCost, { color: theme.colors.text }]}>💰 Estimated Cost: ₹500-1000</Text>
                   <TouchableOpacity 
                     style={styles.bookServiceButton}
                     onPress={() => {
@@ -1663,7 +1665,7 @@ const MarketplaceScreen = ({ navigation }) => {
                       );
                     }}
                   >
-                    <Text style={styles.bookServiceButtonText}>Book Pickup</Text>
+                    <Text style={[styles.bookServiceButtonText, { color: theme.colors.text }]}>Book Pickup</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1675,18 +1677,18 @@ const MarketplaceScreen = ({ navigation }) => {
             <Ionicons 
               name={selectedMandi?.services?.onSiteDealing ? "checkmark-circle" : "close-circle"} 
               size={24} 
-              color={selectedMandi?.services?.onSiteDealing ? "#10B981" : "#EF4444"} 
+              color={selectedMandi?.services?.onSiteDealing ? (theme.colors.success || '#10B981') : (theme.colors.error || '#EF4444')} 
             />
             <View style={styles.serviceOptionText}>
-              <Text style={styles.serviceOptionTitle}>🏢 On-site Dealing</Text>
-              <Text style={styles.serviceOptionDesc}>
+              <Text style={[styles.serviceOptionTitle, { color: theme.colors.text }]}>🏢 On-site Dealing</Text>
+              <Text style={[styles.serviceOptionDesc, { color: theme.colors.text }] }>
                 {selectedMandi?.services?.onSiteDealing 
                   ? 'Direct dealing and payment at mandi' 
                   : 'Remote dealing and payment'}
               </Text>
               {selectedMandi?.services?.onSiteDealing && (
                 <View style={styles.serviceAction}>
-                  <Text style={styles.serviceCost}>💰 No Additional Cost</Text>
+                  <Text style={[styles.serviceCost, { color: theme.colors.text }]}>💰 No Additional Cost</Text>
                   <TouchableOpacity 
                     style={styles.bookServiceButton}
                     onPress={() => {
@@ -1709,7 +1711,7 @@ const MarketplaceScreen = ({ navigation }) => {
                       );
                     }}
                   >
-                    <Text style={styles.bookServiceButtonText}>Schedule Visit</Text>
+                    <Text style={[styles.bookServiceButtonText, { color: theme.colors.text }]}>Schedule Visit</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1721,18 +1723,18 @@ const MarketplaceScreen = ({ navigation }) => {
             <Ionicons 
               name={selectedMandi?.services?.qualityTesting ? "checkmark-circle" : "close-circle"} 
               size={24} 
-              color={selectedMandi?.services?.qualityTesting ? "#10B981" : "#EF4444"} 
+              color={selectedMandi?.services?.qualityTesting ? (theme.colors.success || '#10B981') : (theme.colors.error || '#EF4444')} 
             />
             <View style={styles.serviceOptionText}>
-              <Text style={styles.serviceOptionTitle}>🔬 Quality Testing</Text>
-              <Text style={styles.serviceOptionDesc}>
+              <Text style={[styles.serviceOptionTitle, { color: theme.colors.text }]}>🔬 Quality Testing</Text>
+              <Text style={[styles.serviceOptionDesc, { color: theme.colors.text }] }>
                 {selectedMandi?.services?.qualityTesting 
                   ? 'Professional quality testing available' 
                   : 'No quality testing facility'}
               </Text>
               {selectedMandi?.services?.qualityTesting && (
                 <View style={styles.serviceAction}>
-                  <Text style={styles.serviceCost}>💰 Testing Cost: ₹200-500 per sample</Text>
+                  <Text style={[styles.serviceCost, { color: theme.colors.text }]}>💰 Testing Cost: ₹200-500 per sample</Text>
                   <TouchableOpacity 
                     style={styles.bookServiceButton}
                     onPress={() => {
@@ -1755,7 +1757,7 @@ const MarketplaceScreen = ({ navigation }) => {
                       );
                     }}
                   >
-                    <Text style={styles.bookServiceButtonText}>Book Testing</Text>
+                    <Text style={[styles.bookServiceButtonText, { color: theme.colors.text }]}>Book Testing</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1767,18 +1769,18 @@ const MarketplaceScreen = ({ navigation }) => {
             <Ionicons 
               name={selectedMandi?.services?.storageAvailable ? "checkmark-circle" : "close-circle"} 
               size={24} 
-              color={selectedMandi?.services?.storageAvailable ? "#10B981" : "#EF4444"} 
+              color={selectedMandi?.services?.storageAvailable ? (theme.colors.success || '#10B981') : (theme.colors.error || '#EF4444')} 
             />
             <View style={styles.serviceOptionText}>
-              <Text style={styles.serviceOptionTitle}>🏪 Storage Facility</Text>
-              <Text style={styles.serviceOptionDesc}>
+              <Text style={[styles.serviceOptionTitle, { color: theme.colors.text }]}>🏪 Storage Facility</Text>
+              <Text style={[styles.serviceOptionDesc, { color: theme.colors.text }] }>
                 {selectedMandi?.services?.storageAvailable 
                   ? 'Temporary storage available if needed' 
                   : 'No storage facility available'}
               </Text>
               {selectedMandi?.services?.storageAvailable && (
                 <View style={styles.serviceAction}>
-                  <Text style={styles.serviceCost}>💰 Storage Cost: ₹50-100 per day</Text>
+                  <Text style={[styles.serviceCost, { color: theme.colors.text }]}>💰 Storage Cost: ₹50-100 per day</Text>
                   <TouchableOpacity 
                     style={styles.bookServiceButton}
                     onPress={() => {
@@ -1801,7 +1803,7 @@ const MarketplaceScreen = ({ navigation }) => {
                       );
                     }}
                   >
-                    <Text style={styles.bookServiceButtonText}>Book Storage</Text>
+                    <Text style={[styles.bookServiceButtonText, { color: theme.colors.text }]}>Book Storage</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1812,9 +1814,9 @@ const MarketplaceScreen = ({ navigation }) => {
 
       {/* Transportation Options */}
       <View style={styles.transportCard}>
-        <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.transportCardGradient}>
-          <Text style={styles.transportTitle}>🚛 Transportation Options</Text>
-          <Text style={styles.transportSubtitle}>Choose how to transport your crops</Text>
+  <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.transportCardGradient}>
+          <Text style={[styles.transportTitle, { color: theme.colors.text }]}>🚛 Transportation Options</Text>
+          <Text style={[styles.transportSubtitle, { color: theme.colors.text }]}>Choose how to transport your crops</Text>
           
           <View style={styles.transportOptions}>
             <TouchableOpacity 
@@ -1855,9 +1857,9 @@ const MarketplaceScreen = ({ navigation }) => {
                 );
               }}
             >
-              <Ionicons name="car" size={24} color="#10B981" />
-              <Text style={styles.transportOptionText}>Book Transport</Text>
-              <Text style={styles.transportOptionDesc}>Get competitive rates</Text>
+              <Ionicons name="car" size={24} color={theme.colors.success || '#10B981'} />
+              <Text style={[styles.transportOptionText, { color: theme.colors.text }]}>Book Transport</Text>
+              <Text style={[styles.transportOptionDesc, { color: theme.colors.text }]}>Get competitive rates</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -1882,9 +1884,9 @@ const MarketplaceScreen = ({ navigation }) => {
                 );
               }}
             >
-              <Ionicons name="people" size={24} color="#3B82F6" />
-              <Text style={styles.transportOptionText}>Local Contacts</Text>
-              <Text style={styles.transportOptionDesc}>Direct contact numbers</Text>
+              <Ionicons name="people" size={24} color={theme.colors.primary || '#3B82F6'} />
+              <Text style={[styles.transportOptionText, { color: theme.colors.text }]}>Local Contacts</Text>
+              <Text style={[styles.transportOptionDesc, { color: theme.colors.text }]}>Direct contact numbers</Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -1894,7 +1896,7 @@ const MarketplaceScreen = ({ navigation }) => {
         style={styles.continueButton}
         onPress={() => setCurrentStep('finalCard')}
       >
-        <Text style={styles.continueButtonText}>View Final Details</Text>
+  <Text style={[styles.continueButtonText, { color: theme.colors.headerTitle || theme.colors.text }]}>View Final Details</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1902,7 +1904,7 @@ const MarketplaceScreen = ({ navigation }) => {
   const renderFinalCard = () => (
     <View style={styles.section}>
       <TouchableOpacity style={styles.backButton} onPress={() => setCurrentStep('serviceInfo')}>
-        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+  <Ionicons name="chevron-back" size={24} color={theme.colors.headerTitle || '#FFFFFF'} />
       </TouchableOpacity>
       
       <Text style={styles.sectionTitle}>✅ Final Sale Details</Text>
@@ -1917,7 +1919,7 @@ const MarketplaceScreen = ({ navigation }) => {
       )}
       
       <View style={styles.finalSummaryCard}>
-        <LinearGradient colors={['#10B981', '#059669']} style={styles.finalCardGradient}>
+  <LinearGradient colors={[theme.colors.success || '#10B981', theme.colors.primary || '#059669']} style={styles.finalCardGradient}>
           <View style={styles.finalCardHeader}>
             <Text style={styles.finalCardTitle}>Ready to Sell!</Text>
             <Text style={styles.finalCardMandi}>{selectedMandi ? selectedMandi.name : ''}</Text>
@@ -1948,7 +1950,7 @@ const MarketplaceScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.contactCard}>
-        <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.contactCardGradient}>
+  <LinearGradient colors={[theme.colors.card || '#1C1C1E', theme.colors.surface || '#2C2C2E']} style={styles.contactCardGradient}>
           <Text style={styles.contactTitle}>📞 Contact Information</Text>
           
           <View style={styles.contactDetails}>
@@ -1962,7 +1964,7 @@ const MarketplaceScreen = ({ navigation }) => {
               style={styles.contactRow}
               onPress={() => makePhoneCall(selectedMandi?.phone)}
             >
-              <Ionicons name="call" size={20} color="#10B981" />
+              <Ionicons name="call" size={20} color={theme.colors.success || '#10B981'} />
               <Text style={styles.contactLabel}>Phone:</Text>
               <Text style={[styles.contactValue, styles.phoneNumber]}>{selectedMandi?.phone}</Text>
             </TouchableOpacity>
@@ -1971,7 +1973,7 @@ const MarketplaceScreen = ({ navigation }) => {
               style={styles.contactRow}
               onPress={() => openWebsite(selectedMandi?.website)}
             >
-              <Ionicons name="globe" size={20} color="#3B82F6" />
+              <Ionicons name="globe" size={20} color={theme.colors.primary || '#3B82F6'} />
               <Text style={styles.contactLabel}>Website:</Text>
               <Text style={[styles.contactValue, styles.websiteLink]}>Visit Website</Text>
             </TouchableOpacity>
@@ -2002,7 +2004,7 @@ const MarketplaceScreen = ({ navigation }) => {
             colors={['#DC2626', '#B91C1C']}
             style={styles.exportButtonGradient}
           >
-            <Ionicons name="document-text" size={20} color="#FFFFFF" />
+            <Ionicons name="document-text" size={20} color={theme.colors.headerTitle || '#FFFFFF'} />
             <Text style={styles.exportButtonText}>
               {exportLoading ? '⏳ Generating...' : '📄 Export PDF'}
             </Text>
@@ -2015,7 +2017,7 @@ const MarketplaceScreen = ({ navigation }) => {
           disabled={exportLoading}
         >
           <LinearGradient
-            colors={['#059669', '#10B981']}
+            colors={[theme.colors.primary || '#059669', theme.colors.success || '#10B981']}
             style={styles.exportButtonGradient}
           >
             <Ionicons name="grid" size={20} color="#FFFFFF" />
@@ -2100,10 +2102,10 @@ const MarketplaceScreen = ({ navigation }) => {
     return (
         <AnimatedListItem index={index} key={key}>
             <TouchableOpacity style={styles.marketCard} activeOpacity={0.9}>
-                 <View style={[StyleSheet.absoluteFillObject, styles.cardGlow]}>
-                    <LinearGradient colors={['#10B981', 'transparent']} style={styles.glowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                </View>
-                <LinearGradient colors={['#000000', '#1C1C1E']} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+         <View style={[StyleSheet.absoluteFillObject, styles.cardGlow]}>
+          <LinearGradient colors={[theme.colors.primary, 'transparent']} style={styles.glowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        </View>
+        <LinearGradient colors={[theme.colors.card, theme.colors.surface]} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <View style={styles.marketHeader}>
                         <View style={styles.marketInfo}><Text style={styles.cropEmoji}>📍</Text><View><Text style={styles.cropName}>{item.market}</Text><Text style={styles.volume}>District: {item.district}</Text></View></View>
                         <View style={styles.priceInfo}><Text style={styles.price}>₹{price.toFixed(2)}</Text><Text style={styles.volume}>per Quintal</Text></View>
@@ -2120,19 +2122,19 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   const renderMyListing = (item, index) => {
-    const priceDiff = item.myPrice - item.marketPrice;
-    const isPriceAboveMarket = priceDiff > 0;
-    const priceCompColor = isPriceAboveMarket ? '#F59E0B' : '#10B981';
+  const priceDiff = item.myPrice - item.marketPrice;
+  const isPriceAboveMarket = priceDiff > 0;
+  const priceCompColor = isPriceAboveMarket ? theme.colors.danger : theme.colors.primary;
     return (
         <AnimatedListItem index={index} key={item.id}>
             <View style={styles.listingCard}>
                 <LinearGradient colors={['#000000', '#1C1C1E']} style={styles.marketCardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <View style={styles.listingHeader}><View style={styles.listingInfo}><Text style={styles.cropEmoji}>{item.emoji}</Text><View><Text style={styles.cropName}>{item.name}</Text><Text style={styles.quantity}>{item.quantity}</Text></View></View><View style={[styles.statusBadge, { backgroundColor: item.status === 'active' ? '#10B981' : '#F59E0B' }]}><Text style={styles.statusText}>{item.status.toUpperCase()}</Text></View></View>
-                    <View style={styles.priceComparison}><View style={styles.priceRow}><Text style={styles.priceLabel}>Your Price:</Text><Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text></View><View style={styles.priceRow}><Text style={styles.priceLabel}>Market Price:</Text>{item.marketPriceLoading ? <ActivityIndicator color="#fff" size="small" style={{ marginLeft: 8 }} /> : <Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text>}</View><View style={styles.priceRow}><Text style={styles.priceLabel}>Difference:</Text><Text style={[styles.priceDiff, { color: priceCompColor }]}>{isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}</Text></View></View>
-                    <View style={styles.listingStats}>
-                        <View style={styles.statsGroup}><View style={styles.statBox}><Ionicons name="eye-outline" size={16} color="#10B981" /><Text style={styles.statNumber}>{item.views}</Text><Text style={styles.statText}>Views</Text></View><View style={styles.statBox}><Ionicons name="chatbubble-ellipses-outline" size={16} color="#10B981" /><Text style={styles.statNumber}>{item.inquiries}</Text><Text style={styles.statText}>Inquiries</Text></View></View>
-                        <View style={styles.actionsContainer}><TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}><Ionicons name="create-outline" size={16} color="#10B981" /><Text style={styles.editText}>Edit</Text></TouchableOpacity><TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}><Ionicons name="trash-outline" size={20} color="#EF4444" /></TouchableOpacity></View>
-                    </View>
+          <View style={styles.listingHeader}><View style={styles.listingInfo}><Text style={styles.cropEmoji}>{item.emoji}</Text><View><Text style={styles.cropName}>{item.name}</Text><Text style={styles.quantity}>{item.quantity}</Text></View></View><View style={[styles.statusBadge, { backgroundColor: item.status === 'active' ? theme.colors.primary : theme.colors.danger }]}><Text style={styles.statusText}>{item.status.toUpperCase()}</Text></View></View>
+          <View style={styles.priceComparison}><View style={styles.priceRow}><Text style={styles.priceLabel}>Your Price:</Text><Text style={styles.myPrice}>₹{item.myPrice.toFixed(2)}</Text></View><View style={styles.priceRow}><Text style={styles.priceLabel}>Market Price:</Text>{item.marketPriceLoading ? <ActivityIndicator color={theme.colors.text} size="small" style={{ marginLeft: 8 }} /> : <Text style={styles.marketPriceText}>₹{item.marketPrice.toFixed(2)}</Text>}</View><View style={styles.priceRow}><Text style={styles.priceLabel}>Difference:</Text><Text style={[styles.priceDiff, { color: priceCompColor }]}>{isPriceAboveMarket ? '+' : ''}₹{priceDiff.toFixed(2)}</Text></View></View>
+          <View style={styles.listingStats}>
+            <View style={styles.statsGroup}><View style={styles.statBox}><Ionicons name="eye-outline" size={16} color={theme.colors.primary} /><Text style={styles.statNumber}>{item.views}</Text><Text style={styles.statText}>Views</Text></View><View style={styles.statBox}><Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.primary} /><Text style={styles.statNumber}>{item.inquiries}</Text><Text style={styles.statText}>Inquiries</Text></View></View>
+            <View style={styles.actionsContainer}><TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}><Ionicons name="create-outline" size={16} color={theme.colors.primary} /><Text style={styles.editText}>Edit</Text></TouchableOpacity><TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}><Ionicons name="trash-outline" size={20} color={theme.colors.danger} /></TouchableOpacity></View>
+          </View>
                 </LinearGradient>
             </View>
         </AnimatedListItem>
@@ -2357,19 +2359,20 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar barStyle={theme.colors.statusBarStyle} />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.headerTint} />
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[{ flex: 1 }]}>
+        <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
+      <View style={[styles.header, { backgroundColor: theme.colors.background }] }>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.colors.card }]} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: theme.colors.headerTitle }]}>🤖 Smart Marketplace</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.headerTitle }]}>{t('marketplace.header_title', { defaultValue: '🤖 Smart Marketplace' })}</Text>
           <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>AI-powered crop selling made easy</Text>
         </View>
         <View style={styles.liveIndicator}>
-          <View style={styles.liveDot} />
-          <Text style={[styles.liveText, { color: theme.colors.primary }]}>LIVE</Text>
+          <View style={[styles.liveDot, { backgroundColor: theme.colors.success }]} />
+          <Text style={[styles.liveText, { color: theme.colors.primary }]}>{t('marketplace.live', { defaultValue: 'LIVE' })}</Text>
         </View>
       </View>
 
@@ -2563,7 +2566,7 @@ const MarketplaceScreen = ({ navigation }) => {
                 style={styles.customPriceInput}
                 value={customPriceInput}
                 onChangeText={setCustomPriceInput}
-                placeholder="Enter price"
+                placeholder={t('marketplace.enter_price', { defaultValue: 'Enter price' })}
                 placeholderTextColor="#64748B"
                 keyboardType="numeric"
                 autoFocus={true}
@@ -2575,7 +2578,7 @@ const MarketplaceScreen = ({ navigation }) => {
                 style={styles.customPriceCancelButton}
                 onPress={() => setShowCustomPriceModal(false)}
               >
-                <Text style={styles.customPriceCancelText}>Cancel</Text>
+                <Text style={styles.customPriceCancelText}>{t('common.cancel') || 'Cancel'}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -2588,11 +2591,11 @@ const MarketplaceScreen = ({ navigation }) => {
                     setCurrentCropForPricing(null);
                     setCustomPriceInput('');
                   } else {
-                    Alert.alert('Invalid Price', 'Please enter a valid price greater than 0');
+                    Alert.alert(t('common.error') || 'Invalid Price', t('marketplace.invalid_price') || 'Please enter a valid price greater than 0');
                   }
                 }}
               >
-                <Text style={styles.customPriceConfirmText}>Set Price</Text>
+                <Text style={styles.customPriceConfirmText}>{t('marketplace.set_price') || 'Set Price'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2753,10 +2756,11 @@ const MarketplaceScreen = ({ navigation }) => {
         isActive={false}
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+  const makeStyles = (theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16, backgroundColor: '#000' },
   backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#18181b', alignItems: 'center', justifyContent: 'center' },
@@ -2776,7 +2780,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
     marginBottom: 16, 
     overflow: 'hidden',
-    shadowColor: '#10B981',
+    shadowColor: theme.colors.primary || '#10B981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -2785,7 +2789,7 @@ const styles = StyleSheet.create({
   marketCardGradient: { 
     padding: 20,
     borderWidth: 2,
-    borderColor: '#10B981',
+    borderColor: theme.colors.primary,
     borderRadius: 20,
     position: 'relative'
   },
@@ -2803,7 +2807,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
     marginBottom: 16, 
     overflow: 'hidden',
-    shadowColor: '#10B981',
+    shadowColor: theme.colors.primary || '#10B981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -2816,12 +2820,12 @@ const styles = StyleSheet.create({
   strategicPlansButtonText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
 
   // Strategic Plans Modal Styles
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.8)', justifyContent: 'center', alignItems: 'center' },
-  strategicPlansModal: { backgroundColor: '#1C1C1E', borderRadius: 20, margin: 20, maxHeight: '80%', width: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#3A3A3C' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
-  modalSubtitle: { fontSize: 14, color: '#64748B', paddingHorizontal: 20, paddingBottom: 16 },
-  modalCloseButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#3A3A3C', alignItems: 'center', justifyContent: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center' },
+  strategicPlansModal: { backgroundColor: theme.colors.card, borderRadius: 20, margin: 20, maxHeight: '80%', width: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: theme.colors.text },
+  modalSubtitle: { fontSize: 14, color: theme.colors.textSecondary, paddingHorizontal: 20, paddingBottom: 16 },
+  modalCloseButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceSecondary || '#3A3A3C', alignItems: 'center', justifyContent: 'center' },
   plansScrollView: { maxHeight: 400, paddingHorizontal: 20, paddingBottom: 20 },
   strategicPlanCard: { borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
   planCardGradient: { padding: 20 },
@@ -2839,15 +2843,15 @@ const styles = StyleSheet.create({
   planInsightsText: { fontSize: 12, color: '#64748B' },
 
   // Custom Price Modal Styles
-  customPriceModal: { backgroundColor: '#1C1C1E', borderRadius: 20, margin: 20, padding: 20, width: '90%' },
+  customPriceModal: { backgroundColor: theme.colors.card, borderRadius: 20, margin: 20, padding: 20, width: '90%' },
   customPriceInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2C2C2E', borderRadius: 12, marginVertical: 16, paddingHorizontal: 16 },
   currencySymbol: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginRight: 8 },
   customPriceInput: { flex: 1, fontSize: 18, color: '#FFFFFF', paddingVertical: 16 },
   customPriceButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  customPriceCancelButton: { flex: 1, backgroundColor: '#3A3A3C', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  customPriceCancelText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
-  customPriceConfirmButton: { flex: 1, backgroundColor: '#10B981', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  customPriceConfirmText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
+  customPriceCancelButton: { flex: 1, backgroundColor: theme.colors.surfaceSecondary || '#3A3A3C', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  customPriceCancelText: { fontSize: 16, fontWeight: 'bold', color: theme.colors.text },
+  customPriceConfirmButton: { flex: 1, backgroundColor: theme.colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  customPriceConfirmText: { fontSize: 16, fontWeight: 'bold', color: theme.colors.background },
 
   // AI Insights Styles
   aiInsightsCard: { 
@@ -3388,26 +3392,26 @@ const styles = StyleSheet.create({
   },
 
   // Export Button Styles
-  exportButton: {
+  exportPreview: {
     borderRadius: 8,
     overflow: 'hidden',
   },
   exportButtonGradient: {
     flexDirection: 'row',
+  exportPreviewGradient: {
+    padding: 20,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
+    justifyContent: 'center'
   },
-  exportButtonText: {
-    color: '#FFFFFF',
+  exportPreviewTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },
+  exportPreviewNote: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center' },
     fontSize: 14,
     fontWeight: '600',
   },
 
   // Crop Details Styles
   cropDetailCard: {
-    marginBottom: 16,
+    backgroundColor: theme.colors.overlay,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -3838,5 +3842,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// Bind styles at runtime inside the component
+// (component earlier in the file should call `const styles = makeStyles(theme)`)
 
 export default MarketplaceScreen;

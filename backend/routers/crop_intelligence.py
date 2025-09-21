@@ -40,7 +40,7 @@ def serialize_firebase_data(data):
 def call_gemini_api_direct(prompt: str) -> str:
     """Direct HTTP call to Gemini API as fallback"""
     try:
-        GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY', 'AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs')
+        GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY', 'AIzaSyCLii-M1ywSa5PH-cXc3T-F5AJrCqSrX_4')
         GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}'
         
         # Add JSON instruction to the prompt
@@ -158,7 +158,7 @@ gemini_model = None
 gemini_available = False
 
 try:
-    GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY', 'AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs')
+    GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY', 'AIzaSyBhI1O9Bj_oUsM9HP1u7FlOLYIlKK9Dgt4')
     genai.configure(api_key=GEMINI_API_KEY)
     gemini_model = genai.GenerativeModel('gemini-1.5-flash')
     

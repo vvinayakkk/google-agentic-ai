@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Alert, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Alert, ScrollView, StatusBar, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -8,38 +8,43 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 const API_BASE = NetworkConfig.API_BASE;
 
-// Action button mapping for different AI actions
+// Action button mapping for different AI actions — labels are localized via i18n keys
 const ACTION_BUTTONS = {
-  get_current_temperature: { icon: 'thermometer', label: 'Temperature', color: '#4FC3F7' },
-  get_forecast: { icon: 'cloud', label: 'Weather', color: '#4FC3F7' },
-  get_agri_price: { icon: 'trending-up', label: 'Prices', color: '#FF9800' },
-  get_farmer: { icon: 'person', label: 'Profile', color: '#9C27B0' },
-  get_farmer_profile: { icon: 'person-circle', label: 'Farmer Info', color: '#9C27B0' },
-  get_farmer_livestock: { icon: 'paw', label: 'Livestock', color: '#FF9800' },
-  get_farmer_crops: { icon: 'leaf', label: 'Crops', color: '#4CAF50' },
-  get_farmer_calendar: { icon: 'calendar', label: 'Calendar', color: '#2196F3' },
-  get_farmer_market: { icon: 'storefront', label: 'Market', color: '#FFC107' },
-  add_livestock: { icon: 'add-circle', label: 'Add Livestock', color: '#FF9800' },
-  add_crop: { icon: 'add', label: 'Add Crop', color: '#4CAF50' },
-  add_calendar_event: { icon: 'calendar-outline', label: 'Add Event', color: '#2196F3' },
-  generate_response: { icon: 'chatbubble', label: 'Chat', color: '#03DAC6' },
-  weather: { icon: 'cloud', label: 'Weather', color: '#4FC3F7' },
-  soil_moisture: { icon: 'water', label: 'Soil Check', color: '#8BC34A' },
-  crop_intelligence: { icon: 'leaf', label: 'Crop Intelligence', color: '#4CAF50' },
-  cattle_management: { icon: 'paw', label: 'Livestock', color: '#FF9800' },
-  profile: { icon: 'person', label: 'Profile', color: '#9C27B0' },
-  capture_image: { icon: 'camera', label: 'Camera', color: '#FF5722' },
-  chat: { icon: 'chatbubble', label: 'Chat', color: '#03DAC6' },
-  do_nothing: { icon: 'help-circle', label: 'Help', color: '#757575' }
+  get_current_temperature: { icon: 'thermometer', labelKey: 'livevoice.action.temperature', color: '#4FC3F7' },
+  get_forecast: { icon: 'cloud', labelKey: 'livevoice.action.weather', color: '#4FC3F7' },
+  get_agri_price: { icon: 'trending-up', labelKey: 'livevoice.action.prices', color: '#FF9800' },
+  get_farmer: { icon: 'person', labelKey: 'livevoice.action.profile', color: '#9C27B0' },
+  get_farmer_profile: { icon: 'person-circle', labelKey: 'livevoice.action.farmer_info', color: '#9C27B0' },
+  get_farmer_livestock: { icon: 'paw', labelKey: 'livevoice.action.livestock', color: '#FF9800' },
+  get_farmer_crops: { icon: 'leaf', labelKey: 'livevoice.action.crops', color: '#4CAF50' },
+  get_farmer_calendar: { icon: 'calendar', labelKey: 'livevoice.action.calendar', color: '#2196F3' },
+  get_farmer_market: { icon: 'storefront', labelKey: 'livevoice.action.market', color: '#FFC107' },
+  add_livestock: { icon: 'add-circle', labelKey: 'livevoice.action.add_livestock', color: '#FF9800' },
+  add_crop: { icon: 'add', labelKey: 'livevoice.action.add_crop', color: '#4CAF50' },
+  add_calendar_event: { icon: 'calendar-outline', labelKey: 'livevoice.action.add_event', color: '#2196F3' },
+  generate_response: { icon: 'chatbubble', labelKey: 'livevoice.action.chat', color: '#03DAC6' },
+  weather: { icon: 'cloud', labelKey: 'livevoice.action.weather', color: '#4FC3F7' },
+  soil_moisture: { icon: 'water', labelKey: 'livevoice.action.soil_check', color: '#8BC34A' },
+  crop_intelligence: { icon: 'leaf', labelKey: 'livevoice.action.crop_intelligence', color: '#4CAF50' },
+  cattle_management: { icon: 'paw', labelKey: 'livevoice.action.livestock', color: '#FF9800' },
+  profile: { icon: 'person', labelKey: 'livevoice.action.profile', color: '#9C27B0' },
+  capture_image: { icon: 'camera', labelKey: 'livevoice.action.camera', color: '#FF5722' },
+  chat: { icon: 'chatbubble', labelKey: 'livevoice.action.chat', color: '#03DAC6' },
+  do_nothing: { icon: 'help-circle', labelKey: 'livevoice.action.help', color: '#757575' }
 };
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const isSmallScreen = width < 375;
+const isMediumScreen = width >= 375 && width < 414;
+const isLargeScreen = width >= 414;
 
 function VoiceWaveform({ isActive }) {
   const barCount = 20;
+  const { t } = useTranslation();
   const animatedValues = useRef(
     Array.from({ length: barCount }, () => new Animated.Value(0.5))
   ).current;
@@ -96,22 +101,24 @@ function VoiceWaveform({ isActive }) {
 // Interactive Guide Tooltip Component
 function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+  
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'voiceButton':
         return {
-          bottom: step.position === 'bottom' ? 150 : undefined,
-          top: step.position === 'top' ? 120 : undefined,
+          bottom: step.position === 'bottom' ? 200 : undefined,
+          top: step.position === 'top' ? height * 0.15 : undefined,
           alignSelf: 'center',
         };
       case 'response':
         return {
-          top: 200,
+          top: height * 0.25,
           alignSelf: 'center',
         };
       default:
         return {
-          top: '40%',
+          top: height * 0.4,
           alignSelf: 'center',
         };
     }
@@ -158,6 +165,7 @@ export default function LiveVoiceScreen({ navigation }) {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [hasAskedFirstQuestion, setHasAskedFirstQuestion] = useState(false);
+  const { t } = useTranslation();
   
   // Audio response state
   const [audioBase64, setAudioBase64] = useState('');
@@ -170,12 +178,12 @@ export default function LiveVoiceScreen({ navigation }) {
     testNetworkConnection();
   }, []);
 
-    const testNetworkConnection = async () => {
+  const testNetworkConnection = async () => {
     try {
       setNetworkStatus('checking');
       
       // First, test if the server is reachable
-      console.log(`🔍 Testing connection to: http://192.168.29.55:8001`);
+      console.log(`Testing connection to: http://192.168.31.15:8001`);
       
       // Test a simple endpoint that exists - we'll try the /agent endpoint with a basic request
       const testPayload = {
@@ -184,14 +192,14 @@ export default function LiveVoiceScreen({ navigation }) {
         user_id: 'f001',
         session_id: 'test_session'
       };
-      
-      const response = await axios.post(`http://192.168.29.55:8001/agent`, testPayload, { 
+
+      const response = await axios.post(`http://192.168.31.15:8001/agent`, testPayload, {
         timeout: 5000,
         headers: { 'Content-Type': 'application/json' }
       });
       
       if (response.status === 200) {
-        console.log('✅ Network connection established to KisanKiAwaaz-Backend-V2');
+        console.log('Network connection established to KisanKiAwaaz-Backend-V2');
         setNetworkStatus('connected');
         
         // Also test if audio_agent endpoint is available by trying a POST with minimal data
@@ -206,19 +214,19 @@ export default function LiveVoiceScreen({ navigation }) {
           testFormData.append('session_id', 'test');
           testFormData.append('metadata', JSON.stringify({ farmer_id: 'test' }));
           
-          const audioTestResponse = await axios.post(`http://192.168.29.55:8001/audio_agent`, testFormData, { 
+          const audioTestResponse = await axios.post(`http://192.168.31.15:8001/audio_agent`, testFormData, { 
             timeout: 5000,
             headers: { 'Content-Type': 'multipart/form-data' }
           });
-          console.log('✅ Audio agent endpoint is available and working');
+          console.log('Audio agent endpoint is available and working');
         } catch (audioError) {
-          console.log('⚠️ Audio agent endpoint test failed:', audioError.message);
+          console.log('Audio agent endpoint test failed:', audioError.message);
         }
       } else {
         setNetworkStatus('error');
         Alert.alert(
-          'Connection Error',
-          'Cannot connect to KisanKiAwaaz-Backend-V2 server. Please check:\n• Backend server is running on port 8000\n• Device is on same WiFi network\n• IP address is correct',
+          t('network.connection_error_title') || 'Connection Error',
+          t('network.connection_error_message') || 'Cannot connect to backend. Please check your network and server.',
           [
             { text: 'Retry', onPress: testNetworkConnection },
             { text: 'Cancel', style: 'cancel' }
@@ -226,9 +234,7 @@ export default function LiveVoiceScreen({ navigation }) {
         );
       }
     } catch (error) {
-      // console.error('❌ Network test failed:', error.message);
       setNetworkStatus('error');
-      // Don't show alert immediately on app start, just log the error
     }
   };
 
@@ -299,7 +305,7 @@ export default function LiveVoiceScreen({ navigation }) {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Audio recording permission is needed');
+        Alert.alert(t('common.error') || 'Permission required', t('livevoice.permission_audio') || 'Audio recording permission is needed');
         return;
       }
 
@@ -315,7 +321,7 @@ export default function LiveVoiceScreen({ navigation }) {
       setIsListening(true);
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert('Error', 'Failed to start recording');
+      Alert.alert(t('common.error') || 'Error', t('livevoice.recording_start_failed') || 'Failed to start recording');
     }
   };
 
@@ -334,7 +340,7 @@ export default function LiveVoiceScreen({ navigation }) {
       await processVoiceCommand(uri);
     } catch (error) {
       console.error('Error stopping recording:', error);
-      Alert.alert('Error', 'Failed to process recording');
+      Alert.alert(t('common.error') || 'Error', t('livevoice.recording_processing_failed') || 'Failed to process recording');
     }
     
     setIsProcessing(false);
@@ -377,25 +383,25 @@ export default function LiveVoiceScreen({ navigation }) {
         extra_context: [] 
       }));
 
-      console.log(`🎤 Sending ${fileExtension} audio file to audio_agent endpoint...`);
+      console.log(`Sending ${fileExtension} audio file to audio_agent endpoint...`);
 
       // Use axios like other working screens
-      console.log(`🎤 Making request to: http://192.168.29.55:8001/audio_agent`);
-      console.log(`📋 Form data keys:`, Array.from(formData.keys()));
-      
-      const response = await axios.post(`http://192.168.29.55:8001/audio_agent`, formData, {
+      console.log(`Making request to: http://192.168.31.15:8001/audio_agent`);
+      console.log(`Form data keys:`, Array.from(formData.keys()));
+
+      const response = await axios.post(`http://192.168.31.15:8001/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000, // 30 seconds timeout
       });
 
       const result = response.data;
-      console.log('✅ Audio agent response:', result);
-      console.log('🎵 Audio field present:', !!result.audio);
-      console.log('🎵 Audio length:', result.audio ? result.audio.length : 0);
+      console.log('Audio agent response:', result);
+      console.log('Audio field present:', !!result.audio);
+      console.log('Audio length:', result.audio ? result.audio.length : 0);
       
       // Handle transcription errors
       if (result.error) {
-        console.error('❌ Backend transcription error:', result.error);
+        console.error('Backend transcription error:', result.error);
         
         if (result.error === "Could not transcribe audio") {
           Alert.alert(
@@ -426,7 +432,7 @@ export default function LiveVoiceScreen({ navigation }) {
       // Store audio data for playback
       if (result.audio) {
         setAudioBase64(result.audio);
-        console.log('🎵 Audio response received, ready for playback');
+        console.log('Audio response received, ready for playback');
         
         // Auto-play the audio response only if not muted
         if (!isMuted) {
@@ -434,10 +440,10 @@ export default function LiveVoiceScreen({ navigation }) {
             playAudioResponse(result.audio);
           }, 500); // Small delay to let UI update first
         } else {
-          console.log('🔇 Audio auto-play skipped - muted');
+          console.log('Audio auto-play skipped - muted');
         }
       } else {
-        console.log('🔇 No audio response received from backend');
+        console.log('No audio response received from backend');
         setAudioBase64('');
       }
       
@@ -468,7 +474,7 @@ export default function LiveVoiceScreen({ navigation }) {
       
       // If it's a 404 error, try the regular /agent endpoint as fallback
       if (error.response && error.response.status === 404) {
-        console.log('🔄 Audio agent endpoint not found, trying regular agent endpoint...');
+        console.log('Audio agent endpoint not found, trying regular agent endpoint...');
         try {
           // Try with regular agent endpoint
           const fallbackPayload = {
@@ -481,14 +487,14 @@ export default function LiveVoiceScreen({ navigation }) {
             user_id: 'f001',
             session_id: Date.now().toString()
           };
-          
-          const fallbackResponse = await axios.post(`http://192.168.29.55:8001/agent`, fallbackPayload, {
+
+          const fallbackResponse = await axios.post(`http://192.168.31.15:8001/agent`, fallbackPayload, {
             headers: { 'Content-Type': 'application/json' },
             timeout: 30000,
           });
           
           const fallbackResult = fallbackResponse.data;
-          console.log('✅ Fallback agent response:', fallbackResult);
+          console.log('Fallback agent response:', fallbackResult);
           
           // Process the fallback response
           setCurrentQuestion("Voice command (transcription unavailable)");
@@ -526,9 +532,9 @@ export default function LiveVoiceScreen({ navigation }) {
         errorMessage = error.message;
       }
       
-      Alert.alert('Processing Error', errorMessage, [
-        { text: 'Retry', onPress: () => processVoiceCommand(audioUri) },
-        { text: 'Cancel', style: 'cancel' }
+      Alert.alert(t('livevoice.processing_error_title', 'Processing Error'), errorMessage, [
+        { text: t('common.retry', 'Retry'), onPress: () => processVoiceCommand(audioUri) },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' }
       ]);
     }
   };
@@ -542,7 +548,7 @@ export default function LiveVoiceScreen({ navigation }) {
         navigation.navigate('WeatherScreen');
         break;
       case 'get_agri_price':
-        Alert.alert('Price Data', 'Agricultural price information has been retrieved.');
+        Alert.alert(t('livevoice.price_data_title', 'Price Data'), t('livevoice.price_data_message', 'Agricultural price information has been retrieved.'));
         break;
       case 'get_farmer':
       case 'get_farmer_profile':
@@ -558,10 +564,10 @@ export default function LiveVoiceScreen({ navigation }) {
         break;
       case 'get_farmer_calendar':
       case 'add_calendar_event':
-        Alert.alert('Calendar', 'Calendar functionality is available in the main app.');
+        Alert.alert(t('livevoice.calendar_title', 'Calendar'), t('livevoice.calendar_message', 'Calendar functionality is available in the main app.'));
         break;
       case 'get_farmer_market':
-        Alert.alert('Market', 'Market information has been retrieved.');
+        Alert.alert(t('livevoice.market_title', 'Market'), t('livevoice.market_message', 'Market information has been retrieved.'));
         break;
       case 'generate_response':
         navigation.navigate('VoiceChatInputScreen');
@@ -591,7 +597,7 @@ export default function LiveVoiceScreen({ navigation }) {
         break;
       default:
         if (action !== 'do_nothing') {
-          Alert.alert('Tool Result', `The AI used "${action}" tool to process your request.`);
+          Alert.alert(t('livevoice.tool_result_title', 'Tool Result'), t('livevoice.tool_result_message', `The AI used "${action}" tool to process your request.`));
         }
     }
   };
@@ -604,7 +610,7 @@ export default function LiveVoiceScreen({ navigation }) {
       });
       
       if (result.type === 'success') {
-        Alert.alert('Image Selected', `Selected: ${result.name}`);
+        Alert.alert(t('livevoice.image_selected_title', 'Image Selected'), t('livevoice.image_selected_message', `Selected: ${result.name}`));
         // You can process the image here
       }
     } catch (error) {
@@ -615,7 +621,7 @@ export default function LiveVoiceScreen({ navigation }) {
   // Audio playback functions
   const playAudioResponse = async (audioBase64Data) => {
     if (!audioBase64Data || isMuted) {
-      console.log('🔇 Audio playback skipped - no audio data or muted');
+      console.log('Audio playback skipped - no audio data or muted');
       return;
     }
 
@@ -645,12 +651,12 @@ export default function LiveVoiceScreen({ navigation }) {
         }
       });
       
-      console.log('🎵 Audio playback started');
+      console.log('Audio playback started');
       
     } catch (error) {
-      console.error('❌ Audio playback error:', error);
+      console.error('Audio playback error:', error);
       setIsPlayingAudio(false);
-      Alert.alert('Audio Error', 'Failed to play audio response');
+      Alert.alert(t('common.error', 'Audio Error'), t('livevoice.audio_playback_failed', 'Failed to play audio response'));
     }
   };
 
@@ -662,9 +668,9 @@ export default function LiveVoiceScreen({ navigation }) {
         setSound(null);
       }
       setIsPlayingAudio(false);
-      console.log('🔇 Audio playback stopped');
+      console.log('Audio playback stopped');
     } catch (error) {
-      console.error('❌ Error stopping audio:', error);
+      console.error('Error stopping audio:', error);
     }
   };
 
@@ -715,32 +721,45 @@ export default function LiveVoiceScreen({ navigation }) {
 
   if (!sessionActive) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
-        <Text style={{ color: 'white', fontSize: 22, marginBottom: 20 }}>Session Ended</Text>
-        <Text style={{ color: '#90caf9', fontSize: 16, marginBottom: 30, textAlign: 'center', paddingHorizontal: 20 }}>
-          {conversationHistory.length > 0 
-            ? `Processed ${conversationHistory.length} voice command${conversationHistory.length > 1 ? 's' : ''}`
-            : 'No voice commands processed'}
-        </Text>
-        <TouchableOpacity 
-          style={styles.micButton} 
-          onPress={() => {
-            setSessionActive(true);
-            setCurrentResponse('');
-            setCurrentAction('');
-          }}
-        >
-          <Ionicons name="mic" size={40} color="black" />
-        </TouchableOpacity>
-        <Text style={{ color: 'white', fontSize: 14, marginTop: 10 }}>Start New Session</Text>
+      <View style={styles.outerContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.container, styles.sessionEndedContainer]}> 
+            <View style={styles.sessionEndedContent}>
+          <Text style={[styles.sessionEndedTitle, { color: theme.colors.text }]}>
+            {t('livevoice.session_ended', 'Session Ended')}
+          </Text>
+          <Text style={[styles.sessionEndedSubtitle, { color: theme.colors.textSecondary }]}>
+            {conversationHistory.length > 0 
+              ? t('livevoice.processed_commands', { count: conversationHistory.length, defaultValue: `Processed ${conversationHistory.length} voice command${conversationHistory.length > 1 ? 's' : ''}` })
+              : t('livevoice.no_commands', 'No voice commands processed')}
+          </Text>
+          <TouchableOpacity 
+            style={styles.restartButton} 
+            onPress={() => {
+              setSessionActive(true);
+              setCurrentResponse('');
+              setCurrentAction('');
+            }}
+          >
+            <Ionicons name="mic" size={32} color="white" />
+          </TouchableOpacity>
+          <Text style={[styles.restartText, { color: theme.colors.textSecondary }]}>
+            {t('livevoice.start_new_session', 'Start New Session')}
+          </Text>
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
 
   return (
-    <View style={styles.outerGlowContainer}>
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <StatusBar barStyle={theme.colors.statusBarStyle} />
+    <View style={styles.outerContainer}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.text }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        
         {/* Header with Network Status and Help */}
         <View style={styles.headerContainer}>
           <View style={styles.networkStatusContainer}>
@@ -749,137 +768,143 @@ export default function LiveVoiceScreen({ navigation }) {
               { backgroundColor: networkStatus === 'connected' ? '#4CAF50' : '#FF9800' }
             ]} />
             <Text style={[styles.networkStatusText, { color: theme.colors.text }]}>
-              {networkStatus === 'connected' ? '🟢 Connected' : '🟡 Connecting...'}
+              {networkStatus === 'connected' ? t('livevoice.connected', 'Connected') : t('livevoice.connecting', 'Connecting...')}
             </Text>
             {networkStatus !== 'connected' && (
               <TouchableOpacity onPress={testNetworkConnection} style={styles.retryButton}>
-                <Ionicons name="refresh" size={16} color="white" />
+                <Ionicons name="refresh" size={16} color={theme.colors.primary} />
               </TouchableOpacity>
             )}
           </View>
           
           <TouchableOpacity 
-            style={styles.helpButton} 
+            style={[styles.helpButton, { backgroundColor: `${theme.colors.primary}20` }]} 
             onPress={() => {
               Alert.alert(
-                'Help Options',
-                'How would you like to learn about this app?',
+                t('help.options_title', 'Help Options'),
+                t('help.options_message', 'How would you like to learn about this app?'),
                 [
-                  { text: 'Interactive Guide', onPress: startInteractiveGuide },
-                  { text: 'Help Manual', onPress: () => setShowOnboarding(true) },
-                  { text: 'Cancel', style: 'cancel' }
+                  { text: t('help.interactive_guide', 'Interactive Guide'), onPress: startInteractiveGuide },
+                  { text: t('help.manual', 'Help Manual'), onPress: () => setShowOnboarding(true) },
+                  { text: t('common.cancel', 'Cancel'), style: 'cancel' }
                 ]
               );
             }}
           >
-            <Ionicons name="help-circle-outline" size={24} color="#03DAC6" />
+            <Ionicons name="help-circle-outline" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
 
         {/* Voice Waveform Animation */}
-        <View style={{ marginTop: 20, marginBottom: 20 }}>
+        <View style={styles.waveformSection}>
           <VoiceWaveform isActive={isListening && !isPaused} />
         </View>
 
         {/* AI Response and Action Area */}
-        <View style={styles.transcriptContainer}>
-          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+        <View style={styles.contentContainer}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+          >
             {isProcessing && (
-              <View style={styles.processingContainer}>
-                <Text style={styles.processingText}>🎤 Processing voice command...</Text>
+              <View style={[styles.processingContainer, { backgroundColor: `${theme.colors.warning || '#FFC107'}20` }]}>
+                <Text style={[styles.processingText, { color: theme.colors.warning || '#FFC107' }]}>
+                  {t('livevoice.processing', 'Processing voice command...')}
+                </Text>
               </View>
             )}
             
             {(currentQuestion || currentResponse) && (
               <View style={styles.conversationContainer}>
                 {currentQuestion && (
-                  <View style={styles.questionContainer}>
-                    <Text style={styles.questionTitle}>🎤 You asked:</Text>
-                    <Text style={styles.questionText}>"{currentQuestion}"</Text>
+                  <View style={[styles.questionContainer, { backgroundColor: `${theme.colors.primary}15` }]}>
+                    <Text style={[styles.questionTitle, { color: theme.colors.primary }]}>
+                      {t('livevoice.you_asked', 'You asked:')}
+                    </Text>
+                    <Text style={[styles.questionText, { color: theme.colors.text }]}>
+                      "{currentQuestion}"
+                    </Text>
                   </View>
                 )}
                 
                 {currentResponse && (
-                  <View style={styles.responseContainer}>
-                    <Text style={styles.responseTitle}>🤖 AI Response:</Text>
-                    <Text style={styles.responseText}>{currentResponse}</Text>
+                  <View style={[styles.responseContainer, { backgroundColor: `${theme.colors.primary}10` }]}>
+                    <Text style={[styles.responseTitle, { color: theme.colors.primary }]}>
+                      {t('livevoice.ai_response', 'AI Response:')}
+                    </Text>
+                    <Text style={[styles.responseText, { color: theme.colors.text }]}>
+                      {currentResponse}
+                    </Text>
                     
                     {/* Audio Controls */}
                     {audioBase64 && (
                       <View style={styles.audioControlsContainer}>
                         <TouchableOpacity 
-                          style={[styles.audioButton, isPlayingAudio && styles.audioButtonActive]}
+                          style={[
+                            styles.audioButton, 
+                            { borderColor: theme.colors.primary },
+                            isPlayingAudio && { backgroundColor: `${theme.colors.error || '#FF5722'}20`, borderColor: theme.colors.error || '#FF5722' }
+                          ]}
                           onPress={() => isPlayingAudio ? stopAudioPlayback() : playAudioResponse(audioBase64)}
                         >
                           <Ionicons 
                             name={isPlayingAudio ? "stop" : "play"} 
-                            size={20} 
-                            color={isPlayingAudio ? "#FF5722" : "#03DAC6"} 
+                            size={16} 
+                            color={isPlayingAudio ? (theme.colors.error || '#FF5722') : theme.colors.primary} 
                           />
-                          <Text style={[styles.audioButtonText, isPlayingAudio && styles.audioButtonTextActive]}>
-                            {isPlayingAudio ? "Stop Audio" : "Play Audio"}
+                          <Text style={[
+                            styles.audioButtonText, 
+                            { color: isPlayingAudio ? (theme.colors.error || '#FF5722') : theme.colors.primary }
+                          ]}>
+                            {isPlayingAudio ? t('livevoice.stop_audio', 'Stop') : t('livevoice.play_audio', 'Play')}
                           </Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity 
-                          style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+                          style={[
+                            styles.muteButton, 
+                            { borderColor: theme.colors.primary },
+                            isMuted && { backgroundColor: `${theme.colors.error || '#FF5722'}20`, borderColor: theme.colors.error || '#FF5722' }
+                          ]}
                           onPress={toggleMute}
                         >
                           <Ionicons 
                             name={isMuted ? "volume-mute" : "volume-high"} 
-                            size={20} 
-                            color={isMuted ? "#FF5722" : "#03DAC6"} 
+                            size={16} 
+                            color={isMuted ? (theme.colors.error || '#FF5722') : theme.colors.primary} 
                           />
-                          <Text style={[styles.muteButtonText, isMuted && styles.muteButtonTextActive]}>
-                            {isMuted ? "Unmute" : "Mute"}
+                          <Text style={[
+                            styles.muteButtonText, 
+                            { color: isMuted ? (theme.colors.error || '#FF5722') : theme.colors.primary }
+                          ]}>
+                            {isMuted ? t('livevoice.unmute', 'Unmute') : t('livevoice.mute', 'Mute')}
                           </Text>
                         </TouchableOpacity>
                       </View>
                     )}
                     
                     {!audioBase64 && currentResponse && (
-                      <View style={styles.noAudioContainer}>
-                        <Ionicons name="volume-mute" size={20} color="#757575" />
-                        <Text style={styles.noAudioText}>Audio response not available</Text>
-                        <TouchableOpacity 
-                          style={styles.generateAudioButton}
-                          onPress={async () => {
-                            try {
-                              console.log('🎵 Manually generating audio for response...');
-                              const response = await axios.post(`http://192.168.29.55:8001/generate_audio`, {
-                                text: currentResponse,
-                                language: 'en'
-                              });
-                              
-                              if (response.data.success && response.data.audio) {
-                                setAudioBase64(response.data.audio);
-                                console.log('✅ Manual audio generation successful');
-                              } else {
-                                console.log('❌ Manual audio generation failed:', response.data.error);
-                              }
-                            } catch (error) {
-                              console.error('❌ Manual audio generation error:', error);
-                            }
-                          }}
-                        >
-                          <Ionicons name="refresh" size={16} color="#03DAC6" />
-                          <Text style={styles.generateAudioText}>Generate Audio</Text>
-                        </TouchableOpacity>
+                      <View style={[styles.noAudioContainer, { backgroundColor: `${theme.colors.textSecondary}10` }]}>
+                        <Ionicons name="volume-mute" size={16} color={theme.colors.textSecondary} />
+                        <Text style={[styles.noAudioText, { color: theme.colors.textSecondary }]}>
+                          {t('livevoice.no_audio_available', 'Audio not available')}
+                        </Text>
                       </View>
                     )}
                     
                     {currentAction && currentAction !== 'do_nothing' && (
                       <TouchableOpacity 
-                        style={[styles.actionButton, { backgroundColor: ACTION_BUTTONS[currentAction]?.color || '#03DAC6' }]}
+                        style={[styles.actionButton, { backgroundColor: ACTION_BUTTONS[currentAction]?.color || theme.colors.primary }]}
                         onPress={() => handleActionPress(currentAction)}
                       >
                         <Ionicons 
                           name={ACTION_BUTTONS[currentAction]?.icon || 'help-circle'} 
-                          size={24} 
+                          size={20} 
                           color="white" 
                         />
                         <Text style={styles.actionButtonText}>
-                          {ACTION_BUTTONS[currentAction]?.label || currentAction}
+                          {t(ACTION_BUTTONS[currentAction]?.labelKey) || currentAction}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -889,29 +914,30 @@ export default function LiveVoiceScreen({ navigation }) {
             )}
             
             {conversationHistory.length > 0 && !currentResponse && (
-              <View style={styles.historyContainer}>
-                <Text style={styles.historyTitle}>💬 Recent Commands:</Text>
+              <View style={[styles.historyContainer, { backgroundColor: `${theme.colors.primary}08` }]}>
+                <Text style={[styles.historyTitle, { color: theme.colors.primary }]}>
+                  {t('livevoice.recent_commands', 'Recent Commands:')}
+                </Text>
                 {conversationHistory.slice(-3).map((item) => (
-                  <View key={item.id} style={styles.historyItem}>
-                    <Text style={styles.historyTime}>{item.timestamp}</Text>
+                  <View key={item.id} style={[styles.historyItem, { borderBottomColor: `${theme.colors.border}50` }]}>
+                    <Text style={[styles.historyTime, { color: theme.colors.textSecondary }]}>{item.timestamp}</Text>
                     {item.transcribed && (
-                      <Text style={styles.historyQuestion}>🎤 "{item.transcribed}"</Text>
-                    )}
-                    <Text style={styles.historyAction}>
-                      🔧 Tool: {ACTION_BUTTONS[item.action]?.label || item.action}
-                    </Text>
-                    {item.toolResult && (
-                      <Text style={styles.historyToolResult}>
-                        📊 Result: {typeof item.toolResult === 'string' ? item.toolResult.substring(0, 100) : JSON.stringify(item.toolResult).substring(0, 100)}...
+                      <Text style={[styles.historyQuestion, { color: theme.colors.textSecondary }]}>
+                        "{item.transcribed}"
                       </Text>
                     )}
+                    <Text style={[styles.historyAction, { color: theme.colors.text }]}>
+                      Tool: {t(ACTION_BUTTONS[item.action]?.labelKey) || item.action}
+                    </Text>
                     {item.audioData && (
                       <TouchableOpacity 
-                        style={styles.historyAudioButton}
+                        style={[styles.historyAudioButton, { backgroundColor: `${theme.colors.primary}15` }]}
                         onPress={() => playAudioResponse(item.audioData)}
                       >
-                        <Ionicons name="play" size={16} color="#03DAC6" />
-                        <Text style={styles.historyAudioText}>Replay Audio</Text>
+                        <Ionicons name="play" size={12} color={theme.colors.primary} />
+                        <Text style={[styles.historyAudioText, { color: theme.colors.primary }]}>
+                          {t('livevoice.replay_audio', 'Replay')}
+                        </Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -920,67 +946,87 @@ export default function LiveVoiceScreen({ navigation }) {
             )}
             
             {!currentResponse && !isProcessing && conversationHistory.length === 0 && (
-              <View style={styles.welcomeContainer}>
-                <Text style={styles.welcomeText}>🎤 Ready to Listen</Text>
-                <Text style={styles.welcomeSubtext}>
-                  Tap the microphone and ask about:
-                  {'\n'}• Weather forecasts & temperatures
-                  {'\n'}• Agricultural commodity prices
-                  {'\n'}• Your farm profile & livestock
-                  {'\n'}• Crop management & calendar
-                  {'\n'}• Market information
-                  {'\n'}• Farming tips & advice
+              <View style={[styles.welcomeContainer, { backgroundColor: `${theme.colors.primary}12` }]}>
+                <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
+                  {t('livevoice.ready_to_listen', 'Ready to Listen')}
+                </Text>
+                <Text style={[styles.welcomeSubtext, { color: theme.colors.text }]}>
+                  {t('livevoice.tap_and_ask', 'Tap the microphone and ask about:')}
+                  {'\n\n'}• {t('livevoice.examples.weather', 'Weather forecasts & temperatures')}
+                  {'\n'}• {t('livevoice.examples.prices', 'Agricultural commodity prices')}
+                  {'\n'}• {t('livevoice.examples.profile', 'Your farm profile & livestock')}
+                  {'\n'}• {t('livevoice.examples.crop_management', 'Crop management & calendar')}
+                  {'\n'}• {t('livevoice.examples.market', 'Market information')}
+                  {'\n'}• {t('livevoice.examples.tips', 'Farming tips & advice')}
                 </Text>
                 <TouchableOpacity 
-                  style={styles.quickHelpButton}
+                  style={[styles.quickHelpButton, { backgroundColor: `${theme.colors.primary}20`, borderColor: theme.colors.primary }]}
                   onPress={() => setShowOnboarding(true)}
                 >
-                  <Ionicons name="help-circle" size={20} color="#03DAC6" />
-                  <Text style={styles.quickHelpText}>Need help getting started?</Text>
+                  <Ionicons name="help-circle" size={18} color={theme.colors.primary} />
+                  <Text style={[styles.quickHelpText, { color: theme.colors.primary }]}>
+                    {t('livevoice.need_help', 'Need help getting started?')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
           </ScrollView>
           
           <LinearGradient
-            colors={['transparent', theme.colors.overlay, theme.colors.background]}
+            colors={['transparent', theme.colors.background]}
             style={styles.gradientOverlay}
-            locations={[0, 0.8, 1]}
+            locations={[0, 1]}
           />
         </View>
 
-        {/* Blue Themed Bottom Controls with Glow */}
-        <View style={styles.bottomHalfContainer}>
+        {/* Bottom Controls */}
+        <View style={styles.controlsSection}>
           <LinearGradient
-            colors={["#2c3e50", "#2980b9", "#6dd5fa"]}
-            style={styles.blueGradient}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
+            colors={["#3f51b5", "#5c6bc0", "#9fa8da"]}
+            style={styles.controlsGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
           />
           <View style={styles.controlsContainer}>
-            <TouchableOpacity style={styles.controlButton} onPress={handleEndSession}>
-              <MaterialCommunityIcons name="square" size={28} color="white" />
+            <TouchableOpacity 
+              style={[styles.controlButton, styles.endButton]} 
+              onPress={handleEndSession}
+            >
+              <MaterialCommunityIcons name="square" size={24} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.controlButton} onPress={handlePause}>
-              <MaterialCommunityIcons name={isPaused ? "play" : "pause"} size={28} color="white" />
+            
+            <TouchableOpacity 
+              style={[styles.controlButton, styles.pauseButton]} 
+              onPress={handlePause}
+            >
+              <MaterialCommunityIcons 
+                name={isPaused ? "play" : "pause"} 
+                size={24} 
+                color="white" 
+              />
             </TouchableOpacity>
+            
             <TouchableOpacity 
               style={[
-                styles.micButton, 
-                isListening && { backgroundColor: '#FF5722', transform: [{ scale: 1.1 }] },
-                isProcessing && { backgroundColor: '#FFC107' }
+                styles.micButton,
+                isListening && styles.micButtonActive,
+                isProcessing && styles.micButtonProcessing
               ]} 
               onPress={handleMic}
               disabled={isProcessing}
             >
               <Ionicons 
                 name={isProcessing ? "sync" : (isListening ? "stop" : "mic")} 
-                size={40} 
+                size={isSmallScreen ? 32 : 36} 
                 color="black" 
               />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.redXButton} onPress={handleExit}>
-              <MaterialCommunityIcons name="close" size={28} color="white" />
+            
+            <TouchableOpacity 
+              style={[styles.controlButton, styles.exitButton]} 
+              onPress={handleExit}
+            >
+              <MaterialCommunityIcons name="close" size={24} color="white" />
             </TouchableOpacity>
           </View>
         </View>
@@ -989,7 +1035,7 @@ export default function LiveVoiceScreen({ navigation }) {
         {showInteractiveGuide && (
           <View style={styles.guideOverlay}>
             <TouchableOpacity 
-              style={[styles.guideOverlayBackground, { backgroundColor: theme.colors.overlay }]}
+              style={[styles.guideOverlayBackground, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
               onPress={nextOnboardingStep}
               activeOpacity={1}
             />
@@ -1003,10 +1049,10 @@ export default function LiveVoiceScreen({ navigation }) {
         
         {/* Onboarding Modal */}
         {showOnboarding && (
-          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-            <View style={[styles.onboardingModal, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
+            <View style={[styles.onboardingModal, { backgroundColor: theme.colors.surface }]}>
               <View style={[styles.onboardingHeader, { borderBottomColor: theme.colors.border }]}>
-                <Text style={[styles.onboardingTitle, { color: theme.colors.text }]}>🎤 Voice Assistant Guide</Text>
+                <Text style={[styles.onboardingTitle, { color: theme.colors.text }]}>Voice Assistant Guide</Text>
                 <TouchableOpacity 
                   style={styles.closeButton}
                   onPress={() => setShowOnboarding(false)}
@@ -1017,15 +1063,15 @@ export default function LiveVoiceScreen({ navigation }) {
               
               <ScrollView style={styles.onboardingContent}>
                 <View style={styles.guideSection}>
-                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🚀 How to Use:</Text>
-                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>1. Tap the microphone button 🎤</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>How to Use:</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>1. Tap the microphone button</Text>
                   <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>2. Speak your question clearly</Text>
                   <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>3. Wait for AI response</Text>
                   <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>4. Tap action buttons to navigate</Text>
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>💬 Sample Questions:</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>Sample Questions:</Text>
                   <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"What's the weather today?"</Text>
                   <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"What crops should I grow now?"</Text>
                   <Text style={[styles.guideExample, { color: theme.colors.primary }]}>"Show me modern farming techniques"</Text>
@@ -1034,28 +1080,32 @@ export default function LiveVoiceScreen({ navigation }) {
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🔄 Follow-up Questions:</Text>
-                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>You can ask follow-up questions and the AI will remember the context of your conversation!</Text>
-                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>Example: "What's the weather?" → "Should I water my crops?"</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>Follow-up Questions:</Text>
+                  <Text style={[styles.guideText, { color: theme.colors.textSecondary }]}>
+                    You can ask follow-up questions and the AI will remember the context of your conversation!
+                  </Text>
+                  <Text style={[styles.guideExample, { color: theme.colors.primary }]}>
+                    Example: "What's the weather?" → "Should I water my crops?"
+                  </Text>
                 </View>
                 
                 <View style={styles.guideSection}>
-                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>🎯 Action Buttons:</Text>
+                  <Text style={[styles.guideSectionTitle, { color: theme.colors.text }]}>Action Buttons:</Text>
                   <View style={styles.actionExamples}>
                     <View style={styles.actionExample}>
-                      <Ionicons name="cloud" size={20} color="#4FC3F7" />
+                      <Ionicons name="cloud" size={18} color="#4FC3F7" />
                       <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Weather</Text>
                     </View>
                     <View style={styles.actionExample}>
-                      <Ionicons name="leaf" size={20} color="#4CAF50" />
+                      <Ionicons name="leaf" size={18} color="#4CAF50" />
                       <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Crop Intelligence</Text>
                     </View>
                     <View style={styles.actionExample}>
-                      <Ionicons name="water" size={20} color="#8BC34A" />
+                      <Ionicons name="water" size={18} color="#8BC34A" />
                       <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Soil Check</Text>
                     </View>
                     <View style={styles.actionExample}>
-                      <Ionicons name="paw" size={20} color="#FF9800" />
+                      <Ionicons name="paw" size={18} color="#FF9800" />
                       <Text style={[styles.actionExampleText, { color: theme.colors.textSecondary }]}>Livestock</Text>
                     </View>
                   </View>
@@ -1066,420 +1116,415 @@ export default function LiveVoiceScreen({ navigation }) {
                 style={[styles.gotItButton, { backgroundColor: theme.colors.primary }]}
                 onPress={() => setShowOnboarding(false)}
               >
-                <Text style={[styles.gotItText, { color: theme.colors.headerTitle }]}>Got it! Let's start 🚀</Text>
+                <Text style={[styles.gotItText, { color: 'white' }]}>Got it! Let's start</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-      </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: 'black',
   },
-  // Network Status Styles
+  sessionEndedContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  sessionEndedContent: {
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 300,
+  },
+  sessionEndedTitle: {
+    fontSize: isSmallScreen ? 20 : 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  sessionEndedSubtitle: {
+    fontSize: isSmallScreen ? 14 : 16,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  restartButton: {
+    backgroundColor: '#03DAC6',
+    borderRadius: 50,
+    width: 64,
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  restartText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  
+  // Header Styles
+  headerContainer: {
+    flexDirection: 'row',
+    marginTop : 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
   networkStatusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 50,
-    paddingBottom: 10,
+    flex: 1,
   },
   networkIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: 8,
   },
   networkStatusText: {
-    color: 'white',
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: '500',
   },
   retryButton: {
-    marginLeft: 10,
-    padding: 5,
+    marginLeft: 8,
+    padding: 4,
+  },
+  helpButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  
+  // Waveform Styles
+  waveformSection: {
+    paddingVertical: isSmallScreen ? 15 : 20,
   },
   waveformContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    width: width,
-    height: 60,
-    marginBottom: 10,
+    width: '100%',
+    height: isSmallScreen ? 40 : 50,
   },
   waveBar: {
-    width: 8,
-    height: 40,
-    borderRadius: 4,
-    marginHorizontal: 2,
+    width: isSmallScreen ? 6 : 8,
+    height: isSmallScreen ? 20 : 30,
+    borderRadius: isSmallScreen ? 3 : 4,
+    marginHorizontal: 1,
     backgroundColor: '#90caf9',
   },
-  transcriptContainer: {
+  
+  // Content Styles
+  contentContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 120,
     position: 'relative',
   },
-  // New AI Response Styles
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 160,
+    minHeight: '100%',
+  },
+  
+  // Processing Styles
   processingContainer: {
-    padding: 20,
-    backgroundColor: 'rgba(255, 193, 7, 0.1)',
-    borderRadius: 15,
-    marginBottom: 15,
+    padding: isSmallScreen ? 16 : 20,
+    borderRadius: 12,
+    marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#FFC107',
   },
   processingText: {
-    color: '#FFC107',
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     textAlign: 'center',
     fontWeight: '600',
   },
-  responseContainer: {
-    padding: 20,
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderRadius: 15,
-    marginBottom: 15,
-    borderLeftWidth: 4,
-    borderLeftColor: '#03DAC6',
-  },
-  responseTitle: {
-    color: '#03DAC6',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  responseText: {
-    color: '#B3E5FC',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 15,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    borderRadius: 25,
-    marginTop: 10,
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  historyContainer: {
-    padding: 20,
-    backgroundColor: 'rgba(144, 202, 249, 0.1)',
-    borderRadius: 15,
-    marginBottom: 15,
-    borderLeftWidth: 4,
-    borderLeftColor: '#90CAF9',
-  },
-  historyTitle: {
-    color: '#90CAF9',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  historyItem: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  historyTime: {
-    color: '#757575',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  historyQuestion: {
-    color: '#666',
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginBottom: 2,
-  },
-  historyAction: {
-    color: '#B3E5FC',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  welcomeContainer: {
-    padding: 30,
-    backgroundColor: 'rgba(156, 39, 176, 0.1)',
-    borderRadius: 20,
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(156, 39, 176, 0.3)',
-    alignItems: 'center',
-  },
-  welcomeText: {
-    color: '#CE93D8',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  welcomeSubtext: {
-    color: '#B3E5FC',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  transcriptText: {
-    fontSize: 22,
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 30,
-  },
-  userText: {
-    color: '#90caf9',
-    fontWeight: 'bold',
-  },
-  geminiText: {
-    color: '#b3e5fc', // blueish instead of yellow
-    fontStyle: 'italic',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-  },
-  bottomHalfContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 200,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    overflow: 'hidden',
-    zIndex: 2,
-  },
-  blueGradient: {
-    ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    height:250,
-    paddingTop:60
-  },
-  controlsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 80, // more bottom padding
-    paddingHorizontal: 10,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    minHeight: 100,
-    zIndex: 3,
-  },
-  controlButton: {
-    backgroundColor: '#333',
-    borderRadius: 50,
-    width: 55,
-    height: 55,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 0, // no border
-  },
-  micButton: {
-    backgroundColor: 'white',
-    borderRadius: 50,
-    width: 70,
-    height: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 15,
-    borderWidth: 0, // no border
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  redXButton: {
-    backgroundColor: '#e63946',
-    borderRadius: 50,
-    width: 55,
-    height: 55,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 0, // no border
-  },
-  outerGlowContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    borderRadius: 32,
-    margin: 8,
-    shadowColor: '#0a1a3c',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 32,
-    borderWidth: 4,
-    borderColor: '#0a1a3c',
-    // For Android
-    elevation: 30,
-    overflow: 'hidden',
-  },
   
-  // New styles for enhanced UI
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  helpButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-  },
+  // Conversation Styles
   conversationContainer: {
     width: '100%',
   },
   questionContainer: {
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    padding: 15,
+    padding: isSmallScreen ? 12 : 16,
     borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#03DAC6',
   },
   questionTitle: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: 'bold',
-    color: '#03DAC6',
-    marginBottom: 5,
+    marginBottom: 6,
   },
   questionText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: isSmallScreen ? 14 : 16,
     fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  responseContainer: {
+    padding: isSmallScreen ? 12 : 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#03DAC6',
+  },
+  responseTitle: {
+    fontSize: isSmallScreen ? 12 : 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  responseText: {
+    fontSize: isSmallScreen ? 14 : 16,
+    lineHeight: isSmallScreen ? 20 : 24,
+    marginBottom: 12,
+  },
+  
+  // Audio Control Styles
+  audioControlsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 8,
+  },
+  audioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flex: 1,
+  },
+  audioButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  muteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flex: 1,
+  },
+  muteButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  noAudioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  noAudioText: {
+    fontSize: 12,
+    marginLeft: 6,
+  },
+  
+  // Action Button Styles
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: isSmallScreen ? 12 : 16,
+    borderRadius: 25,
+    marginTop: 12,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: isSmallScreen ? 14 : 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  
+  // History Styles
+  historyContainer: {
+    padding: isSmallScreen ? 12 : 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#90CAF9',
+  },
+  historyTitle: {
+    fontSize: isSmallScreen ? 14 : 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  historyItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    marginBottom: 8,
+  },
+  historyTime: {
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  historyQuestion: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  historyAction: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  historyAudioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  historyAudioText: {
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  
+  // Welcome Styles
+  welcomeContainer: {
+    padding: isSmallScreen ? 20 : 24,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(3, 218, 198, 0.3)',
+    alignItems: 'center',
+  },
+  welcomeText: {
+    fontSize: isSmallScreen ? 20 : 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  welcomeSubtext: {
+    fontSize: isSmallScreen ? 13 : 14,
+    lineHeight: isSmallScreen ? 18 : 20,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   quickHelpButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#03DAC6',
   },
   quickHelpText: {
-    color: '#03DAC6',
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: 12,
+    marginLeft: 6,
     fontWeight: '500',
   },
   
-  // Onboarding modal styles
-  modalOverlay: {
+  // Gradient Overlay
+  gradientOverlay: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    pointerEvents: 'none',
+  },
+  
+  // Controls Section
+  controlsSection: {
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    height: isSmallScreen ? 140 : 160,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    overflow: 'hidden',
+  },
+  controlsGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: isSmallScreen ? 40 : 50,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    height: '100%',
+  },
+  controlButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 25,
+    width: isSmallScreen ? 45 : 50,
+    height: isSmallScreen ? 45 : 50,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  onboardingModal: {
+  endButton: {
+    backgroundColor: 'rgba(255, 152, 0, 0.8)',
+  },
+  pauseButton: {
+    backgroundColor: 'rgba(96, 125, 139, 0.8)',
+  },
+  exitButton: {
+    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+  },
+  micButton: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    width: '90%',
-    maxHeight: '80%',
+    borderRadius: isSmallScreen ? 35 : 40,
+    width: isSmallScreen ? 70 : 80,
+    height: isSmallScreen ? 70 : 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  onboardingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  micButtonActive: {
+    backgroundColor: '#FF5722',
+    transform: [{ scale: 1.1 }],
+    borderColor: '#FF8A65',
   },
-  onboardingTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  onboardingContent: {
-    padding: 20,
-    maxHeight: 400,
-  },
-  guideSection: {
-    marginBottom: 20,
-  },
-  guideSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  guideText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 5,
-  },
-  guideExample: {
-    fontSize: 14,
-    color: '#03DAC6',
-    fontStyle: 'italic',
-    marginBottom: 5,
-    paddingLeft: 10,
-  },
-  actionExamples: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 10,
-  },
-  actionExample: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-    marginBottom: 10,
-  },
-  actionExampleText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 5,
-  },
-  gotItButton: {
-    backgroundColor: '#03DAC6',
-    margin: 20,
-    padding: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  gotItText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  micButtonProcessing: {
+    backgroundColor: '#FFC107',
+    borderColor: '#FFD54F',
   },
   
   // Interactive Guide Styles
@@ -1493,11 +1538,9 @@ const styles = StyleSheet.create({
   },
   guideOverlayBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   tooltip: {
     position: 'absolute',
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
@@ -1519,7 +1562,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: 'white',
   },
   tooltipArrowUp: {
     position: 'absolute',
@@ -1532,40 +1574,36 @@ const styles = StyleSheet.create({
     borderBottomWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: 'white',
   },
   tooltipContent: {
     alignItems: 'center',
   },
   tooltipTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
     textAlign: 'center',
   },
   tooltipMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: isSmallScreen ? 13 : 14,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     marginBottom: 16,
   },
   tooltipButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    gap: 12,
   },
   skipButton: {
     flex: 1,
     padding: 12,
     alignItems: 'center',
-    marginRight: 8,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
   },
   skipButtonText: {
-    color: '#666',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -1573,128 +1611,101 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     alignItems: 'center',
-    marginLeft: 8,
     borderRadius: 8,
-    backgroundColor: '#03DAC6',
   },
   nextButtonText: {
-    color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
   },
   
-  // Audio control styles
-  audioControlsContainer: {
-    marginTop: 10,
-    marginBottom: 10,
+  // Onboarding Modal Styles
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    paddingHorizontal: 20,
+  },
+  onboardingModal: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: height * 0.85,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  onboardingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    padding: 20,
+    borderBottomWidth: 1,
   },
-  audioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderColor: '#03DAC6',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    flex: 1,
+  onboardingTitle: {
+    fontSize: isSmallScreen ? 18 : 20,
+    fontWeight: 'bold',
   },
-  audioButtonActive: {
-    backgroundColor: 'rgba(255, 87, 34, 0.1)',
-    borderColor: '#FF5722',
+  closeButton: {
+    padding: 4,
   },
-  audioButtonText: {
-    color: '#03DAC6',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
+  onboardingContent: {
+    padding: 20,
+    maxHeight: height * 0.6,
   },
-  audioButtonTextActive: {
-    color: '#FF5722',
+  guideSection: {
+    marginBottom: 20,
   },
-  muteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderColor: '#03DAC6',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    flex: 1,
-  },
-  muteButtonActive: {
-    backgroundColor: 'rgba(255, 87, 34, 0.1)',
-    borderColor: '#FF5722',
-  },
-  muteButtonText: {
-    color: '#03DAC6',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  muteButtonTextActive: {
-    color: '#FF5722',
-  },
-  historyAudioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderRadius: 12,
-  },
-  historyAudioText: {
-    color: '#03DAC6',
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  historyToolResult: {
-    color: '#81C784',
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  noAudioContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: 'rgba(255, 87, 34, 0.1)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FF5722',
-  },
-  noAudioText: {
-    color: '#FF5722',
-    fontSize: 14,
-    fontWeight: '500',
+  guideSectionTitle: {
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: 'bold',
     marginBottom: 10,
   },
-  generateAudioButton: {
+  guideText: {
+    fontSize: isSmallScreen ? 13 : 14,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  guideExample: {
+    fontSize: isSmallScreen ? 13 : 14,
+    fontStyle: 'italic',
+    marginBottom: 4,
+    paddingLeft: 10,
+  },
+  actionExamples: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 12,
+  },
+  actionExample: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    borderColor: '#03DAC6',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    marginBottom: 8,
   },
-  generateAudioText: {
-    color: '#03DAC6',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
+  actionExampleText: {
+    fontSize: 11,
+    marginLeft: 4,
+  },
+  gotItButton: {
+    margin: 20,
+    padding: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, y: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  gotItText: {
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: 'bold',
   },
 });

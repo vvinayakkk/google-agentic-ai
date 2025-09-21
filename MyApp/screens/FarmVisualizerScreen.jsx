@@ -450,7 +450,10 @@ const FarmSimLegendary = ({ navigation }) => {
     const tool = gameState.inventory.tools.find(t => t.id === selectedTool);
     
     if (gameState.farmer.energy < tool.energy) {
-      Alert.alert('⚡ Insufficient Energy', 'Rest or consume energy items to continue farming!');
+      Alert.alert(
+        t('farm.energy_title', '⚡ Insufficient Energy'),
+        t('farm.energy_message', 'Rest or consume energy items to continue farming!')
+      );
       return;
     }
 

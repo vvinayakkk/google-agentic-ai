@@ -1,24 +1,28 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-const ReasonCard = ({ title, children, confidence = null, impact = null }) => (
-  <View style={styles.reasonCard}>
-    <View style={styles.reasonHeader}>
-      <Text style={styles.reasonCardTitle}>{title}</Text>
-      {confidence && (
-        <View style={styles.confidenceBadge}>
-          <Text style={styles.confidenceText}>{confidence}% confidence</Text>
+const ReasonCard = ({ title, children, confidence = null, impact = null }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.reasonCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+      <View style={styles.reasonHeader}>
+        <Text style={[styles.reasonCardTitle, { color: theme.colors.primary }]}>{title}</Text>
+        {confidence && (
+          <View style={[styles.confidenceBadge, { backgroundColor: theme.colors.primary }] }>
+            <Text style={[styles.confidenceText, { color: theme.colors.card }]}>{confidence}% confidence</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.reasonCardContent, { color: theme.colors.text }]}>{children}</Text>
+      {impact && (
+        <View style={[styles.impactIndicator, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.impactText, { color: theme.colors.textSecondary }]}>Impact: {impact}</Text>
         </View>
       )}
     </View>
-    <Text style={styles.reasonCardContent}>{children}</Text>
-    {impact && (
-      <View style={styles.impactIndicator}>
-        <Text style={styles.impactText}>Impact: {impact}</Text>
-      </View>
-    )}
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   reasonCard: {

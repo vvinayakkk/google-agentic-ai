@@ -226,7 +226,7 @@ const NewMarketPricesScreen = ({ navigation, embedded = false }) => {
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: embedded ? 0 : 32, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.searchContainer}>
-            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder="Commodity" placeholderTextColor={theme.colors.textSecondary} />
+            <TextInput style={styles.searchInput} value={searchCommodity} onChangeText={setSearchCommodity} placeholder={t('market.placeholder_commodity', 'Commodity')} placeholderTextColor={theme.colors.textSecondary} />
           </View>
           <TouchableOpacity style={[styles.searchButton, isSearching && styles.disabledButton]} onPress={handleSearch} disabled={isSearching}>
             {isSearching ? <ActivityIndicator color={theme.colors.background} /> : <Text style={styles.searchButtonText}>Search Prices</Text>}

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
@@ -9,6 +10,7 @@ import { NetworkConfig } from '../utils/NetworkConfig';
 const API_BASE = NetworkConfig.API_BASE;
 
 export default function SpeechToTextScreen({ navigation }) {
+  const { theme } = useTheme();
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -78,35 +80,35 @@ export default function SpeechToTextScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Speech to Text (Backend)</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
+      <Text style={[styles.title, { color: theme.colors.primary }]}>Speech to Text (Backend)</Text>
       <View style={styles.textContainer}>
         {isUploading ? (
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={theme.colors.success} />
         ) : (
-          <Text style={styles.recognizedText}>{transcript || 'Tap the mic, record, and upload to backend...'}</Text>
+          <Text style={[styles.recognizedText, { color: theme.colors.text }]}>{transcript || 'Tap the mic, record, and upload to backend...'}</Text>
         )}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>}
       <TouchableOpacity
-        style={[styles.micButton, isRecording && { backgroundColor: '#10B981' }]}
+        style={[styles.micButton, isRecording && { backgroundColor: theme.colors.success }]}
         onPress={isRecording ? stopRecording : startRecording}
         activeOpacity={0.8}
         disabled={isUploading}
       >
-        <Ionicons name={isRecording ? 'mic-off' : 'mic'} size={48} color={isRecording ? 'white' : '#10B981'} />
+        <Ionicons name={isRecording ? 'mic-off' : 'mic'} size={48} color={isRecording ? theme.colors.onPrimary : theme.colors.success} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>Back</Text>
+      <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.colors.card }]} onPress={() => navigation.goBack()}>
+        <Text style={[styles.backButtonText, { color: theme.colors.text }]}>Back</Text>
       </TouchableOpacity>
-    </View>
+  </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -126,11 +128,9 @@ const styles = StyleSheet.create({
   },
   recognizedText: {
     fontSize: 22,
-    color: '#fff',
     textAlign: 'center',
   },
   micButton: {
-    backgroundColor: '#fff',
     borderRadius: 50,
     padding: 24,
     marginBottom: 24,
@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#23232a',
   },
   backButtonText: {
     color: '#fff',

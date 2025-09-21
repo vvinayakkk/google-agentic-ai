@@ -39,6 +39,11 @@ export const lightTheme = {
     headerTint: '#4B5563',
     // Status bar
     statusBarStyle: 'dark-content',
+  // Additional semantic tokens
+  onPrimary: '#FFFFFF',
+  accent: '#A855F7',
+  muted: '#9CA3AF',
+  warning: '#F59E0B',
   },
   ...base,
 };
@@ -66,6 +71,11 @@ export const darkTheme = {
     headerTint: '#C7C7CC',
     // Status bar
     statusBarStyle: 'light-content',
+  // Additional semantic tokens
+  onPrimary: '#000000',
+  accent: '#A855F7',
+  muted: '#9CA3AF',
+  warning: '#F59E0B',
   },
   ...base,
 };

@@ -13,7 +13,7 @@ const LANGUAGES = [
   { label: 'हिन्दी (Hindi)', value: 'hi' },
   { label: 'বাংলা (Bengali)', value: 'bn' },
   { label: 'తెలుగు (Telugu)', value: 'te' },
-  { label: 'మరాఠీ (Marathi)', value: 'mr' },
+  { label: 'मराठी (Marathi)', value: 'mr' },
   { label: 'தமிழ் (Tamil)', value: 'ta' },
   { label: 'ગુજરાતી (Gujarati)', value: 'gu' },
   { label: 'ಕನ್ನಡ (Kannada)', value: 'kn' },

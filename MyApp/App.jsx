@@ -5,7 +5,6 @@ import React, { Suspense, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CardStyleInterpolators } from '@react-navigation/stack';
-
 import Toast from 'react-native-toast-message';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { buildNavigationTheme } from './theme';
@@ -37,6 +36,7 @@ import WeatherScreen from './screens/WeatherScreen';
 import NewMarketPricesScreen from './screens/NewMarketPricesScreen';
 import SoilMoistureScreen from './screens/SoilMoistureScreen';
 import FarmerProfileScreen from './screens/FarmerProfileScreen';
+import ProfileScreen from './screens/Profile';
 import LoginScreen from './screens/LoginScreen';
 import RentalScreen from './screens/RentalScreen';
 import MyBookings from './screens/MyBookings';
@@ -55,6 +55,7 @@ import SuicidePrevention from './screens/SuicidePrevention';
 import SettingsScreen from './screens/SettingsScreen';
 import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import ThemeToggle from './components/ThemeToggle';
 import NetworkConfig from './utils/NetworkConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
@@ -249,6 +250,11 @@ function AppInner() {
                 options={{ headerShown: false }} 
               />
               <Stack.Screen 
+                name="Profile" 
+                component={ProfileScreen} 
+                options={{ headerShown: false }} 
+              />
+              <Stack.Screen 
                 name="RentalSystemScreen" 
                 component={RentalScreen} 
                 options={{ headerShown: false }} 
@@ -329,6 +335,9 @@ function AppInner() {
               />
             </Stack.Navigator>
           </NavigationContainer>
+          <View style={styles.toggleContainer} pointerEvents="box-none">
+            <ThemeToggle />
+          </View>
           <Toast />
         </View>
       </Suspense>
@@ -343,5 +352,14 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  toggleContainer: {
+    position: 'absolute',
+    top: 45,
+    right: 6,
+    zIndex: 999,
+  },
+});
 
 // Remove the styles since they're no longer needed

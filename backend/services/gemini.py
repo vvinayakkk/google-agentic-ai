@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY") or "AIzaSyD3K4HNxRHnfATZ6n_nln3MnpdOPqoHZRs"
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY") or "AIzaSyCLii-M1ywSa5PH-cXc3T-F5AJrCqSrX_4"
 if not GEMINI_API_KEY:
     raise RuntimeError("GOOGLE_API_KEY environment variable not set. Please set it before running the backend.")
 GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY

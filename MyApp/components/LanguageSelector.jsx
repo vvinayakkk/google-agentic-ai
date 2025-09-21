@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, getStoredLanguage } from '../i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ const LanguageSelector = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isChanging, setIsChanging] = useState(false);
+  const { theme, isDark } = useTheme();
 
   useEffect(() => {
     loadCurrentLanguage();
@@ -97,7 +99,7 @@ const LanguageSelector = ({
         key={language.value}
         style={[
           styles.languageOption,
-          isSelected && styles.languageOptionSelected
+          isSelected && [styles.languageOptionSelected, { backgroundColor: theme.colors.primary + '22', borderColor: theme.colors.primary }]
         ]}
         onPress={() => handleLanguageChange(language.value)}
         disabled={isChanging}
@@ -109,7 +111,8 @@ const LanguageSelector = ({
           <View style={styles.languageTextContainer}>
             <Text style={[
               styles.languageLabel,
-              isSelected && styles.languageLabelSelected
+              isSelected && styles.languageLabelSelected,
+              { color: isSelected ? theme.colors.primary : theme.colors.text }
             ]}>
               {language.label}
             </Text>
@@ -117,7 +120,7 @@ const LanguageSelector = ({
               <Ionicons 
                 name="checkmark-circle" 
                 size={20} 
-                color="#00C853" 
+                color={theme.colors.primary} 
                 style={styles.checkIcon}
               />
             )}
@@ -129,28 +132,28 @@ const LanguageSelector = ({
 
   const renderCompactButton = () => (
     <TouchableOpacity
-      style={styles.compactButton}
+      style={[styles.compactButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
       onPress={() => setModalVisible(true)}
     >
-      <Ionicons name="ellipsis-vertical" size={24} color="#E0E0E0" />
+      <Ionicons name="ellipsis-vertical" size={24} color={theme.colors.text} />
     </TouchableOpacity>
   );
 
   const renderFullButton = () => (
     <TouchableOpacity
-      style={styles.fullButton}
+      style={[styles.fullButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
       onPress={() => setModalVisible(true)}
     >
       <View style={styles.fullButtonContent}>
         {showFlag && (
-          <Text style={styles.currentLanguageFlag}>
+          <Text style={[styles.currentLanguageFlag, { color: theme.colors.text }]}>
             {getCurrentLanguageInfo().flag}
           </Text>
         )}
-        <Text style={styles.currentLanguageText}>
+        <Text style={[styles.currentLanguageText, { color: theme.colors.text }]}>
           {getCurrentLanguageInfo().label}
         </Text>
-        <Ionicons name="chevron-down" size={16} color="#E0E0E0" />
+        <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
       </View>
     </TouchableOpacity>
   );
@@ -159,7 +162,7 @@ const LanguageSelector = ({
     <>
       {compact ? renderCompactButton() : renderFullButton()}
       
-      <Modal
+  <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
@@ -171,29 +174,29 @@ const LanguageSelector = ({
           onPress={() => setModalVisible(false)}
         >
           <View style={[
-            styles.modalContent,
+    styles.modalContent,
             position === 'top-right' && styles.modalTopRight,
             position === 'top-left' && styles.modalTopLeft,
             position === 'bottom-right' && styles.modalBottomRight,
             position === 'bottom-left' && styles.modalBottomLeft,
           ]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('crop_intelligence.select_language')}</Text>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}> 
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('crop_intelligence.select_language')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Ionicons name="close" size={20} color="#E0E0E0" />
+                <Ionicons name="close" size={20} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
             
-            <View style={styles.languageList}>
+            <View style={[styles.languageList, { backgroundColor: theme.colors.card }] }>
               {LANGUAGES.map(renderLanguageOption)}
             </View>
             
             {isChanging && (
-              <View style={styles.loadingOverlay}>
-                <Text style={styles.loadingText}>{t('crop_intelligence.changing_language')}</Text>
+              <View style={[styles.loadingOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                <Text style={[styles.loadingText, { color: theme.colors.text }]}>{t('crop_intelligence.changing_language')}</Text>
               </View>
             )}
           </View>

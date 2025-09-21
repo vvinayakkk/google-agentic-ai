@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, SafeAreaView, TouchableOpacity , StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NetworkConfig } from '../utils/NetworkConfig';
+import { useTheme } from '../context/ThemeContext';
 
 const API_BASE_URL = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001'; // Replace with dynamic value if needed
 
 export default function MyBookings({ navigation }) {
+  const { theme } = useTheme();
   // Hardcoded beautiful data
   const bookings = [
     {
@@ -52,12 +54,13 @@ export default function MyBookings({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }] }>
+      <StatusBar barStyle={theme.colors.statusBarStyle || 'dark-content'} backgroundColor={theme.colors.background} />
+      <View style={[styles.topBar, { borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.colors.card }]} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.header}>My Bookings</Text>
+        <Text style={[styles.header, { color: theme.colors.text }]}>My Bookings</Text>
       </View>
       <FlatList
         data={bookings}

@@ -1,21 +1,28 @@
 import React from 'react';
 import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-const ProgressBar = ({ progress, color = '#58D68D' }) => (
-  <View style={styles.progressBarContainer}>
-    <View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: color }]} />
-  </View>
-);
-
-const LoadingState = ({ text, progress = 0 }) => (
-  <View style={styles.centerContainer}>
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#58D68D" />
-      <Text style={styles.loadingText}>{text}</Text>
-      {progress > 0 && <ProgressBar progress={progress} />}
+const ProgressBar = ({ progress, color }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.progressBarContainer, { backgroundColor: theme.colors.surface }] }>
+      <View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: color || theme.colors.primary }]} />
     </View>
-  </View>
-);
+  );
+};
+
+const LoadingState = ({ text, progress = 0 }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{text}</Text>
+        {progress > 0 && <ProgressBar progress={progress} />}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   centerContainer: {

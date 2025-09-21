@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Alert, Dimensions, Modal, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- ASYNC STORAGE IMPORT ---
 // You need to install this library to store the user's mode choice
@@ -15,46 +16,42 @@ import { setLanguage } from '../i18n';
 
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 // Interactive Guide Tooltip Component for ChoiceScreen
 function InteractiveGuideTooltip({ step, onNext, onSkip }) {
+  const { t } = useTranslation();
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'voiceButton':
         return {
-          top: '25%', // Above the voice button (which is centered)
+          top: height * 0.35,
           alignSelf: 'center',
         };
       case 'manualButton':
         return {
-          top: '50%', // Above the manual button (below voice button)
+          top: height * 0.55,
           alignSelf: 'center',
         };
       case 'profileIcon':
         return {
-          top: 140, // Below the profile icon (top right)
-          right: 10, // Align with profile icon position
+          top: height * 0.15,
+          right: 20,
         };
-      // case 'marketButton':
-      //   return {
-      //     bottom: 200, // Above the market prices button
-      //     alignSelf: 'center',
-      //   };
       case 'soilButton':
         return {
-          bottom: 140, // Above the soil moisture button (different from market)
+          bottom: height * 0.25,
           alignSelf: 'center',
         };
       case 'helpButton':
         return {
-          bottom: 160, // Above the help button (bottom right)
-          right: 10, // Align with help button position
+          bottom: height * 0.15,
+          right: 20,
         };
       case 'screen':
       default:
         return {
-          top: '35%', // Center of screen for welcome message
+          top: height * 0.3,
           alignSelf: 'center',
         };
     }
@@ -65,19 +62,18 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
       {/* Pointer Arrow */}
       {step.position === 'bottom' && <View style={styles.tooltipArrowDown} />}
       {step.position === 'top' && <View style={styles.tooltipArrowUp} />}
-      {/* No arrow for center position */}
       
       <View style={styles.tooltipContent}>
-        <Text style={styles.tooltipTitle}>{step.title}</Text>
+          <Text style={styles.tooltipTitle}>{step.title}</Text>
         <Text style={styles.tooltipMessage}>{step.message}</Text>
         
         <View style={styles.tooltipButtons}>
           <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-            <Text style={styles.skipButtonText}>Skip Tour</Text>
+            <Text style={styles.skipButtonText}>{t('choice.tour.skip', 'Skip Tour')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.nextButton} onPress={onNext}>
             <Text style={styles.nextButtonText}>
-              {step.id === 'help_features' ? 'Got it!' : 'Next'}
+              {step.id === 'help_features' ? t('choice.tour.got_it', 'Got it!') : t('choice.tour.next', 'Next')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -86,13 +82,13 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   );
 }
 
-// REMOVED: fetchWeatherContext, fetchSoilContext, fetchMarketContext, CONTEXT_FETCHED_KEY, and related useEffect
-
 export default function ChoiceScreen({ navigation }) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [showHelp, setShowHelp] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const { t, i18n } = useTranslation();
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   // Onboarding states
   const [showInteractiveGuide, setShowInteractiveGuide] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -112,8 +108,10 @@ export default function ChoiceScreen({ navigation }) {
 
   const handleLanguageChange = async (languageCode) => {
     try {
-      await setLanguage(languageCode);
-      setShowLanguageDropdown(false);
+  // optimistically update selected language then persist & apply
+  setSelectedLanguage(languageCode);
+  await setLanguage(languageCode);
+  setShowLanguageDropdown(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to change language');
     }
@@ -123,43 +121,43 @@ export default function ChoiceScreen({ navigation }) {
   const ONBOARDING_STEPS = [
     {
       id: 'welcome',
-      title: t('choice.onboarding.welcome_title'),
-      message: t('choice.onboarding.welcome_message'),
+      title: t('choice.onboarding.welcome_title') || 'Welcome!',
+      message: t('choice.onboarding.welcome_message') || 'Let\'s take a quick tour of the app features.',
       target: 'screen',
       position: 'center'
     },
     {
       id: 'voice_mode',
-      title: t('choice.onboarding.voice_title'),
-      message: t('choice.onboarding.voice_message'),
+      title: t('choice.onboarding.voice_title') || 'Voice Mode',
+      message: t('choice.onboarding.voice_message') || 'Use voice commands to interact with the AI assistant.',
       target: 'voiceButton',
       position: 'top'
     },
     {
       id: 'manual_mode',
-      title: t('choice.onboarding.manual_title'),
-      message: t('choice.onboarding.manual_message'),
+      title: t('choice.onboarding.manual_title') || 'Manual Mode',
+      message: t('choice.onboarding.manual_message') || 'Type your questions and get instant responses.',
       target: 'manualButton',
       position: 'top'
     },
     {
       id: 'profile_access',
-      title: t('choice.onboarding.profile_title'),
-      message: t('choice.onboarding.profile_message'),
+      title: t('choice.onboarding.profile_title') || 'Profile',
+      message: t('choice.onboarding.profile_message') || 'Access your profile and settings here.',
       target: 'profileIcon',
       position: 'bottom'
     },
     {
       id: 'market_prices',
-      title: t('choice.onboarding.market_title'),
-      message: t('choice.onboarding.market_message'),
+      title: t('choice.onboarding.market_title') || 'Market Prices',
+      message: t('choice.onboarding.market_message') || 'Check current market prices for your crops.',
       target: 'marketButton',
       position: 'bottom'
     },
     {
       id: 'help_features',
-      title: t('choice.onboarding.help_title'),
-      message: t('choice.onboarding.help_message'),
+      title: t('choice.onboarding.help_title') || 'Help',
+      message: t('choice.onboarding.help_message') || 'Get help and support whenever you need it.',
       target: 'helpButton',
       position: 'bottom'
     }
@@ -177,18 +175,16 @@ export default function ChoiceScreen({ navigation }) {
       
       if (!hasSeenGuide) {
         console.log('First-time user detected, starting onboarding...');
-        // Start onboarding after a short delay
         setTimeout(() => {
           setShowInteractiveGuide(true);
           setOnboardingStep(0);
-        }, 500); // Increased delay to ensure UI is ready
+        }, 500);
       } else {
         console.log('Returning user, onboarding already completed');
       }
       setHasSeenOnboarding(!!hasSeenGuide);
     } catch (error) {
       console.error('Error checking onboarding status:', error);
-      // If there's an error, show onboarding anyway
       setTimeout(() => {
         setShowInteractiveGuide(true);
         setOnboardingStep(0);
@@ -208,7 +204,7 @@ export default function ChoiceScreen({ navigation }) {
       await AsyncStorage.removeItem('choiceScreenOnboardingCompleted');
       setHasSeenOnboarding(false);
       console.log('Onboarding reset - will show on next app start');
-      Alert.alert('Debug', 'Onboarding reset! Restart the app to see it again.');
+  Alert.alert(t('debug.title', 'Debug'), t('onboarding.reset_message', 'Onboarding reset! Restart the app to see it again.'));
     } catch (error) {
       console.error('Error resetting onboarding:', error);
     }
@@ -237,7 +233,6 @@ export default function ChoiceScreen({ navigation }) {
       console.error('Error saving onboarding completion:', error);
     }
   };
-  // REMOVED: loading state and timeoutRef
 
   // Debug: log loading state changes
   useEffect(() => {
@@ -259,9 +254,15 @@ export default function ChoiceScreen({ navigation }) {
   const handleModeSelection = async (mode, screen) => {
     try {
       await AsyncStorage.setItem('userMode', mode);
+      // Ensure the selected language is applied before navigating so subsequent screens render
+      // in the chosen language. If no change is needed this resolves quickly.
+      const currentLang = i18n.language || 'en';
+      if (selectedLanguage && selectedLanguage !== currentLang) {
+        await setLanguage(selectedLanguage);
+      }
       const newChat = {
         id: Date.now().toString(),
-        title: t('voicechat.new_chat'),
+        title: t('voicechat.new_chat') || 'New Chat',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         messages: [],
         context: { weather: '', soil: '', market: '' }
@@ -274,130 +275,167 @@ export default function ChoiceScreen({ navigation }) {
           // Optionally show a toast or log error, but don't block navigation
         });
     } catch (e) {
-      Alert.alert(t('common.error'), t('choice.error_start_chat'));
+      Alert.alert(t('common.error') || 'Error', t('choice.error_start_chat') || 'Failed to start chat');
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
       <StatusBar barStyle={theme.colors.statusBarStyle} />
-      {/* Header Icons at Top Right */}
-      <View style={styles.headerContainer}>
-        {/* Language Menu Button */}
-        <TouchableOpacity
-          style={styles.languageButton}
-          onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="ellipsis-vertical" size={30} color="#10B981" />
-        </TouchableOpacity>
-        
-        {/* Profile Icon */}
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="person-circle-outline" size={50} color="#10B981" />
-        </TouchableOpacity>
-        {/* Settings Icon */}
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="settings-outline" size={28} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-      {/* Title and Subtitle */}
-  <Text style={[styles.title, { color: theme.colors.primary }]}>{t('choice.title')}</Text>
-  <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('choice.subtitle')}</Text>
       
-      <View style={styles.optionsContainer}>
-        <TouchableOpacity 
-          style={[styles.optionButton, { backgroundColor: theme.colors.background, borderColor: theme.colors.text, shadowColor: theme.colors.text }]} 
-          onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
-          // REMOVED: disabled={loading}
-        >
-          <MaterialCommunityIcons name="microphone-outline" size={60} color={theme.colors.text} />
-          <Text style={[styles.optionText, { color: theme.colors.text }]}>{t('choice.voice_pilot')}</Text>
-        </TouchableOpacity>
-        
-        <Text style={styles.orText}>{t('choice.or')}</Text>
-        
-        <TouchableOpacity 
-          style={[styles.optionButton, { backgroundColor: theme.colors.background, borderColor: theme.colors.text, shadowColor: theme.colors.text }]} 
-          onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
-          // REMOVED: disabled={loading}
-        >
-          <Ionicons name="hand-right-outline" size={60} color={theme.colors.text} />
-          <Text style={[styles.optionText, { color: theme.colors.text }]}>{t('choice.manual_mode')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Feature Buttons */}
-      <View style={styles.featureButtonsContainer}>
-        <TouchableOpacity 
-          style={[styles.featureButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]} 
-          onPress={() => navigation.navigate('BestOutOfWasteScreen')}
-        >
-          <Ionicons name="reload-circle-outline" size={24} color={theme.colors.primary} />
-          <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>♻️ Best Out of Waste</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.featureButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]} 
-          onPress={() => navigation.navigate('MarketplaceScreen')}
-        >
-          <Ionicons name="trending-up-outline" size={24} color={theme.colors.primary} />
-          <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>{t('choice.view_market_prices')}</Text>
-        </TouchableOpacity>
-      </View>
-      {/* <TouchableOpacity 
-        style={styles.featureButton} 
-        onPress={() => navigation.navigate('SoilMoisture')}
-        // REMOVED: disabled={loading}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <Ionicons name="water-outline" size={24} color="#3B82F6" />
-        <Text style={[styles.featureButtonText, { color: '#3B82F6' }]}>{t('choice.check_soil_moisture')}</Text>
-      </TouchableOpacity> */}
-
-      {/* <TouchableOpacity 
-        style={[styles.optionButton, { marginTop: 32, backgroundColor: '#10B981' }]}
-        onPress={() => navigation.navigate('SpeechToTextScreen')}
-      >
-        <Ionicons name="mic" size={32} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18, marginLeft: 12 }}>Try Speech-to-Text Demo</Text>
-      </TouchableOpacity> */}
-
-      {/* Tour Buttons */}
-      {hasSeenOnboarding && (
-        <View style={styles.tourButtonsContainer}>
-          <TouchableOpacity 
-            style={styles.restartTourButton} 
-            onPress={startInteractiveGuide}
+        {/* Header Icons */}
+        <View style={styles.headerContainer}>
+          {/* Language Menu Button */}
+          <TouchableOpacity
+            style={[styles.languageButton, { backgroundColor: `${theme.colors.primary}20`, borderColor: `${theme.colors.primary}40` }]}
+            onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
+            activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="replay" size={20} color="#10B981" />
-            <Text style={styles.restartTourText}>Tour</Text>
+            <Ionicons name="ellipsis-vertical" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.resetTourButton} 
-            onPress={resetOnboarding}
+          
+          {/* Profile Icon */}
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
+            activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
-            <Text style={styles.resetTourText}>Reset</Text>
+            <Ionicons name="person-circle-outline" size={32} color={theme.colors.primary} />
+          </TouchableOpacity>
+
+          {/* Settings Icon */}
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="settings-outline" size={28} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
-      )}
 
-      <View style={styles.helpCardContainer}>
-        {showHelp && (
-          <View style={styles.helpCard}>
-            <Text style={styles.helpCardText}>{t('choice.help_text')}</Text>
+        {/* Title and Subtitle */}
+        <View style={styles.titleContainer}>
+          <Text style={[styles.title, { color: theme.colors.primary }]}>
+            {t('choice.title') || 'FarmBot'}
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            {t('choice.subtitle') || 'Choose your interaction mode'}
+          </Text>
+        </View>
+        
+        {/* Main Options */}
+        <View style={styles.optionsContainer}>
+          <TouchableOpacity 
+            style={[styles.optionButton, { 
+              backgroundColor: theme.colors.surface, 
+              borderColor: theme.colors.primary,
+              shadowColor: theme.colors.primary 
+            }]} 
+            onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
+          >
+            <MaterialCommunityIcons name="microphone-outline" size={50} color={theme.colors.primary} />
+            <Text style={[styles.optionText, { color: theme.colors.text }]}>
+              {t('choice.voice_pilot') || 'Voice Mode'}
+            </Text>
+          </TouchableOpacity>
+          
+          <Text style={[styles.orText, { color: theme.colors.textSecondary }]}>
+            {t('choice.or') || 'OR'}
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.optionButton, { 
+              backgroundColor: theme.colors.surface, 
+              borderColor: theme.colors.primary,
+              shadowColor: theme.colors.primary 
+            }]} 
+            onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
+          >
+            <Ionicons name="hand-right-outline" size={50} color={theme.colors.primary} />
+            <Text style={[styles.optionText, { color: theme.colors.text }]}>
+              {t('choice.manual_mode') || 'Manual Mode'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Feature Buttons */}
+        <View style={styles.featureButtonsContainer}>
+          <TouchableOpacity 
+            style={[styles.featureButton, { 
+              backgroundColor: theme.colors.surface, 
+              borderColor: theme.colors.border 
+            }]} 
+            onPress={() => navigation.navigate('BestOutOfWasteScreen')}
+          >
+            <Ionicons name="reload-circle-outline" size={20} color={theme.colors.primary} />
+            <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>
+              ♻️ Best Out of Waste
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.featureButton, { 
+              backgroundColor: theme.colors.surface, 
+              borderColor: theme.colors.border 
+            }]} 
+            onPress={() => navigation.navigate('MarketplaceScreen')}
+          >
+            <Ionicons name="trending-up-outline" size={20} color={theme.colors.primary} />
+            <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>
+              {t('choice.view_market_prices') || 'Market Prices'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tour Buttons */}
+        {hasSeenOnboarding && (
+          <View style={styles.tourButtonsContainer}>
+            <TouchableOpacity 
+              style={[styles.restartTourButton, { 
+                backgroundColor: `${theme.colors.primary}20`, 
+                borderColor: theme.colors.primary 
+              }]} 
+              onPress={startInteractiveGuide}
+            >
+              <MaterialCommunityIcons name="replay" size={18} color={theme.colors.primary} />
+              <Text style={[styles.restartTourText, { color: theme.colors.primary }]}>{t('choice.tour.button', 'Tour')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.resetTourButton} 
+              onPress={resetOnboarding}
+            >
+              <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
+              <Text style={styles.resetTourText}>{t('choice.tour.reset', 'Reset')}</Text>
+            </TouchableOpacity>
           </View>
         )}
-        <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelp(!showHelp)} disabled={false}>
-          <MaterialCommunityIcons name="help-circle-outline" size={28} color="#fff" />
+      </ScrollView>
+
+      {/* Help Button - Fixed Position */}
+      <View style={styles.helpContainer}>
+        {showHelp && (
+          <View style={[styles.helpCard, { 
+            backgroundColor: theme.colors.surface, 
+            borderColor: theme.colors.border 
+          }]}>
+            <Text style={[styles.helpCardText, { color: theme.colors.text }]}>
+              {t('choice.help_text') || 'Choose voice mode for hands-free interaction or manual mode for typing. Access your profile and market prices from the buttons above.'}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity 
+          style={[styles.helpButton, { 
+            backgroundColor: theme.colors.primary,
+            shadowColor: theme.colors.primary 
+          }]} 
+          onPress={() => setShowHelp(!showHelp)}
+        >
+          <MaterialCommunityIcons name="help-circle-outline" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
@@ -409,27 +447,41 @@ export default function ChoiceScreen({ navigation }) {
         onRequestClose={() => setShowLanguageDropdown(false)}
       >
         <TouchableOpacity
-          style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}
+          style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowLanguageDropdown(false)}
         >
-          <View style={[styles.languageDropdown, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
-            <Text style={[styles.languageDropdownTitle, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}>Select Language</Text>
+          <View style={[styles.languageDropdown, { 
+            backgroundColor: theme.colors.card, 
+            borderColor: theme.colors.border 
+          }]}> 
+            <Text style={[styles.languageDropdownTitle, { 
+              color: theme.colors.text, 
+              borderBottomColor: theme.colors.border 
+            }]}>
+              {t('choice.select_language', 'Select Language')}
+            </Text>
             {languages.map((language) => (
               <TouchableOpacity
                 key={language.code}
                 style={[
                   styles.languageOption,
                   { backgroundColor: theme.colors.surface },
-                  i18n.language === language.code && { borderColor: theme.colors.primary, backgroundColor: 'rgba(16, 185, 129, 0.15)' }
+                  i18n.language === language.code && { 
+                    borderColor: theme.colors.primary, 
+                    backgroundColor: `${theme.colors.primary}20` 
+                  }
                 ]}
                 onPress={() => handleLanguageChange(language.code)}
               >
-                <Text style={styles.languageFlag}>{language.flag}</Text>
+                  <Text style={styles.languageFlag}>{language.flag}</Text>
                 <Text style={[
                   styles.languageName,
                   { color: theme.colors.text },
-                  i18n.language === language.code && { color: theme.colors.primary, fontWeight: '700' }
+                  i18n.language === language.code && { 
+                    color: theme.colors.primary, 
+                    fontWeight: '700' 
+                  }
                 ]}>
                   {language.name}
                 </Text>
@@ -457,8 +509,6 @@ export default function ChoiceScreen({ navigation }) {
           />
         </View>
       )}
-      
-      {/* REMOVED: AnimatedLoading visible={loading} */}
     </SafeAreaView>
   );
 }
@@ -466,166 +516,122 @@ export default function ChoiceScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // overridden by theme in component
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 100, // Space for help button
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundImage: 'linear-gradient(to bottom, #0f172a, #121212)',
+    gap: 12,
+    marginBottom: 20,
+    paddingTop: 10,
+  },
+  languageButton: {
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  profileButton: {
+    padding: 4,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
   },
   title: {
-    fontSize: 52,
+    fontSize: Math.min(width * 0.12, 48),
     fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 10,
-    textShadowColor: 'rgba(16,185,129,0.6)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    opacity: 0.9,
+    marginBottom: 8,
     textAlign: 'center',
-    paddingHorizontal: 20,
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(16,185,129,0.3)',
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 60,
-    letterSpacing: 0.5,
+    fontSize: Math.min(width * 0.045, 18),
     textAlign: 'center',
-    maxWidth: '80%',
-    lineHeight: 28,
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
   optionsContainer: {
     alignItems: 'center',
+    marginBottom: 30,
   },
   optionButton: {
-    backgroundColor: '#000',
-    padding: 30,
-    borderRadius: 20,
+    padding: 24,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 220,
-    height: 160,
-    marginVertical: 20,
-    borderWidth: 1,
-    borderColor: '#fff',
-    shadowColor: '#fff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
-    elevation: 16,
+    width: Math.min(width * 0.8, 280),
+    height: Math.min(height * 0.18, 140),
+    marginVertical: 12,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   optionText: {
-    color: 'white',
-    fontSize: 24,
+    fontSize: Math.min(width * 0.055, 22),
     fontWeight: 'bold',
-    marginTop: 10,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  orText: {
+    fontSize: Math.min(width * 0.045, 18),
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginVertical: 16,
+    textAlign: 'center',
   },
   featureButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 40,
-    gap: 15,
+    gap: 12,
     flexWrap: 'wrap',
+    marginBottom: 20,
   },
   featureButton: {
     flexDirection: 'row',
-    backgroundColor: '#27272a',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3f3f46',
+    minWidth: Math.min(width * 0.4, 160),
+    justifyContent: 'center',
   },
   featureButtonText: {
-    color: '#10B981',
-    fontSize: 16,
+    fontSize: Math.min(width * 0.035, 14),
     fontWeight: '600',
-    marginLeft: 10,
+    marginLeft: 8,
+    textAlign: 'center',
   },
-  orText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: 2,
-    marginVertical: 25,
-    textTransform: 'uppercase',
-    position: 'relative',
-    paddingHorizontal: 20,
-    textShadowColor: 'rgba(255,255,255,0.1)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  helpButton: {
-    position: 'absolute',
-    bottom:-40,
-    right: 10,
-    zIndex: 2,
-    backgroundColor: '#000',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#fff',
-    padding: 8,
-  },
-  helpCardContainer: {
-    position: 'absolute',
-    bottom: 60, // appears just above the help button
-    right: 20,
-    alignItems: 'flex-end',
-    zIndex: 1,
-  },
-  helpCard: {
-    backgroundColor: '#000',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#fff',
-    paddingVertical: 5,
-    paddingHorizontal: 18,
-    marginBottom: 20,
-    maxWidth: 260,
-  },
-  helpCardText: {
-    color: '#fff',
-    fontSize: 15,
-    textAlign: 'left',
-  },
-
-  // Onboarding Tour Button
   tourButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    gap: 10
+    gap: 12,
+    marginTop: 16,
   },
   restartTourButton: {
-    zIndex: 2,
-    backgroundColor: 'rgba(16,185,129,0.1)',
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#10B981',
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   restartTourText: {
-    color: '#10B981',
     fontSize: 14,
     fontWeight: '700',
     marginLeft: 6,
-    letterSpacing: 0.5,
   },
   resetTourButton: {
-    zIndex: 2,
     backgroundColor: 'rgba(255,87,34,0.1)',
     borderRadius: 20,
     borderWidth: 1.5,
@@ -634,21 +640,43 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 10,
-    shadowColor: '#FF5722',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   resetTourText: {
     color: '#FF5722',
     fontSize: 14,
     fontWeight: '700',
     marginLeft: 6,
-    letterSpacing: 0.5,
   },
-
+  helpContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    alignItems: 'flex-end',
+    zIndex: 100,
+  },
+  helpButton: {
+    borderRadius: 25,
+    padding: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  helpCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    maxWidth: width * 0.7,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  helpCardText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
   // Interactive Guide Styles
   guideOverlay: {
     position: 'absolute',
@@ -749,27 +777,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-
   // Language Dropdown Styles
-  headerContainer: {
-    position: 'absolute',
-    top: 80,
-    right: 28,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
-  languageButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  profileButton: {
-    // No additional styles needed, keeping original positioning
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -777,13 +785,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   languageDropdown: {
-    backgroundColor: '#1f2937',
     borderRadius: 16,
     padding: 20,
-    width: '80%',
-    maxWidth: 300,
+    width: Math.min(width * 0.85, 320),
+    maxHeight: height * 0.7,
     borderWidth: 1,
-    borderColor: '#374151',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -793,11 +799,9 @@ const styles = StyleSheet.create({
   languageDropdownTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
     textAlign: 'center',
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#374151',
     paddingBottom: 12,
   },
   languageOption: {
@@ -807,12 +811,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginVertical: 4,
-    backgroundColor: '#374151',
-  },
-  selectedLanguage: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    borderWidth: 1,
-    borderColor: '#10B981',
   },
   languageFlag: {
     fontSize: 20,
@@ -821,11 +819,6 @@ const styles = StyleSheet.create({
   languageName: {
     flex: 1,
     fontSize: 16,
-    color: '#ffffff',
     fontWeight: '500',
-  },
-  selectedLanguageText: {
-    color: '#10B981',
-    fontWeight: 'bold',
   },
 });

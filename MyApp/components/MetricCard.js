@@ -1,27 +1,32 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from './Icon';
+import { useTheme } from '../context/ThemeContext';
 
-const MetricCard = ({ icon, title, value, subtitle, trend, color = '#58D68D' }) => (
-  <View style={styles.metricCard}>
-    <View style={styles.metricHeader}>
-      <Icon name={icon} style={[styles.metricIcon, { color }]} />
-      <View style={styles.metricContent}>
-        <Text style={styles.metricTitle}>{title}</Text>
-        <Text style={[styles.metricValue, { color }]}>{value}</Text>
-        {subtitle && <Text style={styles.metricSubtitle}>{subtitle}</Text>}
-        {trend && <Text style={[styles.metricTrend, { color: trend.includes('+') ? '#58D68D' : '#E74C3C' }]}>{trend}</Text>}
+const MetricCard = ({ icon, title, value, subtitle, trend, color }) => {
+  const { theme } = useTheme();
+  const trendColor = trend && trend.includes('+') ? theme.colors.success : theme.colors.danger;
+  return (
+    <View style={[styles.metricCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+      <View style={styles.metricHeader}>
+        <Icon name={icon} style={[styles.metricIcon, { color: color || theme.colors.primary }]} />
+        <View style={styles.metricContent}>
+          <Text style={[styles.metricTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
+          <Text style={[styles.metricValue, { color: color || theme.colors.text }]}>{value}</Text>
+          {subtitle && <Text style={[styles.metricSubtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
+          {trend && <Text style={[styles.metricTrend, { color: trendColor }]}>{trend}</Text>}
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   metricCard: { 
     flex: 1, 
-    backgroundColor: '#1A1A1A', 
     borderRadius: 10, 
-    padding: 12 
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   metricHeader: { 
     flexDirection: 'row', 
@@ -36,7 +41,6 @@ const styles = StyleSheet.create({
   },
   metricTitle: { 
     fontSize: 12, 
-    color: '#A9A9A9', 
     marginBottom: 2 
   },
   metricValue: { 
@@ -45,7 +49,6 @@ const styles = StyleSheet.create({
   },
   metricSubtitle: { 
     fontSize: 10, 
-    color: '#A9A9A9', 
     marginTop: 2 
   },
   metricTrend: { 

@@ -5,7 +5,6 @@ This app now uses a centralized Light/Dark theming system.
 ## Files
 - `theme/index.js`: Theme tokens and navigation theme builder
 - `context/ThemeContext.jsx`: Provider with AsyncStorage persistence and system mode
-- `screens/SettingsScreen.jsx`: UI to toggle Light/Dark/System
 
 ## Usage
 - Access the theme in any component:

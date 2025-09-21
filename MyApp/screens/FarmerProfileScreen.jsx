@@ -13,17 +13,18 @@ import {
   TextInput,
   Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setLanguage } from '../i18n';
 import { Picker } from '@react-native-picker/picker';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTheme } from '../context/ThemeContext';
-
-// Note: Theming handled via useTheme tokens in styles below
+// Simulated recording (no Audio APIs used)
 
 const DEFAULT_PROFILE_IMAGE = 'https://placehold.co/100x100/EFEFEF/333?text=F';
 
@@ -38,7 +39,44 @@ const LANGUAGE_OPTIONS = [
   { code: 'kn', label: 'Kannada' },
 ];
 
-// Helper components are defined within the screen to access themed styles
+// Profile building steps
+const PROFILE_STEPS = [
+  {
+    id: 'farm_size',
+    title: 'Farm Size',
+    question: 'How big is your farm?',
+    placeholder: 'e.g., 2 acres, 5 hectares',
+    field: 'farmSize'
+  },
+  {
+    id: 'farm_location',
+    title: 'Farm Location',
+    question: 'Where is your farm located?',
+    placeholder: 'e.g., Shirur, Maharashtra',
+    field: 'farmLocation'
+  },
+  {
+    id: 'primary_crops',
+    title: 'Primary Crops',
+    question: 'What are your main crops?',
+    placeholder: 'e.g., Rice, Wheat, Sugarcane',
+    field: 'primaryCrops'
+  },
+  {
+    id: 'livestock',
+    title: 'Livestock',
+    question: 'Do you have any livestock?',
+    placeholder: 'e.g., 5 cows, 20 chickens, None',
+    field: 'livestockSummary'
+  },
+  {
+    id: 'farming_experience',
+    title: 'Experience',
+    question: 'How many years of farming experience do you have?',
+    placeholder: 'e.g., 10 years',
+    field: 'farmingExperience'
+  }
+];
 
 const FarmerProfileScreen = ({ route, navigation }) => {
   const { farmerId } = route.params;
@@ -47,7 +85,26 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
 
+  // Profile building states
+  const [buildProfileVisible, setBuildProfileVisible] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [profileData, setProfileData] = useState({});
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [buildingComplete, setBuildingComplete] = useState(false);
+  const [isPreparingRecording, setIsPreparingRecording] = useState(false);
+
+  // Simulated voice recording states
+  const [recording, setRecording] = useState(null);
+
+  // Animation values
+  const recordingAnimation = useState(new Animated.Value(1))[0];
+  const progressAnimation = useState(new Animated.Value(0))[0];
+
+  // States from your original code for full profile display
   const [crops, setCrops] = useState([]);
   const [cropsLoading, setCropsLoading] = useState(true);
   const [cropsError, setCropsError] = useState(null);
@@ -62,9 +119,29 @@ const FarmerProfileScreen = ({ route, navigation }) => {
 
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
+  // Modal states from your original code
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [editProfileData, setEditProfileData] = useState({});
+  const [editProfileLoading, setEditProfileLoading] = useState(false);
+
+  const [cropModalVisible, setCropModalVisible] = useState(false);
+  const [currentCrop, setCurrentCrop] = useState(null);
+  const [cropLoading, setCropLoading] = useState(false);
+
+  const [livestockModalVisible, setLivestockModalVisible] = useState(false);
+  const [currentLivestock, setCurrentLivestock] = useState(null);
+  const [livestockLoadingState, setLivestockLoadingState] = useState(false);
+
+  const [eventModalVisible, setEventModalVisible] = useState(false);
+  const [currentEvent, setCurrentEvent] = useState(null);
+  const [eventLoadingState, setEventLoadingState] = useState(false);
+
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const API_BASE = NetworkConfig.API_BASE;
-  // Inner components (themed)
+  const PROFILE_CACHE_KEY = `farmer-profile-cache-${farmerId}`;
+
+  // Helper components from your original code
   const ProfileField = ({ label, value }) => (
     <View style={styles.fieldRow}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -123,31 +200,17 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     </TouchableOpacity>
   );
 
-  const PROFILE_CACHE_KEY = `farmer-profile-cache-${farmerId}`;
-
-  // State for Modals
-  const [editProfileVisible, setEditProfileVisible] = useState(false);
-  const [editProfileData, setEditProfileData] = useState({});
-  const [editProfileLoading, setEditProfileLoading] = useState(false);
-
-  const [cropModalVisible, setCropModalVisible] = useState(false);
-  const [currentCrop, setCurrentCrop] = useState(null); // Used for both editing and adding
-  const [cropLoading, setCropLoading] = useState(false);
-
-  const [livestockModalVisible, setLivestockModalVisible] = useState(false);
-  const [currentLivestock, setCurrentLivestock] = useState(null);
-  const [livestockLoadingState, setLivestockLoadingState] = useState(false); // Renamed to avoid conflict
-
-  const [eventModalVisible, setEventModalVisible] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState(null);
-  const [eventLoadingState, setEventLoadingState] = useState(false); // Renamed to avoid conflict
-
-  // --- Data Fetching Functions ---
+  // Fetch initial profile data
   const fetchProfile = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/farmer/${farmerId}/profile`);
       setProfile(res.data);
+      
+      // Check if profile is complete
+      const isComplete = res.data.farmSize && res.data.primaryCrops && res.data.farmingExperience;
+      setIsProfileComplete(isComplete);
+      
       await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(res.data));
     } catch (err) {
       console.error('Failed to fetch profile:', err);
@@ -157,6 +220,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     }
   };
 
+  // Fetch functions from your original code
   const fetchCrops = async () => {
     setCropsLoading(true);
     try {
@@ -196,7 +260,6 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- Effects to load data on component mount ---
   useEffect(() => {
     let isMounted = true;
     const loadProfileFromCache = async () => {
@@ -205,38 +268,192 @@ const FarmerProfileScreen = ({ route, navigation }) => {
         if (cached && isMounted) {
           setProfile(JSON.parse(cached));
           setIsCacheLoaded(true);
-          setLoading(false); // Show cached instantly
+          setLoading(false);
         }
       } catch (e) {}
-      // Always fetch fresh in background
       fetchProfile();
     };
     loadProfileFromCache();
-    fetchCrops();
-    fetchLivestock();
-    fetchEvents();
+    
+    // Only fetch additional data if profile is complete
+    if (isProfileComplete) {
+      fetchCrops();
+      fetchLivestock();
+      fetchEvents();
+    }
+    
     return () => { isMounted = false; };
-  }, [farmerId]);
+  }, [farmerId, isProfileComplete]);
 
-  // --- Edit/Add Handlers ---
+  // Animation for recording button
+  const startRecordingAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(recordingAnimation, {
+          toValue: 0.5,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(recordingAnimation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
 
-  // Profile Edit
+  const stopRecordingAnimation = () => {
+    recordingAnimation.stopAnimation();
+    recordingAnimation.setValue(1);
+  };
+
+  // Progress animation
+  const updateProgress = () => {
+    const progress = (currentStep + 1) / PROFILE_STEPS.length;
+    Animated.timing(progressAnimation, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  useEffect(() => {
+    updateProgress();
+  }, [currentStep]);
+
+  // Voice recording functions
+  const startRecording = () => {
+    if (isPreparingRecording || isRecording) return;
+    setIsPreparingRecording(true);
+    // Simulate a small prepare delay
+    setTimeout(() => {
+      setIsPreparingRecording(false);
+      setIsRecording(true);
+      startRecordingAnimation();
+    }, 300);
+  };
+
+  const stopRecording = () => {
+    if (!isRecording) return;
+    setIsRecording(false);
+    stopRecordingAnimation();
+    // Simulate transcription using the placeholder cleaned of 'e.g.'
+    const raw = PROFILE_STEPS[currentStep] && PROFILE_STEPS[currentStep].placeholder ? PROFILE_STEPS[currentStep].placeholder : '';
+    const cleaned = raw.replace(/^\s*(e\.g\.?\s*,?\s*)/i, '').trim();
+    const finalText = cleaned.replace(/\b(e\.g\.?\s*,?\s*)/ig, '').trim();
+    setCurrentAnswer(finalText);
+    setRecording(null);
+  };
+
+  // processVoiceInput is unused in simulated recording mode but kept for future integrations
+  const processVoiceInput = async (audioUri) => {};
+
+  // Handle voice recording toggle
+  const handleRecording = async () => {
+    try {
+      if (isRecording) {
+        await stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (e) {
+      console.error('Recording toggle error:', e);
+    }
+  };
+
+  // Handle next step
+  const handleNext = () => {
+    if (!currentAnswer.trim()) {
+      Alert.alert('Required', 'Please provide an answer before continuing.');
+      return;
+    }
+
+    // Save current answer
+    const currentStepData = PROFILE_STEPS[currentStep];
+    const updatedData = {
+      ...profileData,
+      [currentStepData.field]: currentAnswer.trim()
+    };
+    setProfileData(updatedData);
+
+    if (currentStep < PROFILE_STEPS.length - 1) {
+      // Move to next step
+      setCurrentStep(currentStep + 1);
+      setCurrentAnswer('');
+    } else {
+      // All steps completed
+      handleProfileCompletion(updatedData);
+    }
+  };
+
+  // Handle profile completion
+  const handleProfileCompletion = async (finalData) => {
+    setIsSaving(true);
+    try {
+      // Combine with existing profile data
+      const updatedProfile = {
+        ...profile,
+        ...finalData,
+        onboardingStatus: 'completed'
+      };
+  // Update local state (no backend call requested)
+  setProfile(updatedProfile);
+  setIsProfileComplete(true);
+  // Cache updated profile locally
+  await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(updatedProfile));
+      
+      // Show completion state
+      setBuildingComplete(true);
+      
+      // Navigate to the FarmerProfile route and close modal
+      setTimeout(() => {
+        try {
+          navigation.replace && navigation.replace('Profile', { farmerId });
+        } catch (navErr) {
+          navigation.navigate && navigation.navigate('Profile', { farmerId });
+        }
+        setBuildProfileVisible(false);
+        setBuildingComplete(false);
+        setCurrentStep(0);
+        setProfileData({});
+        setCurrentAnswer('');
+      }, 700);
+      
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle back in modal
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+      // Restore previous answer
+      const prevStep = PROFILE_STEPS[currentStep - 1];
+      setCurrentAnswer(profileData[prevStep.field] || '');
+    }
+  };
+
+  // All the handler functions from your original code
   const handleOpenEditProfile = () => {
     setEditProfileData({ ...profile });
-    setEditProfileVisible(true); // Open instantly, do not wait for any fetch
+    setEditProfileVisible(true);
   };
 
   const handleSubmitEditProfile = async () => {
     setEditProfileLoading(true);
     try {
-      // Optimistically update UI
       setProfile(editProfileData);
       await axios.put(`${API_BASE}/farmer/${farmerId}`, { ...editProfileData });
       await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(editProfileData));
       setEditProfileVisible(false);
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (e) {
-      setProfile(profile); // Rollback if error
+      setProfile(profile);
       console.error('Profile update error:', e);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
@@ -244,9 +461,8 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     }
   };
 
-  // Crop Handlers (Add & Edit)
   const handleOpenCropModal = (crop = null) => {
-    setCurrentCrop(crop || { name: '', plantingDate: '', totalDuration: '' }); // Initialize for add
+    setCurrentCrop(crop || { name: '', plantingDate: '', totalDuration: '' });
     setCropModalVisible(true);
   };
 
@@ -254,14 +470,12 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     setCropLoading(true);
     try {
       if (currentCrop && currentCrop.cropId) {
-        // Edit existing crop
         await axios.put(`${API_BASE}/farmer/${farmerId}/crops/${currentCrop.cropId}`, currentCrop);
         setCrops(crops.map((c) => (c.cropId === currentCrop.cropId ? currentCrop : c)));
         Alert.alert('Success', 'Crop updated successfully!');
       } else {
-        // Add new crop
         const res = await axios.post(`${API_BASE}/farmer/${farmerId}/crops`, currentCrop);
-        setCrops([...crops, res.data]); // Assuming API returns the new crop with an ID
+        setCrops([...crops, res.data]);
         Alert.alert('Success', 'Crop added successfully!');
       }
       setCropModalVisible(false);
@@ -287,7 +501,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
               await axios.delete(`${API_BASE}/farmer/${farmerId}/crops/${cropId}`);
               setCrops(crops.filter((c) => c.cropId !== cropId));
               Alert.alert('Success', 'Crop deleted successfully!');
-              setCropModalVisible(false); // Close modal if deleting the currently edited item
+              setCropModalVisible(false);
             } catch (e) {
               console.error('Crop delete error:', e);
               Alert.alert('Error', 'Failed to delete crop. Please try again.');
@@ -299,7 +513,6 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     );
   };
 
-  // Livestock Handlers (Add & Edit)
   const handleOpenLivestockModal = (animal = null) => {
     setCurrentLivestock(animal || { name: '', type: '', breed: '', age: '', health: '' });
     setLivestockModalVisible(true);
@@ -309,14 +522,12 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     setLivestockLoadingState(true);
     try {
       if (currentLivestock && currentLivestock.id) {
-        // Edit existing livestock
         await axios.put(`${API_BASE}/farmer/${farmerId}/livestock/${currentLivestock.id}`, currentLivestock);
         setLivestock(livestock.map((a) => (a.id === currentLivestock.id ? currentLivestock : a)));
         Alert.alert('Success', 'Livestock updated successfully!');
       } else {
-        // Add new livestock
         const res = await axios.post(`${API_BASE}/farmer/${farmerId}/livestock`, currentLivestock);
-        setLivestock([...livestock, res.data]); // Assuming API returns the new livestock with an ID
+        setLivestock([...livestock, res.data]);
         Alert.alert('Success', 'Livestock added successfully!');
       }
       setLivestockModalVisible(false);
@@ -354,7 +565,6 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     );
   };
 
-  // Event Handlers (Add & Edit)
   const handleOpenEventModal = (event = null) => {
     setCurrentEvent(event || { task: '', date: '', time: '', type: '', priority: '', details: '' });
     setEventModalVisible(true);
@@ -364,14 +574,12 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     setEventLoadingState(true);
     try {
       if (currentEvent && currentEvent.task) {
-        // Edit existing event - assuming 'task' is unique or acts as an ID
         await axios.put(`${API_BASE}/farmer/${farmerId}/calendar/${currentEvent.task}`, currentEvent);
         setEvents(events.map((e) => (e.task === currentEvent.task ? currentEvent : e)));
         Alert.alert('Success', 'Event updated successfully!');
       } else {
-        // Add new event
         const res = await axios.post(`${API_BASE}/farmer/${farmerId}/calendar`, currentEvent);
-        setEvents([...events, res.data]); // Assuming API returns new event data
+        setEvents([...events, res.data]);
         Alert.alert('Success', 'Event added successfully!');
       }
       setEventModalVisible(false);
@@ -409,21 +617,24 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     );
   };
 
-  // --- Loading and Error States ---
-  if (loading && !isCacheLoaded) {
+  // Loading state
+  if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+  <Text style={styles.loadingText}>{t('farmer.loading_profile', 'Loading profile...')}</Text>
       </View>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
         <Text style={styles.errorText}>{error}</Text>
-        <CustomButton title="Retry" onPress={fetchProfile} />
+        <TouchableOpacity style={styles.retryButton} onPress={fetchProfile}>
+          <Text style={styles.retryButtonText}>{t('common.retry', 'Retry')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -431,8 +642,10 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   if (!profile) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
-        <Text style={{ color: theme.colors.text, fontSize: 16 }}>No profile data found.</Text>
-        <CustomButton title="Go Back" onPress={() => navigation.goBack()} />
+  <Text style={styles.errorText}>{t('farmer.no_profile', 'No profile data found.')}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.retryButtonText}>{t('common.go_back', 'Go Back')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -440,139 +653,211 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle || 'light-content'} />
+      
+      {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint || theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Farmer Profile</Text>
+  <Text style={styles.headerTitle}>{t('farmer.my_profile', 'My Profile')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <Image
-            source={{ uri: profile.profileImage || DEFAULT_PROFILE_IMAGE }}
-            style={styles.profileImage}
-          />
-          <Text style={styles.name}>{profile.name}</Text>
-          <Text style={styles.village}>{profile.village}</Text>
-        </View>
+        {!isProfileComplete ? (
+          // Simple profile view with build profile option
+          <>
+            {/* Profile Card - Simple */}
+            <View style={styles.simpleProfileCard}>
+              <Image
+                source={{ uri: profile.profileImage || DEFAULT_PROFILE_IMAGE }}
+                style={styles.profileImageSimple}
+              />
+              <Text style={styles.nameSimple}>{profile.name || t('farmer.fallback_name', 'Farmer')}</Text>
+              <View style={styles.phoneContainer}>
+                <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} />
+                <Text style={styles.phoneText}>{profile.phoneNumber}</Text>
+              </View>
+            </View>
 
-        {/* Profile Info Section */}
-        <Section title="Profile Information" onEdit={handleOpenEditProfile}>
-          <ProfileField label="Phone Number" value={profile.phoneNumber} />
-          <View style={{ marginBottom: 22 }}>
-            <Text style={styles.fieldLabel}>Language</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={profile.language}
-                style={styles.languagePicker}
-                dropdownIconColor={theme.colors.primary}
-                onValueChange={async (lang) => {
-                  // Optimistically update UI
-                  const updated = { ...profile, language: lang };
-                  setProfile(updated);
-                  setEditProfileData((d) => ({ ...d, language: lang }));
-                  await setLanguage(lang);
-                  await axios.put(`${API_BASE}/farmer/${farmerId}`, updated);
-                  await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(updated));
-                }}
-                itemStyle={{ color: theme.colors.text }} // For iOS
-                mode="dropdown"
+            {/* Build Profile Card */}
+            <View style={styles.buildProfileCard}>
+              <Ionicons name="construct-outline" size={48} color={theme.colors.primary} />
+              <Text style={styles.buildProfileTitle}>{t('farmer.complete_profile', 'Complete Your Profile')}</Text>
+              <Text style={styles.buildProfileSubtitle}>
+                {t('farmer.complete_profile_subtitle', 'Help us understand your farming needs better by completing your profile')}
+              </Text>
+              <TouchableOpacity 
+                style={styles.buildProfileButton} 
+                onPress={() => setBuildProfileVisible(true)}
               >
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <Picker.Item key={opt.code} label={opt.label} value={opt.code} color={theme.colors.text} /> // For Android
-                ))}
-              </Picker>
+                <Text style={styles.buildProfileButtonText}>{t('farmer.build_profile', 'Build Profile')}</Text>
+                <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          // Complete profile view (your existing detailed view can go here)
+          <View style={styles.completeProfileContainer}>
+            <View style={styles.profileCard}>
+              <Image
+                source={{ uri: profile.profileImage || DEFAULT_PROFILE_IMAGE }}
+                style={styles.profileImage}
+              />
+              <Text style={styles.name}>{profile.name}</Text>
+              <Text style={styles.village}>{profile.village}</Text>
+            </View>
+
+            {/* Profile Info */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('farmer.profile_information', 'Profile Information')}</Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('farmer.farm_size', 'Farm Size')}</Text>
+                  <Text style={styles.infoValue}>{profile.farmSize}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('farmer.primary_crops', 'Primary Crops')}</Text>
+                  <Text style={styles.infoValue}>{profile.primaryCrops}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('farmer.experience', 'Experience')}</Text>
+                  <Text style={styles.infoValue}>{profile.farmingExperience}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('farmer.livestock', 'Livestock')}</Text>
+                  <Text style={styles.infoValue}>{profile.livestockSummary || 'None'}</Text>
+                </View>
+              </View>
             </View>
           </View>
-          <ProfileField label="Farm Size" value={profile.farmSize} />
-          <ProfileField label="Preferred Mode" value={profile.preferredInteractionMode} />
-          <ProfileField label="Onboarding Status" value={profile.onboardingStatus} />
-          <ProfileField label="Farmer ID" value={profile.farmerId} />
-          <ProfileField label="Farm Location" value={profile.farmLocation ? `${profile.farmLocation.lat}, ${profile.farmLocation.lng}` : '-'} />
-        </Section>
-
-        {/* Crops Section */}
-        <Section title="Crops" onAdd={() => handleOpenCropModal()}>
-          {cropsLoading ? (
-            <ActivityIndicator color={theme.primaryGreen} />
-          ) : cropsError ? (
-            <Text style={styles.errorText}>{cropsError}</Text>
-          ) : crops.length === 0 ? (
-            <Text style={styles.emptyStateText}>No crops added yet.</Text>
-          ) : (
-            crops.map((crop) => (
-              <TouchableOpacity key={crop.cropId || crop.name} style={styles.itemRow} onPress={() => handleOpenCropModal(crop)}>
-                <View>
-                  <Text style={styles.itemTitle}>{crop.name}</Text>
-                  <Text style={styles.itemSub}>Planting Date: {crop.plantingDate}</Text>
-                  <Text style={styles.itemSub}>Duration: {crop.totalDuration}</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            ))
-          )}
-        </Section>
-
-        {/* Livestock Section */}
-        <Section title="Livestock" onAdd={() => handleOpenLivestockModal()}>
-          {livestockLoading ? (
-            <ActivityIndicator color={theme.primaryGreen} />
-          ) : livestockError ? (
-            <Text style={styles.errorText}>{livestockError}</Text>
-          ) : livestock.length === 0 ? (
-            <Text style={styles.emptyStateText}>No livestock added yet.</Text>
-          ) : (
-            livestock.map((animal) => (
-              <TouchableOpacity key={animal.id || animal.name} style={styles.itemRow} onPress={() => handleOpenLivestockModal(animal)}>
-                <View>
-                  <Text style={styles.itemTitle}>{animal.name} <Text style={styles.itemType}>({animal.type})</Text></Text>
-                  <Text style={styles.itemSub}>Breed: {animal.breed}</Text>
-                  <Text style={styles.itemSub}>Age: {animal.age}</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            ))
-          )}
-        </Section>
-
-        {/* Events Section */}
-        <Section title="Calendar Events" onAdd={() => handleOpenEventModal()}>
-          {eventsLoading ? (
-            <ActivityIndicator color={theme.primaryGreen} />
-          ) : eventsError ? (
-            <Text style={styles.errorText}>{eventsError}</Text>
-          ) : events.length === 0 ? (
-            <Text style={styles.emptyStateText}>No events scheduled yet.</Text>
-          ) : (
-            events.map((event) => (
-              <TouchableOpacity key={event.date + event.task} style={styles.itemRow} onPress={() => handleOpenEventModal(event)}>
-                <View>
-                  <Text style={styles.itemTitle}>{event.task}</Text>
-                  <Text style={styles.itemSub}>{event.date} at {event.time} - {event.type}</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            ))
-          )}
-        </Section>
+        )}
       </ScrollView>
 
-      {/* --- Modals for Editing/Adding --- */}
+      {/* Profile Building Modal */}
+      <Modal visible={buildProfileVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {!buildingComplete && !isSaving ? (
+              <>
+                {/* Progress Bar */}
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <Animated.View 
+                      style={[
+                        styles.progressFill, 
+                        { 
+                          width: progressAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%']
+                          })
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {currentStep + 1} of {PROFILE_STEPS.length}
+                  </Text>
+                </View>
 
+                {/* Question */}
+                <View style={styles.questionContainer}>
+                  <Text style={styles.questionTitle}>
+                    {PROFILE_STEPS[currentStep].title}
+                  </Text>
+                  <Text style={styles.questionText}>
+                    {PROFILE_STEPS[currentStep].question}
+                  </Text>
+                </View>
+
+                {/* Input Field */}
+                <TextInput
+                  style={styles.answerInput}
+                  value={currentAnswer}
+                  onChangeText={setCurrentAnswer}
+                  placeholder={PROFILE_STEPS[currentStep].placeholder}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  multiline
+                />
+
+                {/* Voice Recording Button */}
+                <TouchableOpacity 
+                  style={[styles.recordButton, isRecording && styles.recordButtonActive, isPreparingRecording && styles.disabledButton]}
+                  onPress={handleRecording}
+                  disabled={isPreparingRecording}
+                >
+                  <Animated.View style={[styles.micIcon, { opacity: recordingAnimation }]}>
+                    <Ionicons 
+                      name={isRecording ? "stop" : "mic"} 
+                      size={32} 
+                      color={theme.colors.background} 
+                    />
+                  </Animated.View>
+                  <Text style={styles.recordButtonText}>
+                    {isPreparingRecording ? 'Preparing...' : isRecording ? 'Tap to Stop Recording' : 'Tap to Record'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Navigation Buttons */}
+                <View style={styles.modalButtonContainer}>
+                  {currentStep > 0 && (
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                      <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
+                      <Text style={styles.backButtonText}>{t('common.back', 'Back')}</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                    <Text style={styles.nextButtonText}>
+                      {currentStep === PROFILE_STEPS.length - 1 ? 'Complete' : 'Next'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.background} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Close Button */}
+                <TouchableOpacity 
+                  style={styles.closeButton} 
+                  onPress={() => setBuildProfileVisible(false)}
+                >
+                  <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Loading or Success State
+              <View style={styles.completionContainer}>
+                {isSaving ? (
+                  <>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={styles.completionText}>{t('farmer.saving_profile', 'Saving your profile...')}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={80} color={theme.colors.success || '#22c55e'} />
+                    <Text style={styles.completionText}>{t('farmer.profile_complete', 'Profile Complete!')}</Text>
+                    <Text style={styles.completionSubtext}>
+                      Your farming profile has been successfully created
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* All the original modals from your code */}
+      
       {/* Edit Profile Modal */}
       <Modal visible={editProfileVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <Text style={styles.modalTitle}>{t('farmer.edit_profile', 'Edit Profile')}</Text>
             <EditableField label="Name" value={editProfileData.name} onChangeText={(v) => setEditProfileData((d) => ({ ...d, name: v }))} />
             <EditableField label="Village" value={editProfileData.village} onChangeText={(v) => setEditProfileData((d) => ({ ...d, village: v }))} />
             <EditableField label="Phone Number" value={editProfileData.phoneNumber} onChangeText={(v) => setEditProfileData((d) => ({ ...d, phoneNumber: v }))} keyboardType="phone-pad" />
             <EditableField label="Language" value={editProfileData.language} onChangeText={(v) => setEditProfileData((d) => ({ ...d, language: v }))} />
             <EditableField label="Farm Size" value={editProfileData.farmSize} onChangeText={(v) => setEditProfileData((d) => ({ ...d, farmSize: v }))} />
             <EditableField label="Preferred Mode" value={editProfileData.preferredInteractionMode} onChangeText={(v) => setEditProfileData((d) => ({ ...d, preferredInteractionMode: v }))} />
-            {/* Note: Farm Location and Farmer ID are typically not editable by the user directly */}
 
             <View style={styles.modalButtonContainer}>
               <CustomButton title="Cancel" onPress={() => setEditProfileVisible(false)} color={theme.colors.card} />
@@ -586,7 +871,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
       <Modal visible={cropModalVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{currentCrop && currentCrop.cropId ? 'Edit Crop' : 'Add New Crop'}</Text>
+            <Text style={styles.modalTitle}>{currentCrop && currentCrop.cropId ? t('farmer.edit_crop', 'Edit Crop') : t('farmer.add_crop', 'Add New Crop')}</Text>
             <EditableField label="Name" value={currentCrop?.name} onChangeText={(v) => setCurrentCrop((d) => ({ ...d, name: v }))} />
             <EditableField label="Planting Date (YYYY-MM-DD)" value={currentCrop?.plantingDate} onChangeText={(v) => setCurrentCrop((d) => ({ ...d, plantingDate: v }))} />
             <EditableField label="Total Duration (e.g., '90 days')" value={currentCrop?.totalDuration} onChangeText={(v) => setCurrentCrop((d) => ({ ...d, totalDuration: v }))} />
@@ -615,7 +900,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
       <Modal visible={livestockModalVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{currentLivestock && currentLivestock.id ? 'Edit Livestock' : 'Add New Livestock'}</Text>
+            <Text style={styles.modalTitle}>{currentLivestock && currentLivestock.id ? t('farmer.edit_livestock', 'Edit Livestock') : t('farmer.add_livestock', 'Add New Livestock')}</Text>
             <EditableField label="Name" value={currentLivestock?.name} onChangeText={(v) => setCurrentLivestock((d) => ({ ...d, name: v }))} />
             <EditableField label="Type" value={currentLivestock?.type} onChangeText={(v) => setCurrentLivestock((d) => ({ ...d, type: v }))} />
             <EditableField label="Breed" value={currentLivestock?.breed} onChangeText={(v) => setCurrentLivestock((d) => ({ ...d, breed: v }))} />
@@ -646,7 +931,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
       <Modal visible={eventModalVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{currentEvent && currentEvent.task ? 'Edit Event' : 'Add New Event'}</Text>
+            <Text style={styles.modalTitle}>{currentEvent && currentEvent.task ? t('farmer.edit_event', 'Edit Event') : t('farmer.add_event', 'Add New Event')}</Text>
             <EditableField label="Task" value={currentEvent?.task} onChangeText={(v) => setCurrentEvent((d) => ({ ...d, task: v }))} />
             <EditableField label="Date (YYYY-MM-DD)" value={currentEvent?.date} onChangeText={(v) => setCurrentEvent((d) => ({ ...d, date: v }))} />
             <EditableField label="Time (HH:MM)" value={currentEvent?.time} onChangeText={(v) => setCurrentEvent((d) => ({ ...d, time: v }))} />
@@ -676,6 +961,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
     </SafeAreaView>
   );
 };
+
 const createStyles = (theme) =>
   StyleSheet.create({
     safeArea: {
@@ -685,7 +971,6 @@ const createStyles = (theme) =>
     container: {
       padding: 20,
       backgroundColor: theme.colors.background,
-      paddingBottom: 40, // Add some padding at the bottom for scroll
     },
     headerRow: {
       flexDirection: 'row',
@@ -695,17 +980,6 @@ const createStyles = (theme) =>
       backgroundColor: theme.colors.headerBackground || theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-        },
-        android: {
-          elevation: 5,
-        },
-      }),
     },
     backBtn: {
       padding: 6,
@@ -715,6 +989,125 @@ const createStyles = (theme) =>
       color: theme.colors.headerTitle || theme.colors.text,
       fontSize: 24,
       fontWeight: 'bold',
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    loadingText: {
+      color: theme.colors.textSecondary,
+      marginTop: 10,
+      fontSize: 16,
+    },
+    errorText: {
+      color: '#f87171',
+      fontSize: 16,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    retryButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: theme.colors.background,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+
+    // Simple Profile Styles
+    simpleProfileCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      alignItems: 'center',
+      padding: 32,
+      marginBottom: 24,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+        },
+        android: {
+          elevation: 6,
+        },
+      }),
+    },
+    profileImageSimple: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      borderWidth: 3,
+      borderColor: theme.colors.primary,
+      marginBottom: 16,
+    },
+    nameSimple: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    phoneContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    phoneText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      marginLeft: 8,
+    },
+
+    // Build Profile Card
+    buildProfileCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      alignItems: 'center',
+      padding: 32,
+      marginBottom: 24,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      borderStyle: 'dashed',
+    },
+    buildProfileTitle: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    buildProfileSubtitle: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 22,
+    },
+    buildProfileButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 32,
+      paddingVertical: 16,
+      borderRadius: 12,
+    },
+    buildProfileButtonText: {
+      color: theme.colors.background,
+      fontSize: 18,
+      fontWeight: '600',
+      marginRight: 8,
+    },
+
+    // Complete Profile Styles
+    originalContainer: {
+      padding: 20,
+      backgroundColor: theme.colors.background,
+      paddingBottom: 40,
     },
     profileCard: {
       backgroundColor: theme.colors.surface,
@@ -761,7 +1154,7 @@ const createStyles = (theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 12,
-      paddingHorizontal: 4, // Aligns with section padding
+      paddingHorizontal: 4,
     },
     sectionHeader: {
       color: theme.colors.text,
@@ -808,8 +1201,8 @@ const createStyles = (theme) =>
       fontSize: 16,
       color: theme.colors.text,
       fontWeight: '500',
-      flexShrink: 1, // Allow text to wrap
-      textAlign: 'right', // Align value to the right
+      flexShrink: 1,
+      textAlign: 'right',
     },
     itemRow: {
       flexDirection: 'row',
@@ -834,59 +1227,11 @@ const createStyles = (theme) =>
       fontSize: 14,
       marginTop: 2,
     },
-    centered: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      color: theme.colors.textSecondary,
-      marginTop: 10,
-      fontSize: 16,
-    },
-    errorText: {
-      color: '#f87171',
-      fontSize: 16,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
     emptyStateText: {
       color: theme.colors.textSecondary,
       fontSize: 15,
       textAlign: 'center',
       paddingVertical: 10,
-    },
-    // Modal Styles
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.colors.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 20,
-      padding: 24,
-      width: '90%',
-      maxHeight: '80%', // Limit height for larger forms
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.4,
-          shadowRadius: 15,
-        },
-        android: {
-          elevation: 10,
-        },
-      }),
-    },
-    modalTitle: {
-      color: theme.colors.text,
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      textAlign: 'center',
     },
     editableFieldContainer: {
       marginBottom: 16,
@@ -901,19 +1246,14 @@ const createStyles = (theme) =>
       color: theme.colors.text,
       borderRadius: 10,
       paddingHorizontal: 14,
-      paddingVertical: Platform.OS === 'ios' ? 12 : 10, // Adjust padding for different platforms
+      paddingVertical: Platform.OS === 'ios' ? 12 : 10,
       fontSize: 16,
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
     multilineInput: {
       minHeight: 80,
-      textAlignVertical: 'top', // For Android multiline input alignment
-    },
-    modalButtonContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-evenly', // Evenly distribute buttons
-      marginTop: 24,
+      textAlignVertical: 'top',
     },
     customButton: {
       paddingVertical: 12,
@@ -931,8 +1271,175 @@ const createStyles = (theme) =>
     disabledButton: {
       opacity: 0.6,
     },
-    pickerWrapper: { backgroundColor: theme.colors.card, borderRadius: 8, marginTop: 4 },
-    languagePicker: { color: theme.colors.text, height: 54, width: '100%' },
+    pickerWrapper: { 
+      backgroundColor: theme.colors.card, 
+      borderRadius: 8, 
+      marginTop: 4 
+    },
+    languagePicker: { 
+      color: theme.colors.text, 
+      height: 54, 
+      width: '100%' 
+    },
+    modalTitle: {
+      color: theme.colors.text,
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 24,
+      padding: 24,
+      width: '90%',
+      maxHeight: '85%',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+        },
+        android: {
+          elevation: 15,
+        },
+      }),
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 16,
+      right: 16,
+      padding: 8,
+    },
+    progressContainer: {
+      marginBottom: 32,
+      alignItems: 'center',
+    },
+    progressBar: {
+      width: '100%',
+      height: 8,
+      backgroundColor: theme.colors.border,
+      borderRadius: 4,
+      overflow: 'hidden',
+      marginBottom: 8,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+    },
+    progressText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+    questionContainer: {
+      marginBottom: 24,
+      alignItems: 'center',
+    },
+    questionTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    questionText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    answerInput: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: theme.colors.text,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      minHeight: 80,
+      textAlignVertical: 'top',
+      marginBottom: 24,
+    },
+    recordButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 50,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      marginBottom: 32,
+      flexDirection: 'row',
+      justifyContent: 'center',
+    },
+    recordButtonActive: {
+      backgroundColor: '#f87171',
+    },
+    micIcon: {
+      marginRight: 8,
+    },
+    recordButtonText: {
+      color: theme.colors.background,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    modalButtonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    backButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 10,
+      backgroundColor: theme.colors.card,
+    },
+    backButtonText: {
+      color: theme.colors.text,
+      fontSize: 16,
+      marginLeft: 4,
+    },
+    nextButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 10,
+    },
+    nextButtonText: {
+      color: theme.colors.background,
+      fontSize: 16,
+      fontWeight: '600',
+      marginRight: 4,
+    },
+    completionContainer: {
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    completionText: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    completionSubtext: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
   });
 
 export default FarmerProfileScreen;

@@ -1,14 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-const LoanComparisonRow = ({ label, kcc, gold, cooperative }) => (
-  <View style={styles.loanRow}>
-    <Text style={styles.loanLabel}>{label}</Text>
-    <Text style={[styles.loanValue, styles.loanValueRecommended]}>{kcc}</Text>
-    <Text style={styles.loanValue}>{gold}</Text>
-    <Text style={[styles.loanValue, styles.loanValueRecommended]}>{cooperative}</Text>
-  </View>
-);
+const LoanComparisonRow = ({ label, kcc, gold, cooperative }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.loanRow}>
+      <Text style={[styles.loanLabel, { color: theme.colors.text }]}>{label}</Text>
+      <Text style={[styles.loanValue, { color: theme.colors.primary, fontWeight: '600' }]}>{kcc}</Text>
+      <Text style={[styles.loanValue, { color: theme.colors.textSecondary }]}>{gold}</Text>
+      <Text style={[styles.loanValue, { color: theme.colors.primary, fontWeight: '600' }]}>{cooperative}</Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   loanRow: { 
@@ -18,17 +22,11 @@ const styles = StyleSheet.create({
   loanLabel: { 
     flex: 1, 
     fontSize: 14, 
-    color: '#E0E0E0' 
   },
   loanValue: { 
     flex: 1, 
     fontSize: 14, 
-    color: '#A9A9A9', 
     textAlign: 'center' 
-  },
-  loanValueRecommended: { 
-    color: '#58D68D', 
-    fontWeight: '600' 
   },
 });
 

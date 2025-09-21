@@ -27,6 +27,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import EnhancedRentalService from '../services/EnhancedRentalService';
+import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 // Configuration
 const API_CONFIG = {
@@ -41,24 +43,7 @@ const FARMER_PROFILE = {
 
 const { width, height } = Dimensions.get('window');
 
-// Professional color palette
-const COLORS = {
-  primary: '#000000',
-  secondary: '#111111',
-  tertiary: '#1a1a1a',
-  quaternary: '#2a2a2a',
-  accent: '#4CAF50', // Updated to match app's primary green
-  accentSecondary: '#0099ff',
-  text: '#ffffff',
-  textSecondary: '#cccccc',
-  textTertiary: '#888888',
-  success: '#4CAF50', // Updated to match app's primary green
-  warning: '#ffaa00',
-  error: '#ff4444',
-  border: '#333333',
-  card: '#1a1a1a',
-  cardElevated: '#222222'
-};
+// NOTE: use theme tokens at runtime instead of static COLORS
 
 const TYPOGRAPHY = {
   title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
@@ -124,6 +109,8 @@ class RentalAPI {
 // Enhanced Listing Card Component
 const ListingCard = React.memo(({ item, onPress, style }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -145,10 +132,10 @@ const ListingCard = React.memo(({ item, onPress, style }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'available': return COLORS.success;
-      case 'rented': return COLORS.warning;
-      case 'maintenance': return COLORS.error;
-      default: return COLORS.textTertiary;
+      case 'available': return theme.colors.success || theme.colors.primary;
+      case 'rented': return theme.colors.info || theme.colors.primary;
+      case 'maintenance': return theme.colors.danger || theme.colors.primary;
+      default: return theme.colors.textSecondary;
     }
   };
 
@@ -184,15 +171,15 @@ const ListingCard = React.memo(({ item, onPress, style }) => {
           <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
           
           <View style={styles.cardMeta}>
-            <View style={styles.locationContainer}>
-              <Ionicons name="location-outline" size={14} color={COLORS.textTertiary} />
+              <View style={styles.locationContainer}>
+              <Ionicons name="location-outline" size={14} color={theme.colors.textSecondary} />
               <Text style={styles.locationText} numberOfLines={1}>
                 {item.location?.village || item.location || 'Location not specified'}
               </Text>
             </View>
             
             <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color={COLORS.warning} />
+              <Ionicons name="star" size={14} color={theme.colors.info} />
               <Text style={styles.ratingText}>{item.rating || '4.5'}</Text>
             </View>
           </View>
@@ -209,7 +196,7 @@ const ListingCard = React.memo(({ item, onPress, style }) => {
             
             <TouchableOpacity style={styles.bookButton} onPress={onPress}>
               <Text style={styles.bookButtonText}>Book Now</Text>
-              <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -220,6 +207,8 @@ const ListingCard = React.memo(({ item, onPress, style }) => {
 
 // Activity Card Component
 const ActivityCard = React.memo(({ item, type }) => {
+  const { theme } = useTheme();
+
   const getTypeIcon = () => {
     switch (type) {
       case 'purchase': return 'bag-check-outline';
@@ -228,36 +217,37 @@ const ActivityCard = React.memo(({ item, type }) => {
       default: return 'document-outline';
     }
   };
+  const styles = makeStyles(theme);
 
   const getTypeColor = () => {
     switch (type) {
-      case 'purchase': return COLORS.success;
-      case 'rental': return COLORS.accentSecondary;
-      case 'listing': return COLORS.accent;
-      default: return COLORS.textTertiary;
+      case 'purchase': return theme.colors.success;
+      case 'rental': return theme.colors.info || theme.colors.primary;
+      case 'listing': return theme.colors.primary;
+      default: return theme.colors.textSecondary;
     }
   };
-
+  const typeColor = getTypeColor();
   return (
-    <TouchableOpacity style={styles.activityCard}>
-      <View style={[styles.activityIcon, { backgroundColor: getTypeColor() + '20' }]}>
-        <Ionicons name={getTypeIcon()} size={24} color={getTypeColor()} />
+    <TouchableOpacity style={[styles.activityCard, { backgroundColor: theme.colors.card }]}>
+      <View style={[styles.activityIcon, { backgroundColor: `${typeColor}20` }]}>
+        <Ionicons name={getTypeIcon()} size={24} color={typeColor} />
       </View>
-      
+
       <View style={styles.activityContent}>
-        <Text style={styles.activityTitle} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.activityStatus}>
-          {item.status} {item.date && `• ${item.date}`}
+        <Text style={[styles.activityTitle, { color: theme.colors.text }]} numberOfLines={1}>{item.name}</Text>
+        <Text style={[styles.activityStatus, { color: theme.colors.textSecondary }]}> 
+          {item.status} {item.date && `\u0007 ${item.date}`}
         </Text>
         {item.description && (
-          <Text style={styles.activityDescription} numberOfLines={1}>
+          <Text style={[styles.activityDescription, { color: theme.colors.textSecondary }]} numberOfLines={1}>
             {item.description}
           </Text>
         )}
       </View>
       
       <View style={styles.activityPrice}>
-        <Text style={styles.activityPriceText}>
+        <Text style={[styles.activityPriceText, { color: theme.colors.text }]}>
           {item.price || item.price_per_day || '---'}
         </Text>
       </View>
@@ -266,24 +256,31 @@ const ActivityCard = React.memo(({ item, type }) => {
 });
 
 // Enhanced Section Component
-const SectionHeader = ({ title, subtitle, onSeeAll }) => (
-  <View style={styles.sectionHeader}>
-    <View>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
+const SectionHeader = ({ title, subtitle, onSeeAll }) => {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+  return (
+    <View style={styles.sectionHeader}>
+      <View>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{title}</Text>
+        {subtitle && <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
+      </View>
+      {onSeeAll && (
+        <TouchableOpacity onPress={onSeeAll} style={styles.seeAllButton}>
+          <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>See All</Text>
+          <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+        </TouchableOpacity>
+      )}
     </View>
-    {onSeeAll && (
-      <TouchableOpacity onPress={onSeeAll} style={styles.seeAllButton}>
-        <Text style={styles.seeAllText}>See All</Text>
-        <Ionicons name="arrow-forward" size={16} color={COLORS.accent} />
-      </TouchableOpacity>
-    )}
-  </View>
-);
+  );
+};
 
 const SectionCarousel = ({ title, subtitle, data, renderItem, cardWidth = 240, emptyText, onSeeAll }) => {
   // Determine if this section should be center aligned
   const isCenterAligned = title === 'Featured Equipment' || title === 'Recent Activity';
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
   return (
     <View style={{ marginBottom: 24 }}>
       <View style={[styles.sectionHeader, isCenterAligned && { justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }]}> 
@@ -292,11 +289,11 @@ const SectionCarousel = ({ title, subtitle, data, renderItem, cardWidth = 240, e
         {onSeeAll && !isCenterAligned && (
           <TouchableOpacity onPress={onSeeAll} style={styles.seeAllButton}>
             <Text style={styles.seeAllText}>See All</Text>
-            <Ionicons name="arrow-forward" size={16} color={COLORS.accent} />
+            <Ionicons name="arrow-forward" size={16} color={theme.colors.accent} />
           </TouchableOpacity>
         )}
       </View>
-      {data && data.length > 0 ? (
+  {data && data.length > 0 ? (
         <FlatList
           data={data}
           renderItem={renderItem}
@@ -308,7 +305,7 @@ const SectionCarousel = ({ title, subtitle, data, renderItem, cardWidth = 240, e
           decelerationRate="fast"
         />
       ) : (
-        <Text style={{ color: '#a1a1aa', marginLeft: 18, marginTop: 8, fontSize: 15 }}>{emptyText || 'No items found.'}</Text>
+        <Text style={{ color: theme.colors.textSecondary, marginLeft: 18, marginTop: 8, fontSize: 15 }}>{emptyText || 'No items found.'}</Text>
       )}
     </View>
   );
@@ -316,6 +313,9 @@ const SectionCarousel = ({ title, subtitle, data, renderItem, cardWidth = 240, e
 
 // Main Component
 export default function RentalScreen() {
+  const { theme } = useTheme();
+  const {t} = useTranslation();
+  const styles = makeStyles(theme);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
@@ -800,23 +800,23 @@ export default function RentalScreen() {
         onRequestClose={() => setShowBookingModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '85%' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#000' }}>Book Equipment</Text>
-            <Text style={{ color: '#333', marginBottom: 8 }}>{bookingItem?.name}</Text>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: 16, padding: 24, width: '85%' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: theme.colors.text }}>{t('rental.book_equipment', 'Book Equipment')}</Text>
+            <Text style={{ color: theme.colors.textSecondary, marginBottom: 8 }}>{bookingItem?.name}</Text>
             <TextInput
-              placeholder="Start Date (YYYY-MM-DD)"
+              placeholder={t('rental.placeholder.start_date', 'Start Date (YYYY-MM-DD)')}
               value={bookingForm.startDate}
               onChangeText={t => setBookingForm(f => ({ ...f, startDate: t }))}
-              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 12, padding: 8, color: '#000' }}
+              style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, marginBottom: 12, padding: 8, color: theme.colors.text }}
             />
             <TextInput
-              placeholder="End Date (YYYY-MM-DD)"
+              placeholder={t('rental.placeholder.end_date', 'End Date (YYYY-MM-DD)')}
               value={bookingForm.endDate}
               onChangeText={t => setBookingForm(f => ({ ...f, endDate: t }))}
               style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 12, padding: 8, color: '#000' }}
             />
             <TextInput
-              placeholder="Notes (optional)"
+              placeholder={t('rental.placeholder.notes', 'Notes (optional)')}
               value={bookingForm.notes}
               onChangeText={t => setBookingForm(f => ({ ...f, notes: t }))}
               style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 16, padding: 8, color: '#000' }}
@@ -826,9 +826,9 @@ export default function RentalScreen() {
             {bookingLoading ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Button title="Book Now" onPress={handleSubmitBooking} />
+              <Button title={t('rental.book_now', 'Book Now')} onPress={handleSubmitBooking} />
             )}
-            <Button title="Cancel" color="#888" onPress={() => setShowBookingModal(false)} />
+            <Button title={t('common.cancel', 'Cancel')} color="#888" onPress={() => setShowBookingModal(false)} />
           </View>
         </View>
       </Modal>
@@ -843,9 +843,9 @@ export default function RentalScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
-      <SectionCarousel
-        title="Featured Equipment"
-        subtitle="Popular rentals in your area"
+        <SectionCarousel
+          title={t('rental.featured_equipment', 'Featured Equipment')}
+          subtitle={t('rental.popular_in_area', 'Popular rentals in your area')}
         data={featuredRentals}
         renderItem={({ item }) => (
           <ListingCard
@@ -870,23 +870,23 @@ export default function RentalScreen() {
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('rental.quick_actions', 'Quick Actions')}</Text>
         <View style={styles.actionGrid}>
           <TouchableOpacity style={styles.actionCard} onPress={() => setShowListModal(true)}>
-            <Ionicons name="add-circle-outline" size={32} color={COLORS.accent} />
-            <Text style={styles.actionText}>List Equipment</Text>
+            <Ionicons name="add-circle-outline" size={32} color={theme.colors.accent || theme.colors.primary} />
+            <Text style={styles.actionText}>{t('rental.list_equipment', 'List Equipment')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('MyBookings')}>
-            <Ionicons name="calendar-outline" size={32} color={COLORS.accentSecondary} />
-            <Text style={styles.actionText}>My Bookings</Text>
+            <Ionicons name="calendar-outline" size={32} color={theme.colors.accentSecondary || theme.colors.primary} />
+            <Text style={styles.actionText}>{t('rental.my_bookings', 'My Bookings')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Earnings')}>
-            <Ionicons name="wallet-outline" size={32} color={COLORS.warning} />
-            <Text style={styles.actionText}>Earnings</Text>
+            <Ionicons name="wallet-outline" size={32} color={theme.colors.warning || theme.colors.primary} />
+            <Text style={styles.actionText}>{t('rental.earnings', 'Earnings')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="settings-outline" size={32} color={COLORS.textSecondary} />
-            <Text style={styles.actionText}>Settings</Text>
+            <Ionicons name="settings-outline" size={32} color={theme.colors.textSecondary} />
+            <Text style={styles.actionText}>{t('common.settings', 'Settings')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -898,30 +898,30 @@ export default function RentalScreen() {
         onRequestClose={() => setShowListModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '85%' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#000' }}>List New Equipment</Text>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: 16, padding: 24, width: '85%' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: theme.colors.text }}>{t('rental.list_new_equipment', 'List New Equipment')}</Text>
             <TextInput
-              placeholder="Equipment Name"
+              placeholder={t('rental.placeholder.equipment_name', 'Equipment Name')}
               value={listForm.name}
               onChangeText={t => setListForm(f => ({ ...f, name: t }))}
-              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 12, padding: 8, color: '#000' }}
+              style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, marginBottom: 12, padding: 8, color: theme.colors.text }}
             />
             <TextInput
-              placeholder="Description"
+              placeholder={t('rental.placeholder.description', 'Description')}
               value={listForm.description}
               onChangeText={t => setListForm(f => ({ ...f, description: t }))}
               style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 12, padding: 8, color: '#000' }}
               multiline
             />
             <TextInput
-              placeholder="Price per day (₹)"
+              placeholder={t('rental.placeholder.price_per_day', 'Price per day (₹)')}
               value={listForm.price_per_day}
               onChangeText={t => setListForm(f => ({ ...f, price_per_day: t }))}
               style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 12, padding: 8, color: '#000' }}
               keyboardType="numeric"
             />
             <TextInput
-              placeholder="Village/Location"
+              placeholder={t('rental.placeholder.location', 'Village/Location')}
               value={listForm.location}
               onChangeText={t => setListForm(f => ({ ...f, location: t }))}
               style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 16, padding: 8, color: '#000' }}
@@ -940,8 +940,8 @@ export default function RentalScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: 40 }]}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+    <SafeAreaView style={[styles.container, { paddingTop: 40, backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -949,38 +949,36 @@ export default function RentalScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Equipment Rental</Text>
-          <Text style={styles.headerSubtitle}>
-            Welcome back, {FARMER_PROFILE.name}
-          </Text>
+          <Text style={styles.headerTitle}>{t('rental.header_title', 'Equipment Rental')}</Text>
+          <Text style={styles.headerSubtitle}>{t('rental.header_subtitle', 'Welcome back, {{name}}', { name: FARMER_PROFILE.name })}</Text>
         </View>
 
         <TouchableOpacity
           style={styles.profileButton}
           onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_PROFILE.id })}
         >
-          <Ionicons name="person-circle-outline" size={32} color={COLORS.accent} />
+          <Ionicons name="person-circle-outline" size={32} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={20} color={COLORS.textTertiary} />
-          <TextInput
+          <Ionicons name="search-outline" size={20} color={theme.colors.textTertiary || theme.colors.textSecondary} />
+            <TextInput
             style={styles.searchInput}
-            placeholder="Search tractors, harvesters, tools..."
-            placeholderTextColor={COLORS.textTertiary}
+            placeholder={t('rental.search_placeholder', 'Search tractors, harvesters, tools...')}
+            placeholderTextColor={theme.colors.textTertiary || theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={handleSearch}
             returnKeyType="search"
           />
           {isSearching && (
-            <ActivityIndicator size="small" color={COLORS.accent} />
+            <ActivityIndicator size="small" color={theme.colors.accent || theme.colors.primary} />
           )}
         </View>
       </View>
@@ -989,11 +987,11 @@ export default function RentalScreen() {
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
+            <TouchableOpacity
             style={styles.retryButton}
             onPress={() => handleSearch(searchQuery)}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1006,43 +1004,40 @@ export default function RentalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.colors.headerBackground || theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    // *** MODIFICATION START ***
-    justifyContent: 'space-between', // Distributes space between items
-    // No need for alignContent here, alignItems handles vertical alignment
-    // *** MODIFICATION END ***
+    borderBottomColor: theme.colors.border,
+    justifyContent: 'space-between',
   },
   backButton: {
     padding: 8,
     marginRight: 12,
     borderRadius: 12,
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: theme.colors.surface,
   },
   headerContent: {
     flex: 1,
-    justifyContent: 'center' ,
-    alignItems: 'center'    
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     ...TYPOGRAPHY.subtitle,
-    color: COLORS.text,
+    color: theme.colors.headerTitle || theme.colors.text,
     alignContent: 'center',
   },
   headerSubtitle: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   profileButton: {
@@ -1051,22 +1046,22 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.colors.surface,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.colors.border,
   },
   searchInput: {
     flex: 1,
     ...TYPOGRAPHY.body,
-    color: COLORS.text,
+    color: theme.colors.text,
     marginLeft: 12,
   },
   errorContainer: {
@@ -1075,25 +1070,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: COLORS.error + '20',
+    backgroundColor: theme.colors.danger + '20',
     marginHorizontal: 20,
     marginVertical: 8,
     borderRadius: 12,
   },
   errorText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.error,
+    color: theme.colors.danger,
     flex: 1,
   },
   retryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: COLORS.error,
+    backgroundColor: theme.colors.danger,
     borderRadius: 8,
   },
   retryButtonText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.text,
+    color: theme.colors.text,
     fontWeight: '600',
   },
   content: {
@@ -1118,11 +1113,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...TYPOGRAPHY.heading,
-    color: COLORS.text,
+    color: theme.colors.text,
   },
   sectionSubtitle: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   seeAllButton: {
@@ -1131,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.accent,
+    color: theme.colors.accent,
     marginRight: 4,
     fontWeight: '600',
   },
@@ -1148,17 +1143,17 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textTertiary,
+    color: theme.colors.textTertiary || theme.colors.textSecondary,
     marginTop: 12,
   },
   listingCard: {
     width: 280,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.colors.card,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
     paddingLeft:2,
-    borderColor: COLORS.border,
+    borderColor: theme.colors.border,
   },
   cardImageContainer: {
     position: 'relative',
@@ -1166,20 +1161,20 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: 160,
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: theme.colors.surface,
   },
   cardBadge: {
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: COLORS.accent + 'E6',
+    backgroundColor: theme.colors.accent + 'E6',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   cardBadgeText: {
     ...TYPOGRAPHY.small,
-    color: COLORS.primary,
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   statusBadge: {
@@ -1192,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     ...TYPOGRAPHY.small,
-    color: COLORS.text,
+    color: theme.colors.text,
     fontWeight: '600',
   },
   cardContent: {
@@ -1200,13 +1195,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...TYPOGRAPHY.heading,
-    color: COLORS.text,
+    color: theme.colors.text,
     marginBottom: 10,
     marginTop: 20
   },
   cardDescription: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginBottom: 12,
     lineHeight: 18,
   },
@@ -1223,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textTertiary,
+    color: theme.colors.textTertiary || theme.colors.textSecondary,
     marginLeft: 4,
   },
   ratingContainer: {
@@ -1232,7 +1227,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginLeft: 4,
   },
   cardFooter: {
@@ -1242,37 +1237,37 @@ const styles = StyleSheet.create({
   },
   priceText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.accent,
+    color: theme.colors.accent,
     fontWeight: '700',
   },
   priceUnit: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textTertiary,
+    color: theme.colors.textTertiary || theme.colors.textSecondary,
   },
   bookButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
   },
   bookButtonText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.primary,
+    color: theme.colors.primary,
     fontWeight: '600',
     marginRight: 4,
   },
   activityCard: {
     width: 200,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 16,
     marginRight: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.colors.border,
   },
   activityIcon: {
     width: 48,
@@ -1287,17 +1282,17 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.text,
+    color: theme.colors.text,
     fontWeight: '600',
   },
   activityStatus: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textTertiary,
+    color: theme.colors.textTertiary || theme.colors.textSecondary,
     marginTop: 2,
   },
   activityDescription: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   activityPrice: {
@@ -1305,7 +1300,7 @@ const styles = StyleSheet.create({
   },
   activityPriceText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.accent,
+    color: theme.colors.accent,
     fontWeight: '600',
   },
   quickActions: {
@@ -1320,17 +1315,17 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: (width - 60) / 2,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.colors.border,
   },
   actionText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 8,
     fontWeight: '500',
   },

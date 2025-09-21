@@ -2,35 +2,40 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from './Icon';
 import AnimatedCard from './AnimatedCard';
+import { useTheme } from '../context/ThemeContext';
 
-const TimelineNode = ({ isFirst, isLast, title, date, details, priority = 'normal', completed = false }) => (
-  <AnimatedCard>
-    <View style={styles.timelineNode}>
-      <View style={styles.timelineIconContainer}>
-        <View style={[styles.timelineLine, isFirst && {backgroundColor: 'transparent'}]} />
-        <View style={[
-          styles.timelineCircle,
-          { backgroundColor: completed ? '#58D68D' : priority === 'high' ? '#E74C3C' : '#2C2C2C' }
-        ]}>
-          <Icon name={completed ? '✓' : priority === 'high' ? '!' : '🗓️'} style={{fontSize: 14, color: '#FFFFFF'}} />
+const TimelineNode = ({ isFirst, isLast, title, date, details, priority = 'normal', completed = false }) => {
+  const { theme } = useTheme();
+  const circleColor = completed ? theme.colors.success : priority === 'high' ? theme.colors.danger : theme.colors.surface;
+  return (
+    <AnimatedCard>
+      <View style={[styles.timelineNode, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+        <View style={styles.timelineIconContainer}>
+          <View style={[styles.timelineLine, isFirst && {backgroundColor: 'transparent'}, { backgroundColor: theme.colors.border }]} />
+          <View style={[
+            styles.timelineCircle,
+            { backgroundColor: circleColor }
+          ]}>
+            <Icon name={completed ? '✓' : priority === 'high' ? '!' : '🗓️'} style={{fontSize: 14}} color={theme.colors.card} />
+          </View>
+          <View style={[styles.timelineLine, isLast && {backgroundColor: 'transparent'}, { backgroundColor: theme.colors.border }]} />
         </View>
-        <View style={[styles.timelineLine, isLast && {backgroundColor: 'transparent'}]} />
-      </View>
-      <View style={styles.timelineTextContainer}>
-        <View style={styles.timelineHeader}>
-          <Text style={[styles.timelineTitle, completed && { color: '#58D68D' }]}>{title}</Text>
-          {priority === 'high' && (
-            <View style={styles.priorityBadge}>
-              <Text style={styles.priorityText}>URGENT</Text>
-            </View>
-          )}
+        <View style={styles.timelineTextContainer}>
+          <View style={styles.timelineHeader}>
+            <Text style={[styles.timelineTitle, completed && { color: theme.colors.success }, { color: theme.colors.text }]}>{title}</Text>
+            {priority === 'high' && (
+              <View style={[styles.priorityBadge, { backgroundColor: theme.colors.danger }]}>
+                <Text style={[styles.priorityText, { color: theme.colors.card }]}>URGENT</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.timelineDate, { color: theme.colors.primary }]}>{date}</Text>
+          <Text style={[styles.timelineDetails, { color: theme.colors.textSecondary }]}>{details}</Text>
         </View>
-        <Text style={styles.timelineDate}>{date}</Text>
-        <Text style={styles.timelineDetails}>{details}</Text>
       </View>
-    </View>
-  </AnimatedCard>
-);
+    </AnimatedCard>
+  );
+};
 
 const styles = StyleSheet.create({
   timelineNode: {

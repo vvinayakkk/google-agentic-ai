@@ -15,6 +15,7 @@ import {
   Linking,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -41,7 +42,6 @@ const BestOutOfWasteScreen = ({ navigation }) => {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  // Ref for the FlatList to control scrolling
   const practiceFlatListRef = useRef(null);
 
   const API_BASE = NetworkConfig.API_BASE;
@@ -63,7 +63,6 @@ const BestOutOfWasteScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  // Effect to scroll common practices carousel when index changes
   useEffect(() => {
     if (practiceFlatListRef.current && commonPractices.length > 0) {
       practiceFlatListRef.current.scrollToIndex({
@@ -77,17 +76,14 @@ const BestOutOfWasteScreen = ({ navigation }) => {
     try {
       const result = await WasteRecyclingService.getCommonPractices();
       if (result.success) {
-        // Ensure data is an array, if it comes as a string JSON, parse it here.
-        // Assuming result.data.practices is already an array of objects.
         setCommonPractices(result.data.practices || []);
       } else {
         console.log('Error fetching common practices:', result.error);
-        // Fallback or empty array if error
         setCommonPractices(result.data.practices || []);
       }
     } catch (error) {
       console.log('Error fetching common practices:', error);
-      setCommonPractices([]); // Set to empty array on network error
+      setCommonPractices([]);
     }
   };
 
@@ -95,7 +91,7 @@ const BestOutOfWasteScreen = ({ navigation }) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload waste images.');
+        Alert.alert(t('bestout.permission_needed'), t('bestout.permission_message'));
         return;
       }
 
@@ -107,18 +103,24 @@ const BestOutOfWasteScreen = ({ navigation }) => {
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        setSelectedImage(result.assets[0]);
-        setAiSuggestions([]); // Clear previous suggestions
+        const picked = result.assets[0];
+        setSelectedImage(picked);
+        setAiSuggestions([]);
+        // Automatically analyze immediately after picking an image
+        // keep manual analyze button as well
+        setTimeout(() => {
+          analyzeWaste();
+        }, 300);
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert(t('common.error'), t('bestout.pick_image_failed'));
     }
   };
 
   const analyzeWaste = async () => {
     if (!selectedImage) {
-      Alert.alert('No Image', 'Please select an image first.');
+      Alert.alert(t('bestout.no_image_title'), t('bestout.no_image_message'));
       return;
     }
 
@@ -127,9 +129,7 @@ const BestOutOfWasteScreen = ({ navigation }) => {
       const result = await WasteRecyclingService.analyzeWaste(selectedImage, location, 'f001');
 
       if (result.success) {
-        // Ensure result.data.ai_suggestions is an array
         setAiSuggestions(result.data.ai_suggestions || []);
-
         const newAnalysis = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
@@ -138,16 +138,15 @@ const BestOutOfWasteScreen = ({ navigation }) => {
           image_uri: selectedImage.uri,
         };
         setAnalysisHistory(prev => [newAnalysis, ...prev]);
-
-        Alert.alert('Success', 'Waste analysis completed! Check the AI suggestions below.');
+        Alert.alert(t('common.success'), t('bestout.analysis_complete'));
       } else {
         console.error('Analysis failed:', result.error);
         setAiSuggestions(result.data.ai_suggestions || []);
-        Alert.alert('Analysis Complete', 'Analysis completed with fallback suggestions.');
+        Alert.alert(t('common.success'), t('bestout.analysis_fallback'));
       }
     } catch (error) {
       console.error('Error analyzing waste:', error);
-      Alert.alert('Error', 'Failed to analyze waste image. Please try again.');
+      Alert.alert(t('common.error'), t('bestout.analysis_failed'));
     } finally {
       setAnalyzing(false);
     }
@@ -158,10 +157,9 @@ const BestOutOfWasteScreen = ({ navigation }) => {
     setShowPracticeModal(true);
   };
 
-  // Update currentPracticeIndex when user scrolls the FlatList manually
   const onPracticeScrollEnd = (event) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
-    const itemWidth = screenWidth - 60 + 15; // Card width + horizontal margin
+    const itemWidth = screenWidth - 60 + 15;
     const index = Math.round(contentOffsetX / itemWidth);
     setCurrentPracticeIndex(index);
   };
@@ -184,18 +182,8 @@ const BestOutOfWasteScreen = ({ navigation }) => {
       onPress={() => openPracticeModal(practice)}
       activeOpacity={0.8}
     >
-      <Animated.View
-        style={[
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['#1C1C1E', '#2C2C2E']}
-          style={styles.practiceCardGradient}
-        >
+      <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.practiceCardGradient}>
           <View style={styles.practiceHeader}>
             <Text style={styles.practiceIcon}>{practice.icon}</Text>
             <View style={styles.practiceInfo}>
@@ -203,24 +191,21 @@ const BestOutOfWasteScreen = ({ navigation }) => {
               <Text style={styles.practiceDescription}>{practice.description}</Text>
             </View>
           </View>
-
           <View style={styles.practiceDetails}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Difficulty:</Text>
+              <Text style={styles.detailLabel}>{t('bestout.difficulty')}</Text>
               <Text style={styles.detailValue}>{practice.difficulty}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Time Required:</Text>
+              <Text style={styles.detailLabel}>{t('bestout.time_required')}</Text>
               <Text style={styles.detailValue}>{practice.time_required}</Text>
             </View>
           </View>
-
           <View style={styles.practiceButtonsContainer}>
             <View style={styles.viewDetailsButton}>
-              <Text style={styles.viewDetailsText}>View Details</Text>
+              <Text style={styles.viewDetailsText}>{t('bestout.view_details')}</Text>
               <Ionicons name="chevron-forward" size={16} color="#10B981" />
             </View>
-
             {practice.youtube_url && (
               <TouchableOpacity
                 style={styles.practiceYoutubeButton}
@@ -229,12 +214,9 @@ const BestOutOfWasteScreen = ({ navigation }) => {
                   Linking.openURL(practice.youtube_url);
                 }}
               >
-                <LinearGradient
-                  colors={['#FF0000', '#CC0000']}
-                  style={styles.practiceYoutubeGradient}
-                >
+                <LinearGradient colors={['#FF0000', '#CC0000']} style={styles.practiceYoutubeGradient}>
                   <Ionicons name="play-circle" size={14} color="#FFFFFF" />
-                  <Text style={styles.practiceYoutubeText}>Video</Text>
+                  <Text style={styles.practiceYoutubeText}>{t('bestout.video')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
@@ -245,50 +227,30 @@ const BestOutOfWasteScreen = ({ navigation }) => {
   );
 
   const renderAISuggestion = ({ item: suggestion, index }) => {
-    // Handle both string and object formats for suggestions
     let description = '';
     let youtubeUrl = null;
-    
     if (typeof suggestion === 'string') {
       description = suggestion;
     } else if (suggestion && typeof suggestion === 'object') {
       description = suggestion.description || suggestion.text || JSON.stringify(suggestion);
       youtubeUrl = suggestion.youtube_url || suggestion.youtubeUrl || null;
     } else {
-      description = 'No suggestion available';
+      description = t('bestout.no_suggestion');
     }
 
     return (
-      <Animated.View
-        style={[
-          styles.suggestionCard,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateX: slideAnim }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['#10B981', '#059669']}
-          style={styles.suggestionGradient}
-        >
+      <Animated.View style={[styles.suggestionCard, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
+        <LinearGradient colors={['#10B981', '#059669']} style={styles.suggestionGradient}>
           <View style={styles.suggestionHeader}>
             <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-            <Text style={styles.suggestionNumber}>Suggestion {index + 1}</Text>
+            <Text style={styles.suggestionNumber}>{t('bestout.suggestion_number', { number: index + 1 })}</Text>
           </View>
           <Text style={styles.suggestionText}>{description}</Text>
-
           {youtubeUrl && (
-            <TouchableOpacity
-              style={styles.youtubeButton}
-              onPress={() => Linking.openURL(youtubeUrl)}
-            >
-              <LinearGradient
-                colors={['#FF0000', '#CC0000']}
-                style={styles.youtubeGradient}
-              >
+            <TouchableOpacity style={styles.youtubeButton} onPress={() => Linking.openURL(youtubeUrl)}>
+              <LinearGradient colors={['#FF0000', '#CC0000']} style={styles.youtubeGradient}>
                 <Ionicons name="play-circle" size={16} color="#FFFFFF" />
-                <Text style={styles.youtubeButtonText}>Watch Video</Text>
+                <Text style={styles.youtubeButtonText}>{t('bestout.watch_video')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -298,275 +260,163 @@ const BestOutOfWasteScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle} />
-
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.background, theme.colors.surface]}
-        style={styles.header}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+      <LinearGradient colors={[theme.colors.background, theme.colors.surface]} style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-
         <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>♻️ Best Out of Waste</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>AI-powered recycling suggestions</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('bestout.header_title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>{t('bestout.header_subtitle')}</Text>
         </View>
-
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => setShowHistory(!showHistory)}
-        >
+        <TouchableOpacity style={styles.historyButton} onPress={() => setShowHistory(!showHistory)}>
           <Ionicons name="time" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </LinearGradient>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Image Upload Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📸 Upload Waste Image</Text>
-          <Text style={styles.sectionSubtitle}>
-            Take a photo of agricultural waste or field debris for AI analysis
-          </Text>
-
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={pickImage}
-            disabled={analyzing}
-          >
-            <LinearGradient
-              colors={['#3B82F6', '#1D4ED8']}
-              style={styles.uploadGradient}
-            >
+          <Text style={styles.sectionTitle}>{t('bestout.upload_title')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('bestout.upload_subtitle')}</Text>
+          <TouchableOpacity style={styles.uploadButton} onPress={pickImage} disabled={analyzing}>
+            <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.uploadGradient}>
               <Ionicons name="camera" size={32} color="#FFFFFF" />
-              <Text style={styles.uploadText}>
-                {selectedImage ? 'Change Image' : 'Select Image'}
-              </Text>
+              <Text style={styles.uploadText}>{selectedImage ? t('bestout.change_image') : t('bestout.select_image')}</Text>
             </LinearGradient>
           </TouchableOpacity>
-
           {selectedImage && (
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.analyzeButton}
-                onPress={analyzeWaste}
-                disabled={analyzing}
-              >
-                <LinearGradient
-                  colors={analyzing ? ['#6B7280', '#4B5563'] : ['#10B981', '#059669']}
-                  style={styles.analyzeGradient}
-                >
+              <TouchableOpacity style={styles.analyzeButton} onPress={analyzeWaste} disabled={analyzing}>
+                <LinearGradient colors={analyzing ? ['#6B7280', '#4B5563'] : ['#10B981', '#059669']} style={styles.analyzeGradient}>
                   {analyzing ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <Ionicons name="sparkles" size={20} color="#FFFFFF" />
                   )}
-                  <Text style={styles.analyzeText}>
-                    {analyzing ? 'Analyzing...' : 'Analyze with AI'}
-                  </Text>
+                  <Text style={styles.analyzeText}>{analyzing ? t('bestout.analyzing') : t('bestout.analyze_button')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
         </View>
-
-        {/* AI Suggestions Section */}
         {aiSuggestions.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🤖 AI Suggestions</Text>
-            <Text style={styles.sectionSubtitle}>
-              Personalized recycling recommendations based on your waste
-            </Text>
-
+            <Text style={styles.sectionTitle}>{t('bestout.ai_suggestions_title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('bestout.ai_suggestions_subtitle')}</Text>
             <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
               data={aiSuggestions}
               renderItem={renderAISuggestion}
-              keyExtractor={(item, index) => `ai-suggestion-${index}`} // Unique key
+              keyExtractor={(item, index) => `ai-suggestion-${index}`}
               contentContainerStyle={styles.suggestionsCarousel}
-              snapToInterval={screenWidth - 40 + 10} // card width + marginRight
+              snapToInterval={screenWidth - 40 + 10}
               decelerationRate="fast"
               pagingEnabled
             />
           </View>
         )}
-
-        {/* Common Practices Carousel */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📚 Common Recycling Practices</Text>
-          <Text style={styles.sectionSubtitle}>
-            Proven methods for agricultural waste management
-          </Text>
-
+          <Text style={styles.sectionTitle}>{t('bestout.common_practices_title')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('bestout.common_practices_subtitle')}</Text>
           {commonPractices.length > 0 ? (
             <>
               <View style={styles.practicesCarouselContainer}>
-                <TouchableOpacity
-                  onPress={goToPreviousPractice}
-                  style={[styles.carouselArrow, currentPracticeIndex === 0 && styles.disabledArrow]}
-                  disabled={currentPracticeIndex === 0}
-                >
+                <TouchableOpacity onPress={goToPreviousPractice} style={[styles.carouselArrow, currentPracticeIndex === 0 && styles.disabledArrow]} disabled={currentPracticeIndex === 0}>
                   <Ionicons name="chevron-back" size={30} color="#FFF" />
                 </TouchableOpacity>
-
                 <FlatList
                   ref={practiceFlatListRef}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   data={commonPractices}
                   renderItem={renderPracticeCard}
-                  keyExtractor={(item) => item.id.toString()} // Ensure ID is unique and string
+                  keyExtractor={(item) => item.id.toString()}
                   contentContainerStyle={styles.practicesCarouselContent}
-                  onMomentumScrollEnd={onPracticeScrollEnd} // Listen for manual scrolls
-                  snapToInterval={screenWidth - 60 + 15} // Card width + margin
+                  onMomentumScrollEnd={onPracticeScrollEnd}
+                  snapToInterval={screenWidth - 60 + 15}
                   decelerationRate="fast"
                   pagingEnabled
                 />
-
-                <TouchableOpacity
-                  onPress={goToNextPractice}
-                  style={[styles.carouselArrow, currentPracticeIndex === commonPractices.length - 1 && styles.disabledArrow]}
-                  disabled={currentPracticeIndex === commonPractices.length - 1}
-                >
+                <TouchableOpacity onPress={goToNextPractice} style={[styles.carouselArrow, currentPracticeIndex === commonPractices.length - 1 && styles.disabledArrow]} disabled={currentPracticeIndex === commonPractices.length - 1}>
                   <Ionicons name="chevron-forward" size={30} color="#FFF" />
                 </TouchableOpacity>
               </View>
-
               <View style={styles.paginationDots}>
                 {commonPractices.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.dot,
-                      index === currentPracticeIndex ? styles.activeDot : null,
-                    ]}
-                  />
+                  <View key={index} style={[styles.dot, index === currentPracticeIndex ? styles.activeDot : null]} />
                 ))}
               </View>
             </>
           ) : (
-            <Text style={styles.noDataText}>No common practices available.</Text>
+            <Text style={styles.noDataText}>{t('bestout.no_practices')}</Text>
           )}
         </View>
-
-        {/* Analysis History */}
         {showHistory && analysisHistory.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📋 Analysis History</Text>
-            <Text style={styles.sectionSubtitle}>
-              Your previous waste analysis results
-            </Text>
-
+            <Text style={styles.sectionTitle}>{t('bestout.history_title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('bestout.history_subtitle')}</Text>
             {analysisHistory.map((analysis) => (
               <View key={analysis.id} style={styles.historyCard}>
-                <LinearGradient
-                  colors={['#1C1C1E', '#2C2C2E']}
-                  style={styles.historyGradient}
-                >
+                <LinearGradient colors={['#1C1C1E', '#2C2C2E']} style={styles.historyGradient}>
                   <View style={styles.historyHeader}>
-                    <Text style={styles.historyDate}>
-                      {new Date(analysis.timestamp).toLocaleDateString()}
-                    </Text>
+                    <Text style={styles.historyDate}>{new Date(analysis.timestamp).toLocaleDateString()}</Text>
                     <Text style={styles.historyLocation}>{analysis.location}</Text>
                   </View>
-                  <Text style={styles.historySuggestions}>
-                    {analysis.suggestions_count} suggestions generated
-                  </Text>
-                  {analysis.image_uri && (
-                    <Image source={{ uri: analysis.image_uri }} style={styles.historyImagePreview} />
-                  )}
+                  <Text style={styles.historySuggestions}>{t('bestout.suggestions_generated', { count: analysis.suggestions_count })}</Text>
+                  {analysis.image_uri && <Image source={{ uri: analysis.image_uri }} style={styles.historyImagePreview} />}
                 </LinearGradient>
               </View>
             ))}
           </View>
         )}
       </ScrollView>
-
-      {/* Practice Details Modal */}
-      <Modal
-        visible={showPracticeModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowPracticeModal(false)}
-      >
+      <Modal visible={showPracticeModal} animationType="slide" transparent={true} onRequestClose={() => setShowPracticeModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <LinearGradient
-              colors={['#000000', '#1C1C1E']}
-              style={styles.modalGradient}
-            >
+            <LinearGradient colors={['#000000', '#1C1C1E']} style={styles.modalGradient}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {selectedPractice?.icon} {selectedPractice?.title}
-                </Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowPracticeModal(false)}
-                >
+                <Text style={styles.modalTitle}>{selectedPractice?.icon} {selectedPractice?.title}</Text>
+                <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowPracticeModal(false)}>
                   <Ionicons name="close" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
-
               <ScrollView style={styles.modalBody}>
-                <Text style={styles.modalDescription}>
-                  {selectedPractice?.description}
-                </Text>
-
+                <Text style={styles.modalDescription}>{selectedPractice?.description}</Text>
                 <View style={styles.modalDetails}>
                   <View style={styles.modalDetailRow}>
-                    <Text style={styles.modalDetailLabel}>Difficulty:</Text>
+                    <Text style={styles.modalDetailLabel}>{t('bestout.difficulty')}</Text>
                     <Text style={styles.modalDetailValue}>{selectedPractice?.difficulty}</Text>
                   </View>
                   <View style={styles.modalDetailRow}>
-                    <Text style={styles.modalDetailLabel}>Time Required:</Text>
+                    <Text style={styles.modalDetailLabel}>{t('bestout.time_required')}</Text>
                     <Text style={styles.modalDetailValue}>{selectedPractice?.time_required}</Text>
                   </View>
                 </View>
-
                 {selectedPractice?.materials_needed && selectedPractice.materials_needed.length > 0 && (
                   <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>Materials Needed:</Text>
+                    <Text style={styles.modalSectionTitle}>{t('bestout.materials_needed')}</Text>
                     {selectedPractice.materials_needed.map((material, index) => (
-                      <Text key={index} style={styles.modalListItem}>
-                        • {material}
-                      </Text>
+                      <Text key={index} style={styles.modalListItem}>• {material}</Text>
                     ))}
                   </View>
                 )}
-
                 {selectedPractice?.steps && selectedPractice.steps.length > 0 && (
                   <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>Steps:</Text>
+                    <Text style={styles.modalSectionTitle}>{t('bestout.steps')}</Text>
                     {selectedPractice.steps.map((step, index) => (
-                      <Text key={index} style={styles.modalListItem}>
-                        {index + 1}. {step}
-                      </Text>
+                      <Text key={index} style={styles.modalListItem}>{index + 1}. {step}</Text>
                     ))}
                   </View>
                 )}
-
                 {selectedPractice?.youtube_url && (
                   <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>Learn More:</Text>
-                    <TouchableOpacity
-                      style={styles.modalYoutubeButton}
-                      onPress={() => {
-                        Linking.openURL(selectedPractice.youtube_url);
-                      }}
-                    >
-                      <LinearGradient
-                        colors={['#FF0000', '#CC0000']}
-                        style={styles.modalYoutubeGradient}
-                      >
+                    <Text style={styles.modalSectionTitle}>{t('bestout.learn_more')}</Text>
+                    <TouchableOpacity style={styles.modalYoutubeButton} onPress={() => Linking.openURL(selectedPractice.youtube_url)}>
+                      <LinearGradient colors={['#FF0000', '#CC0000']} style={styles.modalYoutubeGradient}>
                         <Ionicons name="play-circle" size={20} color="#FFFFFF" />
-                        <Text style={styles.modalYoutubeText}>Watch YouTube Tutorial</Text>
+                        <Text style={styles.modalYoutubeText}>{t('bestout.watch_youtube_tutorial')}</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
@@ -576,10 +426,9 @@ const BestOutOfWasteScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

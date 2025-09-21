@@ -11,7 +11,7 @@ from PIL import Image
 import io
 
 # --- Gemini 2.5 Flash Model Setup ---
-GOOGLE_API_KEY = "AIzaSyDd0ah4WW1JlpP68xkZkTMphANAZo8IK9A"
+GOOGLE_API_KEY = "AIzaSyBhI1O9Bj_oUsM9HP1u7FlOLYIlKK9Dgt4"
 model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
 
 # --- Pydantic Model for Output ---
@@ -125,21 +125,63 @@ prompt = ChatPromptTemplate.from_messages([
 chain = prompt | model | parser
 
 def analyze_crop_image(image_bytes: bytes) -> dict:
-    try:
-        # Resize image to fixed size
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        image = image.resize((FIXED_WIDTH, FIXED_HEIGHT))
-        buf = io.BytesIO()
-        image.save(buf, format="JPEG")
-        resized_bytes = buf.getvalue()
-        image_data = base64.b64encode(resized_bytes).decode("utf-8")
-        result = chain.invoke({
-            "format_instructions": parser.get_format_instructions(),
-            "image_data": image_data,
-            "x": 0  # Provide a default value for 'x' to satisfy the prompt template
-        })
-        logging.info(f"Gemini parsed response: {result}")
-        return result.dict()
-    except Exception as e:
-        logging.exception("Error in analyze_crop_image")
-        raise 
+  # Validate input
+  if not image_bytes:
+    raise ValueError("Empty image bytes provided to analyze_crop_image")
+
+  try:
+    # Resize image to fixed size
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image = image.resize((FIXED_WIDTH, FIXED_HEIGHT))
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG")
+    resized_bytes = buf.getvalue()
+    image_data = base64.b64encode(resized_bytes).decode("utf-8")
+
+    # Call the multimodal chain
+    result = chain.invoke({
+      "format_instructions": parser.get_format_instructions(),
+      "image_data": image_data,
+      "x": 0  # Provide a default value for 'x' to satisfy the prompt template
+    })
+
+    logging.info(f"Gemini raw response: {result}")
+
+    # Handle possible return types from the chain:
+    # - Pydantic model with .dict()
+    # - dict
+    # - object with .to_dict() or .dict()
+    # - JSON string
+    if hasattr(result, "dict") and callable(getattr(result, "dict")):
+      parsed = result.dict()
+      logging.info("Parsed result via .dict()")
+      return parsed
+
+    if hasattr(result, "to_dict") and callable(getattr(result, "to_dict")):
+      parsed = result.to_dict()
+      logging.info("Parsed result via .to_dict()")
+      return parsed
+
+    if isinstance(result, dict):
+      logging.info("Result is already a dict")
+      return result
+
+    # Try parsing JSON string
+    if isinstance(result, str):
+      import json
+      try:
+        parsed = json.loads(result)
+        logging.info("Parsed result from JSON string")
+        return parsed
+      except Exception:
+        logging.warning("Result is a string but not valid JSON; returning raw string in dict")
+        return {"result": result}
+
+    # Fallback: return string representation
+    logging.warning("Unhandled result type from chain; returning string representation")
+    return {"result": str(result)}
+
+  except Exception as e:
+    logging.exception("Error in analyze_crop_image: %s", e)
+    # raise with a clearer message for the router to pass along
+    raise RuntimeError(f"analyze_crop_image failed: {e}") from e
