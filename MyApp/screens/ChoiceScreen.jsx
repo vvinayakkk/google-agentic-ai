@@ -537,6 +537,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   profileButton: {
+    marginTop : 10,
     padding: 4,
   },
   titleContainer: {

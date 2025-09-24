@@ -77,7 +77,7 @@ function AppInner() {
       <Suspense fallback={null}>
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
           <NavigationContainer theme={buildNavigationTheme(theme)}>
-            <Stack.Navigator initialRouteName="LanguageSelectScreen"
+            <Stack.Navigator initialRouteName="ChoiceScreen"
               screenOptions={{
                 headerShown: false,
               }}

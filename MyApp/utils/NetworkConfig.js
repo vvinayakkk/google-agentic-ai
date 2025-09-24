@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const NetworkConfig = {
   // Primary API base URL
-  API_BASE: 'http://192.168.31.15:8000',
+  API_BASE: 'http://192.168.31.14:8000',
   MODE: 'online', // 'online' or 'offline'
   
   // Alternative URLs to try

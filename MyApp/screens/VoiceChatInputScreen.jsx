@@ -51,11 +51,11 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'profileIcon':
-        return { top: 120, right: 5 };
+        return { top: 100, right: 2 };
       case 'chatHistory':
-        return { top: 120, left: 20 };
+        return { top: 100, left: 20 };
       case 'newChatButton':
-        return { top: 180, alignSelf: 'center' };
+        return { top: 10, alignSelf: 'center' };
       case 'featuresArea':
         return { top: '40%', alignSelf: 'center' };
       case 'inputArea':
@@ -113,7 +113,7 @@ const getKissanAIResponse = async (message, context, t) => {
     };
     
     try {
-        const response = await axios.post(`http://192.168.31.15:8001/agent`, payload);
+        const response = await axios.post(`http://192.168.31.14:8001/agent`, payload);
         if (response.data && response.data.response_text) {
             return response.data.response_text;
         }
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
     tooltip: {
         position: 'absolute',
         borderRadius: 10,
-        padding: 14,
+        padding: 10,
         marginHorizontal: 15,
         maxWidth: width - 30,
         shadowColor: '#000',

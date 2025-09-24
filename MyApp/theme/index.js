@@ -23,7 +23,7 @@ export const lightTheme = {
     text: '#111827',
     textSecondary: '#4B5563',
     // Surfaces
-    background: '#FFFFFF',
+    background: '#C8E6C9',
     surface: '#F6F7F9',
     card: '#FFFFFF',
     border: '#E5E7EB',
