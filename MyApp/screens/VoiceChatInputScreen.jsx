@@ -114,6 +114,7 @@ const getKissanAIResponse = async (message, context, t) => {
     
     try {
         const response = await axios.post(`http://192.168.31.14:8001/agent`, payload);
+        const response = await axios.post(`http://192.168.0.109:8001/agent`, payload);
         if (response.data && response.data.response_text) {
             return response.data.response_text;
         }
