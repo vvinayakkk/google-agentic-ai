@@ -982,7 +982,7 @@ export default function LiveVoiceScreen({ navigation }) {
         {/* Bottom Controls */}
         <View style={styles.controlsSection}>
           <LinearGradient
-            colors={["#3f51b5", "#5c6bc0", "#9fa8da"]}
+            colors={["#2b526f", "#2b9fdeff", "#4cabd9"]}
             style={styles.controlsGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}

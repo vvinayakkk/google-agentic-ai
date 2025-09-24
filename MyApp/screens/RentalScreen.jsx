@@ -966,7 +966,7 @@ export default function RentalScreen() {
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer , {backgroundColor: theme.colors.background}]}>
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color={theme.colors.textTertiary || theme.colors.textSecondary} />
             <TextInput

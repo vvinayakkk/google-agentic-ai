@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 export default function ThemeToggle() {
   const { toggleTheme, mode, theme } = useTheme();
   return (
-    <TouchableOpacity onPress={toggleTheme} style={[styles.button, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+    <TouchableOpacity onPress={toggleTheme} style={[styles.button, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}> 
       <Text style={[styles.text, { color: theme.colors.text }]}>{mode === 'dark' ? '🌙' : '☀️'}</Text>
     </TouchableOpacity>
   );
@@ -19,6 +19,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    marginTop: 17,
+    marginRight: 53,
+    // backgroundColor: '#C8E6C9'
   },
-  text: { fontSize: 18 },
+  text: { fontSize: 20 },
 });

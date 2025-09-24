@@ -284,6 +284,7 @@ const getFeatureOptions = (theme, t) => [
     { icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />, label: t('features.document_builder', 'Document Builder'), screen: 'DocumentAgentScreen', color: '#f59e0b' },
     { icon: <MaterialCommunityIcons name="stethoscope" size={20} color="#10b981" />, label: t('features.crop_doctor', 'Crop Doctor'), screen: 'CropDoctor', color: '#10b981' },
     { icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />, label: t('features.equipment_rental', 'Equipment Rental'), screen: 'RentalSystemScreen', color: '#f59e0b' },
+    { icon: <MaterialCommunityIcons name="sprout" size={20} color="#84cc16" />, label: t('features.farm_visualizer', 'Farm Visualizer'), screen: 'FarmVisualizerScreen', color: '#84cc16' },
     { icon: <MaterialCommunityIcons name="heart-plus" size={20} color="#ef4444" />, label: t('features.mental_health', 'Mental Health Support'), screen: 'SuicidePrevention', color: '#ef4444' },
 ];
 
@@ -356,7 +357,6 @@ const FeaturesView = ({ navigation }) => {
 
 // --- Main Chat Screen Component ---
 export default function VoiceChatInputScreen({ navigation, route }) {
-    const insets = useSafeAreaInsets();
     const { theme } = useTheme();
     const { t } = useTranslation();
     const [inputValue, setInputValue] = useState('');
@@ -477,6 +477,7 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         setChatHistory([]);
         setChatTitle('');
         setInputValue('');
+        setAttachedImage(null);
         setCurrentContext(null);
     };
 
@@ -566,20 +567,19 @@ export default function VoiceChatInputScreen({ navigation, route }) {
         <ErrorBoundary>
             <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
                 <StatusBar barStyle={theme.colors.statusBarStyle} />
-                <TouchableOpacity style={{ position: 'absolute', top: 68, right: 2, zIndex: 10 }} onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })} activeOpacity={0.5}>
-                    <Ionicons name="person-circle-outline" size={44} color={theme.colors.primary} />
-                </TouchableOpacity>
-                <View style={[styles.topBar, { paddingTop: insets.top, borderBottomColor: theme.colors.border }]}> 
+                <View style={[styles.topBar, { borderBottomColor: theme.colors.border }]}> 
                     <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}>
                         <Ionicons name="time-outline" size={28} color={theme.colors.headerTint} />
                     </TouchableOpacity>
                     <Text style={[styles.topBarTitle, { color: theme.colors.headerTitle }]} numberOfLines={1}>{chatTitle || t('voicechat.header_title_default', 'Voice Chat')}</Text>
                     <View style={styles.topRightIcons}>
-                        <TouchableOpacity onPress={() => navigation.navigate('FarmVisualizerScreen')}>
-                            <MaterialCommunityIcons name="sprout" size={28} color={theme.colors.headerTint} style={styles.topRightIcon} />
+                        {/* spacer reserved for external overlay button */}
+                        <View style={styles.overlaySpacer} />
+                        <TouchableOpacity onPress={() => navigation.navigate('Featured')} style={styles.topRightIcon}>
+                            <Ionicons name="star-outline" size={28} color={theme.colors.headerTint} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('Featured')}>
-                            <Ionicons name="star-outline" size={28} color={theme.colors.headerTint} style={styles.topRightIcon} />
+                        <TouchableOpacity onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })} style={styles.topRightIcon}>
+                            <Ionicons name="person-circle-outline" size={28} color={theme.colors.headerTint} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        paddingHorizontal: 30, 
+        paddingHorizontal: 45, 
         paddingTop: 10,
         paddingBottom: 15, 
         borderBottomWidth: 1, 
@@ -702,8 +702,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row' 
     },
     topRightIcon: { 
-        marginRight: 20,
+        marginRight: 95,
         marginTop: 10 
+    },
+    overlaySpacer: {
+        width: 48,
+        height: 48,
+        marginRight: 8,
+        marginTop: 6,
     },
     chatList: { 
         flex: 1 

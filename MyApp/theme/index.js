@@ -34,7 +34,7 @@ export const lightTheme = {
     danger: base.brand.danger,
     info: base.brand.info,
     // Header
-    headerBackground: '#FFFFFF',
+    headerBackground: '#C8E6C9',
     headerTitle: '#111827',
     headerTint: '#4B5563',
     // Status bar

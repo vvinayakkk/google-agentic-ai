@@ -2359,7 +2359,7 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
+    <SafeAreaView style={[styles.container, {  backgroundColor: theme.colors.background }]}> 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[{ flex: 1 }]}>
         <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
       <View style={[styles.header, { backgroundColor: theme.colors.background }] }>

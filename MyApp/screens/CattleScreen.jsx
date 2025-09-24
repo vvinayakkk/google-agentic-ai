@@ -692,7 +692,7 @@ const CattleScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top || StatusBar.currentHeight, backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle} />
 
       {/* Header */}

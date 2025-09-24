@@ -315,7 +315,7 @@ const SmartCalendar = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle} />
       <SafeAreaView style={styles.safeArea}>
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>

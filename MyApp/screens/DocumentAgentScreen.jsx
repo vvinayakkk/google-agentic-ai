@@ -510,9 +510,9 @@ export default function DocumentAgentScreen({ navigation }) {
   // Render loading screen
   if (initialLoading) {
     return (
-      <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <StatusBar barStyle={theme.colors.statusBarStyle} />
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.colors.headerBackground }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
           </TouchableOpacity>
@@ -521,7 +521,7 @@ export default function DocumentAgentScreen({ navigation }) {
         </View>
 
         <View style={styles.loadingContainer}>
-          <View style={[styles.loadingContent, { backgroundColor: theme.colors.card }] }>
+          <View style={[styles.loadingContent, { backgroundColor: theme.colors.background }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>{t('document.loading_schemes', 'Loading Schemes')}</Text>
             <Text style={[styles.loadingSubtitle, { color: theme.colors.textSecondary }]}>{t('document.based_on_activity', 'Based on your activity')}</Text>
@@ -549,9 +549,9 @@ export default function DocumentAgentScreen({ navigation }) {
 
   // Render main scheme display
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}> 
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle} />
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.headerBackground }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color={theme.colors.headerTint} />
         </TouchableOpacity>
