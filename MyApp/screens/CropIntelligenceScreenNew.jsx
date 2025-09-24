@@ -791,10 +791,12 @@ const CropIntelligenceScreen = ({ navigation }) => {
         const tooltipWidth = 280;
         // prefer to show tooltip above the element unless arrowPosition is bottom
         if (step.arrowPosition === 'bottom') {
-          style.top = measured.y + measured.height + 8;
+          style.top = measured.y + measured.height + 12; // Arrow height + gap
           style.left = Math.max(8, measured.x + measured.width / 2 - tooltipWidth / 2);
         } else {
-          style.top = Math.max(8, measured.y - 8 - 120); // place above with a bit offset
+          // Estimate tooltip height (approx 120-150) + arrow height + gap
+          const tooltipHeight = 140; 
+          style.top = Math.max(40, measured.y - tooltipHeight - 12); 
           style.left = Math.max(8, measured.x + measured.width / 2 - tooltipWidth / 2);
         }
       } else {
@@ -942,11 +944,11 @@ const CropIntelligenceScreen = ({ navigation }) => {
               style={styles.responseCardExpandButton}
               onPress={onToggleExpand}
             >
-              <Ionicons
+              <Text><Ionicons
                 name={isExpanded ? 'chevron-up' : 'chevron-down'}
                 size={20}
                 color={theme.colors.textSecondary}
-              />
+              /></Text>
             </TouchableOpacity>
           </View>
 
@@ -1056,15 +1058,13 @@ const CropIntelligenceScreen = ({ navigation }) => {
       >
         <SafeAreaView>
           <View style={styles.headerContent}>
-            <TouchableOpacity
-              ref={backButtonRef}
-              style={[styles.backButton, { backgroundColor: theme.colors.card }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={26} color={theme.colors.headerTitle || '#FFFFFF'} />
-            </TouchableOpacity>
-
-            <View style={styles.headerTitleContainer}>
+              <TouchableOpacity
+                ref={backButtonRef}
+                style={[styles.backButton, { backgroundColor: theme.colors.card }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={26} color={theme.colors.headerTitle || '#FFFFFF'} />
+              </TouchableOpacity>            <View style={styles.headerTitleContainer}>
               <Text style={[styles.headerTitle, { color: theme.colors.headerTitle || '#FFFFFF' }]}>{t('cropintel.title', 'Crop Intelligence')}</Text>
               <View style={styles.locationContainer}>
                 <Ionicons name="location-sharp" size={16} color={theme.colors.headerTint || 'rgba(255,255,255,0.8)'} />
@@ -1151,47 +1151,47 @@ const CropIntelligenceScreen = ({ navigation }) => {
   );
 
   const renderTabBar = () => (
-    <View ref={tabsSectionRef} style={styles.tabBarContainer}>
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'combos' && styles.activeTab , { color: theme.colors.text }]}
-          onPress={() => setActiveTab('combos')}
-        >
-          <MaterialCommunityIcons
-            name="seed"
-            size={22}
-            color={activeTab === 'combos' ? theme.colors.primary : theme.colors.textSecondary}
-          />
-          <Text style={[
-            styles.tabText,
-            activeTab === 'combos' && styles.activeTabText,
-            { color: activeTab === 'combos' ? theme.colors.primary : theme.colors.text  }
-          ]}>
-            {t('cropintel.tabs.combos', 'Crop Combos')}
-          </Text>
-        </TouchableOpacity>
+  <View ref={tabsSectionRef} style={styles.tabBarContainer}>
+    <View style={styles.tabBar}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'combos' && styles.activeTab]}
+        onPress={() => setActiveTab('combos')}
+      >
+        <MaterialCommunityIcons
+          name="seed"
+          size={22}
+          color={activeTab === 'combos' ? theme.colors.primary : theme.colors.textSecondary}
+        />
+        <Text style={[
+          styles.tabText,
+          activeTab === 'combos' && styles.activeTabText,
+          { color: activeTab === 'combos' ? theme.colors.primary : theme.colors.text }
+        ]}>
+          {t('cropintel.tabs.combos', 'Crop Combos')}
+        </Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          ref={aiTabRef}
-          style={[styles.tab, activeTab === 'ai' && styles.activeTab , { color: theme.colors.text }]}
-          onPress={() => setActiveTab('ai')}
-        >
-          <MaterialCommunityIcons
-            name="robot"
-            size={22}
-            color={activeTab === 'ai' ? theme.colors.primary : theme.colors.textSecondary}
-          />
-          <Text style={[
-            styles.tabText,
-            activeTab === 'ai' && styles.activeTabText,
-            { color: activeTab === 'ai' ? theme.colors.primary : theme.colors.text }
-          ]}>
-            {t('cropintel.tabs.ai', 'AI Recommendations')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        ref={aiTabRef}
+        style={[styles.tab, activeTab === 'ai' && styles.activeTab]}
+        onPress={() => setActiveTab('ai')}
+      >
+        <MaterialCommunityIcons
+          name="robot"
+          size={22}
+          color={activeTab === 'ai' ? theme.colors.primary : theme.colors.textSecondary}
+        />
+        <Text style={[
+          styles.tabText,
+          activeTab === 'ai' && styles.activeTabText,
+          { color: activeTab === 'ai' ? theme.colors.primary : theme.colors.text }
+        ]}>
+          {t('cropintel.tabs.ai', 'AI Recommendations')}
+        </Text>
+      </TouchableOpacity>
     </View>
-  );
+  </View>
+);
 
   const renderForecastSection = () => (
     forecastData?.list && (
@@ -1779,13 +1779,13 @@ const CropIntelligenceScreen = ({ navigation }) => {
                 disabled={saveLoading}
               >
                 {saveLoading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <>
-                    <Ionicons name="save-outline" size={20} color="white" />
-                    <Text style={styles.saveButtonText}>{t('common.save_changes')}</Text>
-                  </>
-                )}
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="save-outline" size={20} color="white" />
+                    <Text style={styles.saveButtonText}>{t('common.save_changes')}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
 
