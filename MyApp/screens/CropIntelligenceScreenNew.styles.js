@@ -917,6 +917,47 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  onboardingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      zIndex: 999,
+  },
+  tooltipTitle: {
+      // color: theme.colors.text,
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 8
+  },
+  tooltipContent: {
+      // color: theme.colors.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+      marginBottom: 16
+  },
+  tooltipFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+  },
+  tooltipStep: {
+      // color: theme.colors.textSecondary,
+      fontSize: 12
+  },
+  tooltipSkip: {
+      // color: theme.colors.textSecondary,
+      fontSize: 14
+  },
+  tooltipNextButton: {
+      backgroundColor: '#10B981',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+  },
+  tooltipNextButtonText: {
+      // color: theme.colors.onPrimary,
+      fontSize: 14,
+      fontWeight: '600'
+  },
   resetTourText: {
     color: '#EF4444',
     fontSize: 14,
