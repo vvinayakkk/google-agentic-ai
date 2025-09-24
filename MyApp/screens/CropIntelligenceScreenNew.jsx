@@ -1051,106 +1051,84 @@ const CropIntelligenceScreen = ({ navigation }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <LinearGradient
-        colors={[theme.colors.headerBackground || '#E3F2FD', theme.colors.primary || '#90CAF9', theme.colors.headerAccent || '#64B5F6']}
+        colors={[theme.colors.background, theme.colors.background]}
         style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
       >
         <SafeAreaView>
           <View style={styles.headerContent}>
-              <TouchableOpacity
-                ref={backButtonRef}
-                style={[styles.backButton, { backgroundColor: theme.colors.card }]}
-                onPress={() => navigation.goBack()}
-              >
-                <Ionicons name="arrow-back" size={26} color={theme.colors.headerTitle || '#FFFFFF'} />
-              </TouchableOpacity>            <View style={styles.headerTitleContainer}>
-              <Text style={[styles.headerTitle, { color: theme.colors.headerTitle || '#FFFFFF' }]}>{t('cropintel.title', 'Crop Intelligence')}</Text>
-              <View style={styles.locationContainer}>
-                <Ionicons name="location-sharp" size={16} color={theme.colors.headerTint || 'rgba(255,255,255,0.8)'} />
-                <Text style={[styles.headerSubtitle, { color: theme.colors.headerTint || 'rgba(255,255,255,0.8)' }]}>
-                  {safeText(location?.city, t('cropintel.fetching_location', 'Fetching location...'))}
-                </Text>
-              </View>
-            </View>
+            <TouchableOpacity
+              ref={backButtonRef}
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text><Ionicons name="arrow-back" size={24} color={theme.colors.text} /></Text>
+            </TouchableOpacity>
 
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.refreshButton}
-                onPress={onRefresh}
-              >
-                {refreshing ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary || '#00C853'} />
-                ) : (
-                  <Ionicons name="refresh" size={24} color={theme.colors.primary || '#00C853'} />
-                )}
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.headerTitle}>{t('cropintel.title')}</Text>
+
+            <TouchableOpacity onPress={startOnboardingTour} style={styles.helpButton}>
+              <Text><MaterialCommunityIcons name="help-circle-outline" size={26} color={theme.colors.text} /></Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleButton}>
+                <Text><Ionicons name={isDark ? "sunny" : "moon"} size={24} color={theme.colors.text} /></Text>
+            </TouchableOpacity>
           </View>
-
-          {weatherData && (
-            <View ref={weatherSectionRef} style={[styles.currentWeatherMainCard, { backgroundColor: theme.colors.card }]}> 
-              <View style={styles.currentWeatherMainInfo}>
-                <View style={styles.currentWeatherVisual}>
-                  {weatherData.weather?.[0]?.icon && (
-                    <Image
-                      source={{ uri: getWeatherIcon(weatherData.weather[0].icon) }}
-                      style={styles.currentWeatherBigIcon}
-                    />
-                  )}
-                  <View>
-                    <Text style={[styles.currentWeatherTemperature, { color: theme.colors.text || '#FFFFFF' }]}> 
-                      {safeText(weatherData?.main?.temp ? Math.round(weatherData.main.temp) : 0)}°C
-                    </Text>
-                    <Text style={[styles.currentWeatherDescription, { color: theme.colors.textSecondary || '#E0E0E0' }]}> 
-                      {safeText(
-                        weatherData?.weather?.[0]?.description
-                          ? weatherData.weather[0].description.toUpperCase()
-                          : t('cropintel.na', 'N/A')
-                      )}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.currentWeatherDetailsGrid}>
-                  <View style={styles.weatherDetailItem}>
-                    <MaterialCommunityIcons name="water-percent" size={20} color={theme.colors.info || '#A7FFEB'} />
-                    <Text style={[styles.weatherDetailValue, { color: theme.colors.text || '#FFFFFF' }]}>{weatherData.main?.humidity || 0}%</Text>
-                    <Text style={[styles.weatherDetailLabel, { color: theme.colors.textSecondary || '#E0E0E0' }]}>{t('cropintel.weather.humidity', 'Humidity')}</Text>
-                  </View>
-                  <View style={styles.weatherDetailItem}>
-                    <MaterialCommunityIcons name="weather-windy" size={20} color={theme.colors.info || '#82B1FF'} />
-                    <Text style={[styles.weatherDetailValue, { color: theme.colors.text || '#FFFFFF' }]}> 
-                      {weatherData.wind?.speed ? (weatherData.wind.speed * 3.6).toFixed(1) : '0'} km/h
-                    </Text>
-                    <Text style={[styles.weatherDetailLabel, { color: theme.colors.textSecondary || '#E0E0E0' }]}>{t('cropintel.weather.wind', 'Wind')}</Text>
-                  </View>
-                  {airQualityData?.list?.[0]?.main?.aqi && (
-                    <View style={styles.weatherDetailItem}>
-                      <MaterialCommunityIcons name="air-filter" size={20} color={getAQIColor(airQualityData.list[0].main.aqi)} />
-                      <Text style={[styles.weatherDetailValue, { color: theme.colors.text || '#FFFFFF' }]}>{getAQIText(airQualityData.list[0].main.aqi) || t('cropintel.na', 'N/A')}</Text>
-                      <Text style={[styles.weatherDetailLabel, { color: theme.colors.textSecondary || '#E0E0E0' }]}>{t('cropintel.weather.air_quality', 'Air Quality')}</Text>
-                    </View>
-                  )}
-                  {soilData.length > 0 && (
-                    <View style={styles.weatherDetailItem}>
-                      <MaterialCommunityIcons name="water" size={20} color={theme.colors.success || '#C5E1A5'} />
-                      <Text style={[styles.weatherDetailValue, { color: theme.colors.text || '#FFFFFF' }]}> 
-                        {Math.round(soilData.reduce((sum, item) => sum + (item.moisture || 0), 0) / soilData.length) || 0}%
-                      </Text>
-                      <Text style={[styles.weatherDetailLabel, { color: theme.colors.textSecondary || '#E0E0E0' }]}>{t('cropintel.weather.soil_moisture', 'Soil Moisture')}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          )}
         </SafeAreaView>
       </LinearGradient>
     </View>
   );
 
-  const renderTabBar = () => (
+  const renderWeatherSection = () => (
+    weatherData && (
+      <View ref={weatherSectionRef} style={[styles.weatherSection, { backgroundColor: theme.colors.card }]}>
+        <View style={styles.weatherHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('cropintel.weather.current_weather')}</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={loadData}
+          >
+            <MaterialCommunityIcons name="refresh" size={20} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text }}>{t('common.refresh')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.weatherContent}>
+          <View style={styles.weatherMain}>
+            <Image
+              source={{ uri: getWeatherIcon(weatherData.weather[0].icon) }}
+              style={styles.weatherIcon}
+            />
+            <Text style={[styles.weatherTemp, { color: theme.colors.text }]}>
+              {Math.round(weatherData.main.temp)}°C
+            </Text>
+          </View>
+
+          <View style={styles.weatherDetails}>
+            <View style={styles.weatherDetailItem}>
+              <MaterialCommunityIcons name="water" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.weatherDetailText, { color: theme.colors.text }]}>
+                {weatherData.main.humidity}% {t('cropintel.weather.humidity')}
+              </Text>
+            </View>
+            <View style={styles.weatherDetailItem}>
+              <MaterialCommunityIcons name="wind" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.weatherDetailText, { color: theme.colors.text }]}>
+                {Math.round(weatherData.wind.speed)} {t('cropintel.weather.wind_speed')}
+              </Text>
+            </View>
+            <View style={styles.weatherDetailItem}>
+              <MaterialCommunityIcons name="gauge" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.weatherDetailText, { color: theme.colors.text }]}>
+                {weatherData.main.pressure} hPa {t('cropintel.weather.pressure')}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    )
+  );
+
+  const renderTabBar = () => (
   <View ref={tabsSectionRef} style={styles.tabBarContainer}>
     <View style={styles.tabBar}>
       <TouchableOpacity
@@ -1302,7 +1280,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </View>
           <Text style={[styles.farmersUsing, { color: theme.colors.textSecondary }]}>{combo.farmers_using || t('common.unknown')}</Text>
         </View>
-      </LinearGradient>
+        </LinearGradient>
     </TouchableOpacity>
   );
 
@@ -1409,7 +1387,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           {renderHeader()}
-          {renderForecastSection()}
+          {renderWeatherSection()}
           {renderTabBar()}
 
           {activeTab === 'combos' && (
