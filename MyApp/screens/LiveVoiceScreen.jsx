@@ -215,7 +215,7 @@ export default function LiveVoiceScreen({ navigation }) {
           testFormData.append('metadata', JSON.stringify({ farmer_id: 'test' }));
           
           const audioTestResponse = await axios.post(`http://192.168.0.109:8001/audio_agent`, testFormData, { 
-            timeout: 5000,
+            timeout: 120000,
             headers: { 'Content-Type': 'multipart/form-data' }
           });
           console.log('Audio agent endpoint is available and working');
@@ -391,7 +391,7 @@ export default function LiveVoiceScreen({ navigation }) {
 
       const response = await axios.post(`http://192.168.0.109:8001/audio_agent`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000, // 30 seconds timeout
+        timeout: 120000, // 2 minutes timeout
       });
 
       const result = response.data;
@@ -471,7 +471,26 @@ export default function LiveVoiceScreen({ navigation }) {
 
     } catch (error) {
       console.error('Voice command processing error:', error);
-      
+
+      // Handle rate-limiting / quota (429) specially by using Retry-After if provided
+      const status = error.response?.status;
+      if (status === 429) {
+        const detail = error.response?.data?.detail || error.response?.data || {};
+        // retry_after_seconds may be nested in detail
+        const retryAfter = detail?.retry_after_seconds || detail?.retry_after || error.response?.headers?.['retry-after'];
+        const waitSec = retryAfter ? Number(retryAfter) : 5; // default to 5s if not present
+
+        Alert.alert(
+          t('livevoice.rate_limited_title', 'Service Busy'),
+          t('livevoice.rate_limited_message', 'The AI service is busy right now. Would you like to retry in {{seconds}} seconds?', { seconds: waitSec }),
+          [
+            { text: t('common.retry', 'Retry'), onPress: () => setTimeout(() => processVoiceCommand(audioUri), Math.ceil(waitSec * 1000)) },
+            { text: t('common.cancel', 'Cancel'), style: 'cancel' }
+          ]
+        );
+        return;
+      }
+
       // If it's a 404 error, try the regular /agent endpoint as fallback
       if (error.response && error.response.status === 404) {
         console.log('Audio agent endpoint not found, trying regular agent endpoint...');
@@ -490,7 +509,7 @@ export default function LiveVoiceScreen({ navigation }) {
 
           const fallbackResponse = await axios.post(`http://192.168.0.109:8001/agent`, fallbackPayload, {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 30000,
+            timeout: 120000,
           });
           
           const fallbackResult = fallbackResponse.data;
@@ -519,19 +538,19 @@ export default function LiveVoiceScreen({ navigation }) {
           console.error('Fallback also failed:', fallbackError);
         }
       }
-      
+
       let errorMessage = 'Failed to process voice command';
       if (error.response) {
         console.error('Server response:', error.response.data);
         errorMessage = `Server error: ${error.response.status} - ${error.response.data?.detail || error.response.data?.error || error.response.statusText}`;
-      } else if (error.message.includes('timeout')) {
+      } else if (error.message && error.message.includes('timeout')) {
         errorMessage = 'Request timed out. Server may be slow or busy.';
-      } else if (error.message.includes('network') || error.message.includes('Network Error')) {
+      } else if (error.message && (error.message.includes('network') || error.message.includes('Network Error'))) {
         errorMessage = 'Network connection failed. Please check your internet connection.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert(t('livevoice.processing_error_title', 'Processing Error'), errorMessage, [
         { text: t('common.retry', 'Retry'), onPress: () => processVoiceCommand(audioUri) },
         { text: t('common.cancel', 'Cancel'), style: 'cancel' }
@@ -574,7 +593,7 @@ export default function LiveVoiceScreen({ navigation }) {
         break;
       // Legacy actions for backward compatibility
       case 'weather':
-        navigation.navigate('WeatherScreen');
+        navigation.navigate('SoilMoistureScreen');
         break;
       case 'soil_moisture':
         navigation.navigate('SoilMoistureScreen');

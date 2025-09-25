@@ -1,7 +1,7 @@
 import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n, { getStoredLanguage } from './i18n';
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CardStyleInterpolators } from '@react-navigation/stack';
@@ -64,6 +64,8 @@ const Stack = createStackNavigator();
 
 function AppInner() {
   const { theme } = useTheme();
+  const navigationRef = useRef(null);
+  const [currentRoute, setCurrentRoute] = useState(null);
   useEffect(() => {
     getStoredLanguage().then((lang) => {
       if (i18n.language !== lang) {
@@ -76,7 +78,26 @@ function AppInner() {
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-          <NavigationContainer theme={buildNavigationTheme(theme)}>
+          <NavigationContainer
+            ref={navigationRef}
+            theme={buildNavigationTheme(theme)}
+            onReady={() => {
+              try {
+                const route = navigationRef.current?.getCurrentRoute();
+                setCurrentRoute(route?.name || null);
+              } catch (e) {
+                // ignore
+              }
+            }}
+            onStateChange={() => {
+              try {
+                const route = navigationRef.current?.getCurrentRoute();
+                setCurrentRoute(route?.name || null);
+              } catch (e) {
+                // ignore
+              }
+            }}
+          >
             <Stack.Navigator initialRouteName="ChoiceScreen"
               screenOptions={{
                 headerShown: false,
@@ -335,9 +356,24 @@ function AppInner() {
               />
             </Stack.Navigator>
           </NavigationContainer>
-          <View style={styles.toggleContainer} pointerEvents="box-none">
-            <ThemeToggle />
-          </View>
+          {/* Theme toggle overlay: hide on specific screens listed below */}
+          {(() => {
+            const hiddenOnRoutes = [
+              'LanguageSelectScreen',
+              'FetchingLocationScreen',
+              'LoginScreen',
+              'PaymentProcessingScreen',
+              'ChoiceScreen',
+              'ChatHistory',
+            ];
+            const shouldHide = currentRoute && hiddenOnRoutes.includes(currentRoute);
+            if (shouldHide) return null;
+            return (
+              <View style={styles.toggleContainer} pointerEvents="box-none">
+                <ThemeToggle />
+              </View>
+            );
+          })()}
           <Toast />
         </View>
       </Suspense>

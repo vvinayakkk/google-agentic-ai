@@ -68,10 +68,34 @@ export default function SpeechToTextScreen({ navigation }) {
         name: fileName,
         type: 'audio/wav', // May need to adjust if backend expects .wav
       });
-      const response = await axios.post(`${API_BASE}/speech-to-text/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setTranscript(response.data.transcript || 'No transcript found.');
+      const maxRetries = 2;
+      let attempt = 0;
+      const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+      while (attempt <= maxRetries) {
+        try {
+          attempt += 1;
+          const response = await axios.post(`${API_BASE}/speech-to-text/`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 120000,
+          });
+          setTranscript(response.data.transcript || 'No transcript found.');
+          break;
+        } catch (err) {
+          const status = err.response?.status;
+          if (status === 429) {
+            const retryAfter = err.response?.data?.detail?.retry_after_seconds || err.response?.headers?.['retry-after'];
+            const waitMs = retryAfter ? Math.ceil(Number(retryAfter) * 1000) : Math.min(3000 * attempt, 15000);
+            if (attempt <= maxRetries) {
+              console.log(`Received 429 on STT upload, retrying after ${waitMs}ms (attempt ${attempt}/${maxRetries})`);
+              await sleep(waitMs);
+              continue;
+            }
+            setError('Service is busy. Please try again in a few seconds.');
+            break;
+          }
+          throw err;
+        }
+      }
     } catch (e) {
       setError('Failed to upload or transcribe audio: ' + (e.response?.data?.detail || e.message));
     } finally {

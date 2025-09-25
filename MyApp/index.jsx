@@ -1,3 +1,4 @@
+import './shims/require-shim';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

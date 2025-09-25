@@ -166,3 +166,13 @@ python test_audio_integration.py
 3. **Caching**: Cache generated audio for better performance
 4. **Streaming**: Real-time audio streaming for long responses
 5. **Custom Voices**: Support for custom voice models 
+ 
+## Rate-limit handling (2025-09-25)
+
+The backend now detects quota/rate-limit errors (RESOURCE_EXHAUSTED / HTTP 429) coming from the Gemini/Generative API and will:
+
+- Retry the agent run a few times using the model's suggested retry delay when provided (e.g. "Please retry in 27s").
+- Use exponential backoff when no retry delay is available.
+- If retries are exhausted, the backend returns HTTP 429 with a JSON detail object containing `retry_after_seconds` when known. Frontends should inspect the status code and the `detail` object and either show a user-friendly "service busy" message or retry after the suggested delay.
+
+Frontend changes in the app implement polite client-side retry and user messaging for 429 responses. Adjust `max_attempts` and backoff strategy in `gcp_agents_off_backend/main.py` if you want different behavior.

@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTheme } from '../context/ThemeContext';
+import { format, isToday, isThisWeek, parseISO } from 'date-fns';
 
 const HistoryItem = ({ title, date, onPress }) => (
   <TouchableOpacity style={styles.historyItem} onPress={onPress}>
@@ -21,11 +22,13 @@ const FARMER_ID = 'f001';
 const CHAT_CACHE_KEY = 'chat-history-cache';
 
 export default function ChatHistoryScreen({ navigation }) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [history, setHistory] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [renamingChatId, setRenamingChatId] = React.useState(null);
+  const [renamingText, setRenamingText] = React.useState('');
 
   // Load chat history from cache, then fetch from backend
   const fetchChatHistory = async () => {
@@ -64,21 +67,71 @@ export default function ChatHistoryScreen({ navigation }) {
     }, [])
   );
 
+  const groupByDate = (items) => {
+    const groups = { 'Today': [], 'This Week': [], 'Older': [] };
+    items.forEach(it => {
+      // try to parse ISO or fallback
+      const dateObj = it.date ? (typeof it.date === 'string' ? (isNaN(Date.parse(it.date)) ? new Date(it.date) : parseISO(it.date)) : new Date(it.date)) : new Date();
+      if (isToday(dateObj)) groups['Today'].push(it);
+      else if (isThisWeek(dateObj)) groups['This Week'].push(it);
+      else groups['Older'].push(it);
+    });
+    return groups;
+  };
+
+  const openChat = async (chat) => {
+    // Navigate and pass chat content so VoiceChatInputScreen can load instantly
+    navigation.navigate('VoiceChatInputScreen', { chatId: chat.id, chatData: chat });
+  };
+
+  const renameChat = (chat) => {
+    setRenamingChatId(chat.id);
+    setRenamingText(chat.title || '');
+    // show a prompt-style inline input (simple Alert fallback for older devices)
+    Alert.prompt(
+      'Rename Chat',
+      'Enter a new name for this chat',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => {} },
+        { text: 'OK', onPress: async (text) => {
+            if (!text || text.trim().length === 0) return;
+            const newTitle = text.trim();
+            try {
+              // update locally
+              const updated = history.map(h => h.id === chat.id ? { ...h, title: newTitle } : h);
+              setHistory(updated);
+              await AsyncStorage.setItem(CHAT_CACHE_KEY, JSON.stringify(updated));
+              // persist to backend
+              fetch(`${API_BASE}/farmer/${FARMER_ID}/chat/${chat.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...chat, title: newTitle })
+              }).then(() => {}).catch(() => {});
+            } catch (e) {
+              console.error('Rename failed', e);
+            }
+        } }
+      ],
+      'plain-text',
+      chat.title || ''
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      {/* Background Gradients */}
+      {/* Background Gradients (theme aware) */}
       <LinearGradient
-        colors={['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)']}
+        colors={isDark ? ['rgba(16, 185, 129, 0.05)', 'transparent', 'rgba(59, 130, 246, 0.05)'] : ['rgba(0,0,0,0)', 'transparent', 'rgba(0,0,0,0)']}
         style={StyleSheet.absoluteFillObject}
       />
       <SafeAreaView style={styles.container}>
         {/* Top Bar with Blur and Gradient */}
         <View style={{ paddingTop: insets.top }}>
-          <BlurView intensity={20} tint="dark" style={styles.headerBlur}>
+          <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={[styles.headerBlur, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.topBarContent}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                  colors={isDark ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)']}
                   style={styles.backButtonGradient}
                 >
                   <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
@@ -96,36 +149,44 @@ export default function ChatHistoryScreen({ navigation }) {
           </BlurView>
         </View>
         {/* Chat History List */}
-        <FlatList
-          data={history}
-          renderItem={({ item, index }) => (
-            <LinearGradient
-              colors={index % 2 === 0 ? ['rgba(24, 24, 27, 0.9)', 'rgba(39, 39, 42, 0.9)'] : ['rgba(39, 39, 42, 0.9)', 'rgba(24, 24, 27, 0.9)']}
-              style={styles.historyItemGradient}
-            >
-              <TouchableOpacity
-                style={styles.historyItemTouchable}
-                onPress={() => navigation.navigate('VoiceChatInputScreen', { chatId: item.id })}
-                activeOpacity={0.8}
-              >
-                <View style={styles.historyItemHeader}>
-                  <LinearGradient
-                    colors={['#3b82f6', '#10b981']}
-                    style={styles.historyIconContainer}
-                  >
-                    <Ionicons name="chatbubble-outline" size={18} color={theme.colors.text} />
-                  </LinearGradient>
-                  <View style={styles.historyItemContent}>
-                    <Text style={[styles.historyTitle, { color: theme.colors.text }]} numberOfLines={1}>{item.title}</Text>
-                    <Text style={[styles.historyDate, { color: theme.colors.primary }]}>{item.date}</Text>
-                  </View>
+        {/* New grouped layout */}
+        {(() => {
+          const groups = groupByDate(history || []);
+          const keys = Object.keys(groups).filter(k => groups[k].length > 0);
+          return (
+            <FlatList
+              data={keys}
+              keyExtractor={k => k}
+              renderItem={({ item: groupKey }) => (
+                <View>
+                  <Text style={[styles.groupHeader, { color: theme.colors.text }]}>{groupKey}</Text>
+                  {groups[groupKey].map((chat) => (
+                    <TouchableOpacity key={chat.id} style={[styles.historyRow, { borderColor: theme.colors.border, backgroundColor: theme.colors.card }]} onPress={() => openChat(chat)}>
+                      <View style={styles.historyRowLeft}>
+                        <View style={[styles.historyIconContainer, { backgroundColor: theme.colors.primary }]}>
+                          <Ionicons name="chatbubble-outline" size={18} color={theme.colors.headerTitle} />
+                        </View>
+                        <View style={styles.historyItemContent}>
+                          <Text style={[styles.historyTitle, { color: theme.colors.text }]} numberOfLines={1}>{chat.title}</Text>
+                          <Text style={[styles.historyDate, { color: theme.colors.textSecondary }]}>{chat.date}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.rowActions}>
+                        <TouchableOpacity onPress={() => openChat(chat)} style={styles.iconButton}>
+                          <Ionicons name="open-outline" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => renameChat(chat)} style={styles.iconButton}>
+                          <Ionicons name="pencil-outline" size={20} color={theme.colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </TouchableOpacity>
-            </LinearGradient>
-          )}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContainer}
-        />
+              )}
+              contentContainerStyle={styles.listContainer}
+            />
+          );
+        })()}
       </SafeAreaView>
     </View>
   );

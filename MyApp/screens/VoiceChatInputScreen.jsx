@@ -51,7 +51,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
   const getTooltipPosition = () => {
     switch (step.target) {
       case 'profileIcon':
-        return { top: 100, right: 2 };
+        return { top: 100, right: 4 };
       case 'chatHistory':
         return { top: 100, left: 20 };
       case 'newChatButton':
@@ -94,6 +94,8 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 
 // --- API Configuration ---
 const getKissanAIResponse = async (message, context, t) => {
+    // simple sleep helper for retry backoff
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
     let session_id = await AsyncStorage.getItem('chat_session_id');
     if (!session_id) {
         session_id = Date.now().toString();
@@ -112,33 +114,58 @@ const getKissanAIResponse = async (message, context, t) => {
         session_id,
     };
     
-    try {
-        const response = await axios.post(`http://192.168.0.109:8001/agent`, payload);
-        if (response.data && response.data.response_text) {
-            return response.data.response_text;
-        }
-        if (response.data && response.data.error) {
-            console.log('Server returned error:', response.data.error);
-            return t('voicechat.errors.processing_issue', 'Sorry, there was an issue processing your request: {{error}}', { error: response.data.error });
-        }
-        return t('voicechat.errors.did_not_understand', 'Sorry, I didn\'t understand. Please try again.');
-    } catch (error) {
-        if (error.response) {
-            console.log('AI error response:', error.response.data);
-            console.log('AI error status:', error.response.status);
-            if (error.response.data && error.response.data.detail) {
-                return t('voicechat.errors.generic_with_detail', 'Sorry, there was an error: {{detail}}', { detail: error.response.data.detail });
-            } else if (error.response.data && error.response.data.error) {
-                return t('voicechat.errors.generic_with_detail', 'Sorry, there was an error: {{detail}}', { detail: error.response.data.error });
-            } else if (error.response.status === 500) {
-                return t('voicechat.errors.server_error_500', "Sorry, there was a server error. Please try again or contact support.");
-            } else if (error.response.status === 404) {
-                return t('voicechat.errors.service_unavailable_404', "Sorry, the service is not available. Please check your connection.");
+    const maxRetries = 2;
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+        try {
+            attempt += 1;
+            const response = await axios.post(`http://192.168.0.109:8001/agent`, payload, { timeout: 120000 });
+            if (response.data && response.data.response_text) {
+                return response.data.response_text;
             }
-        } else {
-            console.log('AI error:', error.message || error);
+            if (response.data && response.data.error) {
+                console.log('Server returned error:', response.data.error);
+                return t('voicechat.errors.processing_issue', 'Sorry, there was an issue processing your request: {{error}}', { error: response.data.error });
+            }
+            return t('voicechat.errors.did_not_understand', 'Sorry, I didn\'t understand. Please try again.');
+        } catch (error) {
+            // If server sent a 429, try to respect retry-after if provided
+            const status = error.response?.status;
+            const data = error.response?.data;
+            if (status === 429) {
+                console.log('Received 429 from API:', data);
+                // Try to extract retry seconds
+                const retryAfter = data?.detail?.retry_after_seconds || data?.retry_after_seconds || error.response?.headers?.['retry-after'];
+                const waitMs = retryAfter ? Math.ceil(Number(retryAfter) * 1000) : Math.min(5000 * attempt, 30000);
+                if (attempt <= maxRetries) {
+                    console.log(`Retrying after ${waitMs}ms (attempt ${attempt}/${maxRetries})`);
+                    await sleep(waitMs);
+                    continue;
+                }
+                // Exhausted retries
+                if (data?.detail) {
+                    return t('voicechat.errors.rate_limited', 'The AI service is busy. Please try again after {{seconds}} seconds.', { seconds: data.detail.retry_after_seconds || 'a few' });
+                }
+                return t('voicechat.errors.rate_limited', 'The AI service is busy. Please try again later.');
+            }
+            // Other errors: return friendly messages
+            if (error.response) {
+                console.log('AI error response:', error.response.data);
+                console.log('AI error status:', error.response.status);
+                if (error.response.data && error.response.data.detail) {
+                    return t('voicechat.errors.generic_with_detail', 'Sorry, there was an error: {{detail}}', { detail: error.response.data.detail });
+                } else if (error.response.data && error.response.data.error) {
+                    return t('voicechat.errors.generic_with_detail', 'Sorry, there was an error: {{detail}}', { detail: error.response.data.error });
+                } else if (error.response.status === 500) {
+                    return t('voicechat.errors.server_error_500', "Sorry, there was a server error. Please try again or contact support.");
+                } else if (error.response.status === 404) {
+                    return t('voicechat.errors.service_unavailable_404', "Sorry, the service is not available. Please check your connection.");
+                }
+            } else {
+                console.log('AI error:', error.message || error);
+            }
+            return t('voicechat.errors.server_error_generic', 'Server error. Please try again later.');
         }
-        return t('voicechat.errors.server_error_generic', 'Server error. Please try again later.');
     }
 };
 
@@ -289,12 +316,13 @@ const getFeatureOptions = (theme, t) => [
 ];
 
 const FeaturesView = ({ navigation }) => {
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme();
     const { t } = useTranslation();
     const [showAll, setShowAll] = useState(false);
     const featureOptions = getFeatureOptions(theme, t);
     const mainOptions = featureOptions.slice(0, 4);
     const extraOptions = featureOptions.slice(4);
+    const pillBorderColor = isDark ? '#ffffff' : '#000000';
     
     const renderIcon = (icon, label) => {
         if (React.isValidElement(icon)) {
@@ -308,7 +336,7 @@ const FeaturesView = ({ navigation }) => {
         <View style={styles.featuresPillContainer}>
             <Text style={[styles.featuresTitle, { color: theme.colors.text }]}>{t('voicechat.quick_features', 'Quick Features')}</Text>
             <View style={styles.pillRow}>
-                {mainOptions.map((opt, idx) => {
+                        {mainOptions.map((opt, idx) => {
                     if (!opt || typeof opt !== 'object' || typeof opt.label !== 'string') {
                         console.warn('Skipping invalid mainOption:', opt);
                         return null;
@@ -316,7 +344,7 @@ const FeaturesView = ({ navigation }) => {
                     return (
                         <TouchableOpacity
                             key={`${opt.label}-${idx}`}
-                            style={[styles.pillButton, { borderColor: theme.colors.border }]}
+                            style={[styles.pillButton, { borderColor: pillBorderColor }]}
                             onPress={() => navigation.navigate(opt.screen)}
                             activeOpacity={0.85}
                         >
@@ -325,7 +353,7 @@ const FeaturesView = ({ navigation }) => {
                         </TouchableOpacity>
                     );
                 })}
-                <TouchableOpacity style={[styles.pillButton, { borderColor: theme.colors.border }]} onPress={() => setShowAll((v) => !v)}>
+                <TouchableOpacity style={[styles.pillButton, { borderColor: pillBorderColor }]} onPress={() => setShowAll((v) => !v)}>
                     <MaterialCommunityIcons name="dots-horizontal" size={20} color={theme.colors.text} />
                     <Text style={[styles.pillLabel, { color: theme.colors.text }]}>{t('voicechat.more', 'More')}</Text>
                 </TouchableOpacity>
@@ -340,7 +368,7 @@ const FeaturesView = ({ navigation }) => {
                         return (
                             <TouchableOpacity
                                 key={`${opt.label}-more-${idx}`}
-                                style={[styles.pillButton, { borderColor: theme.colors.border }]}
+                                style={[styles.pillButton, { borderColor: pillBorderColor }]}
                                 onPress={() => navigation.navigate(opt.screen)}
                                 activeOpacity={0.85}
                             >
@@ -451,7 +479,44 @@ export default function VoiceChatInputScreen({ navigation, route }) {
             setChatTitle(t('voicechat.default_title', 'Kisaan ki Awaaz'));
             setChatHistory([]);
         }
-    }, [route.params?.context, t]);
+
+        // If navigated with chatData, load immediately for instant UI
+        const chatData = route.params?.chatData;
+        const chatId = route.params?.chatId;
+        const loadFromCacheOrBackend = async () => {
+            if (chatData) {
+                // chatData expected to have id, title, date, messages
+                setChatTitle(chatData.title || '');
+                setChatHistory(chatData.messages || chatData.messages || []);
+                return;
+            }
+            if (chatId) {
+                try {
+                    const cache = await AsyncStorage.getItem('chat-history-cache');
+                    if (cache) {
+                        const parsed = JSON.parse(cache);
+                        const found = parsed.find(c => c.id === chatId);
+                        if (found) {
+                            setChatTitle(found.title || '');
+                            setChatHistory(found.messages || []);
+                            return;
+                        }
+                    }
+                    // fallback fetch single chat from backend
+                    const resp = await fetch(`${NetworkConfig.API_BASE}/farmer/${FARMER_ID}/chat`);
+                    const all = await resp.json();
+                    const found = all.find(c => c.id === chatId);
+                    if (found) {
+                        setChatTitle(found.title || '');
+                        setChatHistory(found.messages || []);
+                    }
+                } catch (e) {
+                    console.error('Failed to load chat by id', e);
+                }
+            }
+        };
+        loadFromCacheOrBackend();
+    }, [route.params, t]);
 
     const saveChatToHistory = async (title, messages) => {
         try {
@@ -569,17 +634,17 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                 <StatusBar barStyle={theme.colors.statusBarStyle} />
                 <View style={[styles.topBar, { borderBottomColor: theme.colors.border }]}> 
                     <TouchableOpacity onPress={() => navigation.navigate('ChatHistory')}>
-                        <Ionicons name="time-outline" size={28} color={theme.colors.headerTint} />
+                        <Ionicons name="time-outline" size={34} color={theme.colors.headerTint} />
                     </TouchableOpacity>
                     <Text style={[styles.topBarTitle, { color: theme.colors.headerTitle }]} numberOfLines={1}>{chatTitle || t('voicechat.header_title_default', 'Voice Chat')}</Text>
                     <View style={styles.topRightIcons}>
                         {/* spacer reserved for external overlay button */}
                         <View style={styles.overlaySpacer} />
                         <TouchableOpacity onPress={() => navigation.navigate('Featured')} style={styles.topRightIcon}>
-                            <Ionicons name="star-outline" size={28} color={theme.colors.headerTint} />
+                            <Ionicons name="star-outline" size={26} color={theme.colors.headerTint} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })} style={styles.topRightIcon}>
-                            <Ionicons name="person-circle-outline" size={28} color={theme.colors.headerTint} />
+                            <Ionicons name="person-circle-outline" size={42} color={theme.colors.headerTint} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -646,8 +711,8 @@ export default function VoiceChatInputScreen({ navigation, route }) {
                             <MaterialCommunityIcons name="send-circle" size={34} color={theme.colors.primary} />
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={{ position: 'absolute', bottom: 10, right: 9, zIndex: 20, backgroundColor: theme.colors.surface, borderRadius: 32, padding: 10, elevation: 8 }} onPress={() => navigation.navigate('ChoiceScreen')} activeOpacity={0.85}>
-                        <Ionicons name="home-outline" size={38} color={theme.colors.primary} />
+                    <TouchableOpacity style={{ position: 'absolute', bottom: 10, right: 13, zIndex: 20, backgroundColor: theme.colors.surface, borderRadius: 32, padding: 10, elevation: 8 }} onPress={() => navigation.navigate('ChoiceScreen')} activeOpacity={0.85}>
+                        <Ionicons name="home-outline" size={30} color={theme.colors.primary} />
                     </TouchableOpacity>
                     {/* {hasSeenOnboarding && (
                         <View style={styles.tourButtonsContainer}>
@@ -683,31 +748,36 @@ const styles = StyleSheet.create({
         flexDirection: 'row', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        paddingHorizontal: 45, 
-        paddingTop: 10,
-        paddingBottom: 15, 
+        paddingHorizontal: 15, 
+        paddingTop: 8,
+        paddingBottom: 10, 
         borderBottomWidth: 1, 
         borderBottomColor: '#222' 
     },
     topBarTitle: { 
-        fontSize: 30, 
-        fontWeight: 'bold', 
+        fontSize: 23, 
+        fontWeight: '600', 
         flex: 1, 
         textAlign: 'center', 
-        marginHorizontal: 30,
-        marginTop: 10,
-        paddingHorizontal: 30 
+        marginHorizontal: 16,
+        marginTop: 4,
+        paddingHorizontal: 8,
+        paddingRight:-18
     },
     topRightIcons: { 
         flexDirection: 'row' 
     },
     topRightIcon: { 
-        marginRight: 95,
-        marginTop: 10 
+        marginRight: -6,
+        marginTop: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 6,
+        borderRadius: 20
     },
     overlaySpacer: {
-        width: 48,
-        height: 48,
+        width: 8,
+        height: 8,
         marginRight: 8,
         marginTop: 6,
     },
@@ -720,18 +790,18 @@ const styles = StyleSheet.create({
         borderRadius: 35, 
         paddingHorizontal: 20, 
         marginHorizontal: '5%', 
-        marginVertical: 20, 
-        minHeight: 60, 
+        marginVertical: 25, 
+        minHeight: 40, 
         paddingVertical: 5 
     },
     plusButton: { 
-        marginRight: 10 
+        marginRight: 2
     },
     textInput: { 
         flex: 1, 
         fontSize: 18, 
         marginRight: 10, 
-        maxHeight: 120 
+        maxHeight: 80 
     },
     voiceButton: { 
         backgroundColor: '#333', 
@@ -770,7 +840,7 @@ const styles = StyleSheet.create({
     },
     chatMessageText: { 
         fontSize: 16, 
-        lineHeight: 22 
+        lineHeight: 18 
     },
     contextMessageText: { 
         fontSize: 14, 

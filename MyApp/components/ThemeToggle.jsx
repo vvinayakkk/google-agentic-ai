@@ -3,9 +3,10 @@ import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 export default function ThemeToggle() {
-  const { toggleTheme, mode, theme } = useTheme();
+  const { toggleTheme, mode, theme, isDark } = useTheme();
+  const borderColor = isDark ? (theme.colors.border || '#FFFFFF') : (theme.colors.success || '#080f0cff');
   return (
-    <TouchableOpacity onPress={toggleTheme} style={[styles.button, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}> 
+    <TouchableOpacity onPress={toggleTheme} style={[styles.button, { backgroundColor: theme.colors.background, borderColor }]}> 
       <Text style={[styles.text, { color: theme.colors.text }]}>{mode === 'dark' ? '🌙' : '☀️'}</Text>
     </TouchableOpacity>
   );
@@ -13,15 +14,14 @@ export default function ThemeToggle() {
 
 const styles = StyleSheet.create({
   button: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    marginTop: 17,
-    marginRight: 53,
-    // backgroundColor: '#C8E6C9'
+    borderWidth: 2,
+    marginTop: 35,
+    marginRight: 92,
   },
   text: { fontSize: 20 },
 });
