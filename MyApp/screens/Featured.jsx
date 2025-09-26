@@ -343,7 +343,7 @@ export default function Featured({ navigation }) {
       </ScrollView>
 
       {/* Onboarding debug buttons for testing */}
-      {hasSeenOnboarding && (
+      {/* {hasSeenOnboarding && (
         <View style={styles.tourButtonsContainer}>
           <TouchableOpacity 
             style={styles.restartTourButton} 
@@ -360,7 +360,7 @@ export default function Featured({ navigation }) {
             <Text style={styles.resetTourText}>Reset</Text>
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
 
       {/* Interactive Guide Overlay */}
       {showInteractiveGuide && (

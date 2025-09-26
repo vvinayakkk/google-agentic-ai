@@ -12,8 +12,7 @@ if (!globalThis.React) {
 
 import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { CardStyleInterpolators } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 
 // ----- i18n -----
@@ -25,7 +24,7 @@ import i18n, { getStoredLanguage } from './i18n';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { buildNavigationTheme } from './theme';
 
-// ----- Screens (grouped by feature area) -----
+// ----- Screens -----
 import ChoiceScreen from './screens/ChoiceScreen';
 import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
 import LiveVoiceScreen from './screens/LiveVoiceScreen';
@@ -85,12 +84,11 @@ import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
 import ThemeToggle from './components/ThemeToggle';
 const Stack = createStackNavigator();
 
-
-
 function AppInner() {
   const { theme } = useTheme();
   const navigationRef = useRef(null);
   const [currentRoute, setCurrentRoute] = useState(null);
+
   useEffect(() => {
     getStoredLanguage().then((lang) => {
       if (i18n.language !== lang) {
@@ -99,10 +97,6 @@ function AppInner() {
     });
   }, []);
 
-  // Screen registry
-  // Define all app screens in one place to keep the navigator compact and
-  // readable. Each entry can optionally provide `options` to override the
-  // global `screenOptions` for that screen.
   const SCREENS = [
     { name: 'LanguageSelectScreen', component: LanguageSelectScreen },
     { name: 'FetchingLocationScreen', component: FetchingLocationScreen },
@@ -172,14 +166,10 @@ function AppInner() {
             ref={navigationRef}
             theme={buildNavigationTheme(theme)}
             onReady={() => {
-              // When the navigator mounts, store the current route name so
-              // UI elements (like ThemeToggle) can decide whether to render.
               const routeName = navigationRef.current?.getCurrentRoute?.()?.name ?? null;
               setCurrentRoute(routeName);
             }}
             onStateChange={() => {
-              // Update current route on navigation state changes. We keep this
-              // minimal and resilient using optional chaining.
               const routeName = navigationRef.current?.getCurrentRoute?.()?.name ?? null;
               setCurrentRoute(routeName);
             }}
@@ -195,26 +185,14 @@ function AppInner() {
               ))}
             </Stack.Navigator>
           </NavigationContainer>
-          {/* Theme toggle overlay: hide on specific screens */}
-          {(() => {
-            // Screens where the theme toggle should not show (full-screen
-            // flows, auth, or modal processing states).
-            const hiddenOnRoutes = new Set([
-              'LanguageSelectScreen',
-              'FetchingLocationScreen',
-              'LoginScreen',
-              'PaymentProcessingScreen',
-              'ChoiceScreen',
-              'ChatHistory',
-            ]);
-            const isHidden = currentRoute && hiddenOnRoutes.has(currentRoute);
-            if (isHidden) return null;
-            return (
-              <View style={styles.toggleContainer} pointerEvents="box-none">
-                <ThemeToggle />
-              </View>
-            );
-          })()}
+
+          {/* Theme toggle ONLY on VoiceChatInputScreen */}
+          {currentRoute === 'VoiceChatInputScreen' && (
+            <View style={styles.toggleContainer} pointerEvents="box-none">
+              <ThemeToggle />
+            </View>
+          )}
+
           <Toast />
         </View>
       </Suspense>

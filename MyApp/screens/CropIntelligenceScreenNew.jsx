@@ -1583,7 +1583,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.resetTourButton}
-            onPress={resetOnboarding}
+            onPress={resetOnboarding} 
           >
             <MaterialCommunityIcons name="refresh" size={16} color="#EF4444" />
             <Text style={styles.resetTourText}>{t('common.reset')}</Text>
