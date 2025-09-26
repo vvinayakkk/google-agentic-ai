@@ -1,5 +1,15 @@
 // ----- External libraries -----
 import React, { Suspense, useEffect, useRef, useState } from 'react';
+
+// Ensure React is globally accessible for any legacy transpiled modules that
+// still reference the global symbol (pre-new JSX transform) and are loaded
+// before our custom index shim executes (e.g. via Expo's default AppEntry).
+if (!globalThis.React) {
+  // eslint-disable-next-line no-console
+  console.log('[App] attaching React to globalThis');
+  globalThis.React = React;
+}
+
 import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
