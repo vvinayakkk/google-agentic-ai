@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Alert, Dimensions, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Alert, Dimensions, Modal, ScrollView, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // --- ASYNC STORAGE IMPORT ---
@@ -83,7 +83,7 @@ function InteractiveGuideTooltip({ step, onNext, onSkip }) {
 }
 
 export default function ChoiceScreen({ navigation }) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [showHelp, setShowHelp] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -292,128 +292,162 @@ export default function ChoiceScreen({ navigation }) {
         <View style={styles.headerContainer}>
           {/* Language Menu Button */}
           <TouchableOpacity
-            style={[styles.languageButton, { backgroundColor: `${theme.colors.primary}20`, borderColor: `${theme.colors.primary}40` }]}
+            style={[styles.languageButton, { 
+              backgroundColor: `${theme.colors.primary}15`, 
+              borderColor: `${theme.colors.primary}30` 
+            }]}
             onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
-            activeOpacity={0.8}
+            accessibilityLabel={t('choice.language_button', 'Change language')}
+            accessibilityRole="button"
+            activeOpacity={0.7}
           >
-            <Ionicons name="ellipsis-vertical" size={24} color={theme.colors.primary} />
+            <Ionicons name="globe-outline" size={24} color="#FF6B00" />
           </TouchableOpacity>
           
-          {/* Profile Icon */}
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate('FarmerProfile', { farmerId: FARMER_ID })}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="person-circle-outline" size={32} color={theme.colors.primary} />
-          </TouchableOpacity>
-
           {/* Settings Icon */}
           <TouchableOpacity
-            style={styles.profileButton}
+            style={[styles.settingsButton, { 
+              backgroundColor: `${theme.colors.primary}15`, 
+              borderColor: `${theme.colors.primary}30` 
+            }]}
             onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.8}
+            accessibilityLabel={t('choice.settings_button', 'Settings')}
+            accessibilityRole="button"
+            activeOpacity={0.7}
           >
-            <Ionicons name="settings-outline" size={28} color={theme.colors.primary} />
+            <Ionicons name="settings-outline" size={24} color="#0D47A1" />
           </TouchableOpacity>
         </View>
 
-        {/* Title and Subtitle */}
-        <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: theme.colors.primary }]}>
+        {/* App Logo & Title Section */}
+        <View style={styles.titleSection}>
+          <View style={[styles.logoContainer, { 
+            // removed background and border per request
+            backgroundColor: 'transparent',
+            borderColor: 'transparent'
+          }]}>
+            {/* App logo image replaces placeholder icon — no border/background */}
+            <Image
+              source={isDark ? require('../assets/logo_light.png') : require('../assets/logo.png')}
+              style={styles.logoImageLarge}
+              resizeMode="contain"
+            />
+          </View>
+          {/* <Text style={[styles.title, { color: theme.colors.primary }]}>
             {t('choice.title') || 'FarmBot'}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {t('choice.subtitle') || 'Choose your interaction mode'}
-          </Text>
+          </Text> */}
+          {/* <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            {t('choice.subtitle') || 'Your Smart Farming Assistant'}
+          </Text> */}
         </View>
         
-        {/* Main Options */}
-        <View style={styles.optionsContainer}>
+        {/* Main Mode Selection */}
+        <View style={styles.modeSelectionContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            {t('choice.choose_mode', 'Choose Interaction Mode')}
+          </Text>
+          
           <TouchableOpacity 
-            style={[styles.optionButton, { 
+            style={[styles.primaryModeButton, { 
               backgroundColor: theme.colors.surface, 
               borderColor: theme.colors.primary,
               shadowColor: theme.colors.primary 
             }]} 
             onPress={() => handleModeSelection('voice', 'LiveVoiceScreen')}
+            activeOpacity={0.85}
           >
-            <MaterialCommunityIcons name="microphone-outline" size={50} color={theme.colors.primary} />
-            <Text style={[styles.optionText, { color: theme.colors.text }]}>
-              {t('choice.voice_pilot') || 'Voice Mode'}
-            </Text>
+            <View style={[styles.modeIconContainer, { backgroundColor: `${theme.colors.primary}15` }]}>
+              <MaterialCommunityIcons name="microphone" size={32} color={theme.colors.primary} />
+            </View>
+            <View style={styles.modeTextContainer}>
+              <Text style={[styles.modeTitle, { color: theme.colors.text }]}>
+                {t('choice.voice_pilot') || 'Voice Mode'}
+              </Text>
+              <Text style={[styles.modeDescription, { color: theme.colors.textSecondary }]}>
+                {t('choice.voice_description', 'Speak naturally to get instant farming advice')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           
-          <Text style={[styles.orText, { color: theme.colors.textSecondary }]}>
-            {t('choice.or') || 'OR'}
-          </Text>
+          <View style={styles.dividerContainer}>
+            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+            <Text style={[styles.orText, { color: theme.colors.textSecondary }]}>
+              {t('choice.or', 'OR')}
+            </Text>
+            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+          </View>
           
           <TouchableOpacity 
-            style={[styles.optionButton, { 
+            style={[styles.primaryModeButton, { 
               backgroundColor: theme.colors.surface, 
               borderColor: theme.colors.primary,
               shadowColor: theme.colors.primary 
             }]} 
             onPress={() => handleModeSelection('manual', 'VoiceChatInputScreen')}
+            activeOpacity={0.85}
           >
-            <Ionicons name="hand-right-outline" size={50} color={theme.colors.primary} />
-            <Text style={[styles.optionText, { color: theme.colors.text }]}>
-              {t('choice.manual_mode') || 'Manual Mode'}
-            </Text>
+            <View style={[styles.modeIconContainer, { backgroundColor: `${theme.colors.primary}15` }]}>
+              <Ionicons name="create-outline" size={32} color={theme.colors.primary} />
+            </View>
+            <View style={styles.modeTextContainer}>
+              <Text style={[styles.modeTitle, { color: theme.colors.text }]}>
+                {t('choice.manual_mode') || 'Text Mode'}
+              </Text>
+              <Text style={[styles.modeDescription, { color: theme.colors.textSecondary }]}>
+                {t('choice.text_description', 'Type your questions for detailed responses')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Feature Buttons */}
-        <View style={styles.featureButtonsContainer}>
-          <TouchableOpacity 
-            style={[styles.featureButton, { 
-              backgroundColor: theme.colors.surface, 
-              borderColor: theme.colors.border 
-            }]} 
-            onPress={() => navigation.navigate('BestOutOfWasteScreen')}
-          >
-            <Ionicons name="reload-circle-outline" size={20} color={theme.colors.primary} />
-            <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>
-              ♻️ Best Out of Waste
-            </Text>
-          </TouchableOpacity>
+        {/* Quick Access Features */}
+        <View style={styles.featuresSection}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            {t('choice.quick_access', 'Quick Access')}
+          </Text>
           
-          <TouchableOpacity 
-            style={[styles.featureButton, { 
-              backgroundColor: theme.colors.surface, 
-              borderColor: theme.colors.border 
-            }]} 
-            onPress={() => navigation.navigate('MarketplaceScreen')}
-          >
-            <Ionicons name="trending-up-outline" size={20} color={theme.colors.primary} />
-            <Text style={[styles.featureButtonText, { color: theme.colors.primary }]}>
-              {t('choice.view_market_prices') || 'Market Prices'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Tour Buttons */}
-        {hasSeenOnboarding && (
-          <View style={styles.tourButtonsContainer}>
+          <View style={styles.featuresGrid}>
             <TouchableOpacity 
-              style={[styles.restartTourButton, { 
-                backgroundColor: `${theme.colors.primary}20`, 
-                borderColor: theme.colors.primary 
+              style={[styles.featureCard, { 
+                backgroundColor: theme.colors.surface, 
+                borderColor: theme.colors.border 
               }]} 
-              onPress={startInteractiveGuide}
+              onPress={() => navigation.navigate('BestOutOfWasteScreen')}
+              activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="replay" size={18} color={theme.colors.primary} />
-              <Text style={[styles.restartTourText, { color: theme.colors.primary }]}>{t('choice.tour.button', 'Tour')}</Text>
+              <View style={[styles.featureIconContainer, { backgroundColor: '#E8F5E8' }]}>
+                <Text style={styles.featureEmoji}>♻️</Text>
+              </View>
+              <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                Best Out of Waste
+              </Text>
+              <Text style={[styles.featureSubtitle, { color: theme.colors.textSecondary }]}>
+                Sustainable solutions
+              </Text>
             </TouchableOpacity>
+            
             <TouchableOpacity 
-              style={styles.resetTourButton} 
-              onPress={resetOnboarding}
+              style={[styles.featureCard, { 
+                backgroundColor: theme.colors.surface, 
+                borderColor: theme.colors.border 
+              }]} 
+              onPress={() => navigation.navigate('MarketplaceScreen')}
+              activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="refresh" size={16} color="#FF5722" />
-              <Text style={styles.resetTourText}>{t('choice.tour.reset', 'Reset')}</Text>
+              <View style={[styles.featureIconContainer, { backgroundColor: '#FFF3E0' }]}>
+                <Ionicons name="trending-up" size={24} color="#FF9800" />
+              </View>
+              <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                {t('choice.view_market_prices') || 'Market Prices'}
+              </Text>
+              <Text style={[styles.featureSubtitle, { color: theme.colors.textSecondary }]}>
+                Real-time rates
+              </Text>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
       </ScrollView>
 
       {/* Help Button - Fixed Position */}
@@ -424,7 +458,7 @@ export default function ChoiceScreen({ navigation }) {
             borderColor: theme.colors.border 
           }]}>
             <Text style={[styles.helpCardText, { color: theme.colors.text }]}>
-              {t('choice.help_text') || 'Choose voice mode for hands-free interaction or manual mode for typing. Access your profile and market prices from the buttons above.'}
+              {t('choice.help_text') || 'Choose voice mode for hands-free interaction or text mode for typing. Access market prices and sustainable farming tips from quick access section.'}
             </Text>
           </View>
         )}
@@ -434,6 +468,7 @@ export default function ChoiceScreen({ navigation }) {
             shadowColor: theme.colors.primary 
           }]} 
           onPress={() => setShowHelp(!showHelp)}
+          activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="help-circle-outline" size={24} color="white" />
         </TouchableOpacity>
@@ -451,45 +486,54 @@ export default function ChoiceScreen({ navigation }) {
           activeOpacity={1}
           onPress={() => setShowLanguageDropdown(false)}
         >
-          <View style={[styles.languageDropdown, { 
+          <View style={[styles.languageModal, { 
             backgroundColor: theme.colors.card, 
             borderColor: theme.colors.border 
-          }]}> 
-            <Text style={[styles.languageDropdownTitle, { 
-              color: theme.colors.text, 
-              borderBottomColor: theme.colors.border 
-            }]}>
-              {t('choice.select_language', 'Select Language')}
-            </Text>
-            {languages.map((language) => (
-              <TouchableOpacity
-                key={language.code}
-                style={[
-                  styles.languageOption,
-                  { backgroundColor: theme.colors.surface },
-                  i18n.language === language.code && { 
-                    borderColor: theme.colors.primary, 
-                    backgroundColor: `${theme.colors.primary}20` 
-                  }
-                ]}
-                onPress={() => handleLanguageChange(language.code)}
+          }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                {t('choice.select_language', 'Select Language')}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setShowLanguageDropdown(false)}
+                style={styles.closeButton}
               >
-                  <Text style={styles.languageFlag}>{language.flag}</Text>
-                <Text style={[
-                  styles.languageName,
-                  { color: theme.colors.text },
-                  i18n.language === language.code && { 
-                    color: theme.colors.primary, 
-                    fontWeight: '700' 
-                  }
-                ]}>
-                  {language.name}
-                </Text>
-                {i18n.language === language.code && (
-                  <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
-                )}
+                <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
-            ))}
+            </View>
+            
+            <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
+              {languages.map((language) => (
+                <TouchableOpacity
+                  key={language.code}
+                  style={[
+                    styles.languageOption,
+                    { backgroundColor: theme.colors.surface },
+                    i18n.language === language.code && { 
+                      borderColor: theme.colors.primary, 
+                      backgroundColor: `${theme.colors.primary}15` 
+                    }
+                  ]}
+                  onPress={() => handleLanguageChange(language.code)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.languageFlag}>{language.flag}</Text>
+                  <Text style={[
+                    styles.languageName,
+                    { color: theme.colors.text },
+                    i18n.language === language.code && { 
+                      color: theme.colors.primary, 
+                      fontWeight: '600' 
+                    }
+                  ]}>
+                    {language.name}
+                  </Text>
+                  {i18n.language === language.code && (
+                    <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -519,165 +563,264 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100, // Space for help button
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 120,
   },
+  
+  // Header Section
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-    paddingTop: 10,
+    marginBottom: 32,
+    paddingTop: 8,
   },
   languageButton: {
-    padding: 8,
-    borderRadius: 20,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 12,
+  },
+  settingsButton: {
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
   },
-  profileButton: {
-    marginTop : 10,
-    padding: 4,
-  },
-  titleContainer: {
+
+  // Title Section
+  titleSection: {
     alignItems: 'center',
     marginBottom: 40,
   },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 0,
+    borderWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 12,
+  },
+  logoImageLarge: {
+    width: 270,
+    height: 280,
+  },
   title: {
-    fontSize: Math.min(width * 0.12, 48),
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: Math.min(width * 0.045, 18),
+    fontSize: 16,
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
+    lineHeight: 22,
+    opacity: 0.8,
   },
-  optionsContainer: {
+
+  // Mode Selection Section
+  modeSelectionContainer: {
+    marginBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  primaryModeButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
-  },
-  optionButton: {
-    padding: 24,
+    padding: 20,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: Math.min(width * 0.8, 280),
-    height: Math.min(height * 0.18, 140),
-    marginVertical: 12,
-    borderWidth: 2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    borderWidth: 1.5,
+    marginVertical: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
-  optionText: {
-    fontSize: Math.min(width * 0.055, 22),
-    fontWeight: 'bold',
-    marginTop: 12,
-    textAlign: 'center',
+  modeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  modeTextContainer: {
+    flex: 1,
+  },
+  modeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  modeDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    opacity: 0.8,
+  },
+
+  // Divider
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
   },
   orText: {
-    fontSize: Math.min(width * 0.045, 18),
-    fontWeight: '600',
-    letterSpacing: 1,
-    marginVertical: 16,
-    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '500',
+    marginHorizontal: 16,
+    opacity: 0.6,
   },
-  featureButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
+
+  // Features Section
+  featuresSection: {
     marginBottom: 20,
   },
-  featureButton: {
+  featuresGrid: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  featureCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    minWidth: Math.min(width * 0.4, 160),
-    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  featureButtonText: {
-    fontSize: Math.min(width * 0.035, 14),
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureEmoji: {
+    fontSize: 24,
+  },
+  featureTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 8,
     textAlign: 'center',
+    marginBottom: 4,
   },
-  tourButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
+  featureSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.7,
   },
-  restartTourButton: {
-    borderRadius: 20,
-    borderWidth: 1.5,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  restartTourText: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  resetTourButton: {
-    backgroundColor: 'rgba(255,87,34,0.1)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#FF5722',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  resetTourText: {
-    color: '#FF5722',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
+
+  // Help Section
   helpContainer: {
     position: 'absolute',
-    bottom: 30,
-    right: 20,
+    bottom: 32,
+    right: 24,
     alignItems: 'flex-end',
     zIndex: 100,
   },
   helpButton: {
-    borderRadius: 25,
-    padding: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 8,
   },
   helpCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
     maxWidth: width * 0.7,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 4,
   },
   helpCardText: {
     fontSize: 14,
     lineHeight: 20,
   },
+
+  // Language Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  languageModal: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 360,
+    maxHeight: height * 0.7,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  languageList: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  languageFlag: {
+    fontSize: 22,
+    marginRight: 16,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+
   // Interactive Guide Styles
   guideOverlay: {
     position: 'absolute',
@@ -694,15 +837,15 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     marginHorizontal: 20,
     maxWidth: width - 40,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
   },
   tooltipArrowDown: {
     position: 'absolute',
@@ -734,92 +877,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tooltipTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
     textAlign: 'center',
   },
   tooltipMessage: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
+    lineHeight: 24,
+    marginBottom: 20,
   },
   tooltipButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    gap: 12,
   },
   skipButton: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     alignItems: 'center',
-    marginRight: 8,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#f5f5f5',
   },
   skipButtonText: {
     color: '#666',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
   },
   nextButton: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     alignItems: 'center',
-    marginLeft: 8,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#10B981',
   },
   nextButtonText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  // Language Dropdown Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  languageDropdown: {
-    borderRadius: 16,
-    padding: 20,
-    width: Math.min(width * 0.85, 320),
-    maxHeight: height * 0.7,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  languageDropdownTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    paddingBottom: 12,
-  },
-  languageOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  languageFlag: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  languageName: {
-    flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

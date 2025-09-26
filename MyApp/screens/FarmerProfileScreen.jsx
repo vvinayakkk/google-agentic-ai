@@ -204,7 +204,10 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/farmer/${farmerId}/profile`);
+      const url = `${API_BASE}/farmer/${farmerId}/profile`;
+      console.log(`[FarmerProfile] Fetching profile from: ${url}`);
+      const res = await axios.get(url, { timeout: 15000 });
+      console.log('[FarmerProfile] Received response:', res.status, res.data && Object.keys(res.data).length ? 'payload' : 'empty');
       setProfile(res.data);
       
       // Check if profile is complete
@@ -213,8 +216,39 @@ const FarmerProfileScreen = ({ route, navigation }) => {
       
       await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(res.data));
     } catch (err) {
-      console.error('Failed to fetch profile:', err);
-      setError('Failed to load profile. Please try again.');
+      // Log detailed axios error shape so we can debug why request didn't hit backend
+      try {
+        console.error('[FarmerProfile] Failed to fetch profile. Error details:');
+        if (err.response) {
+          console.error('Response status:', err.response.status);
+          console.error('Response data:', err.response.data);
+        } else if (err.request) {
+          console.error('No response - request made but no response received. Request object:', err.request);
+        } else {
+          console.error('Axios error message:', err.message);
+        }
+      } catch (logErr) {
+        console.error('Error while logging axios error:', logErr);
+      }
+
+      // Try to recover by using NetworkConfig.getBestUrl()
+      try {
+        console.log('[FarmerProfile] Attempting fallback: querying NetworkConfig.getBestUrl()');
+        const best = await NetworkConfig.getBestUrl();
+        const fallbackUrl = `${best.replace(/\/$/, '')}/farmer/${farmerId}/profile`;
+        console.log('[FarmerProfile] Retrying with fallback URL:', fallbackUrl);
+        const fallbackRes = await axios.get(fallbackUrl, { timeout: 15000 });
+        console.log('[FarmerProfile] Fallback response status:', fallbackRes.status);
+        setProfile(fallbackRes.data);
+        setError(null);
+        // Also update in-memory API_BASE for subsequent calls
+        NetworkConfig.API_BASE = best;
+        return;
+      } catch (fallbackErr) {
+        console.error('[FarmerProfile] Fallback attempt failed:', fallbackErr?.message || fallbackErr);
+      }
+
+      setError('Failed to load profile. Please check your network or server and try again.');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 {
-  "app.title": "Kisaan AI",
+  "app.title": "Krishi Sarthi",
   "common.ok": "OK",
   "common.cancel": "Cancel",
   "common.error": "Error",
@@ -406,7 +406,7 @@
   "login.allow": "Allow",
   "login.invalid_phone": "Please enter a valid 10-digit phone number.",
 
-  "choice.title": "Kisaan AI",
+  "choice.title": "Krishi Saarthi",
   "choice.subtitle": "action Mode",
   "choice.voice_pilot": "Voice Pilot",
   "choice.manual_mode": "Manual Mode",
