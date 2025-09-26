@@ -133,7 +133,7 @@ export default function SettingsScreen({ navigation }) {
         {/* Privacy Card */}
         <View style={[styles.panel, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
           <SettingRow icon={<Ionicons name="document-text" size={18} color={theme.colors.primary} />} label="Privacy Policy" control={<Ionicons name="lock-closed" size={18} color={theme.colors.primary} />} theme={theme} />
-          <SettingRow icon={<Ionicons name="ios-document" size={18} color={theme.colors.primary} />} label="Terms of Service" control={<Ionicons name="lock-closed" size={18} color={theme.colors.primary} />} theme={theme} />
+          <SettingRow icon={<Ionicons name="document-outline" size={18} color={theme.colors.primary} />} label="Terms of Service" control={<Ionicons name="lock-closed" size={18} color={theme.colors.primary} />} theme={theme} />
           <SettingRow icon={<Ionicons name="settings" size={18} color={theme.colors.primary} />} label="Data Preferences" control={<Ionicons name="lock-closed" size={18} color={theme.colors.primary} />} theme={theme} hideDivider />
         </View>
 

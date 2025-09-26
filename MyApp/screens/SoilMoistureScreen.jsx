@@ -28,9 +28,6 @@ import i18n from '../i18n';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTheme } from '../context/ThemeContext';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const API_BASE = NetworkConfig.API_BASE;
 const CACHE_KEY = 'soilMoistureDataCache';

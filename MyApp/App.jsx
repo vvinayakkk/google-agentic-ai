@@ -1,16 +1,24 @@
-import './i18n';
-import { I18nextProvider } from 'react-i18next';
-import i18n, { getStoredLanguage } from './i18n';
+// ----- External libraries -----
 import React, { Suspense, useEffect, useRef, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CardStyleInterpolators } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
+
+// ----- i18n -----
+import './i18n';
+import { I18nextProvider } from 'react-i18next';
+import i18n, { getStoredLanguage } from './i18n';
+
+// ----- Theme / app-wide context -----
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { buildNavigationTheme } from './theme';
+
+// ----- Screens (grouped by feature area) -----
 import ChoiceScreen from './screens/ChoiceScreen';
 import VoiceChatInputScreen from './screens/VoiceChatInputScreen';
-import LiveVoiceScreen from './screens/LiveVoiceScreen'; // Import the actual screen
+import LiveVoiceScreen from './screens/LiveVoiceScreen';
 import FeaturedScreen from './screens/Featured';
 import ChatHistoryScreen from './screens/ChatHistoryScreen';
 import CropCycleScreen from './screens/CropCycle';
@@ -20,6 +28,8 @@ import MarketplaceScreen from './screens/MarketplaceScreen';
 import UPIScreen from './screens/UPI';
 import CropDoctorScreen from './screens/CropDoctor';
 import FollowUpScreen from './screens/FollowUpScreen';
+
+// UPI sub-flows
 import PayAnyoneScreen from './UPI/PayAnyoneScreen';
 import ContactUPIDetailScreen from './UPI/ContactUPIDetailScreen';
 import PaymentAmountScreen from './UPI/PaymentAmountScreen';
@@ -29,6 +39,8 @@ import PaymentSuccessScreen from './UPI/PaymentSuccessScreen';
 import PaymentProcessingScreen from './UPI/PaymentProcessingScreen';
 import BankTransferScreen from './UPI/BankTransferScreen';
 import MobileRechargeScreen from './UPI/MobileRechargeScreen';
+
+// Utility / misc screens
 import LanguageSelectScreen from './screens/LanguageSelectScreen';
 import FetchingLocationScreen from './screens/FetchingLocationScreen';
 import DocumentAgentScreen from './screens/DocumentAgentScreen';
@@ -44,20 +56,23 @@ import Earnings from './screens/Earnings';
 import ListingDetails from './screens/ListingDetails';
 import SpeechToTextScreen from './screens/SpeechToTextScreen';
 import CropIntelligenceScreenNew from './screens/CropIntelligenceScreenNew';
+
+// Crop-cycle deep screens
 import MarketStrategyScreen from './screens/cropcycle/MarketStrategyScreen';
 import PowerSupplyScreen from './screens/cropcycle/PowerSupplyScreen';
 import ContractFarmingScreen from './screens/cropcycle/ContractFarmingScreen';
 import CropInsuranceScreen from './screens/cropcycle/CropInsuranceScreen';
 import CreditSourcesScreen from './screens/cropcycle/CreditSourcesScreen';
 import SoilHealthScreen from './screens/cropcycle/SoilHealthScreen';
+
+// Other features
 import BestOutOfWasteScreen from './screens/BestOutOfWasteScreen';
 import SuicidePrevention from './screens/SuicidePrevention';
 import SettingsScreen from './screens/SettingsScreen';
 import FarmVisualizerScreen from './screens/FarmVisualizerScreen';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+
+// Components
 import ThemeToggle from './components/ThemeToggle';
-import NetworkConfig from './utils/NetworkConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createStackNavigator();
 
 
@@ -74,6 +89,71 @@ function AppInner() {
     });
   }, []);
 
+  // Screen registry
+  // Define all app screens in one place to keep the navigator compact and
+  // readable. Each entry can optionally provide `options` to override the
+  // global `screenOptions` for that screen.
+  const SCREENS = [
+    { name: 'LanguageSelectScreen', component: LanguageSelectScreen },
+    { name: 'FetchingLocationScreen', component: FetchingLocationScreen },
+    { name: 'LoginScreen', component: LoginScreen },
+    {
+      name: 'ChoiceScreen',
+      component: ChoiceScreen,
+      options: {
+        headerShown: false,
+        animationEnabled: true,
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+      },
+    },
+    { name: 'VoiceChatInputScreen', component: VoiceChatInputScreen },
+    { name: 'LiveVoiceScreen', component: LiveVoiceScreen },
+    { name: 'Featured', component: FeaturedScreen },
+    { name: 'ChatHistory', component: ChatHistoryScreen },
+    { name: 'CropCycle', component: CropCycleScreen },
+    { name: 'CalenderScreen', component: SmartCalendar },
+    { name: 'CattleScreen', component: CattleScreen },
+    { name: 'MarketplaceScreen', component: MarketplaceScreen },
+    { name: 'UPI', component: UPIScreen },
+    { name: 'CropDoctor', component: CropDoctorScreen },
+    {
+      name: 'FollowUpScreen',
+      component: FollowUpScreen,
+      options: { presentation: 'transparentModal', animationEnabled: true },
+    },
+    { name: 'PayAnyone', component: PayAnyoneScreen },
+    { name: 'ContactUPIDetail', component: ContactUPIDetailScreen },
+    { name: 'PaymentAmountScreen', component: PaymentAmountScreen },
+    { name: 'BankSelectScreen', component: BankSelectScreen },
+    { name: 'EnterPinScreen', component: EnterPinScreen },
+    { name: 'PaymentSuccessScreen', component: PaymentSuccessScreen },
+    { name: 'PaymentProcessingScreen', component: PaymentProcessingScreen },
+    { name: 'BankTransferScreen', component: BankTransferScreen },
+    { name: 'MobileRechargeScreen', component: MobileRechargeScreen },
+    { name: 'DocumentAgentScreen', component: DocumentAgentScreen },
+    { name: 'WeatherScreen', component: WeatherScreen },
+    { name: 'NewMarketPrices', component: NewMarketPricesScreen },
+    { name: 'SoilMoisture', component: SoilMoistureScreen },
+    { name: 'FarmerProfile', component: FarmerProfileScreen },
+    { name: 'Profile', component: ProfileScreen },
+    { name: 'RentalSystemScreen', component: RentalScreen },
+    { name: 'ListingDetails', component: ListingDetails },
+    { name: 'MyBookings', component: MyBookings },
+    { name: 'Earnings', component: Earnings },
+    { name: 'SpeechToTextScreen', component: SpeechToTextScreen },
+    { name: 'CropIntelligenceScreenNew', component: CropIntelligenceScreenNew },
+    { name: 'MarketStrategyScreen', component: MarketStrategyScreen },
+    { name: 'PowerSupplyScreen', component: PowerSupplyScreen },
+    { name: 'ContractFarmingScreen', component: ContractFarmingScreen },
+    { name: 'CropInsuranceScreen', component: CropInsuranceScreen },
+    { name: 'CreditSourcesScreen', component: CreditSourcesScreen },
+    { name: 'SoilHealthScreen', component: SoilHealthScreen },
+    { name: 'BestOutOfWasteScreen', component: BestOutOfWasteScreen },
+    { name: 'FarmVisualizerScreen', component: FarmVisualizerScreen },
+    { name: 'SuicidePrevention', component: SuicidePrevention },
+    { name: 'Settings', component: SettingsScreen },
+  ];
+
   return (
     <I18nextProvider i18n={i18n}>
       <Suspense fallback={null}>
@@ -82,292 +162,43 @@ function AppInner() {
             ref={navigationRef}
             theme={buildNavigationTheme(theme)}
             onReady={() => {
-              try {
-                const route = navigationRef.current?.getCurrentRoute();
-                setCurrentRoute(route?.name || null);
-              } catch (e) {
-                // ignore
-              }
+              // When the navigator mounts, store the current route name so
+              // UI elements (like ThemeToggle) can decide whether to render.
+              const routeName = navigationRef.current?.getCurrentRoute?.()?.name ?? null;
+              setCurrentRoute(routeName);
             }}
             onStateChange={() => {
-              try {
-                const route = navigationRef.current?.getCurrentRoute();
-                setCurrentRoute(route?.name || null);
-              } catch (e) {
-                // ignore
-              }
+              // Update current route on navigation state changes. We keep this
+              // minimal and resilient using optional chaining.
+              const routeName = navigationRef.current?.getCurrentRoute?.()?.name ?? null;
+              setCurrentRoute(routeName);
             }}
           >
-            <Stack.Navigator initialRouteName="ChoiceScreen"
-              screenOptions={{
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen 
-                name="LanguageSelectScreen" 
-                component={LanguageSelectScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="FetchingLocationScreen" 
-                component={FetchingLocationScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="LoginScreen" 
-                component={LoginScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="ChoiceScreen" 
-                component={ChoiceScreen} 
-                options={{
-                  headerShown: false,
-                  animationEnabled: true,
-                  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-                }} 
-              />
-              <Stack.Screen 
-                name="VoiceChatInputScreen" 
-                component={VoiceChatInputScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="LiveVoiceScreen" 
-                component={LiveVoiceScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="Featured" 
-                component={FeaturedScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="ChatHistory" 
-                component={ChatHistoryScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CropCycle" 
-                component={CropCycleScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CalenderScreen" 
-                component={SmartCalendar} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CattleScreen" 
-                component={CattleScreen} 
-                options={{ headerShown: false }} 
-              />
-               <Stack.Screen 
-                name="MarketplaceScreen" 
-                component={MarketplaceScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="UPI" 
-                component={UPIScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CropDoctor" 
-                component={CropDoctorScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="FollowUpScreen" 
-                component={FollowUpScreen} 
-                options={{
-                  headerShown: false,
-                  presentation: 'transparentModal', 
-                  animationEnabled: true,
-                }}
-              />
-              <Stack.Screen 
-                name="PayAnyone" 
-                component={PayAnyoneScreen} 
-                options={{ headerShown: false }} 
-              />
-               <Stack.Screen 
-                name="ContactUPIDetail" 
-                component={ContactUPIDetailScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="PaymentAmountScreen" 
-                component={PaymentAmountScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="BankSelectScreen" 
-                component={BankSelectScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="EnterPinScreen" 
-                component={EnterPinScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="PaymentSuccessScreen" 
-                component={PaymentSuccessScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="PaymentProcessingScreen" 
-                component={PaymentProcessingScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="BankTransferScreen" 
-                component={BankTransferScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="MobileRechargeScreen" 
-                component={MobileRechargeScreen} 
-                options={{ headerShown: false }} 
-              />
-               <Stack.Screen 
-                name="DocumentAgentScreen" 
-                component={DocumentAgentScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="WeatherScreen" 
-                component={WeatherScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="NewMarketPrices" 
-                component={NewMarketPricesScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="SoilMoisture" 
-                component={SoilMoistureScreen} 
-                options={{
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="FarmerProfile" 
-                component={FarmerProfileScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="Profile" 
-                component={ProfileScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="RentalSystemScreen" 
-                component={RentalScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="ListingDetails" 
-                component={ListingDetails} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="MyBookings" 
-                component={MyBookings} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="Earnings" 
-                component={Earnings} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="SpeechToTextScreen" 
-                component={SpeechToTextScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CropIntelligenceScreenNew" 
-                component={CropIntelligenceScreenNew} 
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="MarketStrategyScreen" 
-                component={MarketStrategyScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="PowerSupplyScreen" 
-                component={PowerSupplyScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="ContractFarmingScreen" 
-                component={ContractFarmingScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CropInsuranceScreen" 
-                component={CropInsuranceScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="CreditSourcesScreen" 
-                component={CreditSourcesScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="SoilHealthScreen" 
-                component={SoilHealthScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="BestOutOfWasteScreen" 
-                component={BestOutOfWasteScreen} 
+            <Stack.Navigator initialRouteName="ChoiceScreen" screenOptions={{ headerShown: false }}>
+              {SCREENS.map((s) => (
+                <Stack.Screen
+                  key={s.name}
+                  name={s.name}
+                  component={s.component}
+                  options={s.options}
                 />
-                <Stack.Screen  
-                name="FarmVisualizerScreen" 
-                component={FarmVisualizerScreen} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="SuicidePrevention" 
-                component={SuicidePrevention} 
-                options={{ headerShown: false }} 
-              />
-              <Stack.Screen 
-                name="Settings" 
-                component={SettingsScreen} 
-                options={{ headerShown: false }} 
-              />
+              ))}
             </Stack.Navigator>
           </NavigationContainer>
-          {/* Theme toggle overlay: hide on specific screens listed below */}
+          {/* Theme toggle overlay: hide on specific screens */}
           {(() => {
-            const hiddenOnRoutes = [
+            // Screens where the theme toggle should not show (full-screen
+            // flows, auth, or modal processing states).
+            const hiddenOnRoutes = new Set([
               'LanguageSelectScreen',
               'FetchingLocationScreen',
               'LoginScreen',
               'PaymentProcessingScreen',
               'ChoiceScreen',
               'ChatHistory',
-            ];
-            const shouldHide = currentRoute && hiddenOnRoutes.includes(currentRoute);
-            if (shouldHide) return null;
+            ]);
+            const isHidden = currentRoute && hiddenOnRoutes.has(currentRoute);
+            if (isHidden) return null;
             return (
               <View style={styles.toggleContainer} pointerEvents="box-none">
                 <ThemeToggle />
@@ -397,5 +228,3 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
 });
-
-// Remove the styles since they're no longer needed

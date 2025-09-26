@@ -15,10 +15,8 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
-import { ChevronLeft, ChevronDown, Calendar, MapPin, Droplets, Egg } from 'lucide-react-native';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
@@ -577,7 +575,8 @@ const CattleScreen = ({ navigation }) => {
             <TouchableOpacity onPress={() => handleDeleteAnimal(animal)} style={[styles.actionButton, { backgroundColor: '#EF4444' }]}>
               <Ionicons name="trash-outline" size={18} color="#fff" />
             </TouchableOpacity>
-            <ChevronDown
+            <Feather
+              name="chevron-down"
               color="#64748B"
               size={20}
               style={[styles.chevronIcon, { transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }]}
@@ -612,13 +611,13 @@ const CattleScreen = ({ navigation }) => {
 
             {(animal.type && (animal.type.toLowerCase() === 'cow' || animal.type.toLowerCase() === 'goat')) && (
               <View style={styles.capacityRow}>
-                <Droplets color="#3B82F6" size={16} />
+                <MaterialCommunityIcons name="water" color="#3B82F6" size={16} />
                 <Text style={styles.capacityText}>{t('cattle.milk', 'Milk')}: {animal.milkCapacity || t('common.na', 'N/A')}</Text>
               </View>
             )}
             {(animal.type && animal.type.toLowerCase() === 'chicken') && (
               <View style={styles.capacityRow}>
-                <Egg color="#F59E0B" size={16} />
+                <MaterialCommunityIcons name="egg" color="#F59E0B" size={16} />
                 <Text style={styles.capacityText}>{t('cattle.eggs', 'Eggs')}: {animal.eggCapacity || t('common.na', 'N/A')}</Text>
               </View>
             )}
@@ -750,7 +749,7 @@ const CattleScreen = ({ navigation }) => {
               style={styles.section}
             >
               <View style={styles.sectionHeader}>
-                <Calendar color="#10B981" size={20} />
+                <Feather name="calendar" color="#10B981" size={20} />
                 <Text style={styles.sectionTitle}>{t('calendar.title')}</Text>
               </View>
               {calendarUpdates.length > 0 ? (
@@ -777,7 +776,7 @@ const CattleScreen = ({ navigation }) => {
             style={styles.section}
           >
             <View style={styles.sectionHeader}>
-              <MapPin color="#8B5CF6" size={20} />
+              <Feather name="map-pin" color="#8B5CF6" size={20} />
               <Text style={styles.sectionTitle}>{t('cattle.space_suggestion')}</Text>
             </View>
             <View style={{ marginBottom: 10, marginLeft: 2 }}>

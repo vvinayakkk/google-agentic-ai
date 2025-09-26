@@ -34,11 +34,6 @@ import { REAL_MANDI_DATA, AI_STRATEGIC_PLANS, findMandisByCrop, findMandisByLoca
 import { setLanguage } from '../i18n';
 
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const API_BASE = NetworkConfig.API_BASE;
 const FARMER_ID = 'f001';
 const STORAGE_KEY = 'market-listings-cache';

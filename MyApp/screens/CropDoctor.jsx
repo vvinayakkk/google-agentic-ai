@@ -24,10 +24,6 @@ import { useTheme } from '../context/ThemeContext';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTranslation } from 'react-i18next';
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 // Simplified Animated Wrapper with clean effect
 const AnimatedView = ({ children, style, delay = 0, direction = 'up' }) => {
