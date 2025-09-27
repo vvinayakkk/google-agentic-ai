@@ -148,7 +148,7 @@ const getKissanAIResponse = async (message, context, t) => {
   while (attempt <= maxRetries) {
     try {
       attempt += 1;
-      const response = await axios.post(`http://10.67.206.37:8001/agent`, payload, { timeout: 120000 });
+      const response = await axios.post(`http://10.100.155.236:8001/agent`, payload, { timeout: 120000 });
       if (response.data && response.data.response_text) {
         return response.data.response_text;
       }
