@@ -27,12 +27,12 @@ MyApp/
   test-onboarding.js
   temp-fix.js
   assets/
-    splash-icon.png
+    splash_icon.png
     logo.png
     image.png
     icon.png
     favicon.png
-    adaptive-icon.png
+    adaptive_icon.png
   components/
     AnimatedLoading.js
     AnimatedCard.js
