@@ -15,6 +15,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/stack": "^7.4.8",
@@ -33,8 +34,8 @@
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-location": "~18.1.6",
-    "expo-print": "^15.0.7",
-    "expo-sharing": "^14.0.7",
+    "expo-print": "~14.1.4",
+    "expo-sharing": "~13.1.5",
     "expo-speech": "~13.1.7",
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.11",
@@ -53,7 +54,8 @@
     "react-native-screens": "~4.11.1",
     "react-native-toast-message": "^2.3.3",
     "react-native-view-shot": "4.0.3",
-    "react-native-web": "^0.20.0"
+    "react-native-web": "^0.20.0",
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",

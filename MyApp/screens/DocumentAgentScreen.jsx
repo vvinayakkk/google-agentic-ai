@@ -227,8 +227,9 @@ export default function DocumentAgentScreen({ navigation }) {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [showAllSchemes, setShowAllSchemes] = useState(false);
   
-  // Application form states
+  // Application form states (extended structured form for PDF generation)
   const [formData, setFormData] = useState({
+    // Legacy flat fields (kept for backward compatibility / PM-Kisan image overlay)
     farmer_name: '',
     father_name: '',
     mobile_number: '',
@@ -240,7 +241,56 @@ export default function DocumentAgentScreen({ navigation }) {
     state: 'Maharashtra',
     pin_code: '',
     land_area: '',
-    crop_type: ''
+    crop_type: '',
+    sowing_date: '',
+    // New structured fields
+    subDivision: 'North District',
+    block: 'Model Town',
+    farmersName: 'Vinayak Bhatia',
+    sex: 'Male',
+    fhName: 'Rajesh Bhatia',
+    aadharId: '123456789012',
+    ifscCode: 'SBIN0001234',
+    bankAC: '987654321098765',
+    mobile: '9876543210',
+    dob: '15/08/1989',
+    category: 'GEN',
+    address: 'H.No. 123, Village Rampur, Near Post Office',
+    selfDeclaration: {
+      isInstitutionalFarmer: 'No',
+      heldConstitutionalPost: 'No',
+      isFormerMinister: 'No',
+      isRetiredEmployee: 'No',
+      hadIncomeTax: 'No',
+      isProfessional: 'No',
+    },
+    landDetails: {
+      khewatNo: '123/45',
+      khasraNo: '678',
+      areaHect: '1.5',
+      ownership: 'Single',
+    },
+    applicantDeclaration: {
+      sonOf: 'Rajesh Bhatia',
+      residentOf: 'Rampur',
+    },
+    permissionDetails: {
+      sonOf: 'Rajesh Bhatia',
+      residentOf: 'Rampur',
+      enclosedAadhar: true,
+      enclosedBank: true,
+    },
+    officeUse: {
+      applicationAccepted: 'Yes',
+      reasonForRejection: '',
+      verifiedByPS: 'Amit Singh',
+      dateEntered: new Date().toLocaleDateString(),
+      deoName: 'Sunita Sharma',
+    },
+    dateAndPlace: {
+      date: new Date().toLocaleDateString(),
+      place: 'Rampur'
+    }
   });
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const [autoFillStage, setAutoFillStage] = useState(0);
@@ -279,12 +329,11 @@ export default function DocumentAgentScreen({ navigation }) {
     } catch (error) {
       console.log('Could not fetch farmer profile, using default data:', error.message);
       setProfileError(error.message);
-      // Use default profile data if API fails
       setFarmerProfile({
         name: 'Vinayak Bhatia',
-        phoneNumber: '+91 98765 43210',
-        village: 'Shirur, Maharashtra',
-        farmSize: '5 acres'
+        phoneNumber: '9876543210',
+        village: 'Karjat, Raigad',
+        farmSize: '1.2 hectares'
       });
     } finally {
       setProfileLoading(false);
@@ -326,6 +375,24 @@ export default function DocumentAgentScreen({ navigation }) {
 
   // temporary: use inline theme styles where needed to avoid creating extra stylesheet here
 
+  // Helper: create character boxes for PDF
+  const generateCharBoxes = (str, count) => {
+    const chars = String(str || '').split('');
+    let boxes = '';
+    for (let i = 0; i < count; i++) {
+      boxes += `<td class="char-box">${chars[i] || ''}</td>`;
+    }
+    return boxes;
+  };
+
+  // Helper: yes/no checkbox representation
+  const generateYesNoBox = (value = '') => {
+    const v = String(value).toLowerCase();
+    const yesChecked = v === 'yes' ? '☑' : '☐';
+    const noChecked = v === 'no' ? '☑' : '☐';
+    return `<td class="checkbox-cell">${yesChecked} Yes</td><td class="checkbox-cell">${noChecked} <span class="no-label">No</span></td>`;
+  };
+
   // Auto-fill form with farmer profile data and show input fields
   const handleApplyWithAI = () => {
     setShowSchemeModal(false);
@@ -336,71 +403,157 @@ export default function DocumentAgentScreen({ navigation }) {
     simulateAutoFill();
   };
 
-  // Generate and send PDF document after user input
+  // Generate and send PDF document after user input using provided HTML template
   const generateAndSendDocument = async () => {
-    // Client-side generation: create simple HTML, render to PDF, and provide sharing options
     setShowConfirmation(true);
     try {
       const docHtml = `
-        <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>
-              body { font-family: Arial, Helvetica, sans-serif; padding: 24px; color: #111 }
-              h1 { color: #0ea5a4 }
-              .section { margin-bottom: 12px }
-              .label { font-weight: 700 }
-            </style>
-          </head>
-          <body>
-            <h1>PM-KISAN Application</h1>
-            <div class="section"><div class="label">Scheme:</div> ${selectedScheme?.scheme_name || 'PM-KISAN'}</div>
-            <div class="section"><div class="label">Applicant Name:</div> ${farmerProfile?.name || formData.farmer_name || ''}</div>
-            <div class="section"><div class="label">Mobile:</div> ${farmerProfile?.phoneNumber || formData.mobile_number || ''}</div>
-            <div class="section"><div class="label">Aadhaar:</div> ${formData.aadhaar_number || ''}</div>
-            <div class="section"><div class="label">Village:</div> ${formData.village || ''}</div>
-            <div class="section"><div class="label">Land Area:</div> ${formData.land_area || ''}</div>
-            <div class="section"><div class="label">Crop Type:</div> ${formData.crop_type || ''}</div>
-            <div class="section"><div class="label">Sowing Date:</div> ${formData.sowing_date || ''}</div>
-            <hr />
-            <div style="font-size:12px;color:#666">Generated by Kisan Sahayak • ${new Date().toLocaleString()}</div>
-          </body>
-        </html>
-      `;
+      <html>
+        <head>
+          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 15px; color: #333; }
+            .form-container { border: 2px solid #000; padding: 10px; }
+            .header { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-decoration: underline; }
+            .section-title { font-weight: bold; font-size: 14px; margin-top: 15px; margin-bottom: 5px; background-color: #eee; padding: 4px; border: 1px solid #ccc; text-align: center;}
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            td, th { padding: 4px; vertical-align: bottom; }
+            .label { font-weight: bold; }
+            .value { border-bottom: 1px dotted #000; text-align: center; }
+            .full-width { width: 100%; }
+            .char-box { border: 1px solid #000; width: 20px; height: 20px; text-align: center; font-size: 14px; }
+            .declaration-text { text-align: justify; line-height: 1.6; }
+            .signature-area { border-bottom: 1px dotted #000; height: 40px; }
+            .checkbox-cell { text-align: right; }
+            .bordered-table, .bordered-table td, .bordered-table th { border: 1px solid #000; }
+          </style>
+        </head>
+        <body>
+          <div class=\"form-container\">
+            <div class=\"header\">Application Form</div>
 
-      // Try to create a PDF using Expo Print if available
-      let pdfUri = null;
+            <table>
+              <tr>
+                <td class=\"label\">Sub Division:</td><td class=\"value\">${formData.subDivision}</td>
+                <td class=\"label\">Block:</td><td class=\"value\">${formData.block}</td>
+                <td class=\"label\">Village:</td><td class=\"value\">${formData.village}</td>
+                <td class=\"label\">Farmer's Name:</td><td class=\"value\">${formData.farmersName}</td>
+              </tr>
+              <tr>
+                <td class=\"label\">Sex:</td><td class=\"value\">${formData.sex}</td>
+                <td class=\"label\">F/H Name:</td><td class=\"value\">${formData.fhName}</td>
+                 <td class=\"label\">D.O.B:</td><td class=\"value\">${formData.dob}</td>
+              </tr>
+            </table>
+
+            <table>
+                <tr>
+                    <td class=\"label\" style=\"width: 80px;\">AADHAR ID:</td>
+                    ${generateCharBoxes(formData.aadharId, 12)}
+                    <td style=\"width: 20px;\"></td>
+                    <td class=\"label\" style=\"width: 70px;\">IFSC Code:</td>
+                    ${generateCharBoxes(formData.ifscCode, 11)}
+                </tr>
+                 <tr>
+                    <td class=\"label\" style=\"width: 80px;\">Bank A/C:</td>
+                    ${generateCharBoxes(formData.bankAC, 16)}
+                     <td style=\"width: 20px;\"></td>
+                    <td class=\"label\" style=\"width: 70px;\">Mobile:</td>
+                    ${generateCharBoxes(formData.mobile, 10)}
+                </tr>
+            </table>
+
+             <table>
+              <tr>
+                <td class=\"label\">Category:</td><td class=\"value\">${formData.category}</td>
+                <td class=\"label\">Address:</td><td class=\"value full-width\" colspan=\"3\">${formData.address}</td>
+              </tr>
+            </table>
+            
+            <div class=\"section-title\">Self Declaration:</div>
+            <table class=\"bordered-table\">
+                <tr><th></th><th style=\"width: 100px;\">Yes / No</th></tr>
+                <tr><td>I am an institutional farmer</td> ${generateYesNoBox(formData.selfDeclaration.isInstitutionalFarmer)}</tr>
+                <tr><td>Any family member ever held or holding a constitutional post</td>${generateYesNoBox(formData.selfDeclaration.heldConstitutionalPost)}</tr>
+                <tr><td>Any family member ever held or holding the post of MLA/MP/Mayor/Chairman Zila Parishad</td>${generateYesNoBox(formData.selfDeclaration.isFormerMinister)}</tr>
+                <tr><td>Any family member is/was serving or retired employees of central/state government (excluding class 4 employees)</td>${generateYesNoBox(formData.selfDeclaration.isRetiredEmployee)}</tr>
+                <tr><td>Any family member has paid Income Tax for assessment year 2018-19</td>${generateYesNoBox(formData.selfDeclaration.hadIncomeTax)}</tr>
+                <tr><td>Any family member is a registered Doctor/Lawyer/CA/Engineer/Architects practicing privately</td>${generateYesNoBox(formData.selfDeclaration.isProfessional)}</tr>
+            </table>
+
+            <div class=\"section-title\">Land Details</div>
+            <table>
+               <tr>
+                <td class=\"label\">Khewat No.</td><td class=\"value\">${formData.landDetails.khewatNo}</td>
+                <td class=\"label\">Khasra No.</td><td class=\"value\">${formData.landDetails.khasraNo}</td>
+                 <td class=\"label\">Area (Hect.)</td><td class=\"value\">${formData.landDetails.areaHect}</td>
+                <td class=\"label\">Ownership:</td><td class=\"value\">${formData.landDetails.ownership}</td>
+              </tr>
+            </table>
+             <p style=\"font-size: 10px;\">(*More land details, if any, may be written on back page)</p>
+
+            <div class=\"section-title\">Declaration by the applicant:</div>
+            <p class=\"declaration-text\">
+                I, <span class=\"value\">&nbsp;${formData.farmersName}&nbsp;</span> S/o <span class=\"value\">&nbsp;${formData.applicantDeclaration.sonOf}&nbsp;</span> R/o Village <span class=\"value\">&nbsp;${formData.applicantDeclaration.residentOf}&nbsp;</span> hereby declare that above information provided by me is true to my knowledge and if found incorrect, only I would be liable for the same. The total cultivable land of my family as defined in operational guidelines of (PM-Kisan) in the country is less than 2 hectares.
+            </p>
+            <table>
+                <tr>
+                    <td class=\"label\">Date & Place:</td><td class=\"value\">${formData.dateAndPlace.date}, ${formData.dateAndPlace.place}</td>
+                    <td style=\"width: 40%;\"></td>
+                    <td class=\"label\">Signature of Applicant.........................</td>
+                </tr>
+            </table>
+            
+             <div class=\"section-title\">Permission to Use AADHAR Number:</div>
+             <p class=\"declaration-text\">
+                I, <span class=\"value\">&nbsp;${formData.farmersName}&nbsp;</span> S/o <span class=\"value\">&nbsp;${formData.permissionDetails.sonOf}&nbsp;</span> R/o Village <span class=\"value\">&nbsp;${formData.permissionDetails.residentOf}&nbsp;</span> hereby grant my permission to use my AADHAR number for verification purpose under (PM-KISAN) scheme only.
+             </p>
+              <table>
+                <tr>
+                    <td>Enclosed: AADHAR Copy - Yes ${formData.permissionDetails.enclosedAadhar ? '☑' : '☐'} No ${!formData.permissionDetails.enclosedAadhar ? '☑' : '☐'}</td>
+                    <td>Bank Details Copy: - Yes ${formData.permissionDetails.enclosedBank ? '☑' : '☐'} No ${!formData.permissionDetails.enclosedBank ? '☑' : '☐'}</td>
+                </tr>
+                 <tr>
+                    <td class=\"label\">Date & Place:</td><td class=\"value\">${formData.dateAndPlace.date}, ${formData.dateAndPlace.place}</td>
+                    <td style=\"width: 40%;\"></td>
+                    <td class=\"label\">Signature of Applicant.........................</td>
+                </tr>
+            </table>
+
+            <div class=\"section-title\">For Office Use</div>
+             <table>
+                <tr>
+                    <td>Application Accepted: ${formData.officeUse.applicationAccepted}</td>
+                    <td>If No, Reason for Rejection: <span class=\"value\">${formData.officeUse.reasonForRejection}</span></td>
+                </tr>
+                 <tr>
+                    <td>Verified By PS......................</td>
+                    <td>Signature...................</td>
+                     <td>Date Entered: <span class=\"value\">${formData.officeUse.dateEntered}</span></td>
+                </tr>
+                 <tr>
+                    <td>DEO Name: <span class=\"value\">${formData.officeUse.deoName}</span></td>
+                    <td>Signatures.........................</td>
+                </tr>
+            </table>
+
+          </div>
+        </body>
+      </html>
+    `;
+
       if (Print && Print.printToFileAsync) {
         const { uri } = await Print.printToFileAsync({ html: docHtml });
-        pdfUri = uri;
+        await sharePdfFile(uri);
+        setShowConfirmation(false);
+      } else {
+        await shareToWhatsAppPlainText(docHtml);
+        setShowConfirmation(false);
       }
-
-      setShowConfirmation(false);
-
-      // Offer user choices: Share text via WhatsApp, or share generated PDF (if available)
-      Alert.alert(
-        t('document.success_title', 'Document Ready'),
-        t('document.ready_message', 'Your application document is ready. Choose how to share it.'),
-        [
-          {
-            text: t('document.share_whatsapp_text', 'Share as WhatsApp Message'),
-            onPress: () => shareToWhatsAppPlainText(docHtml)
-          },
-          pdfUri ? {
-            text: t('document.share_pdf', 'Generate PDF & Share'),
-            onPress: () => sharePdfFile(pdfUri)
-          } : null,
-          { text: t('common.cancel', 'Cancel'), style: 'cancel' }
-        ].filter(Boolean)
-      );
     } catch (error) {
-      console.error('Error generating document on device:', error);
+      console.error('Error generating structured PDF:', error);
       setShowConfirmation(false);
-      Alert.alert(
-        t('common.error', 'Error'),
-        t('document.generate_failed', `Failed to generate document: ${error.message}`),
-        [{ text: t('common.ok', 'OK') }]
-      );
+      Alert.alert('Error', 'Failed to generate document.');
     }
   };
 
@@ -471,70 +624,74 @@ export default function DocumentAgentScreen({ navigation }) {
   };
 
   const simulateAutoFill = async () => {
-    // Use farmer profile data if available, otherwise use default
-    const autoFillData = {
-      farmer_name: farmerProfile?.name || 'Vinayak Bhatia',
-      father_name: 'Suresh Sharma', 
-      mobile_number: farmerProfile?.phoneNumber || '+91 98765 43210',
-      aadhaar_number: '1234-5678-9012',
-      bank_account: 'SBI12345678901',
-      ifsc_code: 'SBIN0001234',
-      village: farmerProfile?.village || 'Shirur, Maharashtra',
-      district: 'Pune',
-      state: 'Maharashtra',
-      pin_code: '411046',
-      land_area: farmerProfile?.farmSize || '5 acres',
-      // Leave these fields empty for user input
-      crop_type: '', // User must specify crop type
-      sowing_date: '' // User must specify sowing date
-    };
-
-    const fields = Object.keys(autoFillData);
-    
-    for (let i = 0; i < fields.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 200)); // Faster auto-fill
-      const field = fields[i];
-      setFormData(prev => ({
-        ...prev,
-        [field]: autoFillData[field]
-      }));
+    // Order of fields for progressive auto-fill animation
+    const paths = [
+      'subDivision','block','village','farmersName','sex','fhName','aadharId','ifscCode','bankAC','mobile','dob','category','address','landDetails.khewatNo','landDetails.khasraNo','landDetails.areaHect','landDetails.ownership','dateAndPlace.date','dateAndPlace.place'
+    ];
+    for (let i = 0; i < paths.length; i++) {
+      const p = paths[i];
+      setFormData(prev => {
+        const next = { ...prev };
+        const assign = (path, value) => {
+          const segs = path.split('.');
+          let ref = next;
+            for (let s = 0; s < segs.length - 1; s++) {
+              ref[segs[s]] = { ...(ref[segs[s]] || {}) };
+              ref = ref[segs[s]];
+            }
+          ref[segs[segs.length - 1]] = value;
+        };
+        switch (p) {
+          case 'village': assign(p, farmerProfile?.village || 'Rampur'); break;
+          case 'farmersName': assign(p, farmerProfile?.name || 'Vinayak Bhatia'); assign('farmer_name', farmerProfile?.name || 'Vinayak Bhatia'); break;
+          case 'fhName': assign(p, 'Rajesh Bhatia'); assign('father_name','Rajesh Bhatia'); break;
+          case 'aadharId': assign(p, '123456789012'); assign('aadhaar_number','1234-5678-9012'); break;
+          case 'ifscCode': assign(p, 'SBIN0001234'); assign('ifsc_code','SBIN0001234'); break;
+          case 'bankAC': assign(p, '987654321098765'); assign('bank_account','987654321098765'); break;
+          case 'mobile': assign(p, farmerProfile?.phoneNumber || '9876543210'); assign('mobile_number', farmerProfile?.phoneNumber || '9876543210'); break;
+          case 'landDetails.areaHect': assign(p, farmerProfile?.farmSize || '1.5'); assign('land_area', farmerProfile?.farmSize || '1.5'); break;
+          case 'dateAndPlace.date': assign(p, new Date().toLocaleDateString()); break;
+          default: // keep existing value
+            break;
+        }
+        return next;
+      });
       setAutoFillStage(i + 1);
+      await new Promise(r => setTimeout(r, 120));
     }
-
     setAutoFillLoading(false);
     setIsFormAutoFilled(true);
   };
 
-  // Handle form submission
+  // Handle form submission -> generate PDF directly with new structure
   const handleConfirmApplication = () => {
-    // Validate required user input fields
-    const missingFields = [];
-    
-    if (!formData.crop_type?.trim()) {
-      missingFields.push('Crop Type');
-    }
-    
-    if (!formData.sowing_date?.trim()) {
-      missingFields.push('Sowing Date');
-    }
-    
-    if (missingFields.length > 0) {
-      Alert.alert(
-        t('document.missing_title', 'Missing Information'), 
-        t('document.missing_fields', `Please fill in the following required fields:\n\n${missingFields.join('\n')}`),
-        [{ text: t('common.ok', 'OK') }]
-      );
+    const required = ['farmersName','fhName','aadharId','mobile','village','block','subDivision'];
+    const missing = required.filter(k => !String(formData[k] || '').trim());
+    if (missing.length) {
+      Alert.alert('Missing Fields', `Please fill: ${missing.join(', ')}`);
       return;
     }
-    // If selected scheme is PM-KISAN, show image preview and share flow
-    const isPmKisan = (selectedScheme?.scheme_name || 'PM-KISAN').toLowerCase().includes('pm-kisan');
-    if (isPmKisan) {
-      setShowPmKisanPreview(true);
-      return;
-    }
-    // Fallback for any other scheme: previous document generation flow
     generateAndSendDocument();
+  };
 
+  const toggleSelfDecl = (key) => {
+    setFormData(prev => ({
+      ...prev,
+      selfDeclaration: {
+        ...prev.selfDeclaration,
+        [key]: prev.selfDeclaration[key] === 'Yes' ? 'No' : 'Yes'
+      }
+    }));
+  };
+
+  const togglePermission = (key) => {
+    setFormData(prev => ({
+      ...prev,
+      permissionDetails: {
+        ...prev.permissionDetails,
+        [key]: !prev.permissionDetails[key]
+      }
+    }));
   };
 
   // Handle phone number click
@@ -818,7 +975,7 @@ export default function DocumentAgentScreen({ navigation }) {
               <View style={styles.autoFillLoading}>
                 <ActivityIndicator size="small" color="#10b981" />
                 <Text style={styles.autoFillText}>
-                  Autofilling with AI... ({autoFillStage}/13 fields completed)
+                  Autofilling with AI... ({autoFillStage}/19 fields completed)
                 </Text>
               </View>
             )}
@@ -835,174 +992,210 @@ export default function DocumentAgentScreen({ navigation }) {
             )}
 
             <ScrollView style={styles.formBody}>
+              {/* Personal Information */}
               <View style={styles.formSection}>
                 <Text style={styles.formSectionTitle}>Personal Information</Text>
-                
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Farmer Name *</Text>
-                  <TextInput
-                    style={[styles.input, formData.farmer_name && styles.filledInput]}
-                    value={formData.farmer_name}
-                    onChangeText={(text) => setFormData(prev => ({...prev, farmer_name: text}))}
-                    placeholder="Enter farmer name"
-                    placeholderTextColor="#666"
-                  />
+                  <TextInput style={[styles.input, formData.farmersName && styles.filledInput]}
+                    value={formData.farmersName}
+                    onChangeText={(text) => setFormData(prev => ({...prev, farmersName: text, farmer_name: text}))}
+                    placeholder="Enter farmer name" placeholderTextColor="#666" />
                 </View>
-
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Father's Name *</Text>
-                  <TextInput
-                    style={[styles.input, formData.father_name && styles.filledInput]}
-                    value={formData.father_name}
-                    onChangeText={(text) => setFormData(prev => ({...prev, father_name: text}))}
-                    placeholder="Enter father's name"
-                    placeholderTextColor="#666"
-                  />
+                  <Text style={styles.inputLabel}>Father / Husband Name *</Text>
+                  <TextInput style={[styles.input, formData.fhName && styles.filledInput]}
+                    value={formData.fhName}
+                    onChangeText={(text) => setFormData(prev => ({...prev, fhName: text, father_name: text, applicantDeclaration: { ...prev.applicantDeclaration, sonOf: text }, permissionDetails: { ...prev.permissionDetails, sonOf: text }}))}
+                    placeholder="Enter F/H name" placeholderTextColor="#666" />
                 </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Mobile Number *</Text>
-                  <TextInput
-                    style={[styles.input, formData.mobile_number && styles.filledInput]}
-                    value={formData.mobile_number}
-                    onChangeText={(text) => setFormData(prev => ({...prev, mobile_number: text}))}
-                    placeholder="Enter mobile number"
-                    placeholderTextColor="#666"
-                    keyboardType="phone-pad"
-                  />
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Sex *</Text>
+                    <TextInput style={[styles.input, formData.sex && styles.filledInput]}
+                      value={formData.sex}
+                      onChangeText={(text) => setFormData(prev => ({...prev, sex: text}))}
+                      placeholder="Male/Female" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>D.O.B *</Text>
+                    <TextInput style={[styles.input, formData.dob && styles.filledInput]}
+                      value={formData.dob}
+                      onChangeText={(text) => setFormData(prev => ({...prev, dob: text}))}
+                      placeholder="DD/MM/YYYY" placeholderTextColor="#666" />
+                  </View>
                 </View>
-
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Category *</Text>
+                    <TextInput style={[styles.input, formData.category && styles.filledInput]}
+                      value={formData.category}
+                      onChangeText={(text) => setFormData(prev => ({...prev, category: text.toUpperCase()}))}
+                      placeholder="GEN/OBC/SC/ST" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>Mobile *</Text>
+                    <TextInput style={[styles.input, formData.mobile && styles.filledInput]}
+                      value={formData.mobile}
+                      onChangeText={(text) => setFormData(prev => ({...prev, mobile: text, mobile_number: text}))}
+                      placeholder="Enter mobile" placeholderTextColor="#666" keyboardType="phone-pad" />
+                  </View>
+                </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Aadhaar Number *</Text>
-                  <TextInput
-                    style={[styles.input, formData.aadhaar_number && styles.filledInput]}
-                    value={formData.aadhaar_number}
-                    onChangeText={(text) => setFormData(prev => ({...prev, aadhaar_number: text}))}
-                    placeholder="Enter Aadhaar number"
-                    placeholderTextColor="#666"
-                    keyboardType="numeric"
-                  />
+                  <Text style={styles.inputLabel}>Aadhaar *</Text>
+                  <TextInput style={[styles.input, formData.aadharId && styles.filledInput]}
+                    value={formData.aadharId}
+                    onChangeText={(text) => setFormData(prev => ({...prev, aadharId: text.replace(/[^0-9]/g,''), aadhaar_number: text}))}
+                    placeholder="12 digit Aadhaar" placeholderTextColor="#666" keyboardType="numeric" />
                 </View>
               </View>
 
+              {/* Address / Location */}
               <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Bank Details</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Bank Account Number *</Text>
-                  <TextInput
-                    style={[styles.input, formData.bank_account && styles.filledInput]}
-                    value={formData.bank_account}
-                    onChangeText={(text) => setFormData(prev => ({...prev, bank_account: text}))}
-                    placeholder="Enter bank account number"
-                    placeholderTextColor="#666"
-                  />
+                <Text style={styles.formSectionTitle}>Address / Location</Text>
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Sub Division *</Text>
+                    <TextInput style={[styles.input, formData.subDivision && styles.filledInput]}
+                      value={formData.subDivision}
+                      onChangeText={(text) => setFormData(prev => ({...prev, subDivision: text}))}
+                      placeholder="Enter sub division" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>Block *</Text>
+                    <TextInput style={[styles.input, formData.block && styles.filledInput]}
+                      value={formData.block}
+                      onChangeText={(text) => setFormData(prev => ({...prev, block: text}))}
+                      placeholder="Enter block" placeholderTextColor="#666" />
+                  </View>
                 </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>IFSC Code *</Text>
-                  <TextInput
-                    style={[styles.input, formData.ifsc_code && styles.filledInput]}
-                    value={formData.ifsc_code}
-                    onChangeText={(text) => setFormData(prev => ({...prev, ifsc_code: text}))}
-                    placeholder="Enter IFSC code"
-                    placeholderTextColor="#666"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Address Details</Text>
-                
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Village *</Text>
-                  <TextInput
-                    style={[styles.input, formData.village && styles.filledInput]}
+                  <TextInput style={[styles.input, formData.village && styles.filledInput]}
                     value={formData.village}
-                    onChangeText={(text) => setFormData(prev => ({...prev, village: text}))}
-                    placeholder="Enter village name"
-                    placeholderTextColor="#666"
-                  />
+                    onChangeText={(text) => setFormData(prev => ({...prev, village: text, applicantDeclaration: { ...prev.applicantDeclaration, residentOf: text }, permissionDetails: { ...prev.permissionDetails, residentOf: text }}))}
+                    placeholder="Enter village" placeholderTextColor="#666" />
                 </View>
-
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>District *</Text>
-                  <TextInput
-                    style={[styles.input, formData.district && styles.filledInput]}
-                    value={formData.district}
-                    onChangeText={(text) => setFormData(prev => ({...prev, district: text}))}
-                    placeholder="Enter district"
-                    placeholderTextColor="#666"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>State *</Text>
-                  <TextInput
-                    style={[styles.input, formData.state && styles.filledInput]}
-                    value={formData.state}
-                    onChangeText={(text) => setFormData(prev => ({...prev, state: text}))}
-                    placeholder="Enter state"
-                    placeholderTextColor="#666"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>PIN Code *</Text>
-                  <TextInput
-                    style={[styles.input, formData.pin_code && styles.filledInput]}
-                    value={formData.pin_code}
-                    onChangeText={(text) => setFormData(prev => ({...prev, pin_code: text}))}
-                    placeholder="Enter PIN code"
-                    placeholderTextColor="#666"
-                    keyboardType="numeric"
-                  />
+                  <Text style={styles.inputLabel}>Full Address *</Text>
+                  <TextInput style={[styles.input, formData.address && styles.filledInput]}
+                    value={formData.address}
+                    onChangeText={(text) => setFormData(prev => ({...prev, address: text}))}
+                    placeholder="House / Landmark" placeholderTextColor="#666" />
                 </View>
               </View>
 
+              {/* Banking */}
               <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Farm Details</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Land Area *</Text>
-                  <TextInput
-                    style={[styles.input, formData.land_area && styles.filledInput]}
-                    value={formData.land_area}
-                    onChangeText={(text) => setFormData(prev => ({...prev, land_area: text}))}
-                    placeholder="Enter land area (in acres)"
-                    placeholderTextColor="#666"
-                  />
+                <Text style={styles.formSectionTitle}>Bank Details</Text>
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Bank A/C *</Text>
+                    <TextInput style={[styles.input, formData.bankAC && styles.filledInput]}
+                      value={formData.bankAC}
+                      onChangeText={(text) => setFormData(prev => ({...prev, bankAC: text, bank_account: text}))}
+                      placeholder="Account Number" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>IFSC *</Text>
+                    <TextInput style={[styles.input, formData.ifscCode && styles.filledInput]}
+                      value={formData.ifscCode}
+                      onChangeText={(text) => setFormData(prev => ({...prev, ifscCode: text.toUpperCase(), ifsc_code: text.toUpperCase()}))}
+                      placeholder="IFSC Code" placeholderTextColor="#666" autoCapitalize="characters" />
+                  </View>
                 </View>
+              </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, styles.userInputLabel]}>🌾 Crop Type * (Required)</Text>
-                  <TextInput
-                    style={[styles.input, styles.userInput, formData.crop_type && styles.filledInput]}
-                    value={formData.crop_type}
-                    onChangeText={(text) => setFormData(prev => ({...prev, crop_type: text}))}
-                    placeholder="Enter main crop type (e.g., Rice, Wheat, Cotton)"
-                    placeholderTextColor="#666"
-                  />
+              {/* Land Details */}
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Land Details</Text>
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Khewat No.</Text>
+                    <TextInput style={[styles.input, formData.landDetails.khewatNo && styles.filledInput]}
+                      value={formData.landDetails.khewatNo}
+                      onChangeText={(text) => setFormData(prev => ({...prev, landDetails: { ...prev.landDetails, khewatNo: text }}))}
+                      placeholder="Khewat" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>Khasra No.</Text>
+                    <TextInput style={[styles.input, formData.landDetails.khasraNo && styles.filledInput]}
+                      value={formData.landDetails.khasraNo}
+                      onChangeText={(text) => setFormData(prev => ({...prev, landDetails: { ...prev.landDetails, khasraNo: text }}))}
+                      placeholder="Khasra" placeholderTextColor="#666" />
+                  </View>
                 </View>
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Area (Hect.)</Text>
+                    <TextInput style={[styles.input, formData.landDetails.areaHect && styles.filledInput]}
+                      value={formData.landDetails.areaHect}
+                      onChangeText={(text) => setFormData(prev => ({...prev, landDetails: { ...prev.landDetails, areaHect: text }, land_area: text }))}
+                      placeholder="Area" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>Ownership</Text>
+                    <TextInput style={[styles.input, formData.landDetails.ownership && styles.filledInput]}
+                      value={formData.landDetails.ownership}
+                      onChangeText={(text) => setFormData(prev => ({...prev, landDetails: { ...prev.landDetails, ownership: text }}))}
+                      placeholder="Single / Joint" placeholderTextColor="#666" />
+                  </View>
+                </View>
+              </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, styles.userInputLabel]}>📅 Sowing Date * (Required)</Text>
-                  <TextInput
-                    style={[styles.input, styles.userInput, formData.sowing_date && styles.filledInput]}
-                    value={formData.sowing_date}
-                    onChangeText={(text) => setFormData(prev => ({...prev, sowing_date: text}))}
-                    placeholder="Enter sowing date (DD/MM/YYYY)"
-                    placeholderTextColor="#666"
-                  />
+              {/* Self Declaration */}
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Self Declaration (Tap to Toggle)</Text>
+                {Object.entries(formData.selfDeclaration).map(([key,val]) => (
+                  <TouchableOpacity key={key} style={styles.checkboxRow} onPress={() => toggleSelfDecl(key)}>
+                    <MaterialIcons name={val === 'Yes' ? 'check-box' : 'check-box-outline-blank'} size={20} color={val === 'Yes' ? '#10b981' : '#666'} />
+                    <Text style={styles.checkboxLabel}>{
+                      {
+                        isInstitutionalFarmer: 'I am an institutional farmer',
+                        heldConstitutionalPost: 'Family member held/holding constitutional post',
+                        isFormerMinister: 'Family member MLA/MP/Mayor/ZP Chair',
+                        isRetiredEmployee: 'Family member serving/retired govt (excl class 4)',
+                        hadIncomeTax: 'Family member paid Income Tax AY 2018-19',
+                        isProfessional: 'Family member is registered professional (Doctor/Lawyer/CA etc)'
+                      }[key]
+                    }</Text>
+                    <Text style={styles.checkboxValue}>{val}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Permissions & Attachments */}
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Permissions & Attachments</Text>
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => togglePermission('enclosedAadhar')}>
+                  <MaterialIcons name={formData.permissionDetails.enclosedAadhar ? 'check-box' : 'check-box-outline-blank'} size={20} color={formData.permissionDetails.enclosedAadhar ? '#10b981' : '#666'} />
+                  <Text style={styles.checkboxLabel}>Enclosed Aadhaar Copy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => togglePermission('enclosedBank')}>
+                  <MaterialIcons name={formData.permissionDetails.enclosedBank ? 'check-box' : 'check-box-outline-blank'} size={20} color={formData.permissionDetails.enclosedBank ? '#10b981' : '#666'} />
+                  <Text style={styles.checkboxLabel}>Enclosed Bank Details Copy</Text>
+                </TouchableOpacity>
+                <View style={styles.inputGroupRow}>
+                  <View style={[styles.inputGroup, {flex:1, marginRight:8}]}> 
+                    <Text style={styles.inputLabel}>Date</Text>
+                    <TextInput style={[styles.input, formData.dateAndPlace.date && styles.filledInput]}
+                      value={formData.dateAndPlace.date}
+                      onChangeText={(text) => setFormData(prev => ({...prev, dateAndPlace: { ...prev.dateAndPlace, date: text }}))}
+                      placeholder="Date" placeholderTextColor="#666" />
+                  </View>
+                  <View style={[styles.inputGroup, {flex:1}]}> 
+                    <Text style={styles.inputLabel}>Place</Text>
+                    <TextInput style={[styles.input, formData.dateAndPlace.place && styles.filledInput]}
+                      value={formData.dateAndPlace.place}
+                      onChangeText={(text) => setFormData(prev => ({...prev, dateAndPlace: { ...prev.dateAndPlace, place: text }}))}
+                      placeholder="Place" placeholderTextColor="#666" />
+                  </View>
                 </View>
               </View>
 
               {isFormAutoFilled && (
                 <View style={styles.confirmSection}>
-                  <TouchableOpacity 
-                    style={styles.confirmBtn}
-                    onPress={handleConfirmApplication}
-                  >
+                  <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmApplication}>
                     <MaterialIcons name="check-circle" size={20} color="#fff" />
                     <Text style={styles.confirmBtnText}>Confirm & Generate Document</Text>
                   </TouchableOpacity>
@@ -1546,6 +1739,34 @@ const makeStyles = (theme) => StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 16,
+  },
+  inputGroupRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f1f1f',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#2a2a2a'
+  },
+  checkboxLabel: {
+    flex: 1,
+    color: '#ddd',
+    marginLeft: 12,
+    fontSize: 13,
+  },
+  checkboxValue: {
+    color: '#10b981',
+    fontWeight: '600',
+    fontSize: 12,
+    marginLeft: 8,
   },
   inputLabel: {
     color: theme.colors.text,
