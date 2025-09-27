@@ -20,6 +20,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import NewMarketPricesScreen from './NewMarketPricesScreen';
@@ -553,6 +556,88 @@ const MarketplaceScreen = ({ navigation }) => {
   // Enhanced flow functions
   const handleMandiSelection = (mandi) => {
     setSelectedMandi(mandi);
+    // Helper: compute total quantity across selected crops
+    const totalQuantity = (selectedCrops || []).reduce((total, crop) => {
+      const q = parseFloat(cropDetails[crop]?.quantity);
+      return total + (isNaN(q) ? 0 : q);
+    }, 0);
+
+    // Derive Available Services based on UI state
+    const availableServices = [];
+    if (selectedMandi?.services) {
+      const svc = selectedMandi.services;
+      if (svc.pickupService) {
+        availableServices.push({
+          name: 'Home Pickup',
+          description: 'Mandi will collect crops from your location',
+          cost: '₹500-1000 (estimate)',
+          contact: selectedMandi?.phone || '',
+        });
+      } else {
+        availableServices.push({ name: 'Home Pickup', description: 'Not available', cost: '-', contact: '' });
+      }
+      if (svc.onSiteDealing) {
+        availableServices.push({
+          name: 'On-site Dealing',
+          description: 'Direct dealing and payment at mandi',
+          cost: 'No additional cost',
+          contact: selectedMandi?.phone || '',
+        });
+      } else {
+        availableServices.push({ name: 'On-site Dealing', description: 'Remote dealing/payment only', cost: '-', contact: '' });
+      }
+      if (svc.qualityTesting) {
+        availableServices.push({
+          name: 'Quality Testing',
+          description: 'Professional quality testing available',
+          cost: '₹200-500 per sample',
+          contact: selectedMandi?.phone || '',
+        });
+      } else {
+        availableServices.push({ name: 'Quality Testing', description: 'Not available', cost: '-', contact: '' });
+      }
+      if (svc.storageAvailable) {
+        availableServices.push({
+          name: 'Storage Facility',
+          description: 'Temporary storage space at mandi',
+          cost: '₹50-100 per day',
+          contact: selectedMandi?.phone || '',
+        });
+      } else {
+        availableServices.push({ name: 'Storage Facility', description: 'Not available', cost: '-', contact: '' });
+      }
+    }
+
+    // Derive Transportation Options like we show in the UI
+    const baseTransportCost = Math.round(totalQuantity * 0.5); // ₹0.5 per kg (same logic as UI hint)
+    const transportationOptions = [
+      {
+        mode: 'Small Truck',
+        cost: baseTransportCost ? `₹${baseTransportCost}` : '₹—',
+        capacity: 'Up to ~1000 kg',
+        eta: 'Same-day',
+        contact: selectedMandi?.phone || '',
+      },
+      {
+        mode: 'Large Truck',
+        cost: baseTransportCost ? `₹${Math.round(baseTransportCost * 1.5)}` : '₹—',
+        capacity: 'Up to ~2000 kg',
+        eta: 'Same-day',
+        contact: selectedMandi?.phone || '',
+      },
+      // Local transporter contacts displayed in UI
+      { mode: 'Local Transporter: ABC Transport', cost: 'Quote on call', capacity: '-', eta: '-', contact: '+91-98765-43210' },
+      { mode: 'Local Transporter: XYZ Logistics', cost: 'Quote on call', capacity: '-', eta: '-', contact: '+91-98765-43211' },
+      { mode: 'Local Transporter: Quick Cargo', cost: 'Quote on call', capacity: '-', eta: '-', contact: '+91-98765-43212' },
+    ];
+
+    const mandiContact = {
+      name: selectedMandi?.contactPerson || selectedMandi?.name || 'Mandi Office',
+      phone: selectedMandi?.phone || '—',
+      address: selectedMandi?.address || '—',
+      hours: selectedMandi?.operatingHours || '—',
+      website: selectedMandi?.website || '',
+    };
     setCurrentStep('multipleCrops');
   };
 
@@ -575,6 +660,9 @@ const MarketplaceScreen = ({ navigation }) => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
+      availableServices,
+      transportationOptions,
+      mandiContact,
         quality: 0.8,
       });
 
@@ -754,19 +842,19 @@ const MarketplaceScreen = ({ navigation }) => {
     setExportLoading(true);
     try {
       const data = generateExportData();
-      // Simulate PDF generation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const html = buildReportHtml(data);
+      const { uri } = await Print.printToFileAsync({ html });
+
+      // Offer to share immediately
+      if (Sharing && Sharing.shareAsync) {
+        await Sharing.shareAsync(uri, { dialogTitle: 'Share Crop Sales Report', mimeType: 'application/pdf' });
+      }
 
       Alert.alert(
-        t('marketplace.pdf_generated_title') || '📄 PDF Generated!',
-        t('marketplace.pdf_generated_message', {
-          file: `CropSalesReport_${data.exportDate}.pdf`,
-          total: `₹${data.totalEstimatedValue.toLocaleString()}`,
-        }) ||
-          `Your crop sales report has been generated!\n\nFile: CropSalesReport_${
-            data.exportDate
-          }.pdf\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}\n\nThe file has been saved to your Downloads folder.`,
-        [{ text: t('common.ok') || 'Great!', onPress: () => setShowExportModal(false) }]
+        t('marketplace.pdf_generated_title') || '📄 PDF Ready!',
+        `CropSalesReport_${data.exportDate}.pdf` +
+          `\nTotal Value: ₹${data.totalEstimatedValue.toLocaleString()}`,
+        [{ text: t('common.ok') || 'OK' }]
       );
     } catch (error) {
       Alert.alert('Export Error', 'Failed to generate PDF. Please try again.');
@@ -796,6 +884,157 @@ const MarketplaceScreen = ({ navigation }) => {
       );
     } catch (error) {
       Alert.alert('Export Error', 'Failed to generate Excel file. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const buildReportHtml = (data) => {
+    const rows = (data.crops || [])
+      .map(
+        (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.name}</td>
+          <td>${c.quantity}</td>
+          <td>₹${(c.marketPrice || 0).toLocaleString()}</td>
+          <td>₹${(c.finalPrice || 0).toLocaleString()}</td>
+          <td>₹${(c.expectedRevenue || 0).toLocaleString()}</td>
+        </tr>`
+      )
+      .join('');
+    const svcRows = Array.isArray(data.availableServices)
+      ? data.availableServices
+          .map(
+            (s, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${s.name || ''}</td>
+              <td>${s.description || '-'}</td>
+              <td>${s.cost || '-'}</td>
+              <td>${s.contact || '-'}</td>
+            </tr>`
+          )
+          .join('')
+      : '';
+    const trRows = Array.isArray(data.transportationOptions)
+      ? data.transportationOptions
+          .map(
+            (o, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${o.mode || ''}</td>
+              <td>${o.cost || '-'}</td>
+              <td>${o.capacity || '-'}</td>
+              <td>${o.eta || '-'}</td>
+              <td>${o.contact || '-'}</td>
+            </tr>`
+          )
+          .join('')
+      : '';
+    return `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; padding: 24px; }
+            h1 { color: #0ea5a4; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px }
+            th { background: #f0fdfa; text-align: left; }
+            .meta { margin: 8px 0; font-size: 12px; color: #444 }
+            .total { margin-top: 12px; font-weight: bold }
+            .section-title { font-size: 16px; margin: 18px 0 8px; color: #134e4a; }
+            .subtle { color: #475569; font-size: 12px; }
+            .contact-block { margin-top: 8px; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>Crop Sales Report</h1>
+          <div class="meta">Date: ${data.exportDate}</div>
+          <div class="meta">Mandi: ${data.farmerInfo?.selectedMandi} (${data.farmerInfo?.mandiLocation})</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Crop</th>
+                <th>Quantity</th>
+                <th>Avg Market Price</th>
+                <th>Final Price</th>
+                <th>Expected Revenue</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="total">Total Estimated Value: ₹${data.totalEstimatedValue.toLocaleString()}</div>
+          <div class="meta">Generated by Kisan Sahayak</div>
+
+          ${svcRows
+            ? `
+          <div class="section-title">Available Services</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Service</th>
+                <th>Details</th>
+                <th>Cost</th>
+                <th>Contact</th>
+              </tr>
+            </thead>
+            <tbody>${svcRows}</tbody>
+          </table>`
+            : ''}
+
+          ${trRows
+            ? `
+          <div class="section-title">Transport and Logistics</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Mode</th>
+                <th>Estimated Cost</th>
+                <th>Capacity</th>
+                <th>ETA</th>
+                <th>Contact</th>
+              </tr>
+            </thead>
+            <tbody>${trRows}</tbody>
+          </table>`
+            : ''}
+
+          ${data.mandiContact ? `
+          <div class="section-title">Mandi / Logistics Contact</div>
+          <div class="contact-block">
+            <div><strong>Name:</strong> ${data.mandiContact.name || '-'}</div>
+            <div><strong>Phone:</strong> ${data.mandiContact.phone || '-'}</div>
+            <div><strong>Address:</strong> ${data.mandiContact.address || '-'}</div>
+            <div><strong>Hours:</strong> ${data.mandiContact.hours || '-'}</div>
+            ${data.mandiContact.website ? `<div><strong>Website:</strong> ${data.mandiContact.website}</div>` : ''}
+          </div>` : ''}
+        </body>
+      </html>`;
+  };
+
+  const exportToWhatsApp = async () => {
+    setExportLoading(true);
+    try {
+      const data = generateExportData();
+      const html = buildReportHtml(data);
+      const { uri } = await Print.printToFileAsync({ html });
+
+      if (Sharing && Sharing.shareAsync) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share via WhatsApp',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        await Linking.openURL(uri);
+      }
+    } catch (e) {
+      Alert.alert('Export Error', 'Failed to create or share the PDF.');
     } finally {
       setExportLoading(false);
     }
@@ -2218,24 +2457,41 @@ const MarketplaceScreen = ({ navigation }) => {
         </LinearGradient>
       </View>
 
-      {/* Export Buttons */}
-      <View style={styles.exportButtonsContainer}>
-        <TouchableOpacity style={styles.exportPDFButton} onPress={exportToPDF} disabled={exportLoading}>
-          <LinearGradient colors={['#DC2626', '#B91C1C']} style={styles.exportButtonGradient}>
-            <Ionicons name="document-text" size={20} color={theme.colors.headerTitle || '#FFFFFF'} />
-            <Text style={styles.exportButtonText}>{exportLoading ? '⏳ Generating...' : '📄 Export PDF'}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+      {/* Export Buttons - simplified to only WhatsApp (PDF) */}
 
-        <TouchableOpacity style={styles.exportExcelButton} onPress={exportToExcel} disabled={exportLoading}>
+      {/* Quick Export Row before New Sale */}
+      <View style={styles.quickExportRow}>
+        <View style={styles.exportActionCard}>
           <LinearGradient
-            colors={[theme.colors.primary || '#059669', theme.colors.success || '#10B981']}
-            style={styles.exportButtonGradient}
+            colors={[theme.colors.card || '#0B1220', theme.colors.surface || '#121A2A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.exportActionGradient}
           >
-            <Ionicons name="grid" size={20} color="#FFFFFF" />
-            <Text style={styles.exportButtonText}>{exportLoading ? '⏳ Generating...' : '📊 Export Excel'}</Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.exportActionTouchable}
+              disabled={exportLoading}
+              onPress={async () => {
+                try { await Haptics.selectionAsync(); } catch {}
+                exportToWhatsApp();
+              }}
+            >
+             <View style={styles.exportIconOnlyWrap}>
+  {exportLoading ? (
+    <View style={styles.exportIconCircle}>
+      <ActivityIndicator color="#ffffff" />
+    </View>
+  ) : (
+    <View style={styles.iconWrap}>
+      <Ionicons name="logo-whatsapp" size={52} color="#ffffff" />
+    </View>
+  )}
+</View>
+
+            </TouchableOpacity>
           </LinearGradient>
-        </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity style={styles.newSaleButton} onPress={resetFlow}>
@@ -4053,6 +4309,83 @@ const makeStyles = (theme) =>
     },
     exportOption: {
       borderRadius: 12,
+    // Quick Export Row
+    quickExportRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    quickBtn: {
+      flex: 1,
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    exportActionCard: {
+      flex: 1,
+      borderRadius: 14,
+      overflow: 'visible',
+      borderWidth: 0,
+      backgroundColor: 'transparent',
+    },
+    exportActionGradient: {
+      padding: 8,
+      backgroundColor: 'transparent',
+    },
+    exportActionTouchable: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      paddingVertical: 8,
+    },
+    exportIconWrap: {
+      padding: 0,
+      borderRadius: 999,
+      backgroundColor: 'transparent',
+      justifyContent: "center",
+  alignItems: "center"
+    },
+    iconWrapper: {
+  justifyContent: "center",
+  alignItems: "center",
+},
+    exportIconCircle: {
+  justifyContent: "center",
+  alignItems: "center",
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: "#25D366", // optional circle bg for WhatsApp look
+},
+    exportTextWrap: { flex: 1 },
+    exportTitle: {
+      color: '#ffffff',
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    exportSubtitle: {
+      color: '#a3a3a3',
+      fontSize: 12,
+      marginTop: 2,
+    },
+    exportCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#25D366',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+    },
+    exportCtaText: {
+      color: '#ffffff',
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textTransform: 'uppercase',
+    },
       overflow: 'hidden',
     },
     exportOptionGradient: {

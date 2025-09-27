@@ -148,7 +148,7 @@ const getKissanAIResponse = async (message, context, t) => {
   while (attempt <= maxRetries) {
     try {
       attempt += 1;
-      const response = await axios.post(`http://192.168.0.109:8001/agent`, payload, { timeout: 120000 });
+      const response = await axios.post(`http://10.67.206.37:8001/agent`, payload, { timeout: 120000 });
       if (response.data && response.data.response_text) {
         return response.data.response_text;
       }
@@ -418,12 +418,12 @@ const getFeatureOptions = (theme, t) => [
     screen: 'CropIntelligenceScreenNew',
     color: '#38bdf8',
   },
-//   {
-//     icon: <MaterialCommunityIcons name="school" size={20} color={theme?.colors?.primary || '#6366f1'} />,
-//     label: t('features.education_finance', 'Education & Finance'),
-//     screen: 'UPI',
-//     color: theme?.colors?.primary || '#6366f1',
-//   },
+  {
+    icon: <MaterialCommunityIcons name="school" size={20} color={theme?.colors?.primary || '#6366f1'} />,
+    label: t('features.education_finance', 'Education & Finance'),
+    screen: 'UPI',
+    color: theme?.colors?.primary || '#6366f1',
+  },
   {
     icon: <MaterialCommunityIcons name="file-document-multiple" size={20} color="#f59e0b" />,
     label: t('features.document_builder', 'Document Builder'),
@@ -436,12 +436,12 @@ const getFeatureOptions = (theme, t) => [
     screen: 'CropDoctor',
     color: '#10b981',
   },
-//   {
-//     icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />,
-//     label: t('features.equipment_rental', 'Equipment Rental'),
-//     screen: 'RentalSystemScreen',
-//     color: '#f59e0b',
-//   },
+  {
+    icon: <MaterialCommunityIcons name="tractor-variant" size={20} color="#f59e0b" />,
+    label: t('features.equipment_rental', 'Equipment Rental'),
+    screen: 'RentalSystemScreen',
+    color: '#f59e0b',
+  },
 //   {
 //     icon: <MaterialCommunityIcons name="sprout" size={20} color="#84cc16" />,
 //     label: t('features.farm_visualizer', 'Farm Visualizer'),

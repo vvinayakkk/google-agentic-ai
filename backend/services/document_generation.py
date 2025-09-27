@@ -71,6 +71,12 @@ class DocumentGenerationService:
             # Generate document based on format
             if format_type.lower() == "pdf":
                 result = self._generate_pdf(document_content, file_path, template_info)
+                # If PDF libs are unavailable, we may have generated HTML instead.
+                if result.get("success") and result.get("html_file"):
+                    # Point to the actual HTML file and adjust metadata accordingly
+                    file_path = result["html_file"]
+                    filename = os.path.basename(file_path)
+                    format_type = "html"
             elif format_type.lower() == "docx":
                 result = self._generate_docx(document_content, file_path, template_info)
             elif format_type.lower() == "html":
@@ -166,6 +172,52 @@ class DocumentGenerationService:
                 "supporting_documents": farmer_data.get('supporting_documents', [])
             }
         
+        # Normalize and attach Available Services and Transportation Options if provided
+        def _coerce_json(value):
+            # Accept dict/list or JSON string
+            if value is None:
+                return None
+            if isinstance(value, (list, dict)):
+                return value
+            if isinstance(value, str) and value.strip():
+                try:
+                    return json.loads(value)
+                except Exception:
+                    return None
+            return None
+
+        # Try multiple possible keys coming from frontend
+        avail_keys = [
+            'available_services', 'services', 'service_options', 'marketplace_services', 'availableServices'
+        ]
+        transport_keys = [
+            'transportation_options', 'transport_options', 'logistics', 'transport', 'transportationOptions'
+        ]
+
+        available_services = None
+        for k in avail_keys:
+            if k in farmer_data:
+                available_services = _coerce_json(farmer_data.get(k))
+                if available_services:
+                    break
+
+        transportation_options = None
+        for k in transport_keys:
+            if k in farmer_data:
+                transportation_options = _coerce_json(farmer_data.get(k))
+                if transportation_options:
+                    break
+
+        # Optional: mandi or logistics contact information
+        mandi_contact = _coerce_json(farmer_data.get('mandi_contact')) or _coerce_json(farmer_data.get('market_contact'))
+
+        if available_services:
+            document_content["available_services"] = available_services
+        if transportation_options:
+            document_content["transportation_options"] = transportation_options
+        if mandi_contact:
+            document_content["mandi_contact"] = mandi_contact
+
         # 🤖 Add AI assistance section if available
         if 'ai_assistance' in farmer_data:
             ai_data = farmer_data['ai_assistance']
@@ -407,6 +459,94 @@ class DocumentGenerationService:
                 
                 story.append(Spacer(1, 20))
             
+                # Available Services section (numbered)
+                if content.get("available_services"):
+                    story.append(Paragraph("AVAILABLE SERVICES", heading_style))
+                    services = content.get("available_services", [])
+
+                    # If list of dicts, render table; if list of strings, render numbered paragraphs
+                    if isinstance(services, list) and services and isinstance(services[0], dict):
+                        data = [["#", "Service", "Details", "Contact/Cost"]]
+                        for idx, svc in enumerate(services, 1):
+                            name = svc.get('name') or svc.get('title') or svc.get('type') or 'Service'
+                            details_parts = []
+                            for key in ['description', 'details', 'benefits']:
+                                if svc.get(key):
+                                    details_parts.append(str(svc.get(key)))
+                            details = " | ".join(details_parts) or "-"
+                            contact_parts = []
+                            for key in ['contact', 'phone', 'provider', 'cost', 'price']:
+                                if svc.get(key):
+                                    contact_parts.append(f"{key.title()}: {svc.get(key)}")
+                            contact = ", ".join(contact_parts) or "-"
+                            data.append([str(idx), name, details, contact])
+
+                        table = Table(data, colWidths=[0.4*inch, 1.6*inch, 2.7*inch, 1.3*inch])
+                        table.setStyle(TableStyle([
+                            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#f1f5f9')),
+                            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0,0), (-1,0), 10),
+                            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                        ]))
+                        story.append(table)
+                    elif isinstance(services, list):
+                        for idx, svc in enumerate(services, 1):
+                            story.append(Paragraph(f"{idx}. {svc}", normal_style))
+                    else:
+                        story.append(Paragraph(str(services), normal_style))
+                    story.append(Spacer(1, 16))
+
+                # Transportation Options section (numbered)
+                if content.get("transportation_options"):
+                    story.append(Paragraph("TRANSPORT AND LOGISTICS", heading_style))
+                    options = content.get("transportation_options", [])
+
+                    if isinstance(options, list) and options and isinstance(options[0], dict):
+                        data = [["#", "Mode", "Cost/Unit", "Capacity/ETA", "Contact"]]
+                        for idx, opt in enumerate(options, 1):
+                            mode = opt.get('mode') or opt.get('type') or opt.get('name') or 'Transport'
+                            cost = opt.get('cost_per_quintal') or opt.get('cost') or opt.get('price') or '-'
+                            capacity = opt.get('capacity') or opt.get('min_capacity') or '-'
+                            eta = opt.get('eta') or opt.get('time') or ''
+                            cap_eta = f"{capacity}{' | ETA: ' + str(eta) if eta else ''}"
+                            contact_parts = []
+                            for key in ['contact', 'phone', 'provider']:
+                                if opt.get(key):
+                                    contact_parts.append(f"{key.title()}: {opt.get(key)}")
+                            contact = ", ".join(contact_parts) or "-"
+                            data.append([str(idx), mode, str(cost), cap_eta, contact])
+
+                        table = Table(data, colWidths=[0.4*inch, 1.6*inch, 1.2*inch, 2.0*inch, 1.4*inch])
+                        table.setStyle(TableStyle([
+                            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#ecfeff')),
+                            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0,0), (-1,0), 10),
+                            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                        ]))
+                        story.append(table)
+                    elif isinstance(options, list):
+                        for idx, opt in enumerate(options, 1):
+                            story.append(Paragraph(f"{idx}. {opt}", normal_style))
+                    else:
+                        story.append(Paragraph(str(options), normal_style))
+
+                    # Optional mandi contact
+                    if content.get('mandi_contact'):
+                        story.append(Spacer(1, 8))
+                        story.append(Paragraph("Mandi / Logistics Contact", ParagraphStyle(
+                            'MandiHeading', parent=normal_style, fontName='Helvetica-Bold', textColor=colors.darkblue
+                        )))
+                        mc = content['mandi_contact']
+                        if isinstance(mc, dict):
+                            for k, v in mc.items():
+                                story.append(Paragraph(f"• {k.replace('_',' ').title()}: {v}", normal_style))
+                        else:
+                            story.append(Paragraph(str(mc), normal_style))
+
+                    story.append(Spacer(1, 16))
+
             # Footer
             footer = content.get("footer", {})
             story.append(Paragraph(f"Generated by: {footer.get('generated_by', '')}", normal_style))
@@ -571,6 +711,19 @@ class DocumentGenerationService:
         html_content += f"""
     </div>
     
+    <!-- Available Services -->
+    <div class="section">
+        <div class="section-title">AVAILABLE SERVICES</div>
+        <div id="available-services">
+        </div>
+    </div>
+
+    <!-- Transportation Options -->
+    <div class="section">
+        <div class="section-title">TRANSPORT AND LOGISTICS</div>
+        <div id="transportation-options"></div>
+    </div>
+
     <div class="footer">
         <p>Generated by: {footer.get('generated_by', '')}</p>
         <p>{footer.get('disclaimer', '')}</p>
@@ -579,7 +732,76 @@ class DocumentGenerationService:
 </html>
 """
         
-        return html_content
+        # Inject dynamic sections for services and transport in simple HTML
+        try:
+            from html import escape
+            parts = [html_content]
+            # Append Available Services
+            services = content.get('available_services')
+            if services:
+                if isinstance(services, list) and services and isinstance(services[0], dict):
+                    rows = []
+                    rows.append('<table><tr><th>#</th><th>Service</th><th>Details</th><th>Contact/Cost</th></tr>')
+                    for i, svc in enumerate(services, 1):
+                        name = escape(str(svc.get('name') or svc.get('title') or svc.get('type') or 'Service'))
+                        details = escape(str(svc.get('description') or svc.get('details') or svc.get('benefits') or '-'))
+                        contact_parts = []
+                        for key in ['contact','phone','provider','cost','price']:
+                            if svc.get(key):
+                                contact_parts.append(f"{key.title()}: {escape(str(svc.get(key)))}")
+                        contact = ', '.join(contact_parts) or '-'
+                        rows.append(f"<tr><td>{i}</td><td>{name}</td><td>{details}</td><td>{contact}</td></tr>")
+                    rows.append('</table>')
+                    html_services = "\n".join(rows)
+                elif isinstance(services, list):
+                    items = ''.join([f"<li>{escape(str(s))}</li>" for s in services])
+                    html_services = f"<ol>{items}</ol>"
+                else:
+                    html_services = f"<p>{escape(str(services))}</p>"
+                parts[-1] = parts[-1].replace('<div id="available-services"></div>', html_services)
+
+            # Append Transportation Options
+            options = content.get('transportation_options')
+            if options:
+                if isinstance(options, list) and options and isinstance(options[0], dict):
+                    rows = []
+                    rows.append('<table><tr><th>#</th><th>Mode</th><th>Cost/Unit</th><th>Capacity/ETA</th><th>Contact</th></tr>')
+                    for i, opt in enumerate(options, 1):
+                        mode = escape(str(opt.get('mode') or opt.get('type') or opt.get('name') or 'Transport'))
+                        cost = escape(str(opt.get('cost_per_quintal') or opt.get('cost') or opt.get('price') or '-'))
+                        capacity = escape(str(opt.get('capacity') or opt.get('min_capacity') or '-'))
+                        eta = opt.get('eta') or opt.get('time') or ''
+                        cap_eta = f"{capacity}{' | ETA: ' + escape(str(eta)) if eta else ''}"
+                        contact_parts = []
+                        for key in ['contact','phone','provider']:
+                            if opt.get(key):
+                                contact_parts.append(f"{key.title()}: {escape(str(opt.get(key)))}")
+                        contact = ', '.join(contact_parts) or '-'
+                        rows.append(f"<tr><td>{i}</td><td>{mode}</td><td>{cost}</td><td>{cap_eta}</td><td>{contact}</td></tr>")
+                    rows.append('</table>')
+                    html_transport = "\n".join(rows)
+                elif isinstance(options, list):
+                    items = ''.join([f"<li>{escape(str(o))}</li>" for o in options])
+                    html_transport = f"<ol>{items}</ol>"
+                else:
+                    html_transport = f"<p>{escape(str(options))}</p>"
+
+                # Add mandi contact if present
+                mc = content.get('mandi_contact')
+                if mc:
+                    if isinstance(mc, dict):
+                        lines = [f"<p><strong>Mandi / Logistics Contact</strong></p>"]
+                        for k, v in mc.items():
+                            lines.append(f"<div class=\"field\"><span class=\"label\">{escape(str(k)).title()}:</span> <span class=\"value\">{escape(str(v))}</span></div>")
+                        html_transport += "\n" + "\n".join(lines)
+                    else:
+                        html_transport += f"<p><strong>Mandi / Logistics Contact:</strong> {escape(str(mc))}</p>"
+
+                parts[-1] = parts[-1].replace('<div id="transportation-options"></div>', html_transport)
+
+            return parts[-1]
+        except Exception:
+            return html_content
 
     def _create_pdf_html_content(self, content: Dict[str, Any]) -> str:
         """Create HTML content optimized for PDF generation"""
@@ -801,6 +1023,80 @@ class DocumentGenerationService:
             else:
                 html_content += "        </div>\n    </div>\n"
         
+        # === Available Services (rich, numbered) ===
+        services = content.get('available_services')
+        if services:
+            html_content += """
+    <div class="section">
+        <div class="section-title">AVAILABLE SERVICES</div>
+"""
+            if isinstance(services, list) and services and isinstance(services[0], dict):
+                html_content += """
+        <table>
+            <tr><th>#</th><th>Service</th><th>Details</th><th>Contact/Cost</th></tr>
+"""
+                for i, svc in enumerate(services, 1):
+                    name = svc.get('name') or svc.get('title') or svc.get('type') or 'Service'
+                    details = svc.get('description') or svc.get('details') or svc.get('benefits') or '-'
+                    contact_parts = []
+                    for key in ['contact','phone','provider','cost','price']:
+                        if svc.get(key):
+                            contact_parts.append(f"{key.title()}: {svc.get(key)}")
+                    contact = ', '.join(contact_parts) or '-'
+                    html_content += f"            <tr><td>{i}</td><td>{name}</td><td>{details}</td><td>{contact}</td></tr>\n"
+                html_content += "        </table>\n"
+            elif isinstance(services, list):
+                html_content += "        <ol>\n"
+                for i, s in enumerate(services, 1):
+                    html_content += f"            <li>{s}</li>\n"
+                html_content += "        </ol>\n"
+            else:
+                html_content += f"        <p>{services}</p>\n"
+            html_content += "    </div>\n"
+
+        # === Transportation Options (rich, numbered) ===
+        options = content.get('transportation_options')
+        if options:
+            html_content += """
+    <div class="section">
+        <div class="section-title">TRANSPORT AND LOGISTICS</div>
+"""
+            if isinstance(options, list) and options and isinstance(options[0], dict):
+                html_content += """
+        <table>
+            <tr><th>#</th><th>Mode</th><th>Cost/Unit</th><th>Capacity/ETA</th><th>Contact</th></tr>
+"""
+                for i, opt in enumerate(options, 1):
+                    mode = opt.get('mode') or opt.get('type') or opt.get('name') or 'Transport'
+                    cost = opt.get('cost_per_quintal') or opt.get('cost') or opt.get('price') or '-'
+                    capacity = opt.get('capacity') or opt.get('min_capacity') or '-'
+                    eta = opt.get('eta') or opt.get('time') or ''
+                    cap_eta = f"{capacity}{' | ETA: ' + str(eta) if eta else ''}"
+                    contact_parts = []
+                    for key in ['contact','phone','provider']:
+                        if opt.get(key):
+                            contact_parts.append(f"{key.title()}: {opt.get(key)}")
+                    contact = ', '.join(contact_parts) or '-'
+                    html_content += f"            <tr><td>{i}</td><td>{mode}</td><td>{cost}</td><td>{cap_eta}</td><td>{contact}</td></tr>\n"
+                html_content += "        </table>\n"
+            elif isinstance(options, list):
+                html_content += "        <ol>\n"
+                for i, o in enumerate(options, 1):
+                    html_content += f"            <li>{o}</li>\n"
+                html_content += "        </ol>\n"
+            else:
+                html_content += f"        <p>{options}</p>\n"
+
+            mc = content.get('mandi_contact')
+            if mc:
+                html_content += "        <div style=\"margin-top: 10px;\"><strong>Mandi / Logistics Contact</strong></div>\n"
+                if isinstance(mc, dict):
+                    for k, v in mc.items():
+                        html_content += f"        <div class=\"field\"><span class=\"label\">{k.replace('_',' ').title()}:</span> <span class=\"value\">{v}</span></div>\n"
+                else:
+                    html_content += f"        <div class=\"field\">{mc}</div>\n"
+            html_content += "    </div>\n"
+
         html_content += f"""
     <div class="footer">
         <p><strong>Generated by:</strong> {footer.get('generated_by', '')}</p>

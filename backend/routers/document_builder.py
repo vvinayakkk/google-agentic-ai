@@ -74,6 +74,10 @@ class PDFGenerationRequest(BaseModel):
     address: Optional[str] = ""
     document_type: Optional[str] = "general_application"
     format_type: Optional[str] = "pdf"
+    # New optional sections
+    available_services: Optional[Any] = None
+    transportation_options: Optional[Any] = None
+    mandi_contact: Optional[Any] = None
 
 class AIPDFGenerationRequest(BaseModel):
     farmer_name: str
@@ -83,6 +87,10 @@ class AIPDFGenerationRequest(BaseModel):
     address: Optional[str] = ""
     document_type: Optional[str] = "general_application"
     format_type: Optional[str] = "pdf"
+    # New optional sections
+    available_services: Optional[Any] = None
+    transportation_options: Optional[Any] = None
+    mandi_contact: Optional[Any] = None
 
 logger = logging.getLogger(__name__)
 
@@ -708,7 +716,11 @@ async def generate_pdf_with_ai_json(request: AIPDFGenerationRequest):
                 "question": request.user_question,
                 "response": ai_response["response"],
                 "model": ai_response.get("model", "Gemini 2.5 Flash")
-            }
+            },
+            # Pass through optional sections
+            "available_services": request.available_services,
+            "transportation_options": request.transportation_options,
+            "mandi_contact": request.mandi_contact
         }
         
         # Generate PDF with AI integration
@@ -746,7 +758,11 @@ async def generate_pdf_with_ai(
     contact_number: str = Form(""),
     address: str = Form(""),
     document_type: str = Form("general_application"),
-    format_type: str = Form("pdf")
+    format_type: str = Form("pdf"),
+    # New optional JSON strings or simple lists
+    available_services: Optional[str] = Form(None),
+    transportation_options: Optional[str] = Form(None),
+    mandi_contact: Optional[str] = Form(None)
 ):
     """
     Generate PDF with AI assistance - Frontend compatible endpoint
@@ -761,6 +777,19 @@ async def generate_pdf_with_ai(
             chat_history=[]
         )
         
+        # Helper to coerce JSON-like strings
+        def _coerce_json(value):
+            if value is None:
+                return None
+            if isinstance(value, (list, dict)):
+                return value
+            if isinstance(value, str) and value.strip():
+                try:
+                    return json.loads(value)
+                except Exception:
+                    return value  # keep raw string if not JSON
+            return None
+
         # Prepare farmer data with AI assistance
         farmer_data = {
             "farmer_name": farmer_name,
@@ -771,7 +800,11 @@ async def generate_pdf_with_ai(
                 "question": user_question,
                 "response": ai_response["response"],
                 "model": ai_response.get("model", "Gemini 2.5 Flash")
-            }
+            },
+            # New pass-through sections
+            "available_services": _coerce_json(available_services),
+            "transportation_options": _coerce_json(transportation_options),
+            "mandi_contact": _coerce_json(mandi_contact)
         }
         
         # Generate PDF with AI integration
@@ -813,7 +846,11 @@ async def generate_basic_pdf_json(request: PDFGenerationRequest):
             "farmer_name": request.farmer_name,
             "aadhaar_number": request.aadhaar_number or "Not provided",
             "contact_number": request.contact_number or "Not provided", 
-            "address": request.address or "Not provided"
+            "address": request.address or "Not provided",
+            # Optional sections
+            "available_services": request.available_services,
+            "transportation_options": request.transportation_options,
+            "mandi_contact": request.mandi_contact
         }
         
         logger.info(f"Farmer data prepared: {farmer_data}")
@@ -853,7 +890,11 @@ async def generate_basic_pdf(
     contact_number: str = Form(""),
     address: str = Form(""),
     document_type: str = Form("general_application"),
-    format_type: str = Form("pdf")
+    format_type: str = Form("pdf"),
+    # New optional JSON strings
+    available_services: Optional[str] = Form(None),
+    transportation_options: Optional[str] = Form(None),
+    mandi_contact: Optional[str] = Form(None)
 ):
     """
     Generate basic PDF without AI - Frontend compatible endpoint
@@ -867,12 +908,29 @@ async def generate_basic_pdf(
         logger.info(f"Basic PDF generation request: farmer_name={farmer_name}, type={document_type}")
         logger.info(f"All parameters: name={farmer_name}, aadhaar={aadhaar_number}, contact={contact_number}, address={address}")
         
+        # Helper to coerce JSON-like strings
+        def _coerce_json(value):
+            if value is None:
+                return None
+            if isinstance(value, (list, dict)):
+                return value
+            if isinstance(value, str) and value.strip():
+                try:
+                    return json.loads(value)
+                except Exception:
+                    return value
+            return None
+
         # Prepare farmer data
         farmer_data = {
             "farmer_name": farmer_name,
             "aadhaar_number": aadhaar_number or "Not provided",
             "contact_number": contact_number or "Not provided", 
-            "address": address or "Not provided"
+            "address": address or "Not provided",
+            # Optional sections
+            "available_services": _coerce_json(available_services),
+            "transportation_options": _coerce_json(transportation_options),
+            "mandi_contact": _coerce_json(mandi_contact)
         }
         
         logger.info(f"Farmer data prepared: {farmer_data}")

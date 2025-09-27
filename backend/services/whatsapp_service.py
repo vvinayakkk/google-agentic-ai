@@ -70,6 +70,10 @@ Your application document has been generated and is attached to this message. Pl
 • Application number is mentioned in the document footer
 • For any queries, contact the helpline number mentioned in the document
 
+📌 This report now includes:
+• Available Services (numbered list with contacts/costs)
+• Transportation and Logistics options with estimated costs
+
 *Next Steps:*
 1. Review the application form
 2. Verify all details are correct

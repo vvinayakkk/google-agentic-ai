@@ -39,7 +39,20 @@ def test_pdf_generation():
             },
             "scheme_name": "प्रधानमंत्री किसान सम्मान निधी (PM-KISAN)",
             "repayment_period": "12 महिने",
-            "collateral_details": "जमीन गहाण"
+            "collateral_details": "जमीन गहाण",
+            # New: Available Services visible in app
+            "available_services": [
+                {"name": "Soil Testing", "description": "On-site soil sample collection and lab report", "contact": "+91 90000 11111", "cost": "₹250/sample"},
+                {"name": "Fertilizer Advisory", "description": "AI-based fertilizer plan based on soil & crop", "provider": "KVK Nashik", "price": "₹0 (free)"},
+                {"name": "Market Linkage", "description": "Direct buyer introductions for onions & tomatoes", "contact": "+91 98888 22222"}
+            ],
+            # New: Transportation options with costs
+            "transportation_options": [
+                {"mode": "Shared Tractor Trolley", "cost_per_quintal": "₹15/qtl", "capacity": "50 qtl", "contact": "+91 97777 33333"},
+                {"mode": "Mini Truck (Tata Ace)", "cost_per_quintal": "₹25/qtl", "capacity": "80 qtl", "phone": "+91 96666 44444", "eta": "2 hrs"},
+                {"mode": "3-Wheeler Loader", "cost": "₹35/qtl", "capacity": "30 qtl"}
+            ],
+            "mandi_contact": {"name": "Vashi APMC Helpdesk", "phone": "+91 93222 55555", "hours": "6am-6pm"}
         }
         
         # Test different document types
