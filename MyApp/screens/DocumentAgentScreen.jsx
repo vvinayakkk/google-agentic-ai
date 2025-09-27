@@ -13,12 +13,15 @@ import {
   FlatList,
   Linking,
   SafeAreaView,
+  Image,
+  ImageBackground,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import ViewShot from 'react-native-view-shot';
 import MicOverlay from '../components/MicOverlay';
 import schemesData from '../data/schemes.json';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +29,11 @@ import { StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_BASE = NetworkConfig.API_BASE;
+
+// PM-KISAN official form image (static require for Expo bundler)
+const PM_KISAN_IMG = require('../schemes/pm-kisan.png');
+const PM_KISAN_ASSET = Image.resolveAssetSource ? Image.resolveAssetSource(PM_KISAN_IMG) : { width: 714, height: 892 };
+const PM_KISAN_ASPECT = PM_KISAN_ASSET.width / PM_KISAN_ASSET.height;
 
 // Enhanced schemes data with more schemes
 const ENHANCED_SCHEMES = [
@@ -239,6 +247,8 @@ export default function DocumentAgentScreen({ navigation }) {
   const [isFormAutoFilled, setIsFormAutoFilled] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [documentGenerated, setDocumentGenerated] = useState(false);
+  const [showPmKisanPreview, setShowPmKisanPreview] = useState(false);
+  const viewShotRef = useRef(null);
 
   // Farmer profile data
   const [farmerProfile, setFarmerProfile] = useState(null);
@@ -431,6 +441,35 @@ export default function DocumentAgentScreen({ navigation }) {
     }
   };
 
+  const captureAndSharePmKisan = async () => {
+    try {
+      if (!viewShotRef.current) return;
+      const uri = await viewShotRef.current.capture();
+
+      // Try WhatsApp direct share via scheme for images
+      const message = encodeURIComponent('PM-KISAN Application Form');
+      const supported = await Linking.canOpenURL('whatsapp://send');
+      if (supported) {
+        // Use generic share so media is included; WhatsApp respects system sheet
+        if (Sharing && Sharing.shareAsync) {
+          await Sharing.shareAsync(uri, { dialogTitle: 'Share PM-KISAN Form', mimeType: 'image/png' });
+        } else {
+          await Linking.openURL(uri);
+        }
+      } else {
+        // Fallback to web WhatsApp cannot attach files; provide text and open image URL instead
+        if (Sharing && Sharing.shareAsync) {
+          await Sharing.shareAsync(uri, { dialogTitle: 'Share PM-KISAN Form', mimeType: 'image/png' });
+        } else {
+          await Linking.openURL(uri);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to capture/share PM-KISAN form:', e);
+      Alert.alert('Error', 'Failed to share the PM-KISAN form image.');
+    }
+  };
+
   const simulateAutoFill = async () => {
     // Use farmer profile data if available, otherwise use default
     const autoFillData = {
@@ -487,6 +526,13 @@ export default function DocumentAgentScreen({ navigation }) {
       );
       return;
     }
+    // If selected scheme is PM-KISAN, show image preview and share flow
+    const isPmKisan = (selectedScheme?.scheme_name || 'PM-KISAN').toLowerCase().includes('pm-kisan');
+    if (isPmKisan) {
+      setShowPmKisanPreview(true);
+      return;
+    }
+    // Fallback for any other scheme: previous document generation flow
     generateAndSendDocument();
 
   };
@@ -981,6 +1027,79 @@ export default function DocumentAgentScreen({ navigation }) {
             Creating your PM-KISAN application and sending to WhatsApp
           </Text>
         </View>
+        </View>
+      </Modal>
+
+      {/* PM-KISAN Image Preview & Share Modal */}
+      <Modal
+        visible={showPmKisanPreview}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPmKisanPreview(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.pmPreviewCard, { backgroundColor: theme.colors.background }]}>
+            <View style={styles.pmHeaderRow}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>PM-KISAN Form Preview</Text>
+              <TouchableOpacity onPress={() => setShowPmKisanPreview(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
+              <ViewShot
+                ref={viewShotRef}
+                options={{ format: 'png', quality: 1, result: 'tmpfile' }}
+                style={{ backgroundColor: '#fff', borderRadius: 8 }}
+              >
+                <View style={styles.pmFormContainer}>
+                  <ImageBackground
+                    source={PM_KISAN_IMG}
+                    style={{ width: '100%', aspectRatio: PM_KISAN_ASPECT }}
+                    resizeMode="contain"
+                  >
+                    {/* Overlayed text fields — positions are approximate percentages */}
+                    {/* Header line: Village and Farmer's Name */}
+                    <Text style={[styles.pmText, { top: '3.5%', left: '34%' }]}>{formData.village || farmerProfile?.village || ''}</Text>
+                    <Text style={[styles.pmText, { top: '3.5%', left: '66%' }]}>{formData.farmer_name || farmerProfile?.name || ''}</Text>
+
+                    {/* Aadhaar, IFSC, Bank A/c, Mobile */}
+                    <Text style={[styles.pmText, { top: '10%', left: '14%' }]}>{formData.aadhaar_number || ''}</Text>
+                    <Text style={[styles.pmText, { top: '10%', left: '50%' }]}>{formData.ifsc_code || ''}</Text>
+                    <Text style={[styles.pmText, { top: '12.5%', left: '14%' }]}>{formData.bank_account || ''}</Text>
+                    <Text style={[styles.pmText, { top: '12.5%', left: '50%' }]}>{formData.mobile_number || ''}</Text>
+
+                    {/* Address (combine) */}
+                    <Text style={[styles.pmText, { top: '15%', left: '22%' }]}>{`${formData.village || ''}, ${formData.district || ''}, ${formData.state || ''} - ${formData.pin_code || ''}`}</Text>
+
+                    {/* Land Details: Area */}
+                    <Text style={[styles.pmText, { top: '48%', left: '20%' }]}>{formData.land_area || ''}</Text>
+
+                    {/* Declaration Name, Village, Date, Signature placeholder */}
+                    <Text style={[styles.pmText, { top: '62%', left: '6%' }]}>{formData.farmer_name || farmerProfile?.name || ''}</Text>
+                    <Text style={[styles.pmText, { top: '62%', left: '36%' }]}>{formData.village || ''}</Text>
+                    <Text style={[styles.pmText, { top: '70%', left: '10%' }]}>{new Date().toLocaleDateString()}</Text>
+                    <Text style={[styles.pmText, { top: '70%', left: '58%' }]}>{formData.farmer_name || farmerProfile?.name || ''}</Text>
+
+                    {/* Permission to use AADHAR: Enclosed checkboxes text hint */}
+                    <Text style={[styles.pmSmallText, { top: '77%', left: '22%' }]}>Aadhaar Copy: Yes</Text>
+                    <Text style={[styles.pmSmallText, { top: '77%', left: '55%' }]}>Bank Details Copy: Yes</Text>
+                  </ImageBackground>
+                </View>
+              </ViewShot>
+            </ScrollView>
+
+            <View style={styles.pmActionsRow}>
+              <TouchableOpacity style={[styles.pmActionBtn, { backgroundColor: theme.colors.primary }]} onPress={async () => await captureAndSharePmKisan()}>
+                <MaterialIcons name="share" size={18} color="#fff" />
+                <Text style={styles.pmActionText}>Share via WhatsApp</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.pmActionBtn, { backgroundColor: '#2a2a2a' }]} onPress={() => setShowPmKisanPreview(false)}>
+                <MaterialIcons name="close" size={18} color="#10b981" />
+                <Text style={[styles.pmActionText, { color: '#10b981' }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -1500,5 +1619,54 @@ const makeStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  // PM-KISAN preview styles
+  pmPreviewCard: {
+    width: '95%',
+    maxHeight: '90%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  pmHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  pmFormContainer: {
+    padding: 12,
+  },
+  pmText: {
+    position: 'absolute',
+    fontSize: 10,
+    color: '#000',
+  },
+  pmSmallText: {
+    position: 'absolute',
+    fontSize: 8,
+    color: '#000',
+  },
+  pmActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 12,
+  },
+  pmActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  pmActionText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
