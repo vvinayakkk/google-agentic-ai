@@ -20,7 +20,10 @@
       "bundleIdentifier": "com.souldev07.kisansahayak",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to provide local farming services and market information.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to provide local farming services and market information."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to provide local farming services and market information.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
@@ -52,7 +55,8 @@
         "expo-build-properties",
         {
           "android": {
-            "enableProguardInReleaseBuilds": true
+            "enableProguardInReleaseBuilds": true,
+            "usesCleartextTraffic": true
           }
         }
       ],
