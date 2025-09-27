@@ -31,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const API_BASE = NetworkConfig.API_BASE;
 
 // PM-KISAN official form image (static require for Expo bundler)
-const PM_KISAN_IMG = require('../schemes/pm-kisan.png');
+const PM_KISAN_IMG = require('../assets/schemes/pm_kisan.png');
 const PM_KISAN_ASSET = Image.resolveAssetSource ? Image.resolveAssetSource(PM_KISAN_IMG) : { width: 714, height: 892 };
 const PM_KISAN_ASPECT = PM_KISAN_ASSET.width / PM_KISAN_ASSET.height;
 
