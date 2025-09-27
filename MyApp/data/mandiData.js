@@ -1,39 +1,9 @@
 // Real Mandi Data for India - Major Agricultural Markets
 export const REAL_MANDI_DATA = [
   {
-    id: 'azadpur_delhi',
-    name: 'Azadpur Mandi',
-    location: 'Delhi',
-    state: 'Delhi',
-    district: 'North Delhi',
-    address: 'Azadpur, Delhi - 110033',
-    phone: '+91-11-27675234',
-    website: 'https://www.dda.org.in/tendernotices_docs/apr13/azadpur.pdf',
-    contactPerson: 'Market Secretary',
-    operatingHours: '4:00 AM - 12:00 PM',
-    facilities: ['Cold Storage', 'Transportation', 'Quality Testing', 'Banking'],
-    specialization: ['Vegetables', 'Fruits'],
-    yearEstablished: 1977,
-    area: '475 acres',
-    dailyTurnover: '₹15-20 crores',
-    crops: {
-      'Wheat': { avgPrice: 2450, minPrice: 2300, maxPrice: 2600, availability: true },
-      'Rice': { avgPrice: 1890, minPrice: 1750, maxPrice: 2100, availability: true },
-      'Tomato': { avgPrice: 2800, minPrice: 2200, maxPrice: 3500, availability: true },
-      'Onion': { avgPrice: 1650, minPrice: 1400, maxPrice: 1900, availability: true },
-      'Potato': { avgPrice: 1200, minPrice: 1000, maxPrice: 1400, availability: true }
-    },
-    services: {
-      pickupService: true,
-      onSiteDealing: true,
-      qualityTesting: true,
-      storageAvailable: true
-    }
-  },
-  {
     id: 'vashi_mumbai',
     name: 'Vashi Agricultural Produce Market Committee',
-    location: 'Mumbai',
+    location: 'Navi Mumbai',
     state: 'Maharashtra',
     district: 'Thane',
     address: 'Sector 19, Vashi, Navi Mumbai - 400703',
@@ -47,11 +17,11 @@ export const REAL_MANDI_DATA = [
     area: '148 acres',
     dailyTurnover: '₹8-12 crores',
     crops: {
-      'Wheat': { avgPrice: 2500, minPrice: 2350, maxPrice: 2650, availability: true },
-      'Rice': { avgPrice: 1950, minPrice: 1800, maxPrice: 2150, availability: true },
+      'Rice': { avgPrice: 1900, minPrice: 1750, maxPrice: 2100, availability: true },
       'Tomato': { avgPrice: 3200, minPrice: 2800, maxPrice: 3800, availability: true },
-      'Onion': { avgPrice: 1750, minPrice: 1500, maxPrice: 2000, availability: true },
-      'Coconut': { avgPrice: 2500, minPrice: 2200, maxPrice: 2800, availability: true }
+      'Onion': { avgPrice: 1700, minPrice: 1450, maxPrice: 2000, availability: true },
+      'Potato': { avgPrice: 1200, minPrice: 1000, maxPrice: 1400, availability: true },
+      'Coconut': { avgPrice: 2400, minPrice: 2100, maxPrice: 2700, availability: true }
     },
     services: {
       pickupService: false,
@@ -61,116 +31,110 @@ export const REAL_MANDI_DATA = [
     }
   },
   {
-    id: 'koyambedu_chennai',
-    name: 'Koyambedu Wholesale Market Complex',
-    location: 'Chennai',
-    state: 'Tamil Nadu',
-    district: 'Chennai',
-    address: 'Koyambedu, Chennai - 600107',
-    phone: '+91-44-26531081',
-    website: 'https://www.cmdachennai.gov.in/koyambedu-market',
-    contactPerson: 'General Manager',
-    operatingHours: '3:00 AM - 11:00 AM',
-    facilities: ['Modern Infrastructure', 'Cold Storage', 'Banking', 'Canteen'],
-    specialization: ['Vegetables', 'Fruits'],
-    yearEstablished: 1996,
-    area: '295 acres',
-    dailyTurnover: '₹10-15 crores',
-    crops: {
-      'Rice': { avgPrice: 1875, minPrice: 1700, maxPrice: 2050, availability: true },
-      'Tomato': { avgPrice: 2900, minPrice: 2400, maxPrice: 3400, availability: true },
-      'Onion': { avgPrice: 1600, minPrice: 1350, maxPrice: 1850, availability: true },
-      'Coconut': { avgPrice: 2200, minPrice: 1900, maxPrice: 2500, availability: true },
-      'Banana': { avgPrice: 4500, minPrice: 4000, maxPrice: 5000, availability: true }
-    },
-    services: {
-      pickupService: true,
-      onSiteDealing: true,
-      qualityTesting: true,
-      storageAvailable: true
-    }
-  },
-  {
-    id: 'gaddiannaram_hyderabad',
-    name: 'Gaddiannaram Fruit and Vegetable Market',
-    location: 'Hyderabad',
-    state: 'Telangana',
-    district: 'Hyderabad',
-    address: 'Gaddiannaram, Hyderabad - 500059',
-    phone: '+91-40-24015678',
-    website: 'http://www.hyderabadmarket.com',
+    id: 'deonar_mumbai',
+    name: 'Deonar APMC (Mumbai)',
+    location: 'Mumbai',
+    state: 'Maharashtra',
+    district: 'Mumbai Suburban',
+    address: 'Deonar, Mumbai - 400088',
+    phone: '+91-22-24123456',
+    website: 'https://www.mahaapmc.gov.in/deonar',
     contactPerson: 'Market Superintendent',
     operatingHours: '4:00 AM - 12:00 PM',
-    facilities: ['Wholesale Trading', 'Storage', 'Transportation'],
-    specialization: ['Vegetables', 'Fruits', 'Spices'],
-    yearEstablished: 1985,
-    area: '180 acres',
-    dailyTurnover: '₹6-10 crores',
+    facilities: ['Cold Storage', 'Transportation', 'Quality Testing'],
+    specialization: ['Vegetables', 'Fruits', 'Seafood (nearby)'],
+    yearEstablished: 1955,
+    area: '120 acres',
+    dailyTurnover: '₹12-18 crores',
     crops: {
-      'Rice': { avgPrice: 1850, minPrice: 1680, maxPrice: 2020, availability: true },
-      'Tomato': { avgPrice: 2700, minPrice: 2200, maxPrice: 3200, availability: true },
-      'Onion': { avgPrice: 1550, minPrice: 1300, maxPrice: 1800, availability: true },
-      'Chili': { avgPrice: 8500, minPrice: 7500, maxPrice: 9500, availability: true },
-      'Turmeric': { avgPrice: 7200, minPrice: 6800, maxPrice: 7600, availability: true }
-    },
-    services: {
-      pickupService: false,
-      onSiteDealing: true,
-      qualityTesting: false,
-      storageAvailable: true
-    }
-  },
-  {
-    id: 'yeshwanthpur_bangalore',
-    name: 'Yeshwanthpur APMC',
-    location: 'Bangalore',
-    state: 'Karnataka',
-    district: 'Bangalore Urban',
-    address: 'Yeshwanthpur, Bangalore - 560022',
-    phone: '+91-80-23720456',
-    website: 'http://www.bangalore-apmc.com',
-    contactPerson: 'Secretary',
-    operatingHours: '5:00 AM - 1:00 PM',
-    facilities: ['Modern Infrastructure', 'Banking', 'Parking'],
-    specialization: ['Vegetables', 'Fruits', 'Flowers'],
-    yearEstablished: 1979,
-    area: '125 acres',
-    dailyTurnover: '₹5-8 crores',
-    crops: {
-      'Rice': { avgPrice: 1920, minPrice: 1750, maxPrice: 2100, availability: true },
-      'Tomato': { avgPrice: 3000, minPrice: 2500, maxPrice: 3500, availability: true },
-      'Onion': { avgPrice: 1680, minPrice: 1450, maxPrice: 1900, availability: true },
+      'Onion': { avgPrice: 1650, minPrice: 1400, maxPrice: 1900, availability: true },
+      'Tomato': { avgPrice: 3000, minPrice: 2500, maxPrice: 3400, availability: true },
       'Potato': { avgPrice: 1150, minPrice: 950, maxPrice: 1350, availability: true },
-      'Coconut': { avgPrice: 2300, minPrice: 2000, maxPrice: 2600, availability: true }
+      'Mango': { avgPrice: 4500, minPrice: 3500, maxPrice: 6000, availability: true }
     },
     services: {
       pickupService: true,
       onSiteDealing: true,
       qualityTesting: true,
+      storageAvailable: true
+    }
+  },
+  {
+    id: 'thane_apmc',
+    name: 'Thane APMC',
+    location: 'Thane',
+    state: 'Maharashtra',
+    district: 'Thane',
+    address: 'Majiwada, Thane - 400601',
+    phone: '+91-22-25467890',
+    website: 'https://thaneapmc.maha',
+    contactPerson: 'Market Secretary',
+    operatingHours: '5:00 AM - 1:00 PM',
+    facilities: ['Weighbridge', 'Cold Storage', 'Banking'],
+    specialization: ['Vegetables', 'Fruits'],
+    yearEstablished: 1980,
+    area: '90 acres',
+    dailyTurnover: '₹4-7 crores',
+    crops: {
+      'Rice': { avgPrice: 1880, minPrice: 1700, maxPrice: 2050, availability: true },
+      'Onion': { avgPrice: 1600, minPrice: 1350, maxPrice: 1850, availability: true },
+      'Mango': { avgPrice: 5000, minPrice: 3800, maxPrice: 7000, availability: true }
+    },
+    services: {
+      pickupService: true,
+      onSiteDealing: true,
+      qualityTesting: false,
       storageAvailable: false
     }
   },
   {
-    id: 'kalimati_kathmandu',
-    name: 'Kalimati Fruits and Vegetable Market',
-    location: 'Kathmandu',
-    state: 'Nepal',
-    district: 'Kathmandu',
-    address: 'Kalimati, Kathmandu',
-    phone: '+977-1-4278432',
-    website: 'http://www.kalimatimarket.gov.np',
-    contactPerson: 'Market Development Officer',
-    operatingHours: '4:00 AM - 10:00 AM',
-    facilities: ['Wholesale Trading', 'Retail Trading'],
-    specialization: ['Vegetables', 'Fruits'],
-    yearEstablished: 1987,
-    area: '35 acres',
-    dailyTurnover: 'NPR 5-8 crores',
+    id: 'pune_khedshivapur',
+    name: 'Pune Khed Shivapur APMC',
+    location: 'Pune',
+    state: 'Maharashtra',
+    district: 'Pune',
+    address: 'Khed Shivapur, Pune - 411042',
+    phone: '+91-20-26900000',
+    website: 'https://puneapmc.maha',
+    contactPerson: 'General Manager',
+    operatingHours: '4:00 AM - 12:00 PM',
+    facilities: ['Cold Storage', 'Logistics', 'Quality Testing'],
+    specialization: ['Horticulture', 'Vegetables'],
+    yearEstablished: 1992,
+    area: '200 acres',
+    dailyTurnover: '₹6-10 crores',
     crops: {
-      'Rice': { avgPrice: 1800, minPrice: 1650, maxPrice: 1950, availability: true },
-      'Tomato': { avgPrice: 2600, minPrice: 2100, maxPrice: 3100, availability: true },
-      'Onion': { avgPrice: 1500, minPrice: 1250, maxPrice: 1750, availability: true },
-      'Potato': { avgPrice: 1000, minPrice: 850, maxPrice: 1150, availability: true }
+      'Tomato': { avgPrice: 2800, minPrice: 2300, maxPrice: 3300, availability: true },
+      'Onion': { avgPrice: 1500, minPrice: 1250, maxPrice: 1800, availability: true },
+      'Potato': { avgPrice: 1100, minPrice: 900, maxPrice: 1300, availability: true }
+    },
+    services: {
+      pickupService: true,
+      onSiteDealing: true,
+      qualityTesting: true,
+      storageAvailable: true
+    }
+  },
+  {
+    id: 'mapusa_goa',
+    name: 'Mapusa Market',
+    location: 'Mapusa',
+    state: 'Goa',
+    district: 'North Goa',
+    address: 'Mapusa Market, Bardez, Goa - 403507',
+    phone: '+91-832-2251234',
+    website: 'https://mapusamarket.goa',
+    contactPerson: 'Market Manager',
+    operatingHours: '5:00 AM - 11:00 AM',
+    facilities: ['Wholesale Trading', 'Retail Stalls'],
+    specialization: ['Vegetables', 'Fruits', 'Spices'],
+    yearEstablished: 1970,
+    area: '20 acres',
+    dailyTurnover: '₹1-2 crores',
+    crops: {
+      'Coconut': { avgPrice: 2300, minPrice: 2000, maxPrice: 2600, availability: true },
+      'Banana': { avgPrice: 4200, minPrice: 3800, maxPrice: 4800, availability: true },
+      'Mango': { avgPrice: 4800, minPrice: 3500, maxPrice: 6500, availability: true }
     },
     services: {
       pickupService: false,
@@ -180,31 +144,57 @@ export const REAL_MANDI_DATA = [
     }
   },
   {
-    id: 'mother_dairy_ghaziabad',
-    name: 'Mother Dairy Safal Market',
-    location: 'Ghaziabad',
-    state: 'Uttar Pradesh',
-    district: 'Ghaziabad',
-    address: 'Sector 15, Noida - 201301',
-    phone: '+91-120-4567890',
-    website: 'https://www.motherdairy.com',
-    contactPerson: 'Procurement Manager',
-    operatingHours: '6:00 AM - 6:00 PM',
-    facilities: ['Cold Storage', 'Quality Testing', 'Direct Procurement'],
-    specialization: ['Vegetables', 'Fruits', 'Dairy'],
-    yearEstablished: 1974,
-    area: '200 acres',
-    dailyTurnover: '₹12-18 crores',
+    id: 'surat_apmc',
+    name: 'Surat APMC',
+    location: 'Surat',
+    state: 'Gujarat',
+    district: 'Surat',
+    address: 'Bardoli Road, Surat - 395003',
+    phone: '+91-261-2456789',
+    website: 'https://suratapmc.guj',
+    contactPerson: 'Market Secretary',
+    operatingHours: '4:00 AM - 12:00 PM',
+    facilities: ['Cold Storage', 'Weighbridge', 'Quality Testing'],
+    specialization: ['Fruits', 'Vegetables', 'Cash Crops'],
+    yearEstablished: 1985,
+    area: '160 acres',
+    dailyTurnover: '₹7-11 crores',
     crops: {
-      'Wheat': { avgPrice: 2480, minPrice: 2320, maxPrice: 2640, availability: true },
-      'Rice': { avgPrice: 1900, minPrice: 1760, maxPrice: 2040, availability: true },
-      'Tomato': { avgPrice: 2950, minPrice: 2450, maxPrice: 3450, availability: true },
-      'Onion': { avgPrice: 1720, minPrice: 1480, maxPrice: 1960, availability: true },
-      'Potato': { avgPrice: 1180, minPrice: 980, maxPrice: 1380, availability: true }
+      'Rice': { avgPrice: 1860, minPrice: 1700, maxPrice: 2050, availability: true },
+      'Onion': { avgPrice: 1400, minPrice: 1200, maxPrice: 1650, availability: true },
+      'Mango': { avgPrice: 5200, minPrice: 3800, maxPrice: 7500, availability: true }
     },
     services: {
       pickupService: true,
-      onSiteDealing: false,
+      onSiteDealing: true,
+      qualityTesting: true,
+      storageAvailable: true
+    }
+  },
+  {
+    id: 'ahmedabad_apmc',
+    name: 'Ahmedabad APMC',
+    location: 'Ahmedabad',
+    state: 'Gujarat',
+    district: 'Ahmedabad',
+    address: 'Vastrapur/AMS Compound, Ahmedabad - 380015',
+    phone: '+91-79-26300000',
+    website: 'https://ahmedabadapmc.guj',
+    contactPerson: 'Market Manager',
+    operatingHours: '5:00 AM - 1:00 PM',
+    facilities: ['Cold Storage', 'Banking', 'Transportation'],
+    specialization: ['Grains', 'Fruits', 'Vegetables'],
+    yearEstablished: 1978,
+    area: '220 acres',
+    dailyTurnover: '₹10-16 crores',
+    crops: {
+      'Wheat': { avgPrice: 2450, minPrice: 2300, maxPrice: 2600, availability: true },
+      'Rice': { avgPrice: 1900, minPrice: 1750, maxPrice: 2100, availability: true },
+      'Onion': { avgPrice: 1500, minPrice: 1250, maxPrice: 1800, availability: true }
+    },
+    services: {
+      pickupService: true,
+      onSiteDealing: true,
       qualityTesting: true,
       storageAvailable: true
     }
@@ -213,7 +203,7 @@ export const REAL_MANDI_DATA = [
 
 // Common crops available across most mandis
 export const COMMON_CROPS = [
-  'Wheat', 'Rice', 'Tomato', 'Onion', 'Potato', 'Coconut', 'Banana', 'Chili', 'Turmeric'
+  'Wheat', 'Rice', 'Tomato', 'Onion', 'Potato', 'Coconut', 'Banana', 'Mango', 'Chili'
 ];
 
 // Utility functions
@@ -250,19 +240,19 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Diversified Crop Plan',
     description: 'A balanced plan with a mix of high-demand crops for stable returns.',
     targetFarmer: 'Small to medium farmers',
-    defaultMandi: 'yeshwanthpur_bangalore', // Preselected mandi
+    defaultMandi: 'vashi_mumbai', // Preselected mandi near Mumbai
     crops: [
-      { name: 'Coffee', mandi: 'yeshwanthpur_bangalore', expectedProfit: 25000, riskLevel: 'Low' },
-      { name: 'Banana', mandi: 'bangalore_kr_market', expectedProfit: 18000, riskLevel: 'Medium' }
+      { name: 'Banana', mandi: 'mapusa_goa', expectedProfit: 18000, riskLevel: 'Medium' },
+      { name: 'Mango', mandi: 'surat_apmc', expectedProfit: 25000, riskLevel: 'Low' }
     ],
     totalInvestment: 45000,
     expectedReturns: 88000,
     roi: 95.5,
     duration: '4-6 months',
     aiInsights: [
-      'Coffee prices are trending upward due to export demand',
-      'Banana market has consistent demand',
-      'Weather predictions favor both crops this season'
+      'Banana demand remains steady in coastal markets',
+      'Mango fetches premium prices in Gujarat and export channels',
+      'Mixed cropping reduces risk during price dips'
     ],
     riskProfile: 'Moderate',
     suitableFor: ['Mixed farming', 'Market access'],
@@ -276,19 +266,19 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Traditional Crop Plan',
     description: 'Low risk, consistent returns with traditional crops.',
     targetFarmer: 'Risk-averse farmers',
-    defaultMandi: 'tumkur_apmc', // Preselected mandi
+    defaultMandi: 'ahmedabad_apmc', // Preselected mandi in Gujarat
     crops: [
-      { name: 'Coconut', mandi: 'tumkur_apmc', expectedProfit: 15000, riskLevel: 'Very Low' },
-      { name: 'Ragi', mandi: 'tumkur_apmc', expectedProfit: 12000, riskLevel: 'Low' }
+      { name: 'Wheat', mandi: 'ahmedabad_apmc', expectedProfit: 15000, riskLevel: 'Very Low' },
+      { name: 'Rice', mandi: 'surat_apmc', expectedProfit: 12000, riskLevel: 'Low' }
     ],
     totalInvestment: 35000,
     expectedReturns: 62000,
     roi: 77.1,
     duration: '6-8 months',
     aiInsights: [
-      'Coconut has steady demand with minimal price fluctuation',
-      'Ragi is gaining popularity as health food',
-      'Both crops suitable for organic certification'
+      'Wheat and rice remain staple crops with steady offtake',
+      'Gujarat markets show stable pricing for staples',
+      'Good storage lowers post-harvest loss'
     ],
     riskProfile: 'Conservative',
     suitableFor: ['Traditional farming', 'Organic certification'],
@@ -302,10 +292,10 @@ export const AI_STRATEGIC_PLANS = [
     name: 'Short-Term Crop Plan',
     description: 'Crops with shorter cycles for faster returns.',
     targetFarmer: 'Farmers needing quick returns',
-    defaultMandi: 'kolar_apmc', // Preselected mandi
+    defaultMandi: 'pune_khedshivapur', // Preselected mandi near Pune
     crops: [
-      { name: 'Tomato', mandi: 'kolar_apmc', expectedProfit: 8000, riskLevel: 'Medium' },
-      { name: 'Onion', mandi: 'kolar_apmc', expectedProfit: 6000, riskLevel: 'Medium' }
+      { name: 'Tomato', mandi: 'pune_khedshivapur', expectedProfit: 8000, riskLevel: 'Medium' },
+      { name: 'Onion', mandi: 'pune_khedshivapur', expectedProfit: 6000, riskLevel: 'Medium' }
     ],
     totalInvestment: 20000,
     expectedReturns: 34000,
@@ -313,7 +303,7 @@ export const AI_STRATEGIC_PLANS = [
     duration: '3-4 months',
     aiInsights: [
       'Vegetable prices peak during festival seasons',
-      'Kolar APMC has good connectivity to markets',
+      'Pune APMC has good connectivity to markets',
       'Quick harvest cycles allow multiple plantings'
     ],
     riskProfile: 'Moderate',
