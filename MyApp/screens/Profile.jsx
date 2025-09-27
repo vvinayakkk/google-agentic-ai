@@ -486,11 +486,11 @@ const ProfileScreen = ({ route, navigation }) => {
               </Picker>
             </View>
           </View>
-          <ProfileField label="Farm Size" value={profile.farmSize} />
+          {/* <ProfileField label="Farm Size" value={profile.farmSize} /> */}
           <ProfileField label="Preferred Mode" value={profile.preferredInteractionMode} />
           <ProfileField label="Onboarding Status" value={profile.onboardingStatus} />
-          <ProfileField label="Farmer ID" value={profile.farmerId} />
-          <ProfileField label="Farm Location" value={profile.farmLocation ? `${profile.farmLocation.lat}, ${profile.farmLocation.lng}` : '-'} />
+          {/* <ProfileField label="Farmer ID" value={profile.farmerId} /> */}
+          {/* <ProfileField label="Farm Location" value={profile.farmLocation ? `${profile.farmLocation.lat}, ${profile.farmLocation.lng}` : '-'} /> */}
         </Section>
 
         {/* Crops Section */}

@@ -1572,7 +1572,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
         />
       )}
 
-      {__DEV__ && (
+      {/* {__DEV__ && (
         <View style={styles.tourButtonsContainer}>
           <TouchableOpacity
             style={styles.restartTourButton}
@@ -1589,7 +1589,7 @@ const CropIntelligenceScreen = ({ navigation }) => {
             <Text style={styles.resetTourText}>{t('common.reset')}</Text>
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
     </View>
   );
 };

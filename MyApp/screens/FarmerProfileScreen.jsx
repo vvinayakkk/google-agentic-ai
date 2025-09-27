@@ -24,6 +24,7 @@ import { setLanguage } from '../i18n';
 import { Picker } from '@react-native-picker/picker';
 import { NetworkConfig } from '../utils/NetworkConfig';
 import { useTheme } from '../context/ThemeContext';
+import * as Location from 'expo-location';
 // Simulated recording (no Audio APIs used)
 
 const DEFAULT_PROFILE_IMAGE = 'https://placehold.co/100x100/EFEFEF/333?text=F';
@@ -41,39 +42,33 @@ const LANGUAGE_OPTIONS = [
 
 // Profile building steps
 const PROFILE_STEPS = [
-  {
-    id: 'farm_size',
-    title: 'Farm Size',
-    question: 'How big is your farm?',
-    placeholder: 'e.g., 2 acres, 5 hectares',
-    field: 'farmSize'
-  },
+ 
   {
     id: 'farm_location',
     title: 'Farm Location',
     question: 'Where is your farm located?',
-    placeholder: 'e.g., Shirur, Maharashtra',
+    placeholder: 'e.g., Mumbai, Maharashtra',
     field: 'farmLocation'
   },
   {
     id: 'primary_crops',
     title: 'Primary Crops',
     question: 'What are your main crops?',
-    placeholder: 'e.g., Rice, Wheat, Sugarcane',
+    placeholder: 'e.g. Wheat, Sugarcane,Onion,Tomato,Chickpea',
     field: 'primaryCrops'
   },
   {
     id: 'livestock',
     title: 'Livestock',
     question: 'Do you have any livestock?',
-    placeholder: 'e.g., 5 cows, 20 chickens, None',
+    placeholder: 'e.g., cows(Gauri),goat(Moti),buffalo(Shyam),hen(Chikki),chikken(Murgi)',
     field: 'livestockSummary'
   },
   {
     id: 'farming_experience',
     title: 'Experience',
     question: 'How many years of farming experience do you have?',
-    placeholder: 'e.g., 10 years',
+    placeholder: 'e.g., 5 years',
     field: 'farmingExperience'
   }
 ];
@@ -96,6 +91,10 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [buildingComplete, setBuildingComplete] = useState(false);
   const [isPreparingRecording, setIsPreparingRecording] = useState(false);
+
+  // Auto-fill states: when opening the build profile modal, auto-fill first 3 steps
+  const [autoFilling, setAutoFilling] = useState(false);
+  const [autoFillDone, setAutoFillDone] = useState(false);
 
   // Simulated voice recording states
   const [recording, setRecording] = useState(null);
@@ -355,6 +354,120 @@ const FarmerProfileScreen = ({ route, navigation }) => {
   useEffect(() => {
     updateProgress();
   }, [currentStep]);
+
+  // When build profile modal opens, auto-fill first 3 steps (if available) once
+  useEffect(() => {
+    let cancelled = false;
+    const autoFillFirstThree = async () => {
+      if (!buildProfileVisible || autoFillDone) return;
+      if (!PROFILE_STEPS || PROFILE_STEPS.length < 4) return; // need at least 4 steps
+
+      setAutoFilling(true);
+      // Fill steps 0..2 sequentially with visible typing
+      for (let i = 0; i < 3; i++) {
+        if (cancelled) return;
+        setCurrentStep(i);
+
+        const step = PROFILE_STEPS[i];
+        const field = step.field;
+          // For farm_location step try to get live device coordinates and reverse-geocode
+          let raw = (profile && profile[field]) ? profile[field] : (step.placeholder || '');
+          if (field === 'farmLocation') {
+            try {
+              // Request permission and attempt to get current position
+              const { status } = await Location.requestForegroundPermissionsAsync();
+              if (status === 'granted') {
+                const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                // Try reverse geocoding to get a human readable address
+                try {
+                  const rev = await Location.reverseGeocodeAsync({
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                  });
+                  if (Array.isArray(rev) && rev.length > 0) {
+                    const r = rev[0];
+                    // Prefer name/locality/city/village/address fields
+                    const parts = [r.name, r.locality, r.city, r.subregion, r.region, r.postalCode];
+                    const readable = parts.filter(Boolean).join(', ');
+                    raw = readable || `${coords.lat}, ${coords.lng}`;
+                  } else {
+                    raw = `${coords.lat}, ${coords.lng}`;
+                  }
+                } catch (e) {
+                  // reverse geocode failed - fall back to coords
+                  raw = `${coords.lat}, ${coords.lng}`;
+                }
+              } else {
+                // permission denied - fall back to existing profile or placeholder
+                raw = (profile && profile[field]) ? profile[field] : (step.placeholder || '');
+              }
+            } catch (e) {
+              // Any error getting live location - fallback gracefully
+              raw = (profile && profile[field]) ? profile[field] : (step.placeholder || '');
+            }
+          }
+        // If the raw value is an object (e.g., {lat, lng} or address object), format it into a readable string
+        let value = '';
+        try {
+          if (raw && typeof raw === 'object') {
+            // Prefer readable address-like fields first
+            if (raw.address || raw.name || raw.village || raw.city || raw.locality) {
+              value = String(raw.address || raw.name || raw.village || raw.city || raw.locality);
+            } else if (raw.lat !== undefined && raw.lng !== undefined) {
+              // lat/lng object as a fallback
+              value = `${raw.lat}, ${raw.lng}`;
+            } else {
+              // try to join primitive values
+              const vals = Object.values(raw).filter(v => v !== null && v !== undefined && (typeof v === 'string' || typeof v === 'number'));
+              if (vals.length) value = vals.join(', ');
+              else value = JSON.stringify(raw);
+            }
+          } else {
+            value = String(raw || '');
+          }
+
+          // Clean placeholder-like text (remove 'e.g.' prefixes)
+          value = value.replace(/^\s*(e\.g\.?\s*,?\s*)/i, '').trim();
+          value = value.replace(/\b(e\.g\.?\s*,?\s*)/ig, '').trim();
+        } catch (e) {
+          value = String(raw || '');
+        }
+
+        // Simulate typing into the answer field so user can see it filling
+        setCurrentAnswer('');
+        for (let c = 0; c < value.length; c++) {
+          if (cancelled) return;
+          setCurrentAnswer((prev) => prev + value[c]);
+          // slow typing so it's visible
+          // ~80ms per character (adjustable)
+          // For long placeholders limit per-char delay slightly
+          await new Promise((res) => setTimeout(res, 80));
+        }
+
+        // Once typed, persist into profileData
+        setProfileData((d) => ({ ...d, [field]: value }));
+
+        // Hold the filled value briefly so it's readable
+        await new Promise((res) => setTimeout(res, 650));
+      }
+
+      // Move to the 4th question (index 3)
+      if (!cancelled) {
+        setCurrentStep(3);
+        const fourthField = PROFILE_STEPS[3].field;
+        setCurrentAnswer((profile && profile[fourthField]) ? profile[fourthField] : '');
+        setAutoFilling(false);
+        setAutoFillDone(true);
+      }
+    };
+
+    if (buildProfileVisible && !autoFillDone) {
+      autoFillFirstThree();
+    }
+
+    return () => { cancelled = true; };
+  }, [buildProfileVisible]);
 
   // Voice recording functions
   const startRecording = () => {
@@ -793,7 +906,7 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
 
-                {/* Question */}
+                {/* Question (always visible). Input shows live-typing during autofill and is disabled while autofilling */}
                 <View style={styles.questionContainer}>
                   <Text style={styles.questionTitle}>
                     {PROFILE_STEPS[currentStep].title}
@@ -803,21 +916,30 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
 
-                {/* Input Field */}
-                <TextInput
-                  style={styles.answerInput}
-                  value={currentAnswer}
-                  onChangeText={setCurrentAnswer}
-                  placeholder={PROFILE_STEPS[currentStep].placeholder}
-                  placeholderTextColor={theme.colors.textSecondary}
-                  multiline
-                />
+                {/* Input Field - disabled during autofill but shows live-typing */}
+                <View>
+                  <TextInput
+                    style={[styles.answerInput, autoFilling ? { opacity: 0.9 } : null]}
+                    value={currentAnswer}
+                    onChangeText={setCurrentAnswer}
+                    placeholder={PROFILE_STEPS[currentStep].placeholder}
+                    placeholderTextColor={theme.colors.textSecondary}
+                    multiline
+                    editable={!autoFilling}
+                  />
+                  {autoFilling && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -16, marginBottom: 12 }}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={{ color: theme.colors.textSecondary, marginLeft: 8 }}>{t('farmer.autofilling_profile', 'Auto-filling your profile...')}</Text>
+                    </View>
+                  )}
+                </View>
 
                 {/* Voice Recording Button */}
                 <TouchableOpacity 
-                  style={[styles.recordButton, isRecording && styles.recordButtonActive, isPreparingRecording && styles.disabledButton]}
+                  style={[styles.recordButton, isRecording && styles.recordButtonActive, (isPreparingRecording || autoFilling) && styles.disabledButton]}
                   onPress={handleRecording}
-                  disabled={isPreparingRecording}
+                  disabled={isPreparingRecording || autoFilling}
                 >
                   <Animated.View style={[styles.micIcon, { opacity: recordingAnimation }]}>
                     <Ionicons 
@@ -834,13 +956,13 @@ const FarmerProfileScreen = ({ route, navigation }) => {
                 {/* Navigation Buttons */}
                 <View style={styles.modalButtonContainer}>
                   {currentStep > 0 && (
-                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={autoFilling}>
                       <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
                       <Text style={styles.backButtonText}>{t('common.back', 'Back')}</Text>
                     </TouchableOpacity>
                   )}
                   
-                  <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                  <TouchableOpacity style={[styles.nextButton, autoFilling && styles.disabledButton]} onPress={handleNext} disabled={autoFilling}>
                     <Text style={styles.nextButtonText}>
                       {currentStep === PROFILE_STEPS.length - 1 ? 'Complete' : 'Next'}
                     </Text>

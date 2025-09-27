@@ -701,7 +701,7 @@ const CattleScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <ChevronLeft color={theme.colors.text} size={24} />
+          <Feather name="chevron-left" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('cattle.title')}</Text>
@@ -922,7 +922,7 @@ const CattleScreen = ({ navigation }) => {
       )}
 
       {/* Onboarding debug buttons for testing */}
-      {__DEV__ && (
+      {/* {__DEV__ && (
         <View style={styles.tourButtonsContainer}>
           <TouchableOpacity
             style={styles.restartTourButton}
@@ -939,7 +939,7 @@ const CattleScreen = ({ navigation }) => {
             <Text style={styles.resetTourText}>{t('common.reset', 'Reset')}</Text>
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
     </SafeAreaView>
   );
 };
