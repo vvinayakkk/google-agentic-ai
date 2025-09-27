@@ -5,15 +5,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.souldev07.kisansahayak",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to provide local farming services and market information.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to provide local farming services and market information."
@@ -37,12 +41,28 @@
     "plugins": [
       "expo-font",
       [
+        "expo-asset",
+        {
+          "assets": [
+            "./assets"
+          ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true
+          }
+        }
+      ],
+      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to provide local farming services and market information."
         }
       ],
-            [
+      [
         "./plugins/withCustomArchitectures",
         {
           "architectures": [
