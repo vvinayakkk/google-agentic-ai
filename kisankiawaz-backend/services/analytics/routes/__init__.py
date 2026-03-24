@@ -4,8 +4,8 @@ from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_admin, get_current_user
-from shared.db.firebase import get_firestore
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_async_db
+from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus
 
 router = APIRouter()
@@ -14,10 +14,10 @@ router = APIRouter()
 @router.get("/overview", status_code=HttpStatus.OK)
 async def get_overview(date: str = Query(None), admin: dict = Depends(get_current_admin)):
     """Get daily analytics overview."""
-    db = get_firestore()
+    db = get_async_db()
     if not date:
         date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    doc = await db.collection(Firestore.ANALYTICS_SNAPSHOTS).document(date).get()
+    doc = await db.collection(MongoCollections.ANALYTICS_SNAPSHOTS).document(date).get()
     if doc.exists:
         return doc.to_dict()
     return {"date": date, "message": "No snapshot available"}
@@ -26,12 +26,12 @@ async def get_overview(date: str = Query(None), admin: dict = Depends(get_curren
 @router.get("/trends", status_code=HttpStatus.OK)
 async def get_trends(days: int = Query(7, ge=1, le=90), admin: dict = Depends(get_current_admin)):
     """Get analytics trend over multiple days."""
-    db = get_firestore()
+    db = get_async_db()
     now = datetime.now(timezone.utc)
     results = []
     for i in range(days):
         d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        doc = await db.collection(Firestore.ANALYTICS_SNAPSHOTS).document(d).get()
+        doc = await db.collection(MongoCollections.ANALYTICS_SNAPSHOTS).document(d).get()
         if doc.exists:
             results.append(doc.to_dict())
     return {"days": days, "snapshots": results}
@@ -40,10 +40,10 @@ async def get_trends(days: int = Query(7, ge=1, le=90), admin: dict = Depends(ge
 @router.get("/farmers/growth", status_code=HttpStatus.OK)
 async def farmer_growth(days: int = Query(30, ge=1, le=365), admin: dict = Depends(get_current_admin)):
     """Farmer registration growth over time."""
-    db = get_firestore()
+    db = get_async_db()
     now = datetime.now(timezone.utc)
     daily_counts = {}
-    async for doc in db.collection(Firestore.USERS).where("role", "==", "farmer").stream():
+    async for doc in db.collection(MongoCollections.USERS).where("role", "==", "farmer").stream():
         data = doc.to_dict()
         created = data.get("created_at", "")
         if isinstance(created, str) and len(created) >= 10:
@@ -61,10 +61,10 @@ async def farmer_growth(days: int = Query(30, ge=1, le=365), admin: dict = Depen
 @router.get("/agent/usage", status_code=HttpStatus.OK)
 async def agent_usage(days: int = Query(7, ge=1, le=30), admin: dict = Depends(get_current_admin)):
     """Agent query usage over time."""
-    db = get_firestore()
+    db = get_async_db()
     now = datetime.now(timezone.utc)
     daily_counts = {}
-    async for doc in db.collection(Firestore.AGENT_CONVERSATIONS).stream():
+    async for doc in db.collection(MongoCollections.AGENT_CONVERSATIONS).stream():
         data = doc.to_dict()
         last_msg = data.get("last_message_at", "")
         if isinstance(last_msg, str) and len(last_msg) >= 10:
@@ -82,10 +82,10 @@ async def agent_usage(days: int = Query(7, ge=1, le=30), admin: dict = Depends(g
 @router.get("/market/popular-commodities", status_code=HttpStatus.OK)
 async def popular_commodities(limit: int = Query(20, ge=1, le=50), admin: dict = Depends(get_current_admin)):
     """Most queried/available commodities by mandi price count."""
-    db = get_firestore()
+    db = get_async_db()
     from collections import Counter
     counter = Counter()
-    async for doc in db.collection(Firestore.REF_MANDI_PRICES).limit(5000).stream():
+    async for doc in db.collection(MongoCollections.REF_MANDI_PRICES).limit(5000).stream():
         commodity = doc.to_dict().get("commodity", "")
         if commodity:
             counter[commodity] += 1
@@ -95,20 +95,20 @@ async def popular_commodities(limit: int = Query(20, ge=1, le=50), admin: dict =
 @router.get("/farmer/{farmer_id}/summary", status_code=HttpStatus.OK)
 async def farmer_summary(farmer_id: str, user: dict = Depends(get_current_user)):
     """Personal analytics for a farmer (their own usage)."""
-    db = get_firestore()
+    db = get_async_db()
     # Count conversations
     convo_count = 0
-    async for _ in db.collection(Firestore.AGENT_CONVERSATIONS).where("user_id", "==", farmer_id).stream():
+    async for _ in db.collection(MongoCollections.AGENT_CONVERSATIONS).where("user_id", "==", farmer_id).stream():
         convo_count += 1
 
     # Count crops
     crop_count = 0
-    async for _ in db.collection(Firestore.CROPS).where("farmer_id", "==", farmer_id).stream():
+    async for _ in db.collection(MongoCollections.CROPS).where("farmer_id", "==", farmer_id).stream():
         crop_count += 1
 
     # Count bookings
     booking_count = 0
-    async for _ in db.collection(Firestore.EQUIPMENT_BOOKINGS).where("renter_id", "==", farmer_id).stream():
+    async for _ in db.collection(MongoCollections.EQUIPMENT_BOOKINGS).where("renter_id", "==", farmer_id).stream():
         booking_count += 1
 
     return {

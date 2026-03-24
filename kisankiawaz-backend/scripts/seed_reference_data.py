@@ -1,4 +1,4 @@
-"""Seed ALL reference data from CSV files into Firestore.
+"""Seed ALL reference data from CSV files into MongoCollections.
 
 One-time script to populate all ref_* collections from existing CSV files.
 Idempotent (uses merge=True). Shows progress and summary per collection.
@@ -16,12 +16,12 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.db.firebase import get_db, init_firebase
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_db, init_mongodb
+from shared.core.constants import MongoCollections
 
 
 def slugify(text: str) -> str:
-    """Convert text to a slug suitable for Firestore doc IDs."""
+    """Convert text to a slug suitable for MongoCollections doc IDs."""
     if not text:
         return ""
     return re.sub(r"[^a-z0-9]+", "_", str(text).lower().strip()).strip("_")
@@ -58,7 +58,7 @@ def safe_int(val, default=0):
 
 
 def batch_write(db, collection_name: str, docs: list[tuple[str, dict]], label: str = ""):
-    """Write docs to Firestore in batches of 500."""
+    """Write docs to MongoCollections in batches of 500."""
     total = len(docs)
     written = 0
     batch = db.batch()
@@ -163,7 +163,7 @@ def seed_mandi_prices(db, reports_dir: str) -> int:
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
 
-    return batch_write(db, Firestore.REF_MANDI_PRICES, docs, "mandi_prices")
+    return batch_write(db, MongoCollections.REF_MANDI_PRICES, docs, "mandi_prices")
 
 
 def seed_mandi_directory(db, reports_dir: str) -> int:
@@ -194,7 +194,7 @@ def seed_mandi_directory(db, reports_dir: str) -> int:
                 "_ingested_at": now,
             }))
 
-    return batch_write(db, Firestore.REF_MANDI_DIRECTORY, docs, "mandi_directory")
+    return batch_write(db, MongoCollections.REF_MANDI_DIRECTORY, docs, "mandi_directory")
 
 
 def seed_farmer_schemes(db, reports_dir: str) -> int:
@@ -242,7 +242,7 @@ def seed_farmer_schemes(db, reports_dir: str) -> int:
             "_ingested_at": now,
         }))
 
-    return batch_write(db, Firestore.REF_FARMER_SCHEMES, docs, "schemes")
+    return batch_write(db, MongoCollections.REF_FARMER_SCHEMES, docs, "schemes")
 
 
 def seed_soil_health(db, reports_dir: str) -> int:
@@ -276,7 +276,7 @@ def seed_soil_health(db, reports_dir: str) -> int:
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
 
-    return batch_write(db, Firestore.REF_SOIL_HEALTH, docs, "soil_health")
+    return batch_write(db, MongoCollections.REF_SOIL_HEALTH, docs, "soil_health")
 
 
 def seed_equipment_providers(db, reports_dir: str) -> int:
@@ -311,7 +311,7 @@ def seed_equipment_providers(db, reports_dir: str) -> int:
             "_ingested_at": now,
         }))
 
-    return batch_write(db, Firestore.REF_EQUIPMENT_PROVIDERS, docs, "equipment_providers")
+    return batch_write(db, MongoCollections.REF_EQUIPMENT_PROVIDERS, docs, "equipment_providers")
 
 
 def seed_cold_storage(db, reports_dir: str) -> int:
@@ -331,7 +331,7 @@ def seed_cold_storage(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_COLD_STORAGE, docs, "cold_storage")
+    return batch_write(db, MongoCollections.REF_COLD_STORAGE, docs, "cold_storage")
 
 
 def seed_reservoir(db, reports_dir: str) -> int:
@@ -351,7 +351,7 @@ def seed_reservoir(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_RESERVOIR_DATA, docs, "reservoir")
+    return batch_write(db, MongoCollections.REF_RESERVOIR_DATA, docs, "reservoir")
 
 
 def seed_crop_varieties(db, reports_dir: str) -> int:
@@ -373,7 +373,7 @@ def seed_crop_varieties(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_CROP_VARIETIES, docs, "crop_varieties")
+    return batch_write(db, MongoCollections.REF_CROP_VARIETIES, docs, "crop_varieties")
 
 
 def seed_pmfby(db, reports_dir: str) -> int:
@@ -396,7 +396,7 @@ def seed_pmfby(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_PMFBY_DATA, docs, "pmfby")
+    return batch_write(db, MongoCollections.REF_PMFBY_DATA, docs, "pmfby")
 
 
 def seed_msp(db, reports_dir: str) -> int:
@@ -416,7 +416,7 @@ def seed_msp(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_MSP_PRICES, docs, "msp")
+    return batch_write(db, MongoCollections.REF_MSP_PRICES, docs, "msp")
 
 
 def seed_fertilizer(db, reports_dir: str) -> int:
@@ -430,7 +430,7 @@ def seed_fertilizer(db, reports_dir: str) -> int:
             row_data["_ingested_at"] = now
             row_data["_source_resource_id"] = row.get("_source_resource_id", "")
             docs.append((doc_id, row_data))
-    return batch_write(db, Firestore.REF_FERTILIZER_DATA, docs, "fertilizer")
+    return batch_write(db, MongoCollections.REF_FERTILIZER_DATA, docs, "fertilizer")
 
 
 def seed_pesticide(db, reports_dir: str) -> int:
@@ -450,7 +450,7 @@ def seed_pesticide(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_PESTICIDE_ADVISORY, docs, "pesticide")
+    return batch_write(db, MongoCollections.REF_PESTICIDE_ADVISORY, docs, "pesticide")
 
 
 def seed_fasal(db, reports_dir: str) -> int:
@@ -473,7 +473,7 @@ def seed_fasal(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_FASAL_DATA, docs, "fasal")
+    return batch_write(db, MongoCollections.REF_FASAL_DATA, docs, "fasal")
 
 
 def seed_pin_master(db, reports_dir: str) -> int:
@@ -500,13 +500,13 @@ def seed_pin_master(db, reports_dir: str) -> int:
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
             }))
-    return batch_write(db, Firestore.REF_PIN_MASTER, docs, "pin_master")
+    return batch_write(db, MongoCollections.REF_PIN_MASTER, docs, "pin_master")
 
 
 def seed_app_config(db) -> int:
     """Seed default app_config document."""
     now = datetime.now(timezone.utc).isoformat()
-    db.collection(Firestore.APP_CONFIG).document("global").set({
+    db.collection(MongoCollections.APP_CONFIG).document("global").set({
         "maintenance_mode": False,
         "agent_enabled": True,
         "voice_enabled": True,
@@ -530,7 +530,7 @@ def main():
     print("KISAN KI AWAZ — REFERENCE DATA SEEDER")
     print("=" * 60)
 
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     reports_dir = os.path.join(os.path.dirname(__file__), "reports")
@@ -589,7 +589,7 @@ def main():
     # Log ingestion meta
     now = datetime.now(timezone.utc).isoformat()
     for collection, count in summary.items():
-        db.collection(Firestore.REF_DATA_INGESTION_META).document(f"seed_reference_data_{collection}").set({
+        db.collection(MongoCollections.REF_DATA_INGESTION_META).document(f"seed_reference_data_{collection}").set({
             "script": "seed_reference_data",
             "dataset": collection,
             "last_run_at": now,

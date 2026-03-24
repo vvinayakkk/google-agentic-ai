@@ -1,10 +1,10 @@
-"""Agent conversations routes — conversation logging to Firestore."""
+"""Agent conversations routes — conversation logging to MongoCollections."""
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_user
-from shared.db.firebase import get_firestore
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_async_db
+from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
@@ -17,8 +17,8 @@ async def list_conversations(
     user: dict = Depends(get_current_user),
 ):
     """List farmer's agent conversations."""
-    db = get_firestore()
-    query = db.collection(Firestore.AGENT_CONVERSATIONS).where("user_id", "==", user["id"])
+    db = get_async_db()
+    query = db.collection(MongoCollections.AGENT_CONVERSATIONS).where("user_id", "==", user["id"])
     docs = []
     async for doc in query.stream():
         data = doc.to_dict()
@@ -36,8 +36,8 @@ async def list_conversations(
 @router.get("/{session_id}", status_code=HttpStatus.OK)
 async def get_conversation(session_id: str, user: dict = Depends(get_current_user)):
     """Get full conversation history."""
-    db = get_firestore()
-    doc = await db.collection(Firestore.AGENT_CONVERSATIONS).document(session_id).get()
+    db = get_async_db()
+    doc = await db.collection(MongoCollections.AGENT_CONVERSATIONS).document(session_id).get()
     if not doc.exists:
         return {"session_id": session_id, "messages": []}
     data = doc.to_dict()
@@ -48,6 +48,6 @@ async def get_conversation(session_id: str, user: dict = Depends(get_current_use
 @router.delete("/{session_id}", status_code=HttpStatus.OK)
 async def delete_conversation(session_id: str, user: dict = Depends(get_current_user)):
     """Delete a conversation."""
-    db = get_firestore()
-    await db.collection(Firestore.AGENT_CONVERSATIONS).document(session_id).delete()
+    db = get_async_db()
+    await db.collection(MongoCollections.AGENT_CONVERSATIONS).document(session_id).delete()
     return {"detail": "Conversation deleted"}

@@ -1,4 +1,4 @@
-"""HTTP status constants and application error-code enum."""
+﻿"""HTTP status constants and application error-code enum."""
 
 from enum import Enum
 
@@ -90,5 +90,6 @@ class ErrorCode(str, Enum):
     # Misc
     PERMISSION_DENIED = "PERMISSION_DENIED"
     FIREBASE_ERROR = "FIREBASE_ERROR"
-    FIRESTORE_WRITE_FAILED = "FIRESTORE_WRITE_FAILED"
+    MONGO_WRITE_FAILED = "MONGO_WRITE_FAILED"
     QDRANT_ERROR = "QDRANT_ERROR"
+

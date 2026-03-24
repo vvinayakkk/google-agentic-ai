@@ -1,11 +1,11 @@
-"""Notification business logic."""
+﻿"""Notification business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, ErrorCode
 
 
@@ -19,7 +19,7 @@ class NotificationService:
         db, user_id: str, is_read: bool | None, page: int, per_page: int
     ) -> dict:
         """Return paginated notifications for a user."""
-        query = db.collection(Firestore.NOTIFICATIONS)
+        query = db.collection(MongoCollections.NOTIFICATIONS)
         query = query.where(filter=FieldFilter("user_id", "==", user_id))
 
         if is_read is not None:
@@ -53,7 +53,7 @@ class NotificationService:
     async def count_unread(db, user_id: str) -> dict:
         """Return count of unread notifications for a user."""
         query = (
-            db.collection(Firestore.NOTIFICATIONS)
+            db.collection(MongoCollections.NOTIFICATIONS)
             .where(filter=FieldFilter("user_id", "==", user_id))
             .where(filter=FieldFilter("is_read", "==", False))
         )
@@ -65,7 +65,7 @@ class NotificationService:
     @staticmethod
     async def get_notification(db, notification_id: str, user_id: str) -> dict:
         """Return a single notification (ownership enforced)."""
-        doc = await db.collection(Firestore.NOTIFICATIONS).document(notification_id).get()
+        doc = await db.collection(MongoCollections.NOTIFICATIONS).document(notification_id).get()
         if not doc.exists:
             raise not_found("Notification not found")
         data = doc.to_dict()
@@ -79,7 +79,7 @@ class NotificationService:
     @staticmethod
     async def mark_read(db, notification_id: str, user_id: str) -> dict:
         """Mark a notification as read (ownership enforced)."""
-        ref = db.collection(Firestore.NOTIFICATIONS).document(notification_id)
+        ref = db.collection(MongoCollections.NOTIFICATIONS).document(notification_id)
         doc = await ref.get()
         if not doc.exists:
             raise not_found("Notification not found")
@@ -98,7 +98,7 @@ class NotificationService:
     async def mark_all_read(db, user_id: str) -> dict:
         """Mark all notifications as read for a user."""
         query = (
-            db.collection(Firestore.NOTIFICATIONS)
+            db.collection(MongoCollections.NOTIFICATIONS)
             .where(filter=FieldFilter("user_id", "==", user_id))
             .where(filter=FieldFilter("is_read", "==", False))
         )
@@ -106,7 +106,7 @@ class NotificationService:
         now = datetime.now(timezone.utc).isoformat()
         count = 0
         for doc in docs:
-            await db.collection(Firestore.NOTIFICATIONS).document(doc.id).update(
+            await db.collection(MongoCollections.NOTIFICATIONS).document(doc.id).update(
                 {"is_read": True, "read_at": now}
             )
             count += 1
@@ -117,7 +117,7 @@ class NotificationService:
     @staticmethod
     async def delete_notification(db, notification_id: str, user_id: str) -> None:
         """Delete a notification (ownership enforced)."""
-        ref = db.collection(Firestore.NOTIFICATIONS).document(notification_id)
+        ref = db.collection(MongoCollections.NOTIFICATIONS).document(notification_id)
         doc = await ref.get()
         if not doc.exists:
             raise not_found("Notification not found")
@@ -148,7 +148,7 @@ class NotificationService:
             "is_read": False,
             "created_at": now,
         }
-        await db.collection(Firestore.NOTIFICATIONS).document(notification_id).set(doc)
+        await db.collection(MongoCollections.NOTIFICATIONS).document(notification_id).set(doc)
         doc["id"] = notification_id
         return doc
 
@@ -159,7 +159,7 @@ class NotificationService:
         db, title: str, message: str, notification_type: str = "broadcast", role: str | None = None
     ) -> dict:
         """Broadcast a notification to all users or by role."""
-        query = db.collection(Firestore.USERS)
+        query = db.collection(MongoCollections.USERS)
         if role:
             query = query.where(filter=FieldFilter("role", "==", role))
 
@@ -177,7 +177,8 @@ class NotificationService:
                 "is_read": False,
                 "created_at": now,
             }
-            await db.collection(Firestore.NOTIFICATIONS).document(notification_id).set(doc)
+            await db.collection(MongoCollections.NOTIFICATIONS).document(notification_id).set(doc)
             count += 1
 
         return {"broadcast_count": count, "title": title}
+

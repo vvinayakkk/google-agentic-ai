@@ -1,10 +1,10 @@
-import uuid
+﻿import uuid
 from datetime import datetime, timezone
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-from shared.db.firebase import get_firestore
-from shared.core.constants import FirestoreCollections
+from shared.db.mongodb import get_async_db
+from shared.core.constants import MongoCollections
 from agents.coordinator import build_coordinator
 from loguru import logger
 
@@ -44,19 +44,19 @@ class ChatService:
                         response_text += part.text
                 agent_used = event.author or "coordinator"
 
-        # Store in Firestore
-        db = get_firestore()
-        await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).set({
+        # Store in MongoCollections
+        db = get_async_db()
+        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).set({
             "user_id": user_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }, merge=True)
 
-        await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
+        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
             "role": "user",
             "content": message,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
-        await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
+        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
             "role": "assistant",
             "content": response_text,
             "agent": agent_used,
@@ -71,9 +71,9 @@ class ChatService:
         }
 
     async def list_sessions(self, user_id: str) -> list:
-        db = get_firestore()
-        from google.cloud.firestore_v1.base_query import FieldFilter
-        docs = await db.collection(FirestoreCollections.AGENT_SESSIONS).where(
+        db = get_async_db()
+        from shared.db.mongodb import FieldFilter
+        docs = await db.collection(MongoCollections.AGENT_SESSIONS).where(
             filter=FieldFilter("user_id", "==", user_id)
         ).get()
         items = [{"id": d.id, **d.to_dict()} for d in docs]
@@ -82,24 +82,25 @@ class ChatService:
         return items
 
     async def get_session_history(self, session_id: str, user_id: str) -> dict:
-        db = get_firestore()
-        session_doc = await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).get()
+        db = get_async_db()
+        session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
         if not session_doc.exists or session_doc.to_dict().get("user_id") != user_id:
             from shared.errors import not_found
             raise not_found("Session")
-        messages = await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).collection("messages").order_by("timestamp").get()
+        messages = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").order_by("timestamp").get()
         return {
             "session_id": session_id,
             "messages": [m.to_dict() for m in messages],
         }
 
     async def delete_session(self, session_id: str, user_id: str):
-        db = get_firestore()
-        session_doc = await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).get()
+        db = get_async_db()
+        session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
         if not session_doc.exists or session_doc.to_dict().get("user_id") != user_id:
             from shared.errors import not_found
             raise not_found("Session")
-        messages = await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).collection("messages").get()
+        messages = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").get()
         for msg in messages:
             await msg.reference.delete()
-        await db.collection(FirestoreCollections.AGENT_SESSIONS).document(session_id).delete()
+        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).delete()
+

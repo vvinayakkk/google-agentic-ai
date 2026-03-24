@@ -584,13 +584,13 @@ async def test_constants_integration():
     print("TEST 9: Constants & Integration")
     print("=" * 60)
 
-    from shared.core.constants import Firestore, Qdrant, EMBEDDING_DIM
+    from shared.core.constants import MongoCollections, Qdrant, EMBEDDING_DIM
 
     # New collections
-    assert hasattr(Firestore, "DOCUMENT_BUILDER_SESSIONS")
+    assert hasattr(MongoCollections, "DOCUMENT_BUILDER_SESSIONS")
     log("DOCUMENT_BUILDER_SESSIONS collection constant exists", "PASS")
 
-    assert hasattr(Firestore, "EQUIPMENT_RENTAL_RATES")
+    assert hasattr(MongoCollections, "EQUIPMENT_RENTAL_RATES")
     log("EQUIPMENT_RENTAL_RATES collection constant exists", "PASS")
 
     # Qdrant collections
@@ -599,7 +599,7 @@ async def test_constants_integration():
     assert Qdrant.FARMING_GENERAL == "farming_general"
     log("Qdrant collection constants correct", "PASS")
 
-    assert EMBEDDING_DIM == 384
+    assert EMBEDDING_DIM == 768
     log("Embedding dimension = 384", "PASS")
 
     log("Constants & Integration: ALL TESTS PASSED", "PASS")

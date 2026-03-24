@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, conflict, ErrorCode
 
 
@@ -16,7 +16,7 @@ class FarmerService:
     async def get_profile(db, user_id: str) -> dict:
         """Return the farmer profile linked to *user_id*."""
         query = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .where("user_id", "==", user_id)
             .limit(1)
         )
@@ -33,7 +33,7 @@ class FarmerService:
     async def create_profile(db, user_id: str, data: dict) -> dict:
         """Create a new farmer profile (one per user)."""
         existing = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .where("user_id", "==", user_id)
             .limit(1)
         )
@@ -45,7 +45,7 @@ class FarmerService:
         now = datetime.now(timezone.utc).isoformat()
 
         doc = {**data, "user_id": user_id, "created_at": now, "updated_at": now}
-        await db.collection(Firestore.FARMER_PROFILES).document(profile_id).set(doc)
+        await db.collection(MongoCollections.FARMER_PROFILES).document(profile_id).set(doc)
 
         doc["id"] = profile_id
         return doc
@@ -56,7 +56,7 @@ class FarmerService:
     async def update_profile(db, user_id: str, data: dict) -> dict:
         """Update an existing farmer profile."""
         query = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .where("user_id", "==", user_id)
             .limit(1)
         )
@@ -65,9 +65,9 @@ class FarmerService:
             raise not_found("Farmer profile not found")
 
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await db.collection(Firestore.FARMER_PROFILES).document(docs[0].id).update(data)
+        await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).update(data)
 
-        updated = await db.collection(Firestore.FARMER_PROFILES).document(docs[0].id).get()
+        updated = await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).get()
         result = updated.to_dict()
         result["id"] = updated.id
         return result
@@ -78,14 +78,14 @@ class FarmerService:
     async def delete_profile(db, user_id: str) -> None:
         """Delete the farmer profile for *user_id*."""
         query = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .where("user_id", "==", user_id)
             .limit(1)
         )
         docs = [d async for d in query.stream()]
         if not docs:
             raise not_found("Farmer profile not found")
-        await db.collection(Firestore.FARMER_PROFILES).document(docs[0].id).delete()
+        await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).delete()
 
     # ── Dashboard ────────────────────────────────────────────────
 
@@ -95,7 +95,7 @@ class FarmerService:
         # Profile
         profile = None
         pq = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .where("user_id", "==", user_id)
             .limit(1)
         )
@@ -106,7 +106,7 @@ class FarmerService:
 
         # Crops
         crops: list[dict] = []
-        cq = db.collection(Firestore.CROPS).where("farmer_id", "==", user_id)
+        cq = db.collection(MongoCollections.CROPS).where("farmer_id", "==", user_id)
         async for doc in cq.stream():
             c = doc.to_dict()
             c["id"] = doc.id
@@ -114,7 +114,7 @@ class FarmerService:
 
         # Livestock
         livestock: list[dict] = []
-        lq = db.collection(Firestore.LIVESTOCK).where("farmer_id", "==", user_id)
+        lq = db.collection(MongoCollections.LIVESTOCK).where("farmer_id", "==", user_id)
         async for doc in lq.stream():
             ls = doc.to_dict()
             ls["id"] = doc.id
@@ -122,7 +122,7 @@ class FarmerService:
 
         # Unread notifications
         nq = (
-            db.collection(Firestore.NOTIFICATIONS)
+            db.collection(MongoCollections.NOTIFICATIONS)
             .where("user_id", "==", user_id)
             .where("is_read", "==", False)
         )
@@ -142,7 +142,7 @@ class FarmerService:
         """Return a paginated list of farmer profiles."""
         offset = (page - 1) * per_page
         query = (
-            db.collection(Firestore.FARMER_PROFILES)
+            db.collection(MongoCollections.FARMER_PROFILES)
             .order_by("created_at")
             .offset(offset)
             .limit(per_page)
@@ -160,7 +160,7 @@ class FarmerService:
     @staticmethod
     async def get_farmer_by_id(db, farmer_id: str) -> dict:
         """Get a single farmer profile document by ID."""
-        doc = await db.collection(Firestore.FARMER_PROFILES).document(farmer_id).get()
+        doc = await db.collection(MongoCollections.FARMER_PROFILES).document(farmer_id).get()
         if not doc.exists:
             raise not_found("Farmer profile not found")
         result = doc.to_dict()

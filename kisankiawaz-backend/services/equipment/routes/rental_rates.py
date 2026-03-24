@@ -1,4 +1,4 @@
-"""
+﻿"""
 Equipment rental rate routes.
 Provides comprehensive rental rate data for agricultural equipment across India.
 """
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from shared.auth.deps import get_current_user, get_current_admin
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.equipment_rental_data import (
@@ -123,10 +123,10 @@ async def get_equipment_rate(
 async def seed_equipment_rental_data(
     user: dict = Depends(get_current_user),
 ):
-    """Seed all equipment rental data into Firestore."""
-    db = get_firestore()
+    """Seed all equipment rental data into MongoCollections."""
+    db = get_async_db()
     sync_service = EquipmentRentalSyncService()
-    result = await sync_service.seed_to_firestore(db)
+    result = await sync_service.seed_to_mongo(db)
     return result
 
 
@@ -138,3 +138,4 @@ async def embed_equipment_data(
     sync_service = EquipmentRentalSyncService()
     result = await sync_service.embed_to_qdrant()
     return result
+

@@ -1,11 +1,11 @@
-"""Rental business logic."""
+﻿"""Rental business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, unauthorized, ErrorCode
 
 
@@ -18,13 +18,13 @@ class RentalService:
     async def list_rentals(db, user_id: str) -> dict:
         """Return rentals where the user is either the owner or renter."""
         # Rentals as renter
-        renter_query = db.collection(Firestore.EQUIPMENT_BOOKINGS).where(
+        renter_query = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).where(
             filter=FieldFilter("renter_id", "==", user_id)
         )
         renter_docs = [d async for d in renter_query.stream()]
 
         # Rentals as owner
-        owner_query = db.collection(Firestore.EQUIPMENT_BOOKINGS).where(
+        owner_query = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).where(
             filter=FieldFilter("owner_id", "==", user_id)
         )
         owner_docs = [d async for d in owner_query.stream()]
@@ -51,7 +51,7 @@ class RentalService:
             raise bad_request("Missing required field: equipment_id")
 
         # Verify equipment exists
-        equip_doc = await db.collection(Firestore.EQUIPMENT).document(equipment_id).get()
+        equip_doc = await db.collection(MongoCollections.EQUIPMENT).document(equipment_id).get()
         if not equip_doc.exists:
             raise not_found("Equipment not found")
 
@@ -76,7 +76,7 @@ class RentalService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.EQUIPMENT_BOOKINGS).document(rental_id).set(doc)
+        await db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id).set(doc)
 
         doc["id"] = rental_id
         return doc
@@ -86,7 +86,7 @@ class RentalService:
     @staticmethod
     async def get_rental(db, rental_id: str, user_id: str) -> dict:
         """Return a single rental. User must be owner or renter."""
-        doc = await db.collection(Firestore.EQUIPMENT_BOOKINGS).document(rental_id).get()
+        doc = await db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id).get()
         if not doc.exists:
             raise not_found("Rental not found")
 
@@ -102,7 +102,7 @@ class RentalService:
     @staticmethod
     async def _get_rental_as_owner(db, rental_id: str, owner_id: str) -> tuple:
         """Fetch rental doc and verify the caller is the equipment owner."""
-        ref = db.collection(Firestore.EQUIPMENT_BOOKINGS).document(rental_id)
+        ref = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id)
         doc = await ref.get()
         if not doc.exists:
             raise not_found("Rental not found")
@@ -177,7 +177,7 @@ class RentalService:
     @staticmethod
     async def cancel_rental(db, rental_id: str, renter_id: str) -> dict:
         """Renter cancels a pending or approved rental."""
-        ref = db.collection(Firestore.EQUIPMENT_BOOKINGS).document(rental_id)
+        ref = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id)
         doc = await ref.get()
         if not doc.exists:
             raise not_found("Rental not found")
@@ -199,3 +199,4 @@ class RentalService:
         result = updated.to_dict()
         result["id"] = updated.id
         return result
+

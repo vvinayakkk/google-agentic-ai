@@ -21,8 +21,8 @@ if "/app" not in sys.path:
     sys.path.insert(0, "/app")
 
 from shared.auth.security import hash_password  # noqa: E402
-from shared.core.constants import Firestore  # noqa: E402
-from shared.db.firebase import get_db, init_firebase  # noqa: E402
+from shared.core.constants import MongoCollections  # noqa: E402
+from shared.db.mongodb import get_db, init_mongodb  # noqa: E402
 
 SEED_PASSWORD = "Farmer@123"
 
@@ -32,7 +32,7 @@ def now_iso() -> str:
 
 
 def seed_farmers() -> dict[str, int]:
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     states = [
@@ -109,7 +109,7 @@ def seed_farmers() -> dict[str, int]:
             "updated_at": ts,
             "is_seed_data": True,
         }
-        db.collection(Firestore.USERS).document(farmer["user_id"]).set(user_doc)
+        db.collection(MongoCollections.USERS).document(farmer["user_id"]).set(user_doc)
         created_users += 1
 
         profile_doc_id = f"profile_{farmer['user_id']}"
@@ -130,7 +130,7 @@ def seed_farmers() -> dict[str, int]:
             "updated_at": ts,
             "is_seed_data": True,
         }
-        db.collection(Firestore.FARMER_PROFILES).document(profile_doc_id).set(profile_doc)
+        db.collection(MongoCollections.FARMER_PROFILES).document(profile_doc_id).set(profile_doc)
         created_profiles += 1
 
         crop_doc_id = f"crop_{farmer['user_id']}"
@@ -146,7 +146,7 @@ def seed_farmers() -> dict[str, int]:
             "updated_at": ts,
             "is_seed_data": True,
         }
-        db.collection(Firestore.CROPS).document(crop_doc_id).set(crop_doc)
+        db.collection(MongoCollections.CROPS).document(crop_doc_id).set(crop_doc)
         created_crops += 1
 
         l_type, l_breed = livestock_types[i % len(livestock_types)]
@@ -161,7 +161,7 @@ def seed_farmers() -> dict[str, int]:
             "updated_at": ts,
             "is_seed_data": True,
         }
-        db.collection(Firestore.LIVESTOCK).document(livestock_doc_id).set(livestock_doc)
+        db.collection(MongoCollections.LIVESTOCK).document(livestock_doc_id).set(livestock_doc)
         created_livestock += 1
 
         equipment_doc_id = f"equipment_{farmer['user_id']}"
@@ -178,7 +178,7 @@ def seed_farmers() -> dict[str, int]:
             "updated_at": ts,
             "is_seed_data": True,
         }
-        db.collection(Firestore.EQUIPMENT).document(equipment_doc_id).set(equipment_doc)
+        db.collection(MongoCollections.EQUIPMENT).document(equipment_doc_id).set(equipment_doc)
         created_equipment += 1
 
         credentials_rows.append(
@@ -198,7 +198,7 @@ def seed_farmers() -> dict[str, int]:
         "updated_at": now_iso(),
         "is_seed_data": True,
     }
-    db.collection(Firestore.EQUIPMENT_BOOKINGS).document("booking_seed_01").set(booking_doc)
+    db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document("booking_seed_01").set(booking_doc)
 
     notify_doc = {
         "user_id": "seed_farmer_01",
@@ -209,7 +209,7 @@ def seed_farmers() -> dict[str, int]:
         "created_at": now_iso(),
         "is_seed_data": True,
     }
-    db.collection(Firestore.NOTIFICATIONS).document("notif_seed_01").set(notify_doc)
+    db.collection(MongoCollections.NOTIFICATIONS).document("notif_seed_01").set(notify_doc)
 
     audit_dir = ROOT_DIR / "scripts" / "reports" / "data_assets" / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)

@@ -1,11 +1,11 @@
-"""Government scheme business logic."""
+﻿"""Government scheme business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, ErrorCode
 
 
@@ -17,7 +17,7 @@ class SchemeService:
     @staticmethod
     async def list_schemes(db, filters: dict, page: int, per_page: int) -> dict:
         """Return paginated government schemes, optionally filtered."""
-        query = db.collection(Firestore.GOVERNMENT_SCHEMES)
+        query = db.collection(MongoCollections.GOVERNMENT_SCHEMES)
 
         if filters.get("state"):
             query = query.where(filter=FieldFilter("state", "==", filters["state"]))
@@ -35,7 +35,7 @@ class SchemeService:
             item["id"] = doc.id
             items.append(item)
 
-        # Fallback to built-in scheme dataset when Firestore has not been seeded yet.
+        # Fallback to built-in scheme dataset when MongoCollections has not been seeded yet.
         if not items:
             from services.government_schemes_data import ALL_SCHEMES
 
@@ -73,7 +73,7 @@ class SchemeService:
     @staticmethod
     async def get_scheme(db, scheme_id: str) -> dict:
         """Return a single government scheme."""
-        doc = await db.collection(Firestore.GOVERNMENT_SCHEMES).document(scheme_id).get()
+        doc = await db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(scheme_id).get()
         if not doc.exists:
             raise not_found("Government scheme not found")
         result = doc.to_dict()
@@ -99,7 +99,7 @@ class SchemeService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.GOVERNMENT_SCHEMES).document(scheme_id).set(doc)
+        await db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(scheme_id).set(doc)
 
         doc["id"] = scheme_id
         return doc
@@ -109,7 +109,7 @@ class SchemeService:
     @staticmethod
     async def update_scheme(db, scheme_id: str, data: dict) -> dict:
         """Update an existing government scheme."""
-        ref = db.collection(Firestore.GOVERNMENT_SCHEMES).document(scheme_id)
+        ref = db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(scheme_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Government scheme not found")
@@ -127,7 +127,7 @@ class SchemeService:
     @staticmethod
     async def delete_scheme(db, scheme_id: str) -> None:
         """Delete a government scheme."""
-        ref = db.collection(Firestore.GOVERNMENT_SCHEMES).document(scheme_id)
+        ref = db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(scheme_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Government scheme not found")
@@ -144,11 +144,11 @@ class SchemeService:
         ``eligibility_match`` boolean.
         """
         # 1. Lookup farmer profile
-        profile_doc = await db.collection(Firestore.FARMER_PROFILES).document(farmer_id).get()
+        profile_doc = await db.collection(MongoCollections.FARMER_PROFILES).document(farmer_id).get()
         if not profile_doc.exists:
             # Try looking up by user_id field
             query = (
-                db.collection(Firestore.FARMER_PROFILES)
+                db.collection(MongoCollections.FARMER_PROFILES)
                 .where(filter=FieldFilter("user_id", "==", farmer_id))
                 .limit(1)
             )
@@ -164,7 +164,7 @@ class SchemeService:
         farmer_state = farmer.get("state", "")
 
         # 2. Fetch active schemes (optionally filter by farmer state)
-        schemes_query = db.collection(Firestore.GOVERNMENT_SCHEMES).where(
+        schemes_query = db.collection(MongoCollections.GOVERNMENT_SCHEMES).where(
             filter=FieldFilter("is_active", "==", True)
         )
         all_schemes = [d async for d in schemes_query.stream()]
@@ -198,3 +198,4 @@ class SchemeService:
             "eligible_count": sum(1 for r in results if r["eligibility_match"]),
             "total_active_schemes": len(results),
         }
+

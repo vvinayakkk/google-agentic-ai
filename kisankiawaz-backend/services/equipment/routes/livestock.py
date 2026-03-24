@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from shared.auth.deps import get_current_farmer
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.livestock_service import LivestockService
@@ -16,7 +16,7 @@ async def list_livestock(
     user: dict = Depends(get_current_farmer),
 ):
     """List the authenticated farmer's livestock."""
-    db = get_firestore()
+    db = get_async_db()
     return await LivestockService.list_livestock(db=db, farmer_id=user["id"])
 
 
@@ -26,7 +26,7 @@ async def add_livestock(
     user: dict = Depends(get_current_farmer),
 ):
     """Add livestock."""
-    db = get_firestore()
+    db = get_async_db()
     return await LivestockService.add_livestock(db=db, farmer_id=user["id"], data=body)
 
 
@@ -36,7 +36,7 @@ async def get_livestock(
     user: dict = Depends(get_current_farmer),
 ):
     """Get a single livestock record (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     return await LivestockService.get_livestock(db=db, livestock_id=livestock_id, farmer_id=user["id"])
 
 
@@ -47,7 +47,7 @@ async def update_livestock(
     user: dict = Depends(get_current_farmer),
 ):
     """Update livestock (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     return await LivestockService.update_livestock(
         db=db, livestock_id=livestock_id, farmer_id=user["id"], data=body,
     )
@@ -59,5 +59,5 @@ async def delete_livestock(
     user: dict = Depends(get_current_farmer),
 ):
     """Delete livestock (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     await LivestockService.delete_livestock(db=db, livestock_id=livestock_id, farmer_id=user["id"])

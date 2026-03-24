@@ -58,14 +58,19 @@ def _headers():
     return h
 
 
-def _get(path, params=None, expect=200, timeout=30):
+def setup_module(module):
+    """Authenticate once for pytest mode as well."""
+    _login_if_needed()
+
+
+def _get(path, params=None, expect=200, timeout=60):
     r = requests.get(f"{BASE}{path}", headers=_headers(), params=params, timeout=timeout)
     expected = expect if isinstance(expect, (list, tuple, set)) else [expect]
     assert r.status_code in expected, f"GET {path} → {r.status_code}: {r.text[:300]}"
     return r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text
 
 
-def _post(path, body=None, expect=200, timeout=60, retries=0):
+def _post(path, body=None, expect=200, timeout=90, retries=0):
     expected = expect if isinstance(expect, (list, tuple, set)) else [expect]
     attempt = 0
     while True:

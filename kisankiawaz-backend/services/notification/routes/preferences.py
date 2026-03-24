@@ -3,8 +3,8 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from shared.auth.deps import get_current_user
-from shared.db.firebase import get_firestore
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_async_db
+from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus
 from shared.schemas.notification import NotificationPreferencesUpdate
 
@@ -14,8 +14,8 @@ router = APIRouter(prefix="/preferences", tags=["Notification Preferences"])
 @router.get("/", status_code=HttpStatus.OK)
 async def get_preferences(user: dict = Depends(get_current_user)):
     """Get notification preferences for the current user."""
-    db = get_firestore()
-    doc = await db.collection(Firestore.NOTIFICATION_PREFERENCES).document(user["id"]).get()
+    db = get_async_db()
+    doc = await db.collection(MongoCollections.NOTIFICATION_PREFERENCES).document(user["id"]).get()
     if doc.exists:
         data = doc.to_dict()
         data["user_id"] = user["id"]
@@ -33,7 +33,7 @@ async def get_preferences(user: dict = Depends(get_current_user)):
 @router.put("/", status_code=HttpStatus.OK)
 async def update_preferences(body: NotificationPreferencesUpdate, user: dict = Depends(get_current_user)):
     """Update notification preferences."""
-    db = get_firestore()
+    db = get_async_db()
     updates = body.model_dump(exclude_none=True)
     if "price_alerts" in updates:
         # Validate max 10 alerts
@@ -47,5 +47,5 @@ async def update_preferences(body: NotificationPreferencesUpdate, user: dict = D
         ]
     updates["user_id"] = user["id"]
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.collection(Firestore.NOTIFICATION_PREFERENCES).document(user["id"]).set(updates, merge=True)
+    await db.collection(MongoCollections.NOTIFICATION_PREFERENCES).document(user["id"]).set(updates, merge=True)
     return {"detail": "Preferences updated", **updates}

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, forbidden, ErrorCode
 
 
@@ -15,7 +15,7 @@ class CropService:
     @staticmethod
     async def list_crops(db, farmer_id: str) -> list[dict]:
         """Return all crops belonging to *farmer_id*."""
-        query = db.collection(Firestore.CROPS).where("farmer_id", "==", farmer_id)
+        query = db.collection(MongoCollections.CROPS).where("farmer_id", "==", farmer_id)
         results: list[dict] = []
         async for doc in query.stream():
             item = doc.to_dict()
@@ -32,7 +32,7 @@ class CropService:
         now = datetime.now(timezone.utc).isoformat()
 
         doc = {**data, "farmer_id": farmer_id, "created_at": now, "updated_at": now}
-        await db.collection(Firestore.CROPS).document(crop_id).set(doc)
+        await db.collection(MongoCollections.CROPS).document(crop_id).set(doc)
 
         doc["id"] = crop_id
         return doc
@@ -42,7 +42,7 @@ class CropService:
     @staticmethod
     async def get_crop(db, crop_id: str, farmer_id: str) -> dict:
         """Fetch a single crop with ownership check."""
-        doc = await db.collection(Firestore.CROPS).document(crop_id).get()
+        doc = await db.collection(MongoCollections.CROPS).document(crop_id).get()
         if not doc.exists:
             raise not_found("Crop not found")
 
@@ -58,7 +58,7 @@ class CropService:
     @staticmethod
     async def update_crop(db, crop_id: str, farmer_id: str, data: dict) -> dict:
         """Update a crop record after ownership check."""
-        existing = await db.collection(Firestore.CROPS).document(crop_id).get()
+        existing = await db.collection(MongoCollections.CROPS).document(crop_id).get()
         if not existing.exists:
             raise not_found("Crop not found")
 
@@ -67,9 +67,9 @@ class CropService:
             raise forbidden("Not your crop", ErrorCode.RESOURCE_FORBIDDEN)
 
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await db.collection(Firestore.CROPS).document(crop_id).update(data)
+        await db.collection(MongoCollections.CROPS).document(crop_id).update(data)
 
-        updated = await db.collection(Firestore.CROPS).document(crop_id).get()
+        updated = await db.collection(MongoCollections.CROPS).document(crop_id).get()
         result = updated.to_dict()
         result["id"] = updated.id
         return result
@@ -79,7 +79,7 @@ class CropService:
     @staticmethod
     async def delete_crop(db, crop_id: str, farmer_id: str) -> None:
         """Delete a crop record after ownership check."""
-        existing = await db.collection(Firestore.CROPS).document(crop_id).get()
+        existing = await db.collection(MongoCollections.CROPS).document(crop_id).get()
         if not existing.exists:
             raise not_found("Crop not found")
 
@@ -87,7 +87,7 @@ class CropService:
         if crop.get("farmer_id") != farmer_id:
             raise forbidden("Not your crop", ErrorCode.RESOURCE_FORBIDDEN)
 
-        await db.collection(Firestore.CROPS).document(crop_id).delete()
+        await db.collection(MongoCollections.CROPS).document(crop_id).delete()
 
     # ── Recommendations ──────────────────────────────────────────
 
@@ -101,7 +101,7 @@ class CropService:
         state/region, and returns the top matches.
         """
         query = (
-            db.collection(Firestore.CROP_CYCLES)
+            db.collection(MongoCollections.CROP_CYCLES)
             .where("season", "==", season.lower())
         )
         cycles: list[dict] = []

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Real-time mandi and market data routes.
 Integrates live data.gov.in API for massive mandi information.
 """
@@ -7,12 +7,12 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
 from shared.auth.deps import get_current_user, get_current_admin
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 
 from services.mandi_data_fetcher import (
     MandiDataFetcher,
@@ -27,15 +27,15 @@ from services.mandi_data_fetcher import (
 router = APIRouter(prefix="/live-market", tags=["Live Market Data"])
 
 
-async def _query_firestore_prices(
+async def _query_mongo_prices(
     db,
     state: Optional[str] = None,
     commodity: Optional[str] = None,
     district: Optional[str] = None,
     limit: int = 100,
 ) -> list[dict]:
-    """Load market prices from Firestore in live-market response shape."""
-    query = db.collection(Firestore.MARKET_PRICES)
+    """Load market prices from MongoCollections in live-market response shape."""
+    query = db.collection(MongoCollections.MARKET_PRICES)
 
     if state:
         query = query.where(filter=FieldFilter("state", "==", state.strip()))
@@ -60,7 +60,7 @@ async def _query_firestore_prices(
                 "modal_price": float(data.get("modal_price", 0) or 0),
                 "unit": data.get("unit", "quintal"),
                 "arrival_date": data.get("date", ""),
-                "source": data.get("source", "firestore"),
+                "source": data.get("source", "mongo"),
             }
         )
 
@@ -68,13 +68,13 @@ async def _query_firestore_prices(
     return items[:limit]
 
 
-async def _query_firestore_mandis(
+async def _query_mongo_mandis(
     db,
     state: Optional[str] = None,
     limit: int = 200,
 ) -> list[dict]:
-    """Load mandi directory from Firestore."""
-    query = db.collection(Firestore.MANDIS)
+    """Load mandi directory from MongoCollections."""
+    query = db.collection(MongoCollections.MANDIS)
     if state:
         query = query.where(filter=FieldFilter("state", "==", state.strip()))
 
@@ -87,7 +87,7 @@ async def _query_firestore_mandis(
                 "name": data.get("name", ""),
                 "state": data.get("state", ""),
                 "district": data.get("district", ""),
-                "source": data.get("source", "firestore"),
+                "source": data.get("source", "mongo"),
             }
         )
     return items
@@ -112,9 +112,9 @@ async def get_live_prices(
     user: dict = Depends(get_current_user),
 ):
     """Get commodity prices with DB-first strategy and optional live refresh."""
-    db = get_firestore()
+    db = get_async_db()
     if not refresh:
-        cached_prices = await _query_firestore_prices(
+        cached_prices = await _query_mongo_prices(
             db=db,
             state=state,
             commodity=commodity,
@@ -125,7 +125,7 @@ async def get_live_prices(
             return {
                 "prices": cached_prices,
                 "total": len(cached_prices),
-                "source": "firestore",
+                "source": "mongo",
                 "filters": {"state": state, "commodity": commodity, "district": district},
                 "cache_hit": True,
             }
@@ -139,7 +139,7 @@ async def get_live_prices(
             limit=limit,
         )
         if not prices:
-            cached_prices = await _query_firestore_prices(
+            cached_prices = await _query_mongo_prices(
                 db=db,
                 state=state,
                 commodity=commodity,
@@ -150,11 +150,11 @@ async def get_live_prices(
                 return {
                     "prices": cached_prices,
                     "total": len(cached_prices),
-                    "source": "firestore_fallback",
+                    "source": "mongo_fallback",
                     "filters": {"state": state, "commodity": commodity, "district": district},
                     "cache_hit": True,
                 }
-            relaxed_prices = await _query_firestore_prices(
+            relaxed_prices = await _query_mongo_prices(
                 db=db,
                 state=None,
                 commodity=commodity,
@@ -165,7 +165,7 @@ async def get_live_prices(
                 return {
                     "prices": relaxed_prices,
                     "total": len(relaxed_prices),
-                    "source": "firestore_relaxed_fallback",
+                    "source": "mongo_relaxed_fallback",
                     "filters": {
                         "state": state,
                         "commodity": commodity,
@@ -193,9 +193,9 @@ async def get_all_india_prices(
     user: dict = Depends(get_current_user),
 ):
     """Get prices for a commodity across India with DB-first lookup."""
-    db = get_firestore()
+    db = get_async_db()
     if not refresh:
-        cached_prices = await _query_firestore_prices(
+        cached_prices = await _query_mongo_prices(
             db=db,
             commodity=commodity,
             limit=limit,
@@ -205,7 +205,7 @@ async def get_all_india_prices(
                 "commodity": commodity,
                 "prices": cached_prices,
                 "total": len(cached_prices),
-                "source": "firestore",
+                "source": "mongo",
                 "cache_hit": True,
             }
 
@@ -213,7 +213,7 @@ async def get_all_india_prices(
     try:
         prices = await fetcher.fetch_commodity_prices_all_india(commodity, limit=limit)
         if not prices:
-            cached_prices = await _query_firestore_prices(
+            cached_prices = await _query_mongo_prices(
                 db=db,
                 commodity=commodity,
                 limit=limit,
@@ -223,10 +223,10 @@ async def get_all_india_prices(
                     "commodity": commodity,
                     "prices": cached_prices,
                     "total": len(cached_prices),
-                    "source": "firestore_fallback",
+                    "source": "mongo_fallback",
                     "cache_hit": True,
                 }
-            relaxed_prices = await _query_firestore_prices(
+            relaxed_prices = await _query_mongo_prices(
                 db=db,
                 commodity=None,
                 limit=limit,
@@ -236,7 +236,7 @@ async def get_all_india_prices(
                     "commodity": commodity,
                     "prices": relaxed_prices,
                     "total": len(relaxed_prices),
-                    "source": "firestore_relaxed_fallback",
+                    "source": "mongo_relaxed_fallback",
                     "cache_hit": True,
                 }
         return {
@@ -293,8 +293,8 @@ async def get_live_mandi_list(
     refresh: bool = Query(default=False, description="Force live fetch from data.gov.in"),
     user: dict = Depends(get_current_user),
 ):
-    """Fetch mandi list with live-first strategy and Firestore fallback."""
-    db = get_firestore()
+    """Fetch mandi list with live-first strategy and MongoCollections fallback."""
+    db = get_async_db()
 
     fetcher = MandiDataFetcher()
     try:
@@ -307,12 +307,12 @@ async def get_live_mandi_list(
                 "cache_hit": False,
             }
 
-        cached_mandis = await _query_firestore_mandis(db=db, state=state, limit=limit)
+        cached_mandis = await _query_mongo_mandis(db=db, state=state, limit=limit)
         if cached_mandis:
             return {
                 "mandis": cached_mandis,
                 "total": len(cached_mandis),
-                "source": "firestore_fallback",
+                "source": "mongo_fallback",
                 "cache_hit": True,
             }
 
@@ -401,18 +401,18 @@ async def sync_market_data(
     user: dict = Depends(get_current_user),
 ):
     """
-    Sync live market data: Fetch from APIs → Store in Firestore → Embed in Qdrant.
+    Sync live market data: Fetch from APIs → Store in MongoCollections → Embed in Qdrant.
     This can take a while for large syncs.
     """
-    db = get_firestore()
+    db = get_async_db()
     sync_service = MandiDataSyncService()
     try:
         if body.commodity:
-            result = await sync_service.sync_prices_to_firestore(
+            result = await sync_service.sync_prices_to_mongo(
                 db, commodity=body.commodity
             )
         else:
-            result = await sync_service.sync_prices_to_firestore(
+            result = await sync_service.sync_prices_to_mongo(
                 db, states=body.states
             )
         return result
@@ -426,10 +426,10 @@ async def full_sync(
     admin: dict = Depends(get_current_admin),
 ):
     """
-    Full sync: Fetch prices + mandis → Firestore → Qdrant embeddings.
+    Full sync: Fetch prices + mandis → MongoCollections → Qdrant embeddings.
     Admin only. May take several minutes.
     """
-    db = get_firestore()
+    db = get_async_db()
     sync_service = MandiDataSyncService()
     try:
         result = await sync_service.full_sync(db, states=body.states)
@@ -454,3 +454,4 @@ async def list_states(
 ):
     """List all Indian states for filtering."""
     return {"states": INDIAN_STATES, "total": len(INDIAN_STATES)}
+

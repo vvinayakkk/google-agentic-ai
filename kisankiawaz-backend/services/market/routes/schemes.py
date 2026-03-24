@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from shared.auth.deps import get_current_user, get_current_admin
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.scheme_service import SchemeService
@@ -30,7 +30,7 @@ async def list_schemes(
     user: dict = Depends(get_current_user),
 ):
     """List government schemes with optional filters."""
-    db = get_firestore()
+    db = get_async_db()
     filters = {"state": state, "category": category, "is_active": is_active}
     return await SchemeService.list_schemes(db=db, filters=filters, page=page, per_page=per_page)
 
@@ -41,7 +41,7 @@ async def get_scheme(
     user: dict = Depends(get_current_user),
 ):
     """Get a single government scheme."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemeService.get_scheme(db=db, scheme_id=scheme_id)
 
 
@@ -51,7 +51,7 @@ async def create_scheme(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a government scheme."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemeService.create_scheme(db=db, data=body)
 
 
@@ -62,7 +62,7 @@ async def update_scheme(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a government scheme."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemeService.update_scheme(db=db, scheme_id=scheme_id, data=body)
 
 
@@ -72,7 +72,7 @@ async def delete_scheme(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin deletes a government scheme."""
-    db = get_firestore()
+    db = get_async_db()
     await SchemeService.delete_scheme(db=db, scheme_id=scheme_id)
 
 
@@ -82,5 +82,5 @@ async def check_eligibility(
     user: dict = Depends(get_current_user),
 ):
     """Check a farmer's eligibility for government schemes."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemeService.check_eligibility(db=db, farmer_id=body.farmer_id)

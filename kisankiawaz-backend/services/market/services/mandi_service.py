@@ -1,11 +1,11 @@
-"""Mandi business logic."""
+﻿"""Mandi business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, ErrorCode
 
 
@@ -17,7 +17,7 @@ class MandiService:
     @staticmethod
     async def list_mandis(db, filters: dict, page: int, per_page: int) -> dict:
         """Return paginated mandis, optionally filtered."""
-        query = db.collection(Firestore.MANDIS)
+        query = db.collection(MongoCollections.MANDIS)
 
         if filters.get("state"):
             query = query.where(filter=FieldFilter("state", "==", filters["state"]))
@@ -49,7 +49,7 @@ class MandiService:
     @staticmethod
     async def get_mandi(db, mandi_id: str) -> dict:
         """Return a single mandi."""
-        doc = await db.collection(Firestore.MANDIS).document(mandi_id).get()
+        doc = await db.collection(MongoCollections.MANDIS).document(mandi_id).get()
         if not doc.exists:
             raise not_found("Mandi not found")
         result = doc.to_dict()
@@ -74,7 +74,7 @@ class MandiService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.MANDIS).document(mandi_id).set(doc)
+        await db.collection(MongoCollections.MANDIS).document(mandi_id).set(doc)
 
         doc["id"] = mandi_id
         return doc
@@ -84,7 +84,7 @@ class MandiService:
     @staticmethod
     async def update_mandi(db, mandi_id: str, data: dict) -> dict:
         """Update an existing mandi."""
-        ref = db.collection(Firestore.MANDIS).document(mandi_id)
+        ref = db.collection(MongoCollections.MANDIS).document(mandi_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Mandi not found")
@@ -102,8 +102,9 @@ class MandiService:
     @staticmethod
     async def delete_mandi(db, mandi_id: str) -> None:
         """Delete a mandi."""
-        ref = db.collection(Firestore.MANDIS).document(mandi_id)
+        ref = db.collection(MongoCollections.MANDIS).document(mandi_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Mandi not found")
         await ref.delete()
+

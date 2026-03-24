@@ -8,17 +8,17 @@ from loguru import logger
 def send_notification(user_id: str, title: str, message: str, notification_type: str = "general"):
     logger.info(f"Sending notification to {user_id}: {title}")
     # In production, integrate with FCM/push notifications
-    # For now, store in Firestore
-    from shared.db.firebase import init_firebase, get_firestore
+    # For now, store in MongoCollections
+    from shared.db.mongodb import init_mongodb, get_async_db
     import uuid
     from datetime import datetime, timezone
 
-    init_firebase()
+    init_mongodb()
 
     async def _store():
-        db = get_firestore()
-        from shared.core.constants import Firestore
-        await db.collection(Firestore.NOTIFICATIONS).document(uuid.uuid4().hex).set({
+        db = get_async_db()
+        from shared.core.constants import MongoCollections
+        await db.collection(MongoCollections.NOTIFICATIONS).document(uuid.uuid4().hex).set({
             "user_id": user_id,
             "title": title,
             "message": message,

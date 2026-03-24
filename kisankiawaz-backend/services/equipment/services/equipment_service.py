@@ -1,11 +1,11 @@
-"""Equipment business logic."""
+﻿"""Equipment business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, unauthorized, ErrorCode
 
 
@@ -17,7 +17,7 @@ class EquipmentService:
     @staticmethod
     async def list_equipment(db, farmer_id: str) -> dict:
         """Return all equipment belonging to the farmer."""
-        query = db.collection(Firestore.EQUIPMENT).where(
+        query = db.collection(MongoCollections.EQUIPMENT).where(
             filter=FieldFilter("farmer_id", "==", farmer_id)
         )
         docs = [d async for d in query.stream()]
@@ -48,7 +48,7 @@ class EquipmentService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.EQUIPMENT).document(equipment_id).set(doc)
+        await db.collection(MongoCollections.EQUIPMENT).document(equipment_id).set(doc)
 
         doc["id"] = equipment_id
         return doc
@@ -58,7 +58,7 @@ class EquipmentService:
     @staticmethod
     async def get_equipment(db, equipment_id: str, farmer_id: str) -> dict:
         """Return a single equipment item with ownership check."""
-        doc = await db.collection(Firestore.EQUIPMENT).document(equipment_id).get()
+        doc = await db.collection(MongoCollections.EQUIPMENT).document(equipment_id).get()
         if not doc.exists:
             raise not_found("Equipment not found")
 
@@ -74,7 +74,7 @@ class EquipmentService:
     @staticmethod
     async def update_equipment(db, equipment_id: str, farmer_id: str, data: dict) -> dict:
         """Update an equipment item with ownership check."""
-        ref = db.collection(Firestore.EQUIPMENT).document(equipment_id)
+        ref = db.collection(MongoCollections.EQUIPMENT).document(equipment_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Equipment not found")
@@ -98,7 +98,7 @@ class EquipmentService:
     @staticmethod
     async def delete_equipment(db, equipment_id: str, farmer_id: str) -> None:
         """Delete an equipment item with ownership check."""
-        ref = db.collection(Firestore.EQUIPMENT).document(equipment_id)
+        ref = db.collection(MongoCollections.EQUIPMENT).document(equipment_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Equipment not found")
@@ -108,3 +108,4 @@ class EquipmentService:
             raise unauthorized("You do not own this equipment")
 
         await ref.delete()
+

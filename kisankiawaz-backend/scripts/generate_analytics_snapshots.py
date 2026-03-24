@@ -14,8 +14,8 @@ from collections import Counter
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.db.firebase import get_db, init_firebase
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_db, init_mongodb
+from shared.core.constants import MongoCollections
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     print("KISAN KI AWAZ — ANALYTICS SNAPSHOT GENERATOR")
     print("=" * 50)
 
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     now = datetime.now(timezone.utc)
@@ -36,7 +36,7 @@ def main():
     total_farmers = 0
     new_farmers_today = 0
     try:
-        farmers = db.collection(Firestore.USERS).where("role", "==", "farmer").stream()
+        farmers = db.collection(MongoCollections.USERS).where("role", "==", "farmer").stream()
         for doc in farmers:
             total_farmers += 1
             data = doc.to_dict()
@@ -49,7 +49,7 @@ def main():
     # Count agent queries today
     agent_queries_today = 0
     try:
-        convos = db.collection(Firestore.AGENT_CONVERSATIONS).stream()
+        convos = db.collection(MongoCollections.AGENT_CONVERSATIONS).stream()
         for doc in convos:
             data = doc.to_dict()
             last_msg = data.get("last_message_at", "")
@@ -62,7 +62,7 @@ def main():
     dau = 0
     active_users = set()
     try:
-        convos = db.collection(Firestore.AGENT_CONVERSATIONS).stream()
+        convos = db.collection(MongoCollections.AGENT_CONVERSATIONS).stream()
         for doc in convos:
             data = doc.to_dict()
             last_msg = data.get("last_message_at", "")
@@ -77,7 +77,7 @@ def main():
     # Voice sessions today
     voice_sessions_today = 0
     try:
-        sessions = db.collection(Firestore.VOICE_SESSIONS).stream()
+        sessions = db.collection(MongoCollections.VOICE_SESSIONS).stream()
         for doc in sessions:
             data = doc.to_dict()
             started = data.get("started_at", "")
@@ -90,7 +90,7 @@ def main():
     top_commodities = []
     try:
         commodity_counter = Counter()
-        prices = db.collection(Firestore.REF_MANDI_PRICES).order_by("arrival_date", direction="DESCENDING").limit(1000).stream()
+        prices = db.collection(MongoCollections.REF_MANDI_PRICES).order_by("arrival_date", direction="DESCENDING").limit(1000).stream()
         for doc in prices:
             data = doc.to_dict()
             commodity = data.get("commodity", "")
@@ -103,7 +103,7 @@ def main():
     # Notifications sent count
     notification_sent_count = 0
     try:
-        notifs = db.collection(Firestore.NOTIFICATIONS).stream()
+        notifs = db.collection(MongoCollections.NOTIFICATIONS).stream()
         for doc in notifs:
             data = doc.to_dict()
             created = data.get("created_at", "")
@@ -126,7 +126,7 @@ def main():
         "generated_at": now.isoformat(),
     }
 
-    db.collection(Firestore.ANALYTICS_SNAPSHOTS).document(today).set(snapshot, merge=True)
+    db.collection(MongoCollections.ANALYTICS_SNAPSHOTS).document(today).set(snapshot, merge=True)
 
     print(f"\n  Snapshot written to analytics_snapshots/{today}")
     print(f"  Total farmers: {total_farmers}")

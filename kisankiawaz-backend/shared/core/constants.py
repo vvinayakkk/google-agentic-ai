@@ -3,9 +3,9 @@
 from enum import Enum
 
 
-# ── Firestore collection names ──────────────────────────────────
-class Firestore:
-    """Firestore collection name constants."""
+# ── Mongo collection names ──────────────────────────────────
+class MongoCollections:
+    """Mongo collection name constants."""
 
     # ── Existing farmer data ──
     USERS: str = "users"
@@ -63,8 +63,8 @@ class Firestore:
     SUPPORT_TICKETS: str = "support_tickets"
 
 
-# Alias for convenience
-FirestoreCollections = Firestore
+# Backward-compatible alias for legacy imports.
+Collections = MongoCollections
 
 
 # ── Qdrant collection names ─────────────────────────────────────

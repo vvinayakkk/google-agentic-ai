@@ -1,14 +1,13 @@
-"""Hard-reset Firestore by deleting every top-level collection recursively.
+﻿"""Hard-reset MongoDB collections by deleting every top-level collection.
 
 Usage:
-  python scripts/reset_firestore.py
-    python scripts/reset_firestore.py --collections users,crops --batch-size 100 --sleep-seconds 1.0
+  python scripts/reset_mongodb.py
+        python scripts/reset_mongodb.py --collections users,crops --sleep-seconds 1.0
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -16,37 +15,22 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
-from shared.db.firebase import init_firebase, get_db
+from shared.db.mongodb import init_mongodb, get_db
 
 
-def _delete_collection_in_batches(collection, batch_size: int, sleep_seconds: float, max_retries: int) -> int:
-    deleted_total = 0
-
+def _drop_collection_with_retry(db, collection_name: str, max_retries: int, sleep_seconds: float) -> None:
+    attempt = 0
     while True:
-        docs = list(collection.limit(batch_size).stream())
-        if not docs:
-            break
-
-        for doc in docs:
-            attempt = 0
-            while True:
-                try:
-                    doc.reference.delete()
-                    deleted_total += 1
-                    break
-                except Exception as exc:
-                    attempt += 1
-                    if attempt > max_retries:
-                        raise RuntimeError(
-                            f"Exceeded max retries while deleting {collection.id}/{doc.id}: {exc}"
-                        ) from exc
-                    # Exponential backoff helps with Firestore write quota throttling.
-                    backoff = sleep_seconds * (2 ** (attempt - 1))
-                    time.sleep(backoff)
-
-        time.sleep(sleep_seconds)
-
-    return deleted_total
+        try:
+            db._db.drop_collection(collection_name)
+            return
+        except Exception as exc:
+            attempt += 1
+            if attempt > max_retries:
+                raise RuntimeError(f"Unable to drop collection {collection_name}: {exc}") from exc
+            backoff = sleep_seconds * (2 ** (attempt - 1))
+            print(f"drop_collection_retry={attempt} collection={collection_name} backoff_seconds={backoff:.1f} error={exc}")
+            time.sleep(backoff)
 
 
 def _list_collections_with_retry(db, max_retries: int, sleep_seconds: float):
@@ -64,18 +48,17 @@ def _list_collections_with_retry(db, max_retries: int, sleep_seconds: float):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Quota-safe Firestore reset")
+    parser = argparse.ArgumentParser(description="Quota-safe MongoDB reset")
     parser.add_argument(
         "--collections",
         default="",
         help="Comma-separated top-level collection names to delete. Default: all collections",
     )
-    parser.add_argument("--batch-size", type=int, default=100, help="Documents deleted per loop")
     parser.add_argument(
         "--sleep-seconds",
         type=float,
         default=1.0,
-        help="Pause between batches to reduce quota pressure",
+        help="Pause between retries",
     )
     parser.add_argument(
         "--max-retries",
@@ -85,10 +68,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    creds_path = ROOT_DIR / "creds" / "serviceAccountKey.json"
-    os.environ.setdefault("FIREBASE_CREDENTIALS_PATH", str(creds_path))
-
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     selected = {c.strip() for c in args.collections.split(",") if c.strip()}
@@ -105,14 +85,15 @@ def main() -> int:
     for collection in collections:
         name = collection.id
         try:
-            deleted_count = _delete_collection_in_batches(
-                collection=collection,
-                batch_size=max(1, args.batch_size),
-                sleep_seconds=max(0.0, args.sleep_seconds),
+            doc_count = len(list(collection.stream()))
+            _drop_collection_with_retry(
+                db=db,
+                collection_name=name,
                 max_retries=max(0, args.max_retries),
+                sleep_seconds=max(0.1, args.sleep_seconds),
             )
-            print(f"deleted_collection={name} count={deleted_count}")
-            total_deleted += deleted_count
+            print(f"deleted_collection={name} count={doc_count}")
+            total_deleted += doc_count
         except Exception as exc:
             print(f"deleted_collection_failed={name} error={exc}")
             return 1
@@ -132,3 +113,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

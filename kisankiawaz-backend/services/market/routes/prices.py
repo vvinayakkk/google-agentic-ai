@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from shared.auth.deps import get_current_user, get_current_admin
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.price_service import PriceService
@@ -23,7 +23,7 @@ async def list_prices(
     user: dict = Depends(get_current_user),
 ):
     """List recent market prices with optional filters."""
-    db = get_firestore()
+    db = get_async_db()
     filters = {"crop": crop, "state": state, "mandi": mandi}
     return await PriceService.list_prices(db=db, filters=filters, page=page, per_page=per_page)
 
@@ -34,7 +34,7 @@ async def get_price(
     user: dict = Depends(get_current_user),
 ):
     """Get a single market price entry."""
-    db = get_firestore()
+    db = get_async_db()
     return await PriceService.get_price(db=db, price_id=price_id)
 
 
@@ -44,7 +44,7 @@ async def create_price(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a market price entry."""
-    db = get_firestore()
+    db = get_async_db()
     return await PriceService.create_price(db=db, data=body)
 
 
@@ -55,7 +55,7 @@ async def update_price(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a market price entry."""
-    db = get_firestore()
+    db = get_async_db()
     return await PriceService.update_price(db=db, price_id=price_id, data=body)
 
 
@@ -65,5 +65,5 @@ async def delete_price(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin deletes a market price entry."""
-    db = get_firestore()
+    db = get_async_db()
     await PriceService.delete_price(db=db, price_id=price_id)

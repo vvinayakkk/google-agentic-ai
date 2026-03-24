@@ -13,7 +13,7 @@ from shared.auth.security import (
     create_refresh_token,
     decode_token,
 )
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import (
     bad_request,
     unauthorized,
@@ -39,7 +39,7 @@ class AuthService:
         """Create a new user and return tokens + user payload."""
         # Bloom-filter-style duplicate check (query)
         existing = (
-            db.collection(Firestore.USERS)
+            db.collection(MongoCollections.USERS)
             .where("phone", "==", phone)
             .limit(1)
         )
@@ -62,7 +62,7 @@ class AuthService:
             "updated_at": now,
         }
 
-        await db.collection(Firestore.USERS).document(user_id).set(user_doc)
+        await db.collection(MongoCollections.USERS).document(user_id).set(user_doc)
 
         access = create_access_token(user_id, role)
         refresh = create_refresh_token(user_id, role)
@@ -89,7 +89,7 @@ class AuthService:
     async def login(db, phone: str, password: str) -> dict:
         """Verify credentials and return tokens + user payload."""
         query = (
-            db.collection(Firestore.USERS)
+            db.collection(MongoCollections.USERS)
             .where("phone", "==", phone)
             .limit(1)
         )
@@ -145,7 +145,7 @@ class AuthService:
     @staticmethod
     async def get_user(db, user_id: str) -> dict:
         """Fetch a single user document."""
-        doc = await db.collection(Firestore.USERS).document(user_id).get()
+        doc = await db.collection(MongoCollections.USERS).document(user_id).get()
         if not doc.exists:
             raise not_found("User not found", ErrorCode.AUTH_USER_NOT_FOUND)
         user = doc.to_dict()
@@ -163,7 +163,7 @@ class AuthService:
         if not updates:
             raise bad_request("No valid fields to update")
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await db.collection(Firestore.USERS).document(user_id).update(updates)
+        await db.collection(MongoCollections.USERS).document(user_id).update(updates)
         return await AuthService.get_user(db, user_id)
 
     # ── Change password ──────────────────────────────────────────
@@ -171,7 +171,7 @@ class AuthService:
     @staticmethod
     async def change_password(db, user_id: str, old_password: str, new_password: str) -> None:
         """Verify existing password and set a new one."""
-        doc = await db.collection(Firestore.USERS).document(user_id).get()
+        doc = await db.collection(MongoCollections.USERS).document(user_id).get()
         if not doc.exists:
             raise not_found("User not found", ErrorCode.AUTH_USER_NOT_FOUND)
 
@@ -179,7 +179,7 @@ class AuthService:
         if not verify_password(old_password, user.get("password_hash", "")):
             raise bad_request("Current password is incorrect", ErrorCode.AUTH_PASSWORD_MISMATCH)
 
-        await db.collection(Firestore.USERS).document(user_id).update({
+        await db.collection(MongoCollections.USERS).document(user_id).update({
             "password_hash": hash_password(new_password),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
@@ -211,7 +211,7 @@ class AuthService:
         await AuthService.verify_otp(redis, phone, otp)
 
         query = (
-            db.collection(Firestore.USERS)
+            db.collection(MongoCollections.USERS)
             .where("phone", "==", phone)
             .limit(1)
         )
@@ -219,7 +219,7 @@ class AuthService:
         if not docs:
             raise not_found("User not found", ErrorCode.AUTH_USER_NOT_FOUND)
 
-        await db.collection(Firestore.USERS).document(docs[0].id).update({
+        await db.collection(MongoCollections.USERS).document(docs[0].id).update({
             "password_hash": hash_password(new_password),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })

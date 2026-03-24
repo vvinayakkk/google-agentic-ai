@@ -1,4 +1,4 @@
-"""Build/rebuild all 6 Qdrant vector collections from Firestore data.
+"""Build/rebuild all 6 Qdrant vector collections from MongoCollections data.
 
 Collections: schemes_semantic, schemes_faq, mandi_price_intelligence,
              crop_advisory_kb, geo_location_index, equipment_semantic
@@ -16,8 +16,8 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.db.firebase import get_db, init_firebase
-from shared.core.constants import Firestore, Qdrant
+from shared.db.mongodb import get_db, init_mongodb
+from shared.core.constants import MongoCollections, Qdrant
 from shared.services.qdrant_service import QdrantService
 from qdrant_client.models import PointStruct
 
@@ -27,7 +27,7 @@ def build_schemes_semantic(db) -> int:
     print("  Building schemes_semantic ...")
     QdrantService.recreate_collection(Qdrant.SCHEMES_SEMANTIC)
 
-    docs = db.collection(Firestore.REF_FARMER_SCHEMES).stream()
+    docs = db.collection(MongoCollections.REF_FARMER_SCHEMES).stream()
     points = []
 
     for doc in docs:
@@ -70,7 +70,7 @@ def build_schemes_faq(db) -> int:
     print("  Building schemes_faq ...")
     QdrantService.recreate_collection(Qdrant.SCHEMES_FAQ)
 
-    docs = db.collection(Firestore.REF_FARMER_SCHEMES).stream()
+    docs = db.collection(MongoCollections.REF_FARMER_SCHEMES).stream()
     points = []
 
     for doc in docs:
@@ -123,7 +123,7 @@ def build_mandi_price_intelligence(db) -> int:
 
     # Aggregate prices by commodity + district
     price_data = defaultdict(list)
-    docs = db.collection(Firestore.REF_MANDI_PRICES).stream()
+    docs = db.collection(MongoCollections.REF_MANDI_PRICES).stream()
 
     for doc in docs:
         data = doc.to_dict()
@@ -192,7 +192,7 @@ def build_geo_location_index(db) -> int:
     points = []
 
     # From PIN master
-    docs = db.collection(Firestore.REF_PIN_MASTER).stream()
+    docs = db.collection(MongoCollections.REF_PIN_MASTER).stream()
     for doc in docs:
         data = doc.to_dict()
         village = data.get("village_name", "")
@@ -218,7 +218,7 @@ def build_geo_location_index(db) -> int:
         ))
 
     # From mandi directory
-    docs = db.collection(Firestore.REF_MANDI_DIRECTORY).stream()
+    docs = db.collection(MongoCollections.REF_MANDI_DIRECTORY).stream()
     for doc in docs:
         data = doc.to_dict()
         name = data.get("name", "")
@@ -252,7 +252,7 @@ def build_equipment_semantic(db) -> int:
     print("  Building equipment_semantic ...")
     QdrantService.recreate_collection(Qdrant.EQUIPMENT_SEMANTIC)
 
-    docs = db.collection(Firestore.REF_EQUIPMENT_PROVIDERS).stream()
+    docs = db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).stream()
     points = []
 
     for doc in docs:
@@ -295,7 +295,7 @@ def build_crop_advisory_kb(db) -> int:
     points = []
 
     # Build from crop varieties
-    docs = db.collection(Firestore.REF_CROP_VARIETIES).stream()
+    docs = db.collection(MongoCollections.REF_CROP_VARIETIES).stream()
     for doc in docs:
         data = doc.to_dict()
         crop = data.get("crop", "")
@@ -311,7 +311,7 @@ def build_crop_advisory_kb(db) -> int:
         ))
 
     # Build from FASAL data
-    docs = db.collection(Firestore.REF_FASAL_DATA).stream()
+    docs = db.collection(MongoCollections.REF_FASAL_DATA).stream()
     for doc in docs:
         data = doc.to_dict()
         crop = data.get("crop", "")
@@ -327,7 +327,7 @@ def build_crop_advisory_kb(db) -> int:
 
     # Build from soil health (general advice per state)
     state_soil = {}
-    docs = db.collection(Firestore.REF_SOIL_HEALTH).limit(500).stream()
+    docs = db.collection(MongoCollections.REF_SOIL_HEALTH).limit(500).stream()
     for doc in docs:
         data = doc.to_dict()
         state = data.get("state", "")
@@ -353,7 +353,7 @@ def main():
     print("KISAN KI AWAZ — QDRANT INDEX BUILDER")
     print("=" * 60)
 
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     now = datetime.now(timezone.utc).isoformat()
@@ -379,7 +379,7 @@ def main():
 
     # Log ingestion meta
     for collection, count in summary.items():
-        db.collection(Firestore.REF_DATA_INGESTION_META).document(f"qdrant_{collection}").set({
+        db.collection(MongoCollections.REF_DATA_INGESTION_META).document(f"qdrant_{collection}").set({
             "script": "generate_qdrant_indexes",
             "dataset": collection,
             "last_run_at": now,

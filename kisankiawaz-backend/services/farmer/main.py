@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from shared.core.config import get_settings
-from shared.db.firebase import init_firebase, close_firebase
+from shared.db.mongodb import init_mongodb, close_mongodb
 from shared.db.redis import get_redis, close_redis
 from shared.errors import AppError, HttpStatus
 from shared.errors.handlers import global_exception_handler
@@ -22,11 +22,11 @@ from routes import router as api_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
-    init_firebase()
+    init_mongodb()
     await get_redis()
     yield
     await close_redis()
-    close_firebase()
+    close_mongodb()
 
 
 app = FastAPI(

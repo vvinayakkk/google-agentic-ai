@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from shared.core.config import get_settings
-from shared.db.firebase import init_firebase, close_firebase
+from shared.db.mongodb import init_mongodb, close_mongodb
 from shared.db.redis import get_redis, close_redis
 from shared.errors import AppError
 from shared.errors.handlers import global_exception_handler
@@ -18,12 +18,12 @@ from loguru import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_firebase()
+    init_mongodb()
     await get_redis()
     logger.info("Analytics service started")
     yield
     await close_redis()
-    close_firebase()
+    close_mongodb()
 
 
 app = FastAPI(title="KisanKiAwaaz Analytics Service", version="2.0.0", lifespan=lifespan)

@@ -2,7 +2,7 @@
 
 import json
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found
 
 _CACHE_KEY = "crop_cycles:all"
@@ -21,7 +21,7 @@ class CycleService:
         if cached:
             return json.loads(cached)
 
-        query = db.collection(Firestore.CROP_CYCLES)
+        query = db.collection(MongoCollections.CROP_CYCLES)
         results: list[dict] = []
         async for doc in query.stream():
             item = doc.to_dict()
@@ -37,7 +37,7 @@ class CycleService:
     async def get_cycle_by_name(db, name: str) -> list[dict]:
         """Return crop cycles matching *name* (case-insensitive query)."""
         query = (
-            db.collection(Firestore.CROP_CYCLES)
+            db.collection(MongoCollections.CROP_CYCLES)
             .where("crop_name", "==", name.lower())
         )
         results: list[dict] = []

@@ -5,8 +5,8 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from shared.auth.security import decode_token
-from shared.core.constants import Firestore, UserRole
-from shared.db.firebase import get_firestore
+from shared.core.constants import MongoCollections, UserRole
+from shared.db.mongodb import get_async_db
 from shared.errors.codes import ErrorCode
 from shared.errors.exceptions import AppError, unauthorized, forbidden
 
@@ -41,18 +41,18 @@ async def get_current_user(
     role: str = payload.get("role", "")
 
     # 2. Lookup user in appropriate collection
-    db = get_firestore()
+    db = get_async_db()
 
     if role in (UserRole.ADMIN.value, UserRole.SUPER_ADMIN.value):
         # Admin users live in admin_users collection
-        doc = await db.collection(Firestore.ADMIN_USERS).document(user_id).get()
+        doc = await db.collection(MongoCollections.ADMIN_USERS).document(user_id).get()
         if not doc.exists:
             raise unauthorized("Admin user not found", ErrorCode.AUTH_USER_NOT_FOUND)
         user: dict = doc.to_dict()
         user["id"] = doc.id
     else:
         # Farmer / agent users live in users collection
-        doc = await db.collection(Firestore.USERS).document(user_id).get()
+        doc = await db.collection(MongoCollections.USERS).document(user_id).get()
         if not doc.exists:
             raise unauthorized("User not found", ErrorCode.AUTH_USER_NOT_FOUND)
         user: dict = doc.to_dict()

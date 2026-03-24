@@ -10,10 +10,14 @@ from pydantic import Field
 class Settings(BaseSettings):
     """All environment variables consumed by KisanKiAwaaz services."""
 
-    # ── Firebase ────────────────────────────────────────────────
-    FIREBASE_CREDENTIALS_PATH: str = Field(
-        default="/app/creds/serviceAccountKey.json",
-        description="Path to Firebase service-account JSON",
+    # ── MongoDB ────────────────────────────────────────────────
+    MONGODB_URI: str = Field(
+        default="mongodb://localhost:27017",
+        description="MongoDB connection URI",
+    )
+    MONGODB_DB_NAME: str = Field(
+        default="farmer",
+        description="MongoDB database name",
     )
 
     # ── External API keys ───────────────────────────────────────

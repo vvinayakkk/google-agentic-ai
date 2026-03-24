@@ -1,11 +1,11 @@
-import os
+﻿import os
 from typing import Any, Dict
 
 import requests
 
 from services.embedding_service import EmbeddingService
 from shared.core.constants import QdrantCollections
-from shared.db.firebase import get_db
+from shared.db.mongodb import get_db
 
 
 DATA_GOV_BASE = "https://api.data.gov.in/resource"
@@ -32,7 +32,7 @@ def search_market_prices(crop_name: str, state: str = "") -> dict:
 
 
 def get_nearby_mandis(state: str, district: str = "") -> dict:
-    """Get nearby mandi information from Firestore index with embedding fallback."""
+    """Get nearby mandi information from MongoCollections index with embedding fallback."""
     st = (state or "").strip()
     dist = (district or "").strip()
     if not st:
@@ -53,14 +53,14 @@ def get_nearby_mandis(state: str, district: str = "") -> dict:
                     "name": item.get("name", ""),
                     "state": item.get("state", ""),
                     "district": item.get("district", ""),
-                    "source": item.get("source", "firestore"),
+                    "source": item.get("source", "mongo"),
                 }
             )
 
         if rows:
             return {
                 "found": True,
-                "source": "firestore_mandi_index",
+                "source": "mongo_mandi_index",
                 "count": len(rows),
                 "mandis": rows[:20],
             }
@@ -190,3 +190,4 @@ def get_live_mandis(state: str = "", limit: int = 50) -> Dict[str, Any]:
         }
     except Exception as exc:
         return {"found": False, "message": f"Failed to fetch live mandis: {exc}"}
+

@@ -2,8 +2,8 @@
 
 from shared.core.config import get_settings, Settings
 from shared.core.constants import (
-    Firestore,
-    FirestoreCollections,
+    MongoCollections,
+    MongoCollections,
     Qdrant,
     QdrantCollections,
     EMBEDDING_DIM,
@@ -18,7 +18,7 @@ from shared.core.constants import (
 __all__ = [
     "get_settings",
     "Settings",
-    "Firestore",
+    "MongoCollections",
     "Qdrant",
     "EMBEDDING_DIM",
     "UserRole",

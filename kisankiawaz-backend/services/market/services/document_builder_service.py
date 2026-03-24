@@ -1,4 +1,4 @@
-"""
+﻿"""
 Document Builder Service for KisanKiAwaaz.
 Interactive form-filling system that:
 1. Takes a scheme → generates questions from form_fields
@@ -15,7 +15,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request
 from shared.services.api_key_allocator import get_api_key_allocator
 
@@ -40,7 +40,7 @@ class DocumentBuilderService:
         # Find the scheme
         scheme = None
         if scheme_id:
-            doc = await db.collection(Firestore.GOVERNMENT_SCHEMES).document(scheme_id).get()
+            doc = await db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(scheme_id).get()
             if doc.exists:
                 scheme = doc.to_dict()
                 scheme["id"] = doc.id
@@ -54,9 +54,9 @@ class DocumentBuilderService:
         # Get farmer profile if available
         farmer_data = {}
         try:
-            from google.cloud.firestore_v1.base_query import FieldFilter
+            from shared.db.mongodb import FieldFilter
             profile_query = (
-                db.collection(Firestore.FARMER_PROFILES)
+                db.collection(MongoCollections.FARMER_PROFILES)
                 .where(filter=FieldFilter("user_id", "==", farmer_id))
                 .limit(1)
             )
@@ -120,7 +120,7 @@ class DocumentBuilderService:
                 q["options"] = ff["options"]
             questions.append(q)
 
-        # Create session in Firestore
+        # Create session in MongoCollections
         session_id = uuid.uuid4().hex
         session_data = {
             "session_id": session_id,
@@ -448,7 +448,7 @@ Return ONLY the JSON, no markdown, no explanation."""
     @staticmethod
     async def list_sessions(db, farmer_id: str, status: str = None) -> dict:
         """List all document builder sessions for a farmer."""
-        from google.cloud.firestore_v1.base_query import FieldFilter
+        from shared.db.mongodb import FieldFilter
         
         query = db.collection("document_builder_sessions").where(
             filter=FieldFilter("farmer_id", "==", farmer_id)
@@ -617,3 +617,4 @@ Return ONLY the JSON, no markdown, no explanation."""
             "filename": result["filename"],
             "exists": True,
         }
+

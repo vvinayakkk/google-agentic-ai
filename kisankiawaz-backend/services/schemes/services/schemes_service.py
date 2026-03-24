@@ -2,7 +2,7 @@
 
 import math
 from typing import Optional, List
-from shared.core.constants import Firestore, Qdrant
+from shared.core.constants import MongoCollections, Qdrant
 from shared.services.qdrant_service import QdrantService
 from shared.errors import not_found, ErrorCode
 
@@ -12,7 +12,7 @@ class SchemesService:
     @staticmethod
     async def list_schemes(db, page: int = 1, per_page: int = 20, ministry: str = None, state: str = None) -> dict:
         """List schemes with pagination and optional filters."""
-        query = db.collection(Firestore.REF_FARMER_SCHEMES)
+        query = db.collection(MongoCollections.REF_FARMER_SCHEMES)
 
         if ministry:
             query = query.where("ministry", "==", ministry)
@@ -49,7 +49,7 @@ class SchemesService:
     async def get_scheme(db, scheme_id: str) -> dict:
         """Get a single scheme."""
         doc_id = f"scheme_{scheme_id}" if not scheme_id.startswith("scheme_") else scheme_id
-        doc = await db.collection(Firestore.REF_FARMER_SCHEMES).document(doc_id).get()
+        doc = await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).get()
         if not doc.exists:
             raise not_found("Scheme not found", ErrorCode.SCHEME_NOT_FOUND)
         data = doc.to_dict()
@@ -92,7 +92,7 @@ class SchemesService:
         scheme = await SchemesService.get_scheme(db, scheme_id)
 
         # Get farmer profile
-        profile_doc = await db.collection(Firestore.FARMER_PROFILES).document(f"profile_{farmer_id}").get()
+        profile_doc = await db.collection(MongoCollections.FARMER_PROFILES).document(f"profile_{farmer_id}").get()
         farmer_state = ""
         if profile_doc.exists:
             profile = profile_doc.to_dict()
@@ -116,7 +116,7 @@ class SchemesService:
     async def get_pmfby_data(db) -> dict:
         """Get all PMFBY data."""
         docs = []
-        async for doc in db.collection(Firestore.REF_PMFBY_DATA).stream():
+        async for doc in db.collection(MongoCollections.REF_PMFBY_DATA).stream():
             data = doc.to_dict()
             data["id"] = doc.id
             docs.append(data)
@@ -126,7 +126,7 @@ class SchemesService:
     async def get_fertilizer_data(db) -> dict:
         """Get fertilizer advisory data."""
         docs = []
-        async for doc in db.collection(Firestore.REF_FERTILIZER_DATA).limit(100).stream():
+        async for doc in db.collection(MongoCollections.REF_FERTILIZER_DATA).limit(100).stream():
             data = doc.to_dict()
             data["id"] = doc.id
             docs.append(data)
@@ -136,7 +136,7 @@ class SchemesService:
     async def get_pesticide_data(db) -> dict:
         """Get pesticide advisory data."""
         docs = []
-        async for doc in db.collection(Firestore.REF_PESTICIDE_ADVISORY).stream():
+        async for doc in db.collection(MongoCollections.REF_PESTICIDE_ADVISORY).stream():
             data = doc.to_dict()
             data["id"] = doc.id
             docs.append(data)

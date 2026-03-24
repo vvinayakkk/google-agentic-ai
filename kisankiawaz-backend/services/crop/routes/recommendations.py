@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from shared.auth.deps import get_current_farmer
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.crop_service import CropService
@@ -29,7 +29,7 @@ async def get_recommendations(
     _user: dict = Depends(get_current_farmer),
 ):
     """Return recommended crops based on soil/weather context."""
-    db = get_firestore()
+    db = get_async_db()
     return await CropService.get_recommendations(
         db=db, soil_type=body.soil_type, season=body.season, state=body.state,
     )

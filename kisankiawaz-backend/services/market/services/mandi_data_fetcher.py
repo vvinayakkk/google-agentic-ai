@@ -1,4 +1,4 @@
-"""
+﻿"""
 Real-time Mandi Data Fetcher for KisanKiAwaaz.
 Integrates with multiple government data sources:
 
@@ -6,7 +6,7 @@ Integrates with multiple government data sources:
 2. Agmarknet API - APMC mandi prices (Agricultural Marketing Information Network)
 3. eNAM API - Electronic National Agriculture Market
 
-Fetches, normalizes, stores in Firestore, and embeds in Qdrant for the knowledge base.
+Fetches, normalizes, stores in MongoCollections, and embeds in Qdrant for the knowledge base.
 """
 
 import os
@@ -320,7 +320,7 @@ class MandiDataFetcher:
 
 
 class MandiDataSyncService:
-    """Syncs real-time mandi data to Firestore and Qdrant."""
+    """Syncs real-time mandi data to MongoCollections and Qdrant."""
 
     def __init__(self):
         self.fetcher = MandiDataFetcher()
@@ -328,12 +328,12 @@ class MandiDataSyncService:
     async def close(self):
         await self.fetcher.close()
 
-    # ── Sync Prices to Firestore ─────────────────────────────────
+    # ── Sync Prices to MongoCollections ─────────────────────────────────
 
-    async def sync_prices_to_firestore(
+    async def sync_prices_to_mongo(
         self, db, states: List[str] = None, commodity: str = None
     ) -> dict:
-        """Fetch real-time prices and store in Firestore."""
+        """Fetch real-time prices and store in MongoCollections."""
         
         if commodity:
             prices = await self.fetcher.fetch_commodity_prices_all_india(commodity)
@@ -343,7 +343,7 @@ class MandiDataSyncService:
         if not prices:
             return {"synced": 0, "message": "No prices fetched from API"}
         
-        batch_size = 400  # Firestore batch limit is 500
+        batch_size = 400  # MongoCollections batch limit is 500
         synced = 0
         now = datetime.now(timezone.utc).isoformat()
         
@@ -373,13 +373,13 @@ class MandiDataSyncService:
             
             await batch.commit()
         
-        logger.info(f"Synced {synced} market prices to Firestore")
+        logger.info(f"Synced {synced} market prices to MongoCollections")
         return {"synced": synced, "source": "data.gov.in", "timestamp": now}
 
-    # ── Sync Mandis to Firestore ─────────────────────────────────
+    # ── Sync Mandis to MongoCollections ─────────────────────────────────
 
-    async def sync_mandis_to_firestore(self, db, states: List[str] = None) -> dict:
-        """Fetch and sync mandi directory to Firestore."""
+    async def sync_mandis_to_mongo(self, db, states: List[str] = None) -> dict:
+        """Fetch and sync mandi directory to MongoCollections."""
         
         if not states:
             states = INDIAN_STATES
@@ -423,7 +423,7 @@ class MandiDataSyncService:
             
             await batch.commit()
         
-        logger.info(f"Synced {synced} mandis to Firestore")
+        logger.info(f"Synced {synced} mandis to MongoCollections")
         return {"synced": synced, "total_fetched": len(all_mandis), "unique": len(unique_mandis)}
 
     # ── Embed Prices into Qdrant ─────────────────────────────────
@@ -547,13 +547,13 @@ class MandiDataSyncService:
     # ── Full Sync Pipeline ───────────────────────────────────────
 
     async def full_sync(self, db, states: List[str] = None) -> dict:
-        """Complete sync: Fetch → Store in Firestore → Embed in Qdrant."""
+        """Complete sync: Fetch → Store in MongoCollections → Embed in Qdrant."""
         
-        price_result = await self.sync_prices_to_firestore(db, states=states)
-        mandi_result = await self.sync_mandis_to_firestore(db, states=states)
+        price_result = await self.sync_prices_to_mongo(db, states=states)
+        mandi_result = await self.sync_mandis_to_mongo(db, states=states)
         
         # Now embed to Qdrant
-        # Re-fetch from Firestore for embedding
+        # Re-fetch from MongoCollections for embedding
         prices_for_embed = []
         docs = [d async for d in db.collection("market_prices").limit(2000).stream()]
         for doc in docs:
@@ -581,3 +581,4 @@ def get_msp_price(commodity: str) -> Optional[float]:
 def get_all_msp_prices() -> dict:
     """Get all MSP prices."""
     return MSP_PRICES
+

@@ -1,4 +1,4 @@
-"""Seed admin users into Firestore.
+"""Seed admin users into MongoCollections.
 
 Creates 2 admin users: 1 SUPER_ADMIN + 1 ADMIN for testing.
 Outputs credentials to scripts/reports/data_assets/audit/seeded_admin_credentials.csv
@@ -15,9 +15,9 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.db.firebase import get_db, init_firebase
+from shared.db.mongodb import get_db, init_mongodb
 from shared.auth.security import hash_password
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 
 
 ADMIN_USERS = [
@@ -41,7 +41,7 @@ def main():
     print("KISAN KI AWAZ — ADMIN SEEDER")
     print("=" * 50)
 
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     now = datetime.now(timezone.utc).isoformat()
@@ -51,7 +51,7 @@ def main():
         admin_id = f"admin_{admin_data['email'].split('@')[0].replace('.', '_')}"
 
         # Check if already exists
-        existing = db.collection(Firestore.ADMIN_USERS).document(admin_id).get()
+        existing = db.collection(MongoCollections.ADMIN_USERS).document(admin_id).get()
         if existing.exists:
             print(f"  [SKIP] {admin_id} already exists")
             seeded.append({**admin_data, "admin_id": admin_id, "status": "skipped"})
@@ -69,7 +69,7 @@ def main():
             "created_by": "seed_script",
         }
 
-        db.collection(Firestore.ADMIN_USERS).document(admin_id).set(admin_doc)
+        db.collection(MongoCollections.ADMIN_USERS).document(admin_id).set(admin_doc)
         print(f"  [OK] Created {admin_id} ({admin_data['role']})")
         seeded.append({**admin_data, "admin_id": admin_id, "status": "created"})
 

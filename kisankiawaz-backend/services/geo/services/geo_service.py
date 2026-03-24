@@ -1,7 +1,7 @@
 """Geo business logic."""
 
 from typing import Optional
-from shared.core.constants import Firestore, Qdrant
+from shared.core.constants import MongoCollections, Qdrant
 from shared.services.qdrant_service import QdrantService
 from shared.errors import not_found, ErrorCode
 
@@ -11,7 +11,7 @@ class GeoService:
     @staticmethod
     async def lookup_pincode(db, pincode: str) -> dict:
         """Look up locations by PIN code."""
-        query = db.collection(Firestore.REF_PIN_MASTER).where("pincode", "==", pincode)
+        query = db.collection(MongoCollections.REF_PIN_MASTER).where("pincode", "==", pincode)
         results = []
         async for doc in query.stream():
             data = doc.to_dict()
@@ -61,7 +61,7 @@ class GeoService:
     @staticmethod
     async def get_districts(db, state: str) -> dict:
         """List distinct districts in a state from PIN master."""
-        query = db.collection(Firestore.REF_PIN_MASTER).where("state_name", "==", state)
+        query = db.collection(MongoCollections.REF_PIN_MASTER).where("state_name", "==", state)
         districts = set()
         async for doc in query.stream():
             data = doc.to_dict()
@@ -70,7 +70,7 @@ class GeoService:
                 districts.add(d)
 
         # Also check mandi directory
-        mandi_query = db.collection(Firestore.REF_MANDI_DIRECTORY).where("state", "==", state)
+        mandi_query = db.collection(MongoCollections.REF_MANDI_DIRECTORY).where("state", "==", state)
         async for doc in mandi_query.stream():
             data = doc.to_dict()
             d = data.get("district", "")
@@ -84,12 +84,12 @@ class GeoService:
         """List all states from PIN master and mandi directory."""
         states = set()
 
-        async for doc in db.collection(Firestore.REF_PIN_MASTER).stream():
+        async for doc in db.collection(MongoCollections.REF_PIN_MASTER).stream():
             s = doc.to_dict().get("state_name", "")
             if s:
                 states.add(s)
 
-        async for doc in db.collection(Firestore.REF_MANDI_DIRECTORY).stream():
+        async for doc in db.collection(MongoCollections.REF_MANDI_DIRECTORY).stream():
             s = doc.to_dict().get("state", "")
             if s:
                 states.add(s)

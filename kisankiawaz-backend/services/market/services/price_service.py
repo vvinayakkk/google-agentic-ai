@@ -1,11 +1,11 @@
-"""Market price business logic."""
+﻿"""Market price business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, ErrorCode
 
 
@@ -17,7 +17,7 @@ class PriceService:
     @staticmethod
     async def list_prices(db, filters: dict, page: int, per_page: int) -> dict:
         """Return paginated market prices, optionally filtered."""
-        query = db.collection(Firestore.MARKET_PRICES)
+        query = db.collection(MongoCollections.MARKET_PRICES)
 
         if filters.get("crop"):
             query = query.where(filter=FieldFilter("crop_name", "==", filters["crop"]))
@@ -51,7 +51,7 @@ class PriceService:
     @staticmethod
     async def get_price(db, price_id: str) -> dict:
         """Return a single market price entry."""
-        doc = await db.collection(Firestore.MARKET_PRICES).document(price_id).get()
+        doc = await db.collection(MongoCollections.MARKET_PRICES).document(price_id).get()
         if not doc.exists:
             raise not_found("Market price entry not found")
         result = doc.to_dict()
@@ -76,7 +76,7 @@ class PriceService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.MARKET_PRICES).document(price_id).set(doc)
+        await db.collection(MongoCollections.MARKET_PRICES).document(price_id).set(doc)
 
         doc["id"] = price_id
         return doc
@@ -86,7 +86,7 @@ class PriceService:
     @staticmethod
     async def update_price(db, price_id: str, data: dict) -> dict:
         """Update an existing market price entry."""
-        ref = db.collection(Firestore.MARKET_PRICES).document(price_id)
+        ref = db.collection(MongoCollections.MARKET_PRICES).document(price_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Market price entry not found")
@@ -104,8 +104,9 @@ class PriceService:
     @staticmethod
     async def delete_price(db, price_id: str) -> None:
         """Delete a market price entry."""
-        ref = db.collection(Firestore.MARKET_PRICES).document(price_id)
+        ref = db.collection(MongoCollections.MARKET_PRICES).document(price_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Market price entry not found")
         await ref.delete()
+

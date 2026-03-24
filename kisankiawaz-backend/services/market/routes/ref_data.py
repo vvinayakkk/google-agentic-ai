@@ -1,9 +1,9 @@
-"""New reference data routes for market service — cold storage, reservoir, MSP, trends."""
+﻿"""New reference data routes for market service — cold storage, reservoir, MSP, trends."""
 
 from fastapi import APIRouter, Query, Depends
 from shared.auth.deps import get_current_user
-from shared.db.firebase import get_firestore
-from shared.core.constants import Firestore
+from shared.db.mongodb import get_async_db
+from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus
 from typing import Optional
 
@@ -13,8 +13,8 @@ router = APIRouter(prefix="/ref-data", tags=["Reference Data"])
 @router.get("/cold-storage", status_code=HttpStatus.OK)
 async def get_cold_storage(state: Optional[str] = Query(None), user: dict = Depends(get_current_user)):
     """Get cold storage capacity by state from ref data."""
-    db = get_firestore()
-    query = db.collection(Firestore.REF_COLD_STORAGE)
+    db = get_async_db()
+    query = db.collection(MongoCollections.REF_COLD_STORAGE)
     if state:
         query = query.where("state", "==", state)
     items = []
@@ -28,8 +28,8 @@ async def get_cold_storage(state: Optional[str] = Query(None), user: dict = Depe
 @router.get("/reservoir", status_code=HttpStatus.OK)
 async def get_reservoir(state: Optional[str] = Query(None), user: dict = Depends(get_current_user)):
     """Get reservoir data by state."""
-    db = get_firestore()
-    query = db.collection(Firestore.REF_RESERVOIR_DATA)
+    db = get_async_db()
+    query = db.collection(MongoCollections.REF_RESERVOIR_DATA)
     if state:
         query = query.where("state", "==", state)
     items = []
@@ -41,11 +41,11 @@ async def get_reservoir(state: Optional[str] = Query(None), user: dict = Depends
 
 
 @router.get("/msp-data", status_code=HttpStatus.OK)
-async def get_msp_firestore(user: dict = Depends(get_current_user)):
-    """Get MSP data from Firestore."""
-    db = get_firestore()
+async def get_msp_mongo(user: dict = Depends(get_current_user)):
+    """Get MSP data from MongoCollections."""
+    db = get_async_db()
     items = []
-    async for doc in db.collection(Firestore.REF_MSP_PRICES).stream():
+    async for doc in db.collection(MongoCollections.REF_MSP_PRICES).stream():
         data = doc.to_dict()
         data["id"] = doc.id
         items.append(data)
@@ -59,8 +59,8 @@ async def get_mandi_directory(
     user: dict = Depends(get_current_user),
 ):
     """Get mandi directory from ref data."""
-    db = get_firestore()
-    query = db.collection(Firestore.REF_MANDI_DIRECTORY)
+    db = get_async_db()
+    query = db.collection(MongoCollections.REF_MANDI_DIRECTORY)
     if state:
         query = query.where("state", "==", state)
     query = query.limit(limit)
@@ -80,8 +80,8 @@ async def get_price_trends(
     user: dict = Depends(get_current_user),
 ):
     """Get price trend for a commodity using ref_mandi_prices."""
-    db = get_firestore()
-    query = db.collection(Firestore.REF_MANDI_PRICES).where("commodity", "==", commodity)
+    db = get_async_db()
+    query = db.collection(MongoCollections.REF_MANDI_PRICES).where("commodity", "==", commodity)
     if state:
         query = query.where("state", "==", state)
     if market:
@@ -121,3 +121,4 @@ async def get_price_trends(
         "total_records": len(prices),
         "price_points": [{"date": p.get("arrival_date", ""), "modal_price": p.get("modal_price", 0)} for p in prices[-30:]],
     }
+

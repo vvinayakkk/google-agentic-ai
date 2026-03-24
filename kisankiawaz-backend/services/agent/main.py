@@ -17,7 +17,7 @@ elif settings.GEMINI_API_KEY:
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from shared.db.firebase import init_firebase, close_firebase
+from shared.db.mongodb import init_mongodb, close_mongodb
 from shared.db.redis import get_redis, close_redis
 from shared.errors.handlers import global_exception_handler
 from shared.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
@@ -29,13 +29,13 @@ embedding_service = EmbeddingService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_firebase()
+    init_mongodb()
     await get_redis()
     await embedding_service.initialize()
     logger.info("Agent service started")
     yield
     await close_redis()
-    close_firebase()
+    close_mongodb()
 
 app = FastAPI(title="KisanKiAwaaz Agent Service", version="2.0.0", lifespan=lifespan)
 app.add_exception_handler(Exception, global_exception_handler)

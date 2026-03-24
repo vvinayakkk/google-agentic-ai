@@ -361,7 +361,7 @@ class KnowledgeBaseService:
                 if results["market"].get("error"):
                     raise RuntimeError(results["market"]["error"])
             else:
-                results["market"] = {"embedded": 0, "reason": "No Firestore client provided"}
+                results["market"] = {"embedded": 0, "reason": "No MongoCollections client provided"}
 
             results["rebuilt_at"] = datetime.now(timezone.utc).isoformat()
             return results

@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from shared.auth.deps import get_current_user
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import AppError, HttpStatus
 
 from services.document_builder_service import DocumentBuilderService
@@ -102,7 +102,7 @@ async def start_session(
     Start a new document builder session for a government scheme.
     Pre-fills available data from farmer profile and returns first batch of questions.
     """
-    db = get_firestore()
+    db = get_async_db()
     farmer_id = user.get("uid") or user.get("user_id")
 
     scheme = get_scheme_by_name(body.scheme_name)
@@ -132,7 +132,7 @@ async def submit_answers(
     Submit answers for the current batch of questions.
     Returns next batch or marks session complete.
     """
-    db = get_firestore()
+    db = get_async_db()
     result = await service.submit_answers(
         db=db,
         session_id=session_id,
@@ -148,7 +148,7 @@ async def extract_from_base64(
     user: dict = Depends(get_current_user),
 ):
     """Extract fields from a base64-encoded document (alternative to file upload)."""
-    db = get_firestore()
+    db = get_async_db()
 
     try:
         file_bytes = base64.b64decode(body.file_content, validate=True)
@@ -181,7 +181,7 @@ async def get_session(
     user: dict = Depends(get_current_user),
 ):
     """Get session details including all filled fields and progress."""
-    db = get_firestore()
+    db = get_async_db()
     result = await service.get_session(db=db, session_id=session_id)
     if not result:
         raise AppError(
@@ -198,7 +198,7 @@ async def list_sessions(
     user: dict = Depends(get_current_user),
 ):
     """List all document builder sessions for the current farmer."""
-    db = get_firestore()
+    db = get_async_db()
     farmer_id = user.get("uid") or user.get("user_id")
     result = await service.list_sessions(db=db, farmer_id=farmer_id, status=status)
     return result
@@ -210,7 +210,7 @@ async def download_document(
     user: dict = Depends(get_current_user),
 ):
     """Download the generated application form for a completed session."""
-    db = get_firestore()
+    db = get_async_db()
     result = await service.get_document_file(db=db, session_id=session_id)
     if not result:
         raise AppError(
@@ -224,11 +224,11 @@ async def download_document(
 # ── Bulk Scheme Seed ─────────────────────────────────────────────
 
 @router.post("/seed-schemes", status_code=HttpStatus.CREATED)
-async def seed_schemes_to_firestore(
+async def seed_schemes_to_mongo(
     user: dict = Depends(get_current_user),
 ):
-    """Seed all government schemes from the built-in database into Firestore."""
-    db = get_firestore()
+    """Seed all government schemes from the built-in database into MongoDB."""
+    db = get_async_db()
     schemes = get_all_schemes()
 
     batch = db.batch()
@@ -248,7 +248,7 @@ async def seed_schemes_to_firestore(
         })
         count += 1
 
-        # Firestore batch limit
+        # Keep write batches below hard limits.
         if count % 400 == 0:
             await batch.commit()
             batch = db.batch()
@@ -256,7 +256,7 @@ async def seed_schemes_to_firestore(
     if count % 400 != 0:
         await batch.commit()
 
-    return {"seeded": count, "message": f"Seeded {count} government schemes to Firestore"}
+    return {"seeded": count, "message": f"Seeded {count} government schemes to MongoDB"}
 
 
 # ── Scheme Document Downloads ────────────────────────────────────

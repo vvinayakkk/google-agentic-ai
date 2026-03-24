@@ -1,4 +1,4 @@
-"""
+﻿"""
 Equipment Rental Rate Database for Indian Agriculture.
 Real-world rental rates across Indian states for farm equipment, machinery, and tools.
 Sourced from CHC (Custom Hiring Centres), FMTTIs, ICAR publications, and state agriculture departments.
@@ -766,10 +766,10 @@ def search_equipment(query: str) -> List[Dict]:
 
 
 class EquipmentRentalSyncService:
-    """Sync equipment rental data to Firestore and Qdrant."""
+    """Sync equipment rental data to MongoCollections and Qdrant."""
 
-    async def seed_to_firestore(self, db) -> dict:
-        """Seed all equipment rental data into Firestore."""
+    async def seed_to_mongo(self, db) -> dict:
+        """Seed all equipment rental data into MongoCollections."""
         from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc).isoformat()
@@ -794,7 +794,7 @@ class EquipmentRentalSyncService:
         if count % 400 != 0:
             await batch.commit()
 
-        return {"seeded": count, "message": f"Seeded {count} equipment items to Firestore"}
+        return {"seeded": count, "message": f"Seeded {count} equipment items to MongoCollections"}
 
     async def embed_to_qdrant(self) -> dict:
         """Embed equipment data into Qdrant for knowledge base."""
@@ -885,3 +885,4 @@ class EquipmentRentalSyncService:
         except Exception as e:
             logger.error(f"Error embedding equipment: {e}")
             return {"embedded": 0, "error": str(e)}
+

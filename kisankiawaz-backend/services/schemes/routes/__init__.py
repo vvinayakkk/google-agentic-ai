@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_user
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 from shared.schemas.scheme import SchemeSearchRequest
 from services.schemes_service import SchemesService
@@ -19,7 +19,7 @@ async def list_schemes(
     user: dict = Depends(get_current_user),
 ):
     """List all schemes with optional filtering."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.list_schemes(db, page=page, per_page=per_page, ministry=ministry, state=state)
 
 
@@ -37,28 +37,28 @@ async def check_eligibility(
     user: dict = Depends(get_current_user),
 ):
     """Check farmer eligibility for a scheme."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.check_eligibility(db, scheme_id, user["id"])
 
 
 @router.get("/pmfby", status_code=HttpStatus.OK)
 async def get_pmfby(user: dict = Depends(get_current_user)):
     """Get PMFBY (crop insurance) data."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.get_pmfby_data(db)
 
 
 @router.get("/fertilizer-advisory", status_code=HttpStatus.OK)
 async def get_fertilizer_advisory(user: dict = Depends(get_current_user)):
     """Get fertilizer advisory data."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.get_fertilizer_data(db)
 
 
 @router.get("/pesticide-advisory", status_code=HttpStatus.OK)
 async def get_pesticide_advisory(user: dict = Depends(get_current_user)):
     """Get pesticide advisory data."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.get_pesticide_data(db)
 
 
@@ -66,5 +66,5 @@ async def get_pesticide_advisory(user: dict = Depends(get_current_user)):
 @router.get("/{scheme_id}", status_code=HttpStatus.OK)
 async def get_scheme(scheme_id: str, user: dict = Depends(get_current_user)):
     """Get a single scheme by ID."""
-    db = get_firestore()
+    db = get_async_db()
     return await SchemesService.get_scheme(db, scheme_id)

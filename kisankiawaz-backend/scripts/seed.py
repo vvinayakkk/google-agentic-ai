@@ -1,4 +1,4 @@
-"""Unified seed orchestrator for Firestore + Qdrant.
+"""Unified seed orchestrator for MongoCollections + Qdrant.
 
 This script replaces the legacy mixed seeding approach with one deterministic flow:
 1) Seed full farmer app test data (auth/profile/crops/livestock/equipment).
@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
@@ -35,8 +36,8 @@ from qdrant_client.models import Distance, PointStruct, VectorParams, PayloadSch
 from fastembed import TextEmbedding
 
 from shared.core.config import get_settings
-from shared.core.constants import EMBEDDING_DIM, Firestore, Qdrant
-from shared.db.firebase import get_db, get_firestore, init_firebase
+from shared.core.constants import EMBEDDING_DIM, MongoCollections, Qdrant
+from shared.db.mongodb import get_db, get_async_db, init_mongodb
 from shared.services.knowledge_base_service import KnowledgeBaseService
 from scripts.seed_farmers_end_to_end import seed_farmers
 
@@ -107,15 +108,15 @@ def _count_query_limit(query, required: int) -> int:
 
 
 def _verify_seed_data_completeness() -> dict[str, Any]:
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     required_seed_counts = {
-        Firestore.USERS: 8,
-        Firestore.FARMER_PROFILES: 8,
-        Firestore.CROPS: 8,
-        Firestore.LIVESTOCK: 8,
-        Firestore.EQUIPMENT: 8,
+        MongoCollections.USERS: 8,
+        MongoCollections.FARMER_PROFILES: 8,
+        MongoCollections.CROPS: 8,
+        MongoCollections.LIVESTOCK: 8,
+        MongoCollections.EQUIPMENT: 8,
     }
 
     result: dict[str, Any] = {"ok": True, "checked": {}}
@@ -135,15 +136,15 @@ def _verify_seed_data_completeness() -> dict[str, Any]:
 
 
 def _verify_reference_data_readiness() -> dict[str, Any]:
-    init_firebase()
+    init_mongodb()
     db = get_db()
 
     required_non_empty = {
-        Firestore.REF_FARMER_SCHEMES: 1,
-        Firestore.REF_MANDI_PRICES: 1,
-        Firestore.REF_EQUIPMENT_PROVIDERS: 1,
-        Firestore.REF_CROP_VARIETIES: 1,
-        Firestore.REF_PIN_MASTER: 1,
+        MongoCollections.REF_FARMER_SCHEMES: 1,
+        MongoCollections.REF_MANDI_PRICES: 1,
+        MongoCollections.REF_EQUIPMENT_PROVIDERS: 1,
+        MongoCollections.REF_CROP_VARIETIES: 1,
+        MongoCollections.REF_PIN_MASTER: 1,
     }
 
     result: dict[str, Any] = {"ok": True, "checked": {}}
@@ -167,7 +168,8 @@ def _utc_now_iso() -> str:
 
 def _stable_point_id(prefix: str, value: str) -> str:
     digest = hashlib.sha256(f"{prefix}:{value}".encode("utf-8")).hexdigest()
-    return f"{prefix}_{digest[:40]}"
+    # Qdrant point IDs must be uint64 or UUID strings.
+    return str(uuid.UUID(digest[:32]))
 
 
 def _ensure_qdrant_collection(client: QdrantClient, name: str) -> None:
@@ -201,7 +203,7 @@ def _ensure_qdrant_indexes(client: QdrantClient, name: str) -> None:
 
 def _collect_seeded_farmer_docs(db) -> list[dict[str, Any]]:
     users = []
-    for snap in db.collection(Firestore.USERS).stream():
+    for snap in db.collection(MongoCollections.USERS).stream():
         data = snap.to_dict() or {}
         if data.get("role") != "farmer":
             continue
@@ -229,10 +231,10 @@ def _list_matches(collection: str, field: str, value: str, limit: int = 8) -> li
 
 
 def _build_farmer_profile_text(user_id: str, user: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    profile = _first_match(Firestore.FARMER_PROFILES, "user_id", user_id) or {}
-    crops = _list_matches(Firestore.CROPS, "farmer_id", user_id)
-    livestock = _list_matches(Firestore.LIVESTOCK, "farmer_id", user_id)
-    equipment = _list_matches(Firestore.EQUIPMENT, "farmer_id", user_id)
+    profile = _first_match(MongoCollections.FARMER_PROFILES, "user_id", user_id) or {}
+    crops = _list_matches(MongoCollections.CROPS, "farmer_id", user_id)
+    livestock = _list_matches(MongoCollections.LIVESTOCK, "farmer_id", user_id)
+    equipment = _list_matches(MongoCollections.EQUIPMENT, "farmer_id", user_id)
 
     crop_summary = ", ".join(
         f"{c.get('name', '')} ({c.get('season', '')})"
@@ -276,7 +278,7 @@ def _build_farmer_profile_text(user_id: str, user: dict[str, Any]) -> tuple[str,
 
 
 def embed_seeded_farmers_for_fast_retrieval() -> dict[str, Any]:
-    init_firebase()
+    init_mongodb()
     db = get_db()
     settings = get_settings()
 
@@ -323,7 +325,7 @@ def embed_seeded_farmers_for_fast_retrieval() -> dict[str, Any]:
 
 
 async def rebuild_knowledge_base() -> dict[str, Any]:
-    db_async = get_firestore()
+    db_async = get_async_db()
     service = KnowledgeBaseService()
     return await service.full_rebuild(db=db_async, strict=True)
 

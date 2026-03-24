@@ -13,7 +13,7 @@ creds/
 .idea/
 *.swp
 *.swo
-
+scripts/reports/
 # Docker
 docker-compose.override.yml
 

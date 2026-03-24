@@ -1,11 +1,11 @@
-"""Livestock business logic."""
+﻿"""Livestock business logic."""
 
 import uuid
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
+from shared.db.mongodb import FieldFilter
 
-from shared.core.constants import Firestore
+from shared.core.constants import MongoCollections
 from shared.errors import not_found, bad_request, unauthorized, ErrorCode
 
 
@@ -17,7 +17,7 @@ class LivestockService:
     @staticmethod
     async def list_livestock(db, farmer_id: str) -> dict:
         """Return all livestock records for the farmer."""
-        query = db.collection(Firestore.LIVESTOCK).where(
+        query = db.collection(MongoCollections.LIVESTOCK).where(
             filter=FieldFilter("farmer_id", "==", farmer_id)
         )
         docs = [d async for d in query.stream()]
@@ -48,7 +48,7 @@ class LivestockService:
             "created_at": now,
             "updated_at": now,
         }
-        await db.collection(Firestore.LIVESTOCK).document(livestock_id).set(doc)
+        await db.collection(MongoCollections.LIVESTOCK).document(livestock_id).set(doc)
 
         doc["id"] = livestock_id
         return doc
@@ -58,7 +58,7 @@ class LivestockService:
     @staticmethod
     async def get_livestock(db, livestock_id: str, farmer_id: str) -> dict:
         """Return a single livestock record with ownership check."""
-        doc = await db.collection(Firestore.LIVESTOCK).document(livestock_id).get()
+        doc = await db.collection(MongoCollections.LIVESTOCK).document(livestock_id).get()
         if not doc.exists:
             raise not_found("Livestock record not found")
 
@@ -74,7 +74,7 @@ class LivestockService:
     @staticmethod
     async def update_livestock(db, livestock_id: str, farmer_id: str, data: dict) -> dict:
         """Update a livestock record with ownership check."""
-        ref = db.collection(Firestore.LIVESTOCK).document(livestock_id)
+        ref = db.collection(MongoCollections.LIVESTOCK).document(livestock_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Livestock record not found")
@@ -98,7 +98,7 @@ class LivestockService:
     @staticmethod
     async def delete_livestock(db, livestock_id: str, farmer_id: str) -> None:
         """Delete a livestock record with ownership check."""
-        ref = db.collection(Firestore.LIVESTOCK).document(livestock_id)
+        ref = db.collection(MongoCollections.LIVESTOCK).document(livestock_id)
         existing = await ref.get()
         if not existing.exists:
             raise not_found("Livestock record not found")
@@ -108,3 +108,4 @@ class LivestockService:
             raise unauthorized("You do not own this livestock record")
 
         await ref.delete()
+

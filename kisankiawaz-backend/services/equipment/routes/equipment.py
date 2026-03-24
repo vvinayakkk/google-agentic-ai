@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from shared.auth.deps import get_current_farmer
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.equipment_service import EquipmentService
@@ -16,7 +16,7 @@ async def list_equipment(
     user: dict = Depends(get_current_farmer),
 ):
     """List the authenticated farmer's equipment."""
-    db = get_firestore()
+    db = get_async_db()
     return await EquipmentService.list_equipment(db=db, farmer_id=user["id"])
 
 
@@ -26,7 +26,7 @@ async def add_equipment(
     user: dict = Depends(get_current_farmer),
 ):
     """Add a piece of equipment."""
-    db = get_firestore()
+    db = get_async_db()
     return await EquipmentService.add_equipment(db=db, farmer_id=user["id"], data=body)
 
 
@@ -36,7 +36,7 @@ async def get_equipment(
     user: dict = Depends(get_current_farmer),
 ):
     """Get a single equipment item (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     return await EquipmentService.get_equipment(db=db, equipment_id=equipment_id, farmer_id=user["id"])
 
 
@@ -47,7 +47,7 @@ async def update_equipment(
     user: dict = Depends(get_current_farmer),
 ):
     """Update equipment (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     return await EquipmentService.update_equipment(
         db=db, equipment_id=equipment_id, farmer_id=user["id"], data=body,
     )
@@ -59,5 +59,5 @@ async def delete_equipment(
     user: dict = Depends(get_current_farmer),
 ):
     """Delete equipment (ownership check)."""
-    db = get_firestore()
+    db = get_async_db()
     await EquipmentService.delete_equipment(db=db, equipment_id=equipment_id, farmer_id=user["id"])

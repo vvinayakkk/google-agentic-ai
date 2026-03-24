@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from shared.auth.deps import get_current_user, get_current_admin
-from shared.db.firebase import get_firestore
+from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
 
 from services.mandi_service import MandiService
@@ -22,7 +22,7 @@ async def list_mandis(
     user: dict = Depends(get_current_user),
 ):
     """List all mandis with optional filters."""
-    db = get_firestore()
+    db = get_async_db()
     filters = {"state": state, "district": district}
     return await MandiService.list_mandis(db=db, filters=filters, page=page, per_page=per_page)
 
@@ -33,7 +33,7 @@ async def get_mandi(
     user: dict = Depends(get_current_user),
 ):
     """Get a single mandi."""
-    db = get_firestore()
+    db = get_async_db()
     return await MandiService.get_mandi(db=db, mandi_id=mandi_id)
 
 
@@ -43,7 +43,7 @@ async def create_mandi(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a mandi."""
-    db = get_firestore()
+    db = get_async_db()
     return await MandiService.create_mandi(db=db, data=body)
 
 
@@ -54,7 +54,7 @@ async def update_mandi(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a mandi."""
-    db = get_firestore()
+    db = get_async_db()
     return await MandiService.update_mandi(db=db, mandi_id=mandi_id, data=body)
 
 
@@ -64,5 +64,5 @@ async def delete_mandi(
     admin: dict = Depends(get_current_admin),
 ):
     """Admin deletes a mandi."""
-    db = get_firestore()
+    db = get_async_db()
     await MandiService.delete_mandi(db=db, mandi_id=mandi_id)
