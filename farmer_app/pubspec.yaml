@@ -1,0 +1,73 @@
+name: farmer_app
+description: "KisanKiAwaaz - AI-Powered Farmer Assistant"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: any
+  riverpod_annotation: any
+
+  # Navigation
+  go_router: any
+
+  # Networking
+  dio: any
+
+  # Storage
+  shared_preferences: any
+
+  # Localization
+  easy_localization: any
+
+  # UI Components
+  flutter_markdown: any
+  google_fonts: any
+  cached_network_image: any
+  shimmer: any
+  flutter_animate: any
+
+  # Maps & Location
+  geolocator: any
+  geocoding: any
+  flutter_map: any
+  latlong2: any
+
+  # Media
+  image_picker: any
+  file_picker: any
+  record: any
+  audioplayers: any
+  flutter_tts: any
+
+  # Utilities
+  intl: any
+  uuid: any
+  url_launcher: any
+  share_plus: any
+  path_provider: any
+  permission_handler: any
+  connectivity_plus: any
+
+  # Icons
+  cupertino_icons: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/translations/

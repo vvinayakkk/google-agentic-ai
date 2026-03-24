@@ -1,0 +1,275 @@
+name,state,district,source,latitude,longitude,geocode_quality
+Pundibari,West Bengal,Coochbehar,derived_from_market_records,,,
+Toofanganj,West Bengal,Coochbehar,derived_from_market_records,,,
+Sheoraphuly,West Bengal,Hooghly,derived_from_market_records,,,
+Anoop Shahar,Uttar Pradesh,Bulandshahar,derived_from_market_records,,,
+Sikanderabad,Uttar Pradesh,Bulandshahar,derived_from_market_records,,,
+Sealdah Koley Market,West Bengal,Kolkata,derived_from_market_records,22.56263,88.36304,PPLA
+Deesa(Deesa Veg Yard),Gujarat,Banaskanth,derived_from_market_records,,,
+Bharuch,Gujarat,Bharuch,derived_from_market_records,21.69482,72.9805,PPL
+Talalagir,Gujarat,Gir Somnath,derived_from_market_records,,,
+Surat,Gujarat,Surat,derived_from_market_records,21.19594,72.83023,PPL
+Padra,Gujarat,Vadodara(Baroda),derived_from_market_records,,,
+Vadodara(Sayajipura),Gujarat,Vadodara(Baroda),derived_from_market_records,,,
+Borsad,Gujarat,Anand,derived_from_market_records,22.55251,72.9552,PPLA2
+Junagadh,Gujarat,Junagarh,derived_from_market_records,19.85993,82.93385,PPL
+Bardoli,Gujarat,Surat,derived_from_market_records,21.19594,72.83023,PPL
+Valod(Buhari),Gujarat,Surat,derived_from_market_records,21.19594,72.83023,PPL
+Bhiwani,Haryana,Bhiwani,derived_from_market_records,28.79304,76.13968,PPL
+Ch. Dadri,Haryana,Bhiwani,derived_from_market_records,28.79304,76.13968,PPL
+Tosham,Haryana,Bhiwani,derived_from_market_records,28.79304,76.13968,PPL
+Barwala(Hisar),Haryana,Hissar,derived_from_market_records,36.0633,48.581,PPL
+Barwala,Haryana,Panchkula,derived_from_market_records,30.69461,76.8504,PPLA2
+Narwal Jammu (F&V),Jammu and Kashmir,Jammu,derived_from_market_records,32.73528,74.86167,PPLA
+Kathua,Jammu and Kashmir,Kathua,derived_from_market_records,32.36941,75.52539,PPL
+Ajnala,Punjab,Amritsar,derived_from_market_records,31.62234,74.87534,PPL
+Barnala,Punjab,Barnala,derived_from_market_records,30.37451,75.5487,PPL
+Meham,Haryana,Rohtak,derived_from_market_records,28.89447,76.58917,PPL
+Hamirpur,Himachal Pradesh,Hamirpur,derived_from_market_records,25.9553,80.14842,PPL
+Hamirpur(Nadaun),Himachal Pradesh,Hamirpur,derived_from_market_records,25.9553,80.14842,PPL
+Gadhwah,Jharkhand,Garhwa,derived_from_market_records,24.16002,83.80755,PPL
+Munnar,Kerala,Idukki,derived_from_market_records,9.85,76.96667,PPL
+Kollam,Kerala,Kollam,derived_from_market_records,8.88113,76.58469,PPLA2
+Kottarakkara,Kerala,Kollam,derived_from_market_records,8.88113,76.58469,PPLA2
+Kuruppanthura,Kerala,Kottayam,derived_from_market_records,9.58692,76.52132,PPL
+Shillong,Meghalaya,East Khasi Hills,derived_from_market_records,,,
+Shahdara,NCT of Delhi,Delhi,derived_from_market_records,28.65195,77.23149,PPLA
+Khamano,Punjab,Fatehgarh,derived_from_market_records,27.36409,79.63111,PPL
+Talwandi Bhai,Punjab,Ferozpur,derived_from_market_records,30.93198,72.83818,PPL
+Adampur,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Bilga,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Lohian Khas,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Bariwala,Punjab,Muktsar,derived_from_market_records,30.47426,74.5166,PPL
+Giddarbaha,Punjab,Muktsar,derived_from_market_records,30.47426,74.5166,PPL
+Malout,Punjab,Muktsar,derived_from_market_records,30.47426,74.5166,PPL
+Muktsar,Punjab,Muktsar,derived_from_market_records,30.47426,74.5166,PPL
+Banga,Punjab,Nawanshahr,derived_from_market_records,31.1245,76.11613,PPL
+Ajmer(F&V),Rajasthan,Ajmer,derived_from_market_records,26.4521,74.63867,PPL
+Alwar (F&V),Rajasthan,Alwar,derived_from_market_records,27.56246,76.625,PPL
+Bikaner (F&V),Rajasthan,Bikaner,derived_from_market_records,28.01762,73.31495,PPL
+Jodhpur (F&V),Rajasthan,Jodhpur,derived_from_market_records,26.26841,73.00594,PPL
+Nabha,Punjab,Patiala,derived_from_market_records,30.33625,76.3922,PPL
+Morinda,Punjab,Ropar (Rupnagar),derived_from_market_records,,,
+Lehra Gaga,Punjab,Sangrur,derived_from_market_records,30.24506,75.84488,PPL
+Sriganganagar (F&V),Rajasthan,Ganganagar,derived_from_market_records,29.92009,73.87496,PPLA2
+Kiratpur,Uttar Pradesh,Bijnor,derived_from_market_records,29.373,78.13636,PPL
+Unnao,Uttar Pradesh,Unnao,derived_from_market_records,26.54706,80.48781,PPL
+Kotadwara,Uttrakhand,Garhwal (Pauri),derived_from_market_records,,,
+Diamond Harbour,West Bengal,North 24 Parganas,derived_from_market_records,,,
+Baruipur(Canning),West Bengal,Sounth 24 Parganas,derived_from_market_records,,,
+Ahmedabad,Gujarat,Ahmedabad,derived_from_market_records,23.02579,72.58727,PPL
+Bilimora,Gujarat,Navsari,derived_from_market_records,20.94237,72.92467,PPLA2
+Piravam,Kerala,Ernakulam,derived_from_market_records,9.93988,76.26022,PPL
+Punalur,Kerala,Kollam,derived_from_market_records,8.88113,76.58469,PPLA2
+Wadakkanchery,Kerala,Thirssur,derived_from_market_records,,,
+Anyara(EEC),Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Chala,Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Pothencode,Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Thiruvananthapuram,Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Gunpur,Odisha,Rayagada,derived_from_market_records,19.17132,83.41428,PPL
+Chittorgarh,Rajasthan,Chittorgarh,derived_from_market_records,24.88963,74.62403,PPL
+Pabiacherra,Tripura,Unokoti,derived_from_market_records,,,
+Baruwasagar,Uttar Pradesh,Jhansi,derived_from_market_records,25.45887,78.57994,PPL
+Gurdaspur,Punjab,Gurdaspur,derived_from_market_records,32.03933,75.40318,PPL
+Kalanaur,Punjab,Gurdaspur,derived_from_market_records,32.03933,75.40318,PPL
+Quadian,Punjab,Gurdaspur,derived_from_market_records,32.03933,75.40318,PPL
+Jalandhar City,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Phillaur,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Ludhiana,Punjab,Ludhiana,derived_from_market_records,30.91204,75.85379,PPL
+Roorkee APMC,Uttarakhand,Haridwar,derived_from_market_records,29.94791,78.16025,PPL
+Kharar APMC,Punjab,Mohali,derived_from_market_records,30.67995,76.72211,PPL
+Karera(F&V) APMC,Madhya Pradesh,Shivpuri,derived_from_market_records,25.42378,77.66223,PPL
+Bilimora APMC,Gujarat,Navsari,derived_from_market_records,20.94237,72.92467,PPLA2
+Chansama APMC,Gujarat,Patan,derived_from_market_records,27.67658,85.31417,PPL
+APMCKHEDBRAHMA,Gujarat,Sabarkantha,derived_from_market_records,,,
+Sendhwa(F&V) APMC,Madhya Pradesh,Badwani,derived_from_market_records,32.84671,74.59616,PPL
+Karimangalam(Uzhavar Sandhai),Tamil Nadu,Dharmapuri,derived_from_market_records,12.1277,78.15794,PPL
+Mecheri(Uzhavar Sandhai),Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Pallikonda(Uzhavar Sandhai),Tamil Nadu,Vellore,derived_from_market_records,12.9184,79.13255,PPL
+Perampet(Uzhavar Sandhai),Tamil Nadu,Vellore,derived_from_market_records,12.9184,79.13255,PPL
+Ponnamaravathi(Uzhavar Sandhai),Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Gandhigramam(Uzhavar Sandhai),Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+"Flower Market,Gazipur APMC",NCT of Delhi,Delhi,derived_from_market_records,28.65195,77.23149,PPLA
+Khair APMC,Uttar Pradesh,Aligarh,derived_from_market_records,27.88145,78.07464,PPL
+Payagpur APMC,Uttar Pradesh,Shravasti,derived_from_market_records,27.50198,82.02675,AIRP
+Tulsipur APMC,Uttar Pradesh,Balrampur,derived_from_market_records,23.61219,83.61115,PPLA2
+Kulai APMC,Tripura,Dhalai,derived_from_market_records,24.60117,92.84785,PPL
+Wokha Town APMC,Nagaland,Wokha,derived_from_market_records,26.09717,94.25817,PPL
+Durgapur APMC,West Bengal,Paschim Bardhaman,derived_from_market_records,,,
+Darjeeling APMC,West Bengal,Darjeeling,derived_from_market_records,27.03333,88.26667,PPL
+Sulur(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Gandarvakottai(Uzhavar Sandhai ) APMC,Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Mayiladuthurai(Uzhavar Sandhai ) APMC,Tamil Nadu,Nagapattinam,derived_from_market_records,10.76377,79.84313,PPL
+Paramathivelur(Uzhavar Sandhai ) APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Thammampatti (Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Tiruvarur(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvarur,derived_from_market_records,10.77269,79.6368,PPL
+Udumalpet APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Ulundurpettai APMC,Tamil Nadu,Villupuram,derived_from_market_records,11.93975,79.49244,PPL
+Sailana APMC,Madhya Pradesh,Ratlam,derived_from_market_records,23.33033,75.04032,PPL
+Devgadhbaria APMC,Gujarat,Dahod,derived_from_market_records,22.83283,74.25986,PPL
+Mansa(Manas Veg Yard) APMC,Gujarat,Gandhinagar,derived_from_market_records,23.21667,72.68333,PPLA
+Mahuva(Anaval) APMC,Gujarat,Surat,derived_from_market_records,21.19594,72.83023,PPL
+PMY Bilaspur,Himachal Pradesh,Bilaspur,derived_from_market_records,22.08005,82.15543,PPL
+Bhesan APMC,Gujarat,Junagarh,derived_from_market_records,19.85993,82.93385,PPL
+Surat APMC,Gujarat,Surat,derived_from_market_records,21.19594,72.83023,PPL
+Hodal APMC,Haryana,Palwal,derived_from_market_records,28.14469,77.32546,PPL
+PMY Paonta Sahib,Himachal Pradesh,Sirmore,derived_from_market_records,,,
+Kannur APMC,Kerala,Kannur,derived_from_market_records,11.86752,75.35763,PPL
+Payyannur APMC,Kerala,Kannur,derived_from_market_records,11.86752,75.35763,PPL
+Khanna APMC,Punjab,Ludhiana,derived_from_market_records,30.91204,75.85379,PPL
+Baghapurana APMC,Punjab,Moga,derived_from_market_records,30.81383,75.16878,PPL
+Patiala APMC,Punjab,Patiala,derived_from_market_records,30.33625,76.3922,PPL
+Nawalgarh APMC,Rajasthan,Jhunjhunu,derived_from_market_records,28.12559,75.39797,PPL
+Tamluk (Medinipur E) APMC,West Bengal,Medinipur(E),derived_from_market_records,,,
+Rewari APMC,Haryana,Rewari,derived_from_market_records,28.199,76.6183,PPL
+PMY Kather Solan,Himachal Pradesh,Solan,derived_from_market_records,30.90908,77.10869,PPL
+Mukerian APMC,Punjab,Hoshiarpur,derived_from_market_records,31.53723,75.91269,PPLA2
+Cheyyar(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvannamalai,derived_from_market_records,,,
+Bhiwani APMC,Haryana,Bhiwani,derived_from_market_records,28.79304,76.13968,PPL
+Papanasam(Uzhavar Sandhai ) APMC,Tamil Nadu,Thanjavur,derived_from_market_records,10.78523,79.13909,PPL
+Panposh APMC,Odisha,Sundergarh,derived_from_market_records,22.11667,84.03333,PPL
+Haridwar Union APMC,Uttarakhand,Haridwar,derived_from_market_records,29.94791,78.16025,PPL
+Deeg APMC,Rajasthan,Deeg,derived_from_market_records,2.94744,44.10325,PPL
+Bhucho APMC,Punjab,Bhatinda,derived_from_market_records,,,
+Garh Shankar APMC,Punjab,Hoshiarpur,derived_from_market_records,31.53723,75.91269,PPLA2
+Doraha APMC,Punjab,Ludhiana,derived_from_market_records,30.91204,75.85379,PPL
+Bisoli APMC,Uttar Pradesh,Badaun,derived_from_market_records,33.75803,70.80705,PPL
+Kurali APMC,Punjab,Mohali,derived_from_market_records,30.67995,76.72211,PPL
+Boudh APMC,Odisha,Boudh,derived_from_market_records,31.56,-8.28,PPL
+Rairakhol APMC,Odisha,Sambalpur,derived_from_market_records,21.46527,83.97573,PPL
+Sargipali APMC,Odisha,Sundergarh,derived_from_market_records,22.11667,84.03333,PPL
+Dhenkanal APMC,Odisha,Dhenkanal,derived_from_market_records,20.65744,85.59693,PPL
+Vadavalli(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Kohima APMC,Nagaland,Kohima,derived_from_market_records,25.67467,94.11099,PPLA
+Nutanbazar APMC,Tripura,Gomati,derived_from_market_records,40.39608,23.79547,PPL
+PMY Kangni Mandi,Himachal Pradesh,Mandi,derived_from_market_records,31.71194,76.93273,PPL
+Padra APMC,Gujarat,Vadodara(Baroda),derived_from_market_records,,,
+Pappanchani VFPCK APMC,Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Chhachrauli APMC,Haryana,Yamuna Nagar,derived_from_market_records,30.12796,77.28371,PPL
+Gulavati APMC,Uttar Pradesh,Bulandshahar,derived_from_market_records,,,
+Barwala(Hisar) APMC,Haryana,Hissar,derived_from_market_records,36.0633,48.581,PPL
+Dhand APMC,Haryana,Kaithal,derived_from_market_records,29.80153,76.39959,PPL
+Jalalabad APMC,Punjab,Fazilka,derived_from_market_records,30.40207,74.02836,PPLA2
+Babain APMC,Haryana,Kurukshetra,derived_from_market_records,29.9657,76.837,PPL
+Kosli APMC,Haryana,Rewari,derived_from_market_records,28.199,76.6183,PPL
+Pulpally APMC,Kerala,Wayanad,derived_from_market_records,,,
+Jaggampet APMC,Andhra Pradesh,East Godavari,derived_from_market_records,,,
+Gurgaon APMC,Haryana,Gurgaon,derived_from_market_records,28.4601,77.02635,PPLA2
+Sundarapuram(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Neyyatinkara APMC,Kerala,Thiruvananthapuram,derived_from_market_records,8.4855,76.94924,PPLA
+Chengannur APMC,Kerala,Alappuzha,derived_from_market_records,9.49004,76.3264,PPLA2
+Harippad APMC,Kerala,Alappuzha,derived_from_market_records,9.49004,76.3264,PPLA2
+Pala APMC,Kerala,Kottayam,derived_from_market_records,9.58692,76.52132,PPL
+Chavakkad APMC,Kerala,Thirssur,derived_from_market_records,,,
+Thrippunithura APMC,Kerala,Ernakulam,derived_from_market_records,9.93988,76.26022,PPL
+Meham APMC,Haryana,Rohtak,derived_from_market_records,28.89447,76.58917,PPL
+Karanjia APMC,Odisha,Mayurbhanja,derived_from_market_records,,,
+Thottippal VFPCK APMC,Kerala,Thirssur,derived_from_market_records,,,
+North Paravur APMC,Kerala,Ernakulam,derived_from_market_records,9.93988,76.26022,PPL
+SMY Nalagarh,Himachal Pradesh,Solan,derived_from_market_records,30.90908,77.10869,PPL
+SMY Nadaun,Himachal Pradesh,Hamirpur,derived_from_market_records,25.9553,80.14842,PPL
+Jaleswar APMC,Odisha,Balasore,derived_from_market_records,21.49266,86.93348,PPL
+SMY Baijnath,Himachal Pradesh,Kangra,derived_from_market_records,32.09135,76.26267,PPL
+SMY Jaisinghpur,Himachal Pradesh,Kangra,derived_from_market_records,32.09135,76.26267,PPL
+SMY Nagrota Bagwan,Himachal Pradesh,Kangra,derived_from_market_records,32.09135,76.26267,PPL
+Anandnagar APMC,Uttar Pradesh,Maharajganj,derived_from_market_records,26.25914,83.11643,PPL
+Siliguri APMC,West Bengal,Darjeeling,derived_from_market_records,27.03333,88.26667,PPL
+Taliparamba APMC,Kerala,Kannur,derived_from_market_records,11.86752,75.35763,PPL
+Garh Shankar(Mahalpur) APMC,Punjab,Hoshiarpur,derived_from_market_records,31.53723,75.91269,PPLA2
+Quilandy APMC,Kerala,Kozhikode(Calicut),derived_from_market_records,,,
+Tarantaran APMC,Punjab,Tarntaran,derived_from_market_records,,,
+Gobichettipalayam(Uzhavar Sandhai ) APMC,Tamil Nadu,Erode,derived_from_market_records,11.3428,77.72741,PPL
+Sathiyamagalam(Uzhavar Sandhai ) APMC,Tamil Nadu,Erode,derived_from_market_records,11.3428,77.72741,PPL
+SMY Rohroo,Himachal Pradesh,Shimla,derived_from_market_records,31.10442,77.16662,PPLA
+SMY Santoshgarh,Himachal Pradesh,Una,derived_from_market_records,40.2241,-1.97788,PPLA3
+Mehatpur APMC,Punjab,Jalandhar,derived_from_market_records,31.32556,75.57917,PPL
+Jasvantnagar APMC,Uttar Pradesh,Etawah,derived_from_market_records,26.77615,79.02133,PPL
+Diglipur APMC,Andaman and Nicobar,North and Middle Andaman,derived_from_market_records,,,
+Tiruchengode APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Bhulath (Nadala) APMC,Punjab,Kapurthala,derived_from_market_records,31.38011,75.38105,PPL
+Thuraiyur APMC,Tamil Nadu,Thiruchirappalli,derived_from_market_records,,,
+Ariyalur(Uzhavar Sandhai) APMC,Tamil Nadu,Ariyalur,derived_from_market_records,11.13849,79.07556,PPL
+Singanallur(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Banki APMC,Odisha,Cuttack,derived_from_market_records,20.46497,85.87927,PPL
+PMY Kangra,Himachal Pradesh,Kangra,derived_from_market_records,32.09135,76.26267,PPL
+Narnaul APMC,Haryana,Mahendragarh-Narnaul,derived_from_market_records,,,
+Lalganj APMC,Uttar Pradesh,Raebarelli,derived_from_market_records,,,
+Hasanpur APMC,Uttar Pradesh,Amroha,derived_from_market_records,28.90314,78.46984,PPL
+Barwala APMC,Haryana,Panchkula,derived_from_market_records,30.69461,76.8504,PPLA2
+Pollachi(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Nabha APMC,Punjab,Patiala,derived_from_market_records,30.33625,76.3922,PPL
+Jalalabad APMC,Uttar Pradesh,Shahjahanpur,derived_from_market_records,27.88165,79.90918,PPL
+Kairana APMC,Uttar Pradesh,Shamli,derived_from_market_records,29.4497,77.30959,PPLA2
+Mettupalayam(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Maigalganj APMC,Uttar Pradesh,Khiri (Lakhimpur),derived_from_market_records,,,
+Gangoh APMC,Uttar Pradesh,Saharanpur,derived_from_market_records,29.9679,77.54522,PPL
+Fatehabad APMC,Uttar Pradesh,Agra,derived_from_market_records,27.18333,78.01667,PPLA2
+Anwala APMC,Uttar Pradesh,Bareilly,derived_from_market_records,28.36678,79.43167,PPL
+Chandigarh(Grain/Fruit) APMC,Chandigarh,Chandigarh,derived_from_market_records,30.73629,76.7884,PPLA
+Karur(Uzhavar Sandhai ) APMC,Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+Kurichi(Uzhavar Sandhai ) APMC,Tamil Nadu,Coimbatore,derived_from_market_records,11.00555,76.96612,PPL
+Viruthachalam(Uzhavar Sandhai ) APMC,Tamil Nadu,Cuddalore,derived_from_market_records,11.75617,79.76693,PPL
+Vadalur(Uzhavar Sandhai ) APMC,Tamil Nadu,Cuddalore,derived_from_market_records,11.75617,79.76693,PPL
+Dharmapuri(Uzhavar Sandhai ) APMC,Tamil Nadu,Dharmapuri,derived_from_market_records,12.1277,78.15794,PPL
+Pennagaram(Uzhavar Sandhai ) APMC,Tamil Nadu,Dharmapuri,derived_from_market_records,12.1277,78.15794,PPL
+Palacode(Uzhavar Sandhai ) APMC,Tamil Nadu,Dharmapuri,derived_from_market_records,12.1277,78.15794,PPL
+AJattihalli(Uzhavar Sandhai ) APMC,Tamil Nadu,Dharmapuri,derived_from_market_records,12.1277,78.15794,PPL
+Perundurai(Uzhavar Sandhai ) APMC,Tamil Nadu,Erode,derived_from_market_records,11.3428,77.72741,PPL
+Thalavadi(Uzhavar Sandhai ) APMC,Tamil Nadu,Erode,derived_from_market_records,11.3428,77.72741,PPL
+Kundrathur(Uzhavar Sandhai ) APMC,Tamil Nadu,Kancheepuram,derived_from_market_records,,,
+Kulithalai(Uzhavar Sandhai ) APMC,Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+Velayuthampalayam(Uzhavar Sandhai ) APMC,Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+Pallapatti (Uzhavar Sandhai ) APMC,Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+Vengamedu(Uzhavar Sandhai ) APMC,Tamil Nadu,Karur,derived_from_market_records,10.95771,78.08095,PPL
+Hosur(Uzhavar Sandhai ) APMC,Tamil Nadu,Krishnagiri,derived_from_market_records,12.51921,78.21382,PPL
+Krishnagiri(Uzhavar Sandhai ) APMC,Tamil Nadu,Krishnagiri,derived_from_market_records,12.51921,78.21382,PPL
+Denkanikottai(Uzhavar Sandhai ) APMC,Tamil Nadu,Krishnagiri,derived_from_market_records,12.51921,78.21382,PPL
+Avallapalli(Uzhavar Sandhai ) APMC,Tamil Nadu,Krishnagiri,derived_from_market_records,12.51921,78.21382,PPL
+Anna nagar(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Chokkikulam(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Palanganatham(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Usilampatti(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Thirumangalam(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Melur(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Anaiyur(Uzhavar Sandhai ) APMC,Tamil Nadu,Madurai,derived_from_market_records,9.919,78.11953,PPLA2
+Sirkali(Uzhavar Sandhai ) APMC,Tamil Nadu,Nagapattinam,derived_from_market_records,10.76377,79.84313,PPL
+Namakkal(Uzhavar Sandhai ) APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Rasipuram(Uzhavar Sandhai ) APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Kumarapalayam(Uzhavar Sandhai ) APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Mohanur(Uzhavar Sandhai ) APMC,Tamil Nadu,Namakkal,derived_from_market_records,11.22126,78.16524,PPL
+Udhagamandalam(Uzhavar Sandhai ) APMC,Tamil Nadu,The Nilgiris,derived_from_market_records,,,
+Perambalur(Uzhavar Sandhai ) APMC,Tamil Nadu,Perambalur,derived_from_market_records,11.23333,78.88333,PPL
+Pudukottai(Uzhavar Sandhai ) APMC,Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Aranthangi(Uzhavar Sandhai ) APMC,Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Alangudi(Uzhavar Sandhai ) APMC,Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Viralimalai(Uzhavar Sandhai ) APMC,Tamil Nadu,Pudukkottai,derived_from_market_records,10.38128,78.82141,PPL
+Ramanathapuram(Uzhavar Sandhai ) APMC,Tamil Nadu,Ramanathapuram,derived_from_market_records,9.37158,78.83077,PPL
+Paramakudi(Uzhavar Sandhai ) APMC,Tamil Nadu,Ramanathapuram,derived_from_market_records,9.37158,78.83077,PPL
+Sooramangalam(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Thathakapatti(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Mettur(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Attayampatti(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Hasthampatti(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Elampillai(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Jalagandapuram(Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Edapadi (Uzhavar Sandhai ) APMC,Tamil Nadu,Salem,derived_from_market_records,11.65376,78.15538,PPL
+Sivagangai (Uzhavar Sandhai ) APMC,Tamil Nadu,Sivaganga,derived_from_market_records,9.84701,78.48358,PPL
+Devakottai (Uzhavar Sandhai ) APMC,Tamil Nadu,Sivaganga,derived_from_market_records,9.84701,78.48358,PPL
+Karaikudi(Uzhavar Sandhai ) APMC,Tamil Nadu,Sivaganga,derived_from_market_records,9.84701,78.48358,PPL
+Tirupatthur(Uzhavar Sandhai ) APMC,Tamil Nadu,Sivaganga,derived_from_market_records,9.84701,78.48358,PPL
+Singampunari(Uzhavar Sandhai ) APMC,Tamil Nadu,Sivaganga,derived_from_market_records,9.84701,78.48358,PPL
+Pattukottai(Uzhavar Sandhai ) APMC,Tamil Nadu,Thanjavur,derived_from_market_records,10.78523,79.13909,PPL
+Theni(Uzhavar Sandhai ) APMC,Tamil Nadu,Theni,derived_from_market_records,10.01115,77.47772,PPLX
+Kambam(Uzhavar Sandhai ) APMC,Tamil Nadu,Theni,derived_from_market_records,10.01115,77.47772,PPLX
+Bodinayakanur(Uzhavar Sandhai ) APMC,Tamil Nadu,Theni,derived_from_market_records,10.01115,77.47772,PPLX
+Devaram(Uzhavar Sandhai ) APMC,Tamil Nadu,Theni,derived_from_market_records,10.01115,77.47772,PPLX
+Chinnamanur(Uzhavar Sandhai ) APMC,Tamil Nadu,Theni,derived_from_market_records,10.01115,77.47772,PPLX
+Palayamkottai(Uzhavar Sandhai ) APMC,Tamil Nadu,Thirunelveli,derived_from_market_records,,,
+Kandiyaperi(Uzhavar Sandhai ) APMC,Tamil Nadu,Thirunelveli,derived_from_market_records,,,
+NGO Colony(Uzhavar Sandhai ) APMC,Tamil Nadu,Thirunelveli,derived_from_market_records,,,
+Tiruthuraipoondi(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvarur,derived_from_market_records,10.77269,79.6368,PPL
+Mannargudi II(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvarur,derived_from_market_records,10.77269,79.6368,PPL
+Kovilpatti(Uzhavar Sandhai ) APMC,Tamil Nadu,Tuticorin,derived_from_market_records,8.76735,78.13425,PPL
+Tiruvannamalai(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvannamalai,derived_from_market_records,,,
+Polur(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvannamalai,derived_from_market_records,,,
+Arani(Uzhavar Sandhai ) APMC,Tamil Nadu,Thiruvannamalai,derived_from_market_records,,,

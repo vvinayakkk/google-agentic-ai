@@ -1,0 +1,423 @@
+MICROSERVICES AUDIT
+Generated at: 2026-03-22T21:23:00.472672+00:00
+Services root: services
+
+SERVICE: agent
+PATH: services/agent
+TOTAL FILES: 23
+FILE STRUCTURE:
+  - __init__.py
+  - agents/__init__.py
+  - agents/coordinator.py
+  - agents/crop_agent.py
+  - agents/general_agent.py
+  - agents/market_agent.py
+  - agents/scheme_agent.py
+  - agents/weather_agent.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/chat.py
+  - services/__init__.py
+  - services/chat_service.py
+  - services/embedding_service.py
+  - services/groq_fallback_service.py
+  - tools/__init__.py
+  - tools/crop_tools.py
+  - tools/general_tools.py
+  - tools/market_tools.py
+  - tools/scheme_tools.py
+  - tools/weather_tools.py
+PROVIDES:
+  - chat
+  - coordinator
+  - crop agent
+  - crop tools
+  - embedding
+  - general agent
+  - general tools
+  - groq fallback
+  - market agent
+  - market tools
+  - scheme agent
+  - scheme tools
+  - weather agent
+  - weather tools
+ROUTES:
+  - file: routes/chat.py
+    GET /key-pool/status  |  full: /api/v1/agent/key-pool/status
+    GET /sessions  |  full: /api/v1/agent/sessions
+    GET /sessions/{session_id}  |  full: /api/v1/agent/sessions/{session_id}
+    POST /chat  |  full: /api/v1/agent/chat
+    POST /search  |  full: /api/v1/agent/search
+    DELETE /sessions/{session_id}  |  full: /api/v1/agent/sessions/{session_id}
+  - include_router prefixes in main.py:
+    api_router: /api/v1/agent
+TOTAL DETECTED ROUTES: 6
+
+SERVICE: auth
+PATH: services/auth
+TOTAL FILES: 8
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/auth.py
+  - services/__init__.py
+  - services/auth_service.py
+PROVIDES:
+  - auth
+ROUTES:
+  - file: routes/auth.py
+    GET /me  |  full: /api/v1/auth/me
+    POST /register  |  full: /api/v1/auth/register
+    POST /login  |  full: /api/v1/auth/login
+    POST /refresh  |  full: /api/v1/auth/refresh
+    POST /change-password  |  full: /api/v1/auth/change-password
+    POST /otp/send  |  full: /api/v1/auth/otp/send
+    POST /otp/verify  |  full: /api/v1/auth/otp/verify
+    POST /reset-password  |  full: /api/v1/auth/reset-password
+    PUT /me  |  full: /api/v1/auth/me
+  - include_router prefixes in main.py:
+    api_router: /api/v1/auth
+TOTAL DETECTED ROUTES: 9
+
+SERVICE: crop
+PATH: services/crop
+TOTAL FILES: 13
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/crops.py
+  - routes/cycles.py
+  - routes/disease.py
+  - routes/recommendations.py
+  - services/__init__.py
+  - services/crop_service.py
+  - services/cycle_service.py
+  - services/disease_service.py
+PROVIDES:
+  - crop
+  - crops
+  - cycle
+  - cycles
+  - disease
+  - recommendations
+ROUTES:
+  - file: routes/crops.py
+    GET /  |  full: /api/v1/crops
+    GET /{crop_id}  |  full: /api/v1/crops/{crop_id}
+    POST /  |  full: /api/v1/crops
+    PUT /{crop_id}  |  full: /api/v1/crops/{crop_id}
+    DELETE /{crop_id}  |  full: /api/v1/crops/{crop_id}
+  - file: routes/cycles.py
+    GET /cycles  |  full: /api/v1/crops/cycles
+    GET /cycles/{name}  |  full: /api/v1/crops/cycles/{name}
+  - file: routes/disease.py
+    router_prefix: /disease
+    POST /disease/detect  |  full: /api/v1/crops/disease/detect
+  - file: routes/recommendations.py
+    POST /recommendations  |  full: /api/v1/crops/recommendations
+  - include_router prefixes in main.py:
+    api_router: /api/v1/crops
+TOTAL DETECTED ROUTES: 9
+
+SERVICE: equipment
+PATH: services/equipment
+TOTAL FILES: 14
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/equipment.py
+  - routes/livestock.py
+  - routes/rental_rates.py
+  - routes/rentals.py
+  - services/__init__.py
+  - services/equipment_rental_data.py
+  - services/equipment_service.py
+  - services/livestock_service.py
+  - services/rental_service.py
+PROVIDES:
+  - equipment
+  - equipment rental data
+  - livestock
+  - rental
+  - rental rates
+  - rentals
+ROUTES:
+  - file: routes/equipment.py
+    GET /  |  full: /api/v1/equipment
+    GET /{equipment_id}  |  full: /api/v1/equipment/{equipment_id}
+    POST /  |  full: /api/v1/equipment
+    PUT /{equipment_id}  |  full: /api/v1/equipment/{equipment_id}
+    DELETE /{equipment_id}  |  full: /api/v1/equipment/{equipment_id}
+  - file: routes/livestock.py
+    router_prefix: /livestock
+    GET /livestock  |  full: /api/v1/equipment/livestock
+    GET /livestock/{livestock_id}  |  full: /api/v1/equipment/livestock/{livestock_id}
+    POST /livestock  |  full: /api/v1/equipment/livestock
+    PUT /livestock/{livestock_id}  |  full: /api/v1/equipment/livestock/{livestock_id}
+    DELETE /livestock/{livestock_id}  |  full: /api/v1/equipment/livestock/{livestock_id}
+  - file: routes/rental_rates.py
+    router_prefix: /rental-rates
+    GET /rental-rates  |  full: /api/v1/equipment/rental-rates
+    GET /rental-rates/categories  |  full: /api/v1/equipment/rental-rates/categories
+    GET /rental-rates/chc-info  |  full: /api/v1/equipment/rental-rates/chc-info
+    GET /rental-rates/search  |  full: /api/v1/equipment/rental-rates/search
+    GET /rental-rates/{equipment_name}  |  full: /api/v1/equipment/rental-rates/{equipment_name}
+    POST /rental-rates/seed  |  full: /api/v1/equipment/rental-rates/seed
+    POST /rental-rates/embed  |  full: /api/v1/equipment/rental-rates/embed
+  - file: routes/rentals.py
+    router_prefix: /rentals
+    GET /rentals  |  full: /api/v1/equipment/rentals
+    GET /rentals/{rental_id}  |  full: /api/v1/equipment/rentals/{rental_id}
+    POST /rentals  |  full: /api/v1/equipment/rentals
+    PUT /rentals/{rental_id}/approve  |  full: /api/v1/equipment/rentals/{rental_id}/approve
+    PUT /rentals/{rental_id}/reject  |  full: /api/v1/equipment/rentals/{rental_id}/reject
+    PUT /rentals/{rental_id}/complete  |  full: /api/v1/equipment/rentals/{rental_id}/complete
+    PUT /rentals/{rental_id}/cancel  |  full: /api/v1/equipment/rentals/{rental_id}/cancel
+  - include_router prefixes in main.py:
+    api_router: /api/v1/equipment
+TOTAL DETECTED ROUTES: 24
+
+SERVICE: farmer
+PATH: services/farmer
+TOTAL FILES: 10
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/admin.py
+  - routes/dashboard.py
+  - routes/profiles.py
+  - services/__init__.py
+  - services/farmer_service.py
+PROVIDES:
+  - admin
+  - dashboard
+  - farmer
+  - profiles
+ROUTES:
+  - file: routes/admin.py
+    GET /  |  full: /api/v1/farmers
+    GET /{farmer_id}  |  full: /api/v1/farmers/{farmer_id}
+  - file: routes/dashboard.py
+    GET /me/dashboard  |  full: /api/v1/farmers/me/dashboard
+  - file: routes/profiles.py
+    GET /me/profile  |  full: /api/v1/farmers/me/profile
+    POST /me/profile  |  full: /api/v1/farmers/me/profile
+    PUT /me/profile  |  full: /api/v1/farmers/me/profile
+    DELETE /me/profile  |  full: /api/v1/farmers/me/profile
+  - include_router prefixes in main.py:
+    api_router: /api/v1/farmers
+TOTAL DETECTED ROUTES: 7
+
+SERVICE: market
+PATH: services/market
+TOTAL FILES: 22
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/document_builder.py
+  - routes/live_market.py
+  - routes/mandis.py
+  - routes/prices.py
+  - routes/schemes.py
+  - routes/weather_soil.py
+  - services/__init__.py
+  - services/document_builder_service.py
+  - services/government_schemes_data.py
+  - services/langextract_service.py
+  - services/mandi_data_fetcher.py
+  - services/mandi_service.py
+  - services/price_service.py
+  - services/scheme_document_downloader.py
+  - services/scheme_service.py
+  - services/soil_service.py
+  - services/weather_service.py
+PROVIDES:
+  - document builder
+  - government schemes data
+  - langextract
+  - live market
+  - mandi
+  - mandi data fetcher
+  - mandis
+  - price
+  - prices
+  - scheme
+  - scheme document downloader
+  - schemes
+  - soil
+  - weather
+  - weather soil
+ROUTES:
+  - file: routes/document_builder.py
+    router_prefix: /document-builder
+    GET /document-builder/schemes  |  full: /api/v1/market/document-builder/schemes
+    GET /document-builder/schemes/{scheme_name}  |  full: /api/v1/market/document-builder/schemes/{scheme_name}
+    GET /document-builder/sessions/{session_id}  |  full: /api/v1/market/document-builder/sessions/{session_id}
+    GET /document-builder/sessions  |  full: /api/v1/market/document-builder/sessions
+    GET /document-builder/sessions/{session_id}/download  |  full: /api/v1/market/document-builder/sessions/{session_id}/download
+    GET /document-builder/scheme-docs/{scheme_name}  |  full: /api/v1/market/document-builder/scheme-docs/{scheme_name}
+    GET /document-builder/scheme-docs  |  full: /api/v1/market/document-builder/scheme-docs
+    GET /document-builder/scheme-docs/{scheme_name}/file/{doc_name}  |  full: /api/v1/market/document-builder/scheme-docs/{scheme_name}/file/{doc_name}
+    POST /document-builder/sessions/start  |  full: /api/v1/market/document-builder/sessions/start
+    POST /document-builder/sessions/{session_id}/answer  |  full: /api/v1/market/document-builder/sessions/{session_id}/answer
+    POST /document-builder/sessions/{session_id}/extract  |  full: /api/v1/market/document-builder/sessions/{session_id}/extract
+    POST /document-builder/seed-schemes  |  full: /api/v1/market/document-builder/seed-schemes
+    POST /document-builder/download-scheme-docs/{scheme_name}  |  full: /api/v1/market/document-builder/download-scheme-docs/{scheme_name}
+    POST /document-builder/download-all-scheme-docs  |  full: /api/v1/market/document-builder/download-all-scheme-docs
+    POST /document-builder/extract-text  |  full: /api/v1/market/document-builder/extract-text
+  - file: routes/live_market.py
+    router_prefix: /live-market
+    GET /live-market/prices  |  full: /api/v1/market/live-market/prices
+    GET /live-market/prices/all-india  |  full: /api/v1/market/live-market/prices/all-india
+    GET /live-market/prices/bulk  |  full: /api/v1/market/live-market/prices/bulk
+    GET /live-market/mandis  |  full: /api/v1/market/live-market/mandis
+    GET /live-market/msp  |  full: /api/v1/market/live-market/msp
+    GET /live-market/msp/all  |  full: /api/v1/market/live-market/msp/all
+    GET /live-market/msp/{commodity}  |  full: /api/v1/market/live-market/msp/{commodity}
+    GET /live-market/commodities  |  full: /api/v1/market/live-market/commodities
+    GET /live-market/states  |  full: /api/v1/market/live-market/states
+    POST /live-market/sync  |  full: /api/v1/market/live-market/sync
+    POST /live-market/sync/full  |  full: /api/v1/market/live-market/sync/full
+  - file: routes/mandis.py
+    router_prefix: /mandis
+    GET /mandis  |  full: /api/v1/market/mandis
+    GET /mandis/{mandi_id}  |  full: /api/v1/market/mandis/{mandi_id}
+    POST /mandis  |  full: /api/v1/market/mandis
+    PUT /mandis/{mandi_id}  |  full: /api/v1/market/mandis/{mandi_id}
+    DELETE /mandis/{mandi_id}  |  full: /api/v1/market/mandis/{mandi_id}
+  - file: routes/prices.py
+    router_prefix: /prices
+    GET /prices  |  full: /api/v1/market/prices
+    GET /prices/{price_id}  |  full: /api/v1/market/prices/{price_id}
+    POST /prices  |  full: /api/v1/market/prices
+    PUT /prices/{price_id}  |  full: /api/v1/market/prices/{price_id}
+    DELETE /prices/{price_id}  |  full: /api/v1/market/prices/{price_id}
+  - file: routes/schemes.py
+    router_prefix: /schemes
+    GET /schemes  |  full: /api/v1/market/schemes
+    GET /schemes/{scheme_id}  |  full: /api/v1/market/schemes/{scheme_id}
+    POST /schemes  |  full: /api/v1/market/schemes
+    POST /schemes/check-eligibility  |  full: /api/v1/market/schemes/check-eligibility
+    PUT /schemes/{scheme_id}  |  full: /api/v1/market/schemes/{scheme_id}
+    DELETE /schemes/{scheme_id}  |  full: /api/v1/market/schemes/{scheme_id}
+  - file: routes/weather_soil.py
+    GET /weather/city  |  full: /api/v1/market/weather/city
+    GET /weather/coords  |  full: /api/v1/market/weather/coords
+    GET /weather/forecast/city  |  full: /api/v1/market/weather/forecast/city
+    GET /weather/forecast/coords  |  full: /api/v1/market/weather/forecast/coords
+    GET /soil-moisture  |  full: /api/v1/market/soil-moisture
+  - include_router prefixes in main.py:
+    api_router: /api/v1/market
+TOTAL DETECTED ROUTES: 47
+
+SERVICE: notification
+PATH: services/notification
+TOTAL FILES: 8
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/notifications.py
+  - services/__init__.py
+  - services/notification_service.py
+PROVIDES:
+  - notification
+  - notifications
+ROUTES:
+  - file: routes/notifications.py
+    GET /  |  full: /api/v1/notifications
+    GET /unread/count  |  full: /api/v1/notifications/unread/count
+    GET /{notification_id}  |  full: /api/v1/notifications/{notification_id}
+    POST /  |  full: /api/v1/notifications
+    POST /broadcast  |  full: /api/v1/notifications/broadcast
+    PUT /{notification_id}/read  |  full: /api/v1/notifications/{notification_id}/read
+    PUT /read-all  |  full: /api/v1/notifications/read-all
+    DELETE /{notification_id}  |  full: /api/v1/notifications/{notification_id}
+  - include_router prefixes in main.py:
+    api_router: /api/v1/notifications
+TOTAL DETECTED ROUTES: 8
+
+SERVICE: scheme_documents
+PATH: services/scheme_documents
+TOTAL FILES: 20
+FILE STRUCTURE:
+  - aif/aif_application.html
+  - enam/enam_farmer_registration.html
+  - enam/enam_user_manual.html
+  - fpo_scheme/fpo_formation_guidelines.html
+  - kcc/kcc_application_form_pnb.html
+  - kcc/kcc_guidelines_rbi.html
+  - kcc/pm-kisan_kcc_form.html
+  - manifest.json
+  - midh/midh_guidelines.pdf
+  - pkvy/pgs_india_guidelines.pdf
+  - pkvy/pkvy_cluster_registration_form.html
+  - pm-kusum/component_b_guidelines.html
+  - pm-kusum/pm-kusum_application_form.html
+  - pmfby/claim_form.html
+  - pmfby/pmfby_application_form.html
+  - pmfby/pmfby_guidelines.pdf
+  - pmmsy/pmmsy_application.html
+  - shc/soil_health_card_sample.pdf
+  - smam/smam_guidelines.pdf
+  - smam/smam_online_application.html
+PROVIDES:
+  - (no capability modules detected)
+ROUTES:
+  - (no routes folder found)
+TOTAL DETECTED ROUTES: 0
+
+SERVICE: voice
+PATH: services/voice
+TOTAL FILES: 11
+FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes/__init__.py
+  - routes/stt.py
+  - routes/tts.py
+  - routes/voice.py
+  - services/__init__.py
+  - services/stt_service.py
+  - services/tts_service.py
+PROVIDES:
+  - stt
+  - tts
+  - voice
+ROUTES:
+  - file: routes/stt.py
+    router_prefix: /stt
+    POST /stt  |  full: /api/v1/voice/stt
+  - file: routes/tts.py
+    router_prefix: /tts
+    POST /tts  |  full: /api/v1/voice/tts
+    POST /tts/base64  |  full: /api/v1/voice/tts/base64
+  - file: routes/voice.py
+    router_prefix: /command
+    POST /command  |  full: /api/v1/voice/command
+    POST /command/text  |  full: /api/v1/voice/command/text
+  - include_router prefixes in main.py:
+    api_router: /api/v1/voice
+TOTAL DETECTED ROUTES: 5

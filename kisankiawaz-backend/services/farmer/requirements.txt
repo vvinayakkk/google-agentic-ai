@@ -1,0 +1,1 @@
+# Farmer-specific deps (base covers everything)

@@ -1,0 +1,33 @@
+WORKERS FOLDER AUDIT
+Generated at: 2026-03-22T21:26:19.754879+00:00
+Path: workers
+Total files: 7
+
+FULL FILE STRUCTURE:
+  - __init__.py
+  - celery_app.py
+  - Dockerfile
+  - requirements.txt
+  - tasks/__init__.py
+  - tasks/embedding_tasks.py
+  - tasks/notification_tasks.py
+
+CELERY APP:
+  - entry: celery_app.py
+  - broker config line: settings.CELERY_BROKER_URL,
+  - backend config line: settings.CELERY_RESULT_BACKEND,
+
+WORKER TASKS / SERVICES:
+  - file: __init__.py
+  - file: celery_app.py
+  - file: tasks/__init__.py
+  - file: tasks/embedding_tasks.py
+    functions: _init, _ensure_collection, embed_text, embed_batch
+    celery_tasks_named: embed_text, embed_batch
+  - file: tasks/notification_tasks.py
+    functions: send_notification, send_broadcast
+    celery_tasks_named: send_notification, send_broadcast
+
+TOTAL DETECTED NAMED CELERY TASKS: 4
+INFERRED PURPOSE:
+  - Background async processing (notifications, embeddings, and related jobs).

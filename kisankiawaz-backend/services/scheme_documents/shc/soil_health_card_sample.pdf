@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/assets/shc-CRJdFe3H.png"  />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"> -->
+    <meta name="theme-color" content="#018840"/>
+    <title>Soil Health</title>
+    <script type="module" crossorigin src="/assets/index-ldCKJ6Z3.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-d5lKDhyc.css">
+  </head>
+  <body>
+    <div id="root" style="width: 100%;"></div>
+  </body>
+</html>

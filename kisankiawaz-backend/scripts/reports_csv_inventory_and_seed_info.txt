@@ -1,0 +1,236 @@
+REPORTS CSV INVENTORY + SEED SCRIPT INFO
+Generated at: 2026-03-22T21:17:48.588002Z
+Reports root: scripts/reports
+Total CSV files scanned: 32
+
+CSV INVENTORY (by folder)
+
+Folder: data_gov_extraction_snapshots
+CSV files in folder: 3
+  - File: data_gov_extraction_snapshots/35985678-0d79-46b4-9ed6-6f13308a1d24.csv
+    Row count (excluding header): 49000
+    Column count: 12
+    Columns: State, District, Market, Commodity, Variety, Grade, Arrival_Date, Min_Price, Max_Price, Modal_Price, Commodity_Code, _resource_id
+  - File: data_gov_extraction_snapshots/4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+    Row count (excluding header): 15000
+    Column count: 8
+    Columns: State, District, Date, Year, Month, Avg_smlvl_at15cm, Agency_name, _resource_id
+  - File: data_gov_extraction_snapshots/9ef84268-d588-465a-a308-a864a43d0070.csv
+    Row count (excluding header): 8407
+    Column count: 11
+    Columns: state, district, market, commodity, variety, grade, arrival_date, min_price, max_price, modal_price, _resource_id
+
+Folder: farmer_schemes_data
+CSV files in folder: 1
+  - File: farmer_schemes_data/farmer_schemes_master.csv
+    Row count (excluding header): 743
+    Column count: 17
+    Columns: source, scheme_id, title, summary, ministry, categories, beneficiary_state, tags, official_links, document_links, contact_numbers, contact_emails, office_addresses, how_to_apply, eligibility, required_documents, faqs
+
+Folder: legacy_api_feeds
+CSV files in folder: 2
+  - File: legacy_api_feeds/mandi_directory_derived_geocoded.csv
+    Row count (excluding header): 274
+    Column count: 7
+    Columns: name, state, district, source, latitude, longitude, geocode_quality
+  - File: legacy_api_feeds/vegetable_api_pulls.csv
+    Row count (excluding header): 18000
+    Column count: 12
+    Columns: resource_id, state, district, market, commodity, variety, arrival_date, min_price, max_price, modal_price, source, veg_query
+
+Folder: master_reference_tables
+CSV files in folder: 2
+  - File: master_reference_tables/mandi_directory_india.csv
+    Row count (excluding header): 513
+    Column count: 4
+    Columns: name, state, district, source
+  - File: master_reference_tables/manual_rental_providers.csv
+    Row count (excluding header): 15
+    Column count: 16
+    Columns: rental_id, name, category, state, district, rate_hourly, rate_daily, unit, provider_name, provider_phone, provider_email, provider_address, booking_link, source, last_verified_at, is_active
+
+Folder: recovery_pipeline_data/agromet
+CSV files in folder: 1
+  - File: recovery_pipeline_data/agromet/049d64ee-24ed-483f-b84f-00b525516552.csv
+    Row count (excluding header): 37
+    Column count: 27
+    Columns: india_state__ut, enrolment___private_unaided_recognized___pre_primary___boys, enrolment___private_unaided_recognized___pre_primary___girls, enrolment___private_unaided_recognized___pre_primary___total, enrolment___private_unaided_recognized___primary__1_to_5____boys, enrolment___private_unaided_recognized___primary__1_to_5____girls, enrolment___private_unaided_recognized___primary__1_to_5____total, enrolment___private_unaided_recognized___upper_primary__6_8____boys, enrolment___private_unaided_recognized___upper_primary__6_8____girls, enrolment___private_unaided_recognized___upper_primary__6_8____total, enrolment___private_unaided_recognized___elementary__1_8____boys, enrolment___private_unaided_recognized___elementary__1_8____girls, enrolment___private_unaided_recognized___elementary__1_8____total, enrolment___private_unaided_recognized___secondary__9_10____boys, enrolment___private_unaided_recognized___secondary__9_10____girls, enrolment___private_unaided_recognized___secondary__9_10____total, enrolment___private_unaided_recognized___higher_secondary__11_12____boys, enrolment___private_unaided_recognized___higher_secondary__11_12____girls, enrolment___private_unaided_recognized___higher_secondary__11_12____total, enrolment___private_unaided_recognized___primary_to_higher_secondary__1_12____boys, enrolment___private_unaided_recognized___primary_to_higher_secondary__1_12____girls, enrolment___private_unaided_recognized___primary_to_higher_secondary__1_12____total, enrolment___private_unaided_recognized___total__pre_primary_to_higher_secondary____boys, enrolment___private_unaided_recognized___total__pre_primary_to_higher_secondary____girls, enrolment___private_unaided_recognized___total__pre_primary_to_higher_secondary____total, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/arrivals
+CSV files in folder: 1
+  - File: recovery_pipeline_data/arrivals/02e72f1b-d82d-4512-a105-7b4373d6fa85.csv
+    Row count (excluding header): 12
+    Column count: 10
+    Columns: _10_most_popular_centrally_protected_ticketed_monuments_for_domestic_visitors_in_2021_22___rank, _10_most_popular_centrally_protected_ticketed_monuments_for_domestic_visitors_in_2021_22___name_of_monument, _10_most_popular_centrally_protected_ticketed_monuments_for_domestic_visitors_in_2021_22___no__of_domestic_visitors, _10_most_popular_centrally_protected_ticketed_monuments_for_domestic_visitors_in_2021_22___percentage_share, _10_most_popular_centrally_protected_ticketed_monuments_for_foreign_visitors_in_2021_22___rank, _10_most_popular_centrally_protected_ticketed_monuments_for_foreign_visitors_in_2021_22___name_of_monument, _10_most_popular_centrally_protected_ticketed_monuments_for_foreign_visitors_in_2021_22___no__of_foreign_visitors, _10_most_popular_centrally_protected_ticketed_monuments_for_foreign_visitors_in_2021_22___percentage_share, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/cold_storage
+CSV files in folder: 1
+  - File: recovery_pipeline_data/cold_storage/a75195de-8cd6-4ecf-a818-54c761dfa24a.csv
+    Row count (excluding header): 32
+    Column count: 6
+    Columns: sl__no_, state_ut, available_capacity__mt_, capacity_required__mt_, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/cost_cultivation
+CSV files in folder: 1
+  - File: recovery_pipeline_data/cost_cultivation/48bcec64-5573-4f3d-b38e-c474253a6a9d.csv
+    Row count (excluding header): 5
+    Column count: 5
+    Columns: sl__no_, crop, production__in_thousand_tonnes_, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/crop_yield_varieties
+CSV files in folder: 2
+  - File: recovery_pipeline_data/crop_yield_varieties/7b9f57f0-5f8a-4442-9759-352dacb9d71b.csv
+    Row count (excluding header): 23
+    Column count: 5
+    Columns: crop, season, production_target_for_2016_17, _resource_id, _source_resource_id
+  - File: recovery_pipeline_data/crop_yield_varieties/cf80173e-fece-439d-a0b1-6e9cb510593d.csv
+    Row count (excluding header): 200
+    Column count: 111
+    Columns: District_Names, State_UT, Household_Surveyed, Women_Age_Interviewed, Men_Age_Interviewed, Female_Population_Attended_School, Population_Below_15Years, Sex_Ratio, Sex_Ratio_At_Birth, Birth_Registration_Under_5, Death_Registration_Last_3, Household_Electricity, Improved_Drinking-Water_Source, Household_Using_Improved_Sanitation, Households_Using_Clean_Fuel, Households_Using_Iodized_Salt, Health_Insurance_Scheme_Coverage, Children_Attended_Pre-Primary_School, Literate_Women, Women_Age_Schooling, Married_Women, Birth_Preceding_Survey, Already_Mother_or_Pregnant, Hygienic_Menstrual_Protection_Use, Using_Any_Contraception_Method, Using_Modern_Contraception_Method, Female_Sterilization, Male_Sterilization, IUD_PPIUD, Pill_Usage, Condom_Usage, Injectables_Usage, Total_Unmet_Contraception_Need, Unmet_Need_For_Spacing, Non-Users_Advised_Family_Planning, Users_Informed_Side_Effects, Antenatal_Check-up_First_Trimester, Mothers_Four_ANC_Visits, Neonatal_Tetanus_Protection, Iron_Folic_Acid_100_Days, Iron_Folic_Acid_180_Days, Postnatal_Care_Within_2_Days, Financial_Assistance_Under_JSY, Out-of-Pocket_Expenditure, Children_Born_At_Home, Children_Health_Check_After_Birth, Institutional_Birth, Public_Facility_Institutional_Births, Home_Deliveries_By_Professionals, Births_Assisted_By_Professionals, Caesarean_Section_Births, Private_Caesarean_Section_Births, Public_Caesarean_Section_Births, Children_Fully_Vaccinated_Recall, Children_Fully_Vaccinated, Children_BCG_Vaccine, Children_Polio_Doses, Children_DPT_Doses, Children_1st_Measles_Vaccine, Children_2nd_Measles_Vaccine, Children_3rd_Rotavirus_Vaccine, Children_3rd_Penta_Vaccine, Children_Vitamin_A, Children_Vaccinations_Public_Facility, Children_Vaccinations_Private_Facility, Prevalence_Diarrhoea_Survey, Diarrhea_Cases_Received_ORS, Diarrhea_Cases_Received_Zinc, Diarrhea_Cases_Treated_Facility, ARI_Treated_Prevalence, Fever/ARI_Cases_Treated_Facility, Breastfed_Within_One_Hour, Exclusive_Breastfeeding_Under_6, Solid_Food_Introduction_6-8, Breastfeeding_Children_Adequate_Diet, Non-Breastfeeding_Adequate_Diet, Total_Children_Adequate_Diet, Stunted_Children_Under_Five, Wasted_Children_Under_Five, Severely_Wasted_Children_Under_Five, Underweight_Children_Under_Five, Overnight_Children_Under_Five, Women_Below_Normal_BMI, Overweight_or_Obese_Women, Women_Waist-to-Hip_Ratio, Anaemic_Children_6-59_Months, Anaemic_Non-Pregnant_Women, Anaemic_Pregnant_Women, Anaemic_All_Women_15-49, Anaemic_All_Women_15-19, Women_High_Blood_Sugar, Women_Very_High_Sugar, Women_High_Sugar_Control_With_Medicine, Men_High_Blood_Sugar, Men_Very_High_Sugar, Men_High_Sugar_Control_With_Medicine, Women_Mildly_Elevated_BP, Women_Moderately_Elevated_BP, Women_Elevated_BP, Men_Mildly_Elevated_BP, Men_Moderately_Elevated_BP, Men_Elevated_BP, Women_Cervical_Cancer, Women_Breast_Cancer, Women_Oral_Cancer, Women_Tobacco, Men_Tobacco, Women_Alcohol, Men_Alcohol, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/fasal
+CSV files in folder: 1
+  - File: recovery_pipeline_data/fasal/14f6f0d0-311d-4b71-acfe-ac08bbecfd1c.csv
+    Row count (excluding header): 22
+    Column count: 8
+    Columns: sl_no, crop, no_of_notified_firkas, no_of_notified_villages, no_of_crop_cutting_experiments_planned_for_firkas, no_of_crop_cutting_experiments_planned_for_villages, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/fertilizer
+CSV files in folder: 1
+  - File: recovery_pipeline_data/fertilizer/5c2f62fe-5afa-4119-a499-fec9d604d5bd.csv
+    Row count (excluding header): 200
+    Column count: 13
+    Columns: circlename, regionname, divisionname, officename, pincode, officetype, delivery, district, statename, latitude, longitude, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/fpo
+CSV files in folder: 1
+  - File: recovery_pipeline_data/fpo/28287ce1-424a-4c43-85f4-de8a38924a69.csv
+    Row count (excluding header): 9
+    Column count: 8
+    Columns: sl__no_, states, _area, cluster_figs, fpc, farmers, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/groundwater
+CSV files in folder: 1
+  - File: recovery_pipeline_data/groundwater/6f81905b-5c66-458f-baa3-74f870de5cd0.csv
+    Row count (excluding header): 83
+    Column count: 14
+    Columns: region, country_of_nationality, number_of_arrivals_2017, number_of_arrivals_2018, number_of_arrivals_2019, number_of_arrivals_2020, number_of_arrivals_2021, percentage_share____2018_17, percentage_share____2019_18, percentage_share____2020_19, percentage_change___2021_20, percentage_change___2021, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/kcc
+CSV files in folder: 1
+  - File: recovery_pipeline_data/kcc/2bbff406-a8a8-4920-90c3-095adebf531f.csv
+    Row count (excluding header): 38
+    Column count: 8
+    Columns: sl__no_, state_ut, fisheries_total_no__of_applications___received, fisheries_total_no__of_applications___sanctioned, fisheries_total_no__of_applications___pending_greater_than_15_days, fisheries_total_no__of_applications__rejected, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/labour_wages
+CSV files in folder: 1
+  - File: recovery_pipeline_data/labour_wages/67722646-54ac-4b26-b73e-124d4bc22bda.csv
+    Row count (excluding header): 19
+    Column count: 14
+    Columns: _sl__no_, state_ut, _2018___general_agricultural_labourers, _2018___non__agricultural_labourers, _2019___general_agricultural_labourers, _2019___non__agricultural_labourers, _2020___general_agricultural_labourers, _2020___non__agricultural_labourers, _2021___general_agricultural_labourers, _2021___non__agricultural_labourers, _2022___general_agricultural_labourers, _2022___non__agricultural_labourers, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/market_prices
+CSV files in folder: 1
+  - File: recovery_pipeline_data/market_prices/9ef84268-d588-465a-a308-a864a43d0070.csv
+    Row count (excluding header): 200
+    Column count: 12
+    Columns: state, district, market, commodity, variety, grade, arrival_date, min_price, max_price, modal_price, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/msp
+CSV files in folder: 1
+  - File: recovery_pipeline_data/msp/5e6056c8-b644-40a8-a346-3da6b3d8e67e.csv
+    Row count (excluding header): 10
+    Column count: 5
+    Columns: sl__no_, crop, oilseeds_production__lakh_tonns_, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/pesticides
+CSV files in folder: 2
+  - File: recovery_pipeline_data/pesticides/7c568619-b9b4-40bb-b563-68c28c27a6c1.csv
+    Row count (excluding header): 111
+    Column count: 138
+    Columns: states_uts, area, number_of_households_surveyed, number_of_women_age_15_49_years_interviewed, number_of_men_age_15_54_years_interviewed, _female_population_age_6_years_and_above_who_ever_attended_school____, population_below_age_15_years____, _sex_ratio_of_the_total_population__females_per_1_000_males_, sex_ratio_at_birth_for_children_born_in_the_last_five_years__females_per_1_000_males_, children_under_age_5_years_whose_birth_was_registered_with_the_civil_authority____, deaths_in_the_last_3_years_registered_with_the_civil_authority____, population_living_in_households_with_electricity____, population_living_in_households_with_an_improved_drinking_water_source1____, population_living_in_households_that_use_an_improved_sanitation_facility2____, households_using_clean_fuel_for_cooking3____, households_using_iodized_salt____, households_with_any_usual_member_covered_under_a_health_insurance_financing_scheme____, children_age_5_years_who_attended_pre_primary_school_during_the_school_year_2019_20____, _women__age_15_49__who_are_literate4____, men__age_15_49__who_are_literate4____, _women__age_15_49___with_10_or_more_years_of_schooling____, men__age_15_49___with_10_or_more_years_of_schooling____, women__age_15_49___who_have_ever_used_the_internet____, men__age_15_49___who_have_ever_used_the_internet____, women_age_20_24_years_married_before_age_18_years____, men_age_25_29_years_married_before_age_21_years____, total_fertility_rate__number_of_children_per_woman_, women_age_15_19_years_who_were_already_mothers_or_pregnant_at_the_time_of_the_survey____, adolescent_fertility_rate_for_women_age_15_19_years5, neonatal_mortality_rate__per_1000_live_births_, infant_mortality_rate__per_1000_live_births_, under_five_mortality_rate__per_1000_live_births_, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____any_method6____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____any_modern_method6____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____female_sterilization____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____male_sterilization____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____iud_ppiud____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____pill____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____condom____, current_use_of_family_planning_methods__currently_married_women_age_15_49__years____injectables____, total_unmet_need_for_family_planning__currently_married_women_age_15_49__years_7____, unmet_need_for_spacing__currently_married_women_age_15_49__years_7____, health_worker_ever_talked_to_female_non_users_about_family_planning____, current_users_ever_told_about_side_effects_of_current_method_of_family_planning8____, mothers_who_had_an_antenatal_check_up_in_the_first_trimester___for_last_birth_in_the_5_years_before_the_survey_____, mothers_who_had_at_least_4_antenatal_care_visits___for_last_birth_in_the_5_years_before_the_survey_____, mothers_whose_last_birth_was_protected_against_neonatal_tetanus__for_last_birth_in_the_5_years_before_the_survey_9____, mothers_who_consumed_iron_folic_acid_for_100_days_or_more_when_they_were_pregnant__for_last_birth_in_the_5_years_before_the_survey_, mothers_who_consumed_iron_folic_acid_for_180_days_or_more_when_they_were_pregnant__for_last_birth_in_the_5_years_before_the_survey_, registered_pregnancies_for_which_the_mother_received_a_mother_and_child_protection__mcp__card__for_last_birth_in_the_5_years_before_the_survey_, mothers_who_received_postnatal_care_from_a_doctor_nurse_lhv_anm_midwife_other_health_personnel_within_2_days_of_delivery__for_last_birth_in_the_5_years_before_the_survey_, average_out_of_pocket_expenditure_per_delivery_in_a_public_health_facility__for_last_birth_in_the_5_years_before_the_survey___rs__, children_born_at_home_who_were_taken_to_a_health_facility_for_a_check_up_within_24_hours_of_birth__for_last_birth_in_the_5_years_before_the_survey_, children_who_received_postnatal_care_from_a_doctor_nurse_lhv_anm_midwife__other_health_personnel_within_2_days_of_delivery__for_last_birth_in_the_5_years_before_the_survey_____, institutional_births__in_the_5_years_before_the_survey_____, institutional_births_in_public_facility__in_the_5_years_before_the_survey_____, home_births_that_were_conducted_by_skilled_health_personnel___in_the_5_years_before_the_survey_10____, births_attended_by_skilled_health_personnel__in_the_5_years_before_the_survey_10____, births_delivered_by_caesarean_section__in_the_5_years_before_the_survey_____, births_in_a_private_health_facility_that_were_delivered_by_caesarean_section__in_the_5_years_before_the_survey_____, births_in_a_public_health_facility_that_were_delivered_by_caesarean_section__in_the_5_years_before_the_survey_____, children_age_12_23_months_fully_vaccinated_based_on_information_from_either_vaccination_card_or_mother_s_recall11____, children_age_12_23_months_fully_vaccinated_based_on_information_from_vaccination_card_only12____, children_age_12_23_months_who_have_received_bcg____, children_age_12_23_months_who_have_received_3_doses_of_polio_vaccine13____, children_age_12_23_months_who_have_received_3_doses_of_penta_or_dpt_vaccine____, children_age_12_23_months_who_have_received_the_first_dose_of_measles_containing_vaccine__mcv_____, children_age_24_35_months_who_have_received_a_second_dose_of_measles_containing_vaccine__mcv_____, children_age_12_23_months_who_have_received_3_doses_of_rotavirus_vaccine14____, children_age_12_23_months_who_have_received_3_doses_of_penta_or_hepatitis_b_vaccine____, children_age_9_35_months_who_received_a_vitamin_a_dose_in_the_last_6_months____, children_age_12_23_months_who_received_most_of_their_vaccinations_in_a_public_health_facility____, children_age_12_23_months_who_received_most_of_their_vaccinations_in_a_private_health_facility____, prevalence_of_diarrhoea_in_the_2_weeks_preceding_the_survey__children_under_age_5_years______, children_with_diarrhoea_in_the_2_weeks_preceding_the_survey_who_received_oral_rehydration_salts__ors___children_under_age_5_years______, children_with_diarrhoea_in_the_2_weeks_preceding_the_survey_who_received_zinc__children_under_age_5_years______, children_swith_diarrhoea_in_the_2_weeks_preceding_the_survey_taken_to_a_health_facility_or_health_provider__children_under_age_5_years______, children_prevalence_of_symptoms_of_acute_respiratory_infection__ari__in_the_2_weeks_preceding_the_survey__children_under_age_5_years______, children_with_fever_or_symptoms_of_ari_in_the_2_weeks_preceding_the_survey_taken_to_a_health_facility_or_health_provider__children_under_age_5_years_______, children_under_age_3_years_breastfed_within_one_hour_of_birth15____, children_under_age_6_months_exclusively_breastfed16____, children_age_6_8_months_receiving_solid_or_semi_solid_food_and_breastmilk16____, breastfeeding_children_age_6_23_months_receiving_an_adequate_diet16__17_____, non_breastfeeding_children_age_6_23_months_receiving_an_adequate_diet16__17____, total_children_age_6_23_months_receiving_an_adequate_diet16__17_____, children_under_5_years_who_are_stunted__height_for_age_18____, children_under_5_years_who_are_wasted__weight_for_height_18____, children_under_5_years_who_are_severely_wasted__weight_for_height_19____, children_under_5_years_who_are_underweight__weight_for_age_18____, children_under_5_years_who_are_overweight__weight_for_height_20____, women__age_15_49_years__whose_body_mass_index__bmi__is_below_normal__bmi__18_5_kg_m2_21____, men__age_15_49_years__whose_body_mass_index__bmi__is_below_normal__bmi__18_5_kg_m2_____, women__age_15_49_years__who_are_overweight_or_obese__bmi___25_0_kg_m2_21____, men__age_15_49_years__who_are_overweight_or_obese__bmi___25_0_kg_m2_____, women__age_15_49_years__who_have_high_risk_waist_to_hip_ratio____0_85_____, men__age_15_49_years__who_have_high_risk_waist_to_hip_ratio____0_90_____, children_age_6_59_months_who_are_anaemic___11_0_g_dl_22____, non_pregnant_women_age_15_49_years_who_are_anaemic___12_0_g_dl_22____, pregnant_women_age_15_49_years_who_are_anaemic___11_0_g_dl_22____, _all_women_age_15_49_years_who_are_anaemic22____, all_women_age_15_19_years_who_are_anaemic22_____, men_age_15_49_years_who_are_anaemic___13_0_g_dl_22____, men_age_15_19_years_who_are_anaemic___13_0_g_dl_22____, _women__age_15_years_and_above_with_high__141_160_mg_dl__blood_sugar_level23____, _women_age_15_years_and_above_wih_very_high___160_mg_dl__blood_sugar_level23____, _women_age_15_years_and_above_wih_high_or_very_high___140_mg_dl__blood_sugar_level_or_taking_medicine_to_control_blood_sugar_level23____, _men_age_15_years_and_above_wih_high__141_160_mg_dl__blood_sugar_level23____, _men__age_15_years_and_above_wih__very_high___160_mg_dl__blood_sugar_level23____, _men_age_15_years_and_above_wih_high_or_very_high___140_mg_dl__blood_sugar_level__or_taking_medicine_to_control_blood_sugar_level23____, _women_age_15_years_and_above_wih_mildly_elevated_blood_pressure__systolic_140_159_mm_of_hg_and_or_diastolic_90_99_mm_of_hg_____, women_age_15_years_and_above_wih_moderately_or_severely_elevated_blood_pressure__systolic___160_mm_of_hg_and_or_diastolic___100_mm_of_hg_____, women_age_15_years_and_above_wih_elevated_blood_pressure__systolic___140_mm_of_hg_and_or_diastolic___90_mm_of_hg__or_taking_medicine_to_control_blood_pressure____, _men_age_15_years_and_above_wih_mildly_elevated_blood_pressure__systolic_140_159_mm_of_hg_and_or_diastolic_90_99_mm_of_hg_____, men_age_15_years_and_above_wih_moderately_or_severely_elevated_blood_pressure__systolic___160_mm_of_hg_and_or_diastolic___100_mm_of_hg_____, men_age_15_years_and_above_wih_elevated_blood_pressure__systolic___140_mm_of_hg_and_or_diastolic___90_mm_of_hg__or_taking_medicine_to_control_blood_pressure____, women__age_30_49_years__ever_undergone_a_screening_test_for_cervical_cancer____, women__age_30_49_years__ever_undergone_a_breast_examination_for_breast_cancer____, women__age_30_49_years__ever_undergone_an_oral_cavity_examination_for_oral_cancer____, men__age_30_49_years_ever_undergone_an_oral_cavity_examination_for_oral_cancer____, women__age_15_49_years__who_have_comprehensive_knowledge24_of_hiv_aids____, men__age_15_49_years__who_have_comprehensive_knowledge24_of_hiv_aids____, women__age_15_49_years__who_know_that_consistent_condom_use_can_reduce_the_chance_of_getting_hiv_aids____, men__age_15_49_years__who_know_that_consistent_condom_use_can_reduce_the_chance_of_getting_hiv_aids____, currently_married_women__age_15_49_years__who_usually_participate_in_three_household_decisions25____, women__age_15_49_years__who_worked_in_the_last_12_months_and_were_paid_in_cash____, women__age_15_49_years__owning_a_house_and_or_land__alone_or_jointly_with_others_____, women__age_15_49_years__having_a_bank_or_savings_account_that_they_themselves_use____, women__age_15_49_years__having_a_mobile_phone_that_they_themselves_use____, women_age_15_24_years_who_use_hygienic_methods_of_protection_during_their_menstrual_period26____, ever_married_women_age_18_49_years_who_have_ever_experienced_spousal_violence27____, ever_married_women_age_18_49_years_who_have_experienced_physical_violence_during_any_pregnancy____, young_women_age_18_29_years_who_experienced_sexual_violence_by_age_18____, _women_age_15_years_and_above_who_use_any_kind_of_tobacco____, _men_age_15_years_and_above_who_use_any_kind_of_tobacco____, _women_age_15_years_and_above_who_consume_alcohol____, _men_age_15_years_and_above_who_consume_alcohol____, _resource_id, _source_resource_id
+  - File: recovery_pipeline_data/pesticides/98a33686-715f-4076-97da-fa3dcf6bc61b.csv
+    Row count (excluding header): 14
+    Column count: 4
+    Columns: crop_, production__million_tonnes_, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/pin_master
+CSV files in folder: 1
+  - File: recovery_pipeline_data/pin_master/f17a1608-5f10-4610-bb50-a63c80d83974.csv
+    Row count (excluding header): 200
+    Column count: 11
+    Columns: stateCode, stateNameEnglish, districtCode, districtNameEnglish, subdistrictCode, subdistrictNameEnglish, villageCode, villageNameEnglish, pincode, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/pmfby
+CSV files in folder: 1
+  - File: recovery_pipeline_data/pmfby/a330e681-6562-4552-a94b-58f1df7eccf3.csv
+    Row count (excluding header): 6
+    Column count: 8
+    Columns: _year, total_farmer_applications__in_lakhs_, farmer_premium__in_crores_, state_premium__in_crores_, goi_premium__in_crores_, claims_paid__in_crores_, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/reservoir
+CSV files in folder: 1
+  - File: recovery_pipeline_data/reservoir/247146af-5216-47ff-80f6-ddea261f1139.csv
+    Row count (excluding header): 23
+    Column count: 5
+    Columns: state, projects_having_deficiency___equal_to_and_less_than_80__of_average_of_last_10_years_, current_year_s_storage_as__age_of_normal, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/soil_health
+CSV files in folder: 1
+  - File: recovery_pipeline_data/soil_health/4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+    Row count (excluding header): 200
+    Column count: 9
+    Columns: State, District, Date, Year, Month, Avg_smlvl_at15cm, Agency_name, _resource_id, _source_resource_id
+
+Folder: recovery_pipeline_data/supporting_assets
+CSV files in folder: 1
+  - File: recovery_pipeline_data/supporting_assets/recovery_generation_report.csv
+    Row count (excluding header): 20
+    Column count: 4
+    Columns: resource_id, category, rows, status
+
+Folder: staging_backfill_data
+CSV files in folder: 3
+  - File: staging_backfill_data/4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+    Row count (excluding header): 26000
+    Column count: 8
+    Columns: State, District, Date, Year, Month, Avg_smlvl_at15cm, Agency_name, _resource_id
+  - File: staging_backfill_data/all_data_gov_rows.csv
+    Row count (excluding header): 43000
+    Column count: 17
+    Columns: State, District, Market, Commodity, Variety, Grade, Arrival_Date, Min_Price, Max_Price, Modal_Price, Commodity_Code, _resource_id, Date, Year, Month, Avg_smlvl_at15cm, Agency_name
+  - File: staging_backfill_data/mandi_master_derived_geocoded.csv
+    Row count (excluding header): 779
+    Column count: 6
+    Columns: name, state, district, source, latitude, longitude
+
+SEED SCRIPT SUMMARY
+
+SEED SCRIPT: scripts/seed_farmers_end_to_end.py
+- Purpose: Seeds 8 complete farmer accounts for end-to-end testing.
+- Entry point: seed_farmers()
+- Default password: Farmer@123
+- Uses Firebase/Firestore via shared.db.firebase.get_db() and init_firebase().
+- Writes data into Firestore collections referenced by constants:
+  Firestore.USERS, Firestore.FARMER_PROFILES, Firestore.CROPS, Firestore.LIVESTOCK,
+  Firestore.EQUIPMENT, Firestore.EQUIPMENT_BOOKINGS, Firestore.NOTIFICATIONS
+- Seeded counts (per run, as coded):
+  users=8, profiles=8, crops=8, livestock=8, equipment=8, bookings=1, notifications=1
+- Sample IDs pattern created:
+  user_id: seed_farmer_01..08
+  profile_id: profile_seed_farmer_01..08
+  crop_id: crop_seed_farmer_01..08
+  livestock_id: livestock_seed_farmer_01..08
+  equipment_id: equipment_seed_farmer_01..08
+- Audit outputs produced by script:
+  scripts/reports/data_assets/audit/seeded_farmers_credentials.csv
+  scripts/reports/data_assets/audit/seed_farmers_end_to_end_report.json
+- Key fields by document type:
+  user_doc: phone, password_hash, name, role, language, is_active, created_at, updated_at, is_seed_data
+  profile_doc: user_id, name, phone, village, district, state, pin_code
+  crop_doc: farmer_id, name, variety, season, area, sowing_date, status, created_at, updated_at, is_seed_data
+  livestock_doc: farmer_id, type, breed, count, health_status, created_at, updated_at, is_seed_data
+  equipment_doc: farmer_id, name, type, status, rate_per_hour, rate_per_day, location
+  booking_doc: equipment_id, equipment_name, owner_id, renter_id, start_date, end_date, message, status, created_at, updated_at, is_seed_data
+  notify_doc: user_id, title, body, type, is_read, created_at, is_seed_data

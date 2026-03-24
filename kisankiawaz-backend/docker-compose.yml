@@ -1,0 +1,308 @@
+x-common-env: &common-env
+  FIREBASE_CREDENTIALS_PATH: /app/creds/serviceAccountKey.json
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  QDRANT_HOST: qdrant
+  QDRANT_PORT: "6333"
+  DATA_GOV_API_KEY: ${DATA_GOV_API_KEY}
+
+services:
+  # ── Infrastructure ──────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Nginx API Gateway ───────────────────────
+  gateway:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      farmer-service:
+        condition: service_healthy
+      crop-service:
+        condition: service_healthy
+      market-service:
+        condition: service_healthy
+      equipment-service:
+        condition: service_healthy
+      agent-service:
+        condition: service_healthy
+      voice-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      schemes-service:
+        condition: service_healthy
+      geo-service:
+        condition: service_healthy
+      admin-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Auth Service ────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+      - ./scripts:/app/scripts:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Farmer Service ──────────────────────────
+  farmer-service:
+    build:
+      context: .
+      dockerfile: services/farmer/Dockerfile
+    ports:
+      - "8002:8002"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Crop Service ────────────────────────────
+  crop-service:
+    build:
+      context: .
+      dockerfile: services/crop/Dockerfile
+    ports:
+      - "8003:8003"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Market Service ──────────────────────────
+  market-service:
+    build:
+      context: .
+      dockerfile: services/market/Dockerfile
+    ports:
+      - "8004:8004"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+      - market_documents:/app/scheme_documents
+      - market_generated:/app/generated_documents
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Equipment Service ───────────────────────
+  equipment-service:
+    build:
+      context: .
+      dockerfile: services/equipment/Dockerfile
+    ports:
+      - "8005:8005"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Agent Service (ADK Multi-Agent) ─────────
+  agent-service:
+    build:
+      context: .
+      dockerfile: services/agent/Dockerfile
+    ports:
+      - "8006:8006"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Voice Service ───────────────────────────
+  voice-service:
+    build:
+      context: .
+      dockerfile: services/voice/Dockerfile
+    ports:
+      - "8007:8007"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      agent-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Notification Service ────────────────────
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    ports:
+      - "8008:8008"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Schemes Service (NEW) ───────────────────
+  schemes-service:
+    build:
+      context: .
+      dockerfile: services/schemes/Dockerfile
+    ports:
+      - "8009:8009"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Geo Service (NEW) ──────────────────────
+  geo-service:
+    build:
+      context: .
+      dockerfile: services/geo/Dockerfile
+    ports:
+      - "8010:8010"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Admin Service (NEW) ────────────────────
+  admin-service:
+    build:
+      context: .
+      dockerfile: services/admin/Dockerfile
+    ports:
+      - "8011:8011"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Analytics Service (NEW) ─────────────────
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+    ports:
+      - "8012:8012"
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Celery Worker ───────────────────────────
+  celery-worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    env_file: .env
+    environment:
+      <<: *common-env
+    volumes:
+      - ./creds:/app/creds:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  qdrant_data:
+  market_documents:
+  market_generated:

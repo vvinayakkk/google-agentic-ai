@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Agriculture Infra Financing Facility</title>
+    <link href="/Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="/Content/MvcGrid/mvc-grid.css" rel="stylesheet" />
+    <link href="/Content/bootstrap-table.min.css" rel="stylesheet" />
+    <link href="/Content/fontawesome/css/all.min.css" rel="stylesheet" />
+    <link href="/Content/SiteNew.css" rel="stylesheet" />
+    <link href="/Content/font/OpenSans.css" rel="stylesheet" />
+    <link href="/Content/font/Merriweather.css" rel="stylesheet" />
+    
+
+    
+    <link rel="stylesheet" href="https://translation-plugin.bhashini.co.in/v3/website_translation_utility.css">
+</head>
+<body>
+
+    <section class="header">
+        <!-- News Ticker -->
+<section class="news-ticker d-flex">
+    <div class="w-100">
+        <div class="bg-ticker news-banner ">
+            <button class="btn btn-danger btn-sm fixed-button mt-1 ms-3 me-1 mb-1">Update</button>
+            <div class="scroll-container w-100">
+                <marquee class="text-dark scroll-text  mb-0">
+                    <!--Welcome to the Agri Infra Portal — Empowering farmers with infrastructure support under the Agriculture Infrastructure Fund.-->
+                    Alert: Do not click on any private links for AIF application or geotagging. AIF is not associated with such links. Check status only on the official AIF portal.
+                </marquee>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Header1 (Government Logo, Site Name, Language, Accessibility) -->
+<header class="header1 container-fluid d-flex flex-wrap justify-content-between my-2 px-3">
+
+    <div class="logo-and-site  d-flex flex-nowrap align-items-center justify-content-center  mb-2 mb-md-0">
+        <div class="d-flex px-1 ">
+            <img src="/Content/images/emblem.svg" alt="emblem" />
+            <div class="site ms-1 col-xl-12 px-1 px-xl-0">
+                <p class="mb-0 bhashini-skip-translation">भारत सरकार</p>
+                <p class="mb-0 goi bhashini-skip-translation">Government of India</p>
+            </div>
+        </div>
+        <div class="vertical-line d-none d-lg-block ms-xl-1 my-xxl-4"></div>
+        <div class="site ms-xl-2 ms-md-2">
+            <p class="mb-0 bhashini-skip-translation">कृषि एवं किसान कल्याण मंत्रालय</p>
+            <p class="mb-0 goi bhashini-skip-translation">Agricultural & Farmers Welfare Department</p>
+        </div>
+
+
+    </div>
+
+    <div class="other-options d-flex flex-row  align-items-center justify-content-stretch ">
+        <img class="me-1" src="/Content/images/azadi.svg" alt="" />
+        <a href="#maincontent" class="mb-0 me-1">Skip to main content</a>
+        <div class="d-flex flex-row text-nowrap">
+            <p id="decrease-font" class="a11y mb-0 me-1 p-1">-A</p>
+            <p id="reset-font" class="a11y mb-0 me-1 p-1">A</p>
+            <p id="increase-font" class="a11y mb-0 me-1 p-1">+A</p>
+        </div>
+        <div class="bhashini-plugin-container"></div>
+    </div>
+</header>
+
+<!-- Main Header (Site Logo, Name, Search, Publications Link, Login Popup) -->
+<header id="main-header" class="header2 d-flex ">
+    <div class="gif-aif row justify-content-between col-12">
+        <div class="left-side-header2 d-flex flex-row col-sm-8  col-lg-8 col-xl-6 ">
+            <img class="aif-logo" src="/Content/images/AIFRound_3yr.gif" alt="" />
+
+            <div class="aif-text text-center d-flex flex-column align-items-start justify-content-center">
+                <p class="mb-0 aif-text-eng text-uppercase bhashini-skip-translation">
+                    Agriculture Infrastructure Fund
+                </p>
+                <p class="mb-0 bhashini-skip-translation">कृषि अवसंरचना कोष</p>
+            </div>
+        </div>
+        <div class="right-side-header2 d-flex width-for-right-side  col-lg-4 flex-column align-items-end justify-content-center col-sm-4 col-xl-6 ">
+            <div class="aif-right-section search-wrapper position-relative custom-width search-input">
+                <input type="text"
+                       class=" form-control w-100 w-sm-25 w-md-50 w-lg-25  small border-info  rounded-pill pe-1"
+                       placeholder="Search" />
+                <i class="fa fa-search position-absolute text-dark small custom-center-vertical search-icon p-1 "></i>
+            </div>
+            <div class="monthly-publication-section d-flex my-2 me-2">
+                <a href="/Home/Publication">
+                    <div class="transparent-button">
+                        <img src="/Content/images/Layer_1.svg" alt="" />
+                        <span class=" d-sm-none d-lg-flex text-wrap">Monthly Publication</span>
+                    </div>
+                </a>
+                
+            <a href="/Home/DashboardGeoTag">
+                <div class=" transparent-button separator-green pe-3">
+                    <img src="/Content/images/location.svg" alt="" />
+                    <span class="d-sm-none text-wrap d-lg-flex" >Geo Tagged Dashboard</span>
+                </div>
+
+
+            </a>
+            <a  href="/Home/Login">
+                <div class="transparent-button">
+                    <img src="/Content/images/login.svg" alt="" />
+                    <span class="d-sm-none text-wrap d-lg-flex">Login</span>
+                </div>
+
+            </a>
+                
+            </div>
+        </div>
+    </div>
+</header>
+
+
+    </section>
+
+    <!-- Navigation Bar -->
+    <section class="nav-section d-flex">
+        <nav class="navbar navbar-expand-md navbar-dark nav-bg flex-fill w-100">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav nav-pill me-auto flex-wrap align-content-stretch">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/">Home <span class="visually-hidden">(current)</span></a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">About Scheme</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/SchemeOverview">Scheme Overview</a>
+                            <a class="dropdown-item nav-link" href="/Home/Objectives">Scheme Objective</a>
+                            <a class="dropdown-item nav-link" href="/Home/MainFeatures">Key Features</a>
+                            <a class="dropdown-item nav-link" href="/Home/FundAllocation">Fund Allocation</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Eligibility</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/WhoCanApply">Who Can Apply</a>
+                            <a class="dropdown-item nav-link" href="/Home/EligibleProjects">Eligible Project</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Beneficiary Corner</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/BeneficiaryRegistration">Register as Beneficiary</a>
+                            <a class="dropdown-item nav-link" href="/Home/RecoverBeneficiaryId">Recover Beneficiary ID</a>
+                            <a class="dropdown-item nav-link" href="/Home/BenefitsUnderOtherScheme">Convergence with Other Schemes</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Lending Institutions</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/EligibleLendingInstitutions">Eligible Institutions</a>
+                            <a class="dropdown-item nav-link" href="/Home/InterestRate">Interest Rates</a>
+                            <a class="dropdown-item nav-link" href="/Home/Jurisdiction">Jurisdiction</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Scheme Monitoring</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/Dashboard">Scheme Dashboard</a>
+                            <a class="dropdown-item nav-link" href="/MISReports/SanctionedStateDistrictProjectTypeMISReport">Sanctioned State And District Wise (MIS)</a>
+                            <a class="dropdown-item nav-link" href="/Home/DashboardGeoTag">Geo-Tagged Dashboard</a>
+                            <a class="dropdown-item nav-link" href="/MISReports/GeoTagProgress">Geo-Tagged Progress (MIS)</a>
+                            <a class="dropdown-item nav-link" href="/Home/SchemeMonitoring">Monitoring Committees</a>
+                            <a class="dropdown-item nav-link" href="/Home/MISReport">MIS Report</a>
+                            <a class="dropdown-item nav-link" href="/MISReports/SanctionedLendingInstitutionLendingInstitutionBranchMISReport">Sanctioned Lending Institution Branch Wise (MIS)</a>
+                            <a class="dropdown-item nav-link" href="/MISReports/SanctionedLIStateDistrictMISReport">Sanctioned Lending Institution State Wise (MIS)</a>
+                            <a class="dropdown-item nav-link" href="/Home/FinancialYearWiseReports">Financial Year Wise (MIS)</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Resources</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Content/DocAttachment/FINALSchemeGuidelinesAIF.pdf" target="_blank">Scheme SOP</a>
+                            <a class="dropdown-item nav-link" href="/Home/Circulars">Circulars</a>
+                            <a class="dropdown-item nav-link" href="/Home/CheckList">Document Checklists</a>
+
+                            <a class="dropdown-item nav-link" href="/Home/ModelDPR">DPR Samples & Templates</a>
+                            <a class="dropdown-item nav-link" href="/Home/Presentation">Presentations</a>
+                            <a class="dropdown-item nav-link" href="/Home/TutorialVideos">Video Tutorials</a>
+                            <a class="dropdown-item nav-link" href="https://play.google.com/store/apps/details?id=com.agri.krishimapper" target="_blank">Krishi Mapper App (Android)</a>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Assistance</a>
+                        <div class="dropdown-menu nav-bg">
+                            <a class="dropdown-item nav-link" href="/Home/FAQs">FAQs</a>
+                            <a class="dropdown-item nav-link" href="/Home/Help">Help</a>
+                            <a class="dropdown-item nav-link" href="/Home/Login">Support</a>
+                        </div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/Home/ContactUs">Contact Us</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/Home/Login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/Home/Announcement">Announcement</a>
+                    </li>
+                </ul>
+            </div>
+
+
+
+
+        </nav>
+    </section>
+
+    <!-- Fixed-floating Social Icons -->
+    <aside class="social nav flex-column position-fixed">
+        <a class="twitter mb-2" href="https://twitter.com/AgriInfraFund">         <i class="icon-circle rounded-circle text-center fa fa-2x fa-x-twitter bg-info">  <img src="/Content/images/Twiiter_Icon.svg" class="icon-circle"></i><b class="mx-2">Twitter</b></a>
+        <a class="facebook mb-2" href="https://www.facebook.com/Agriinfrafund/">   <i class="icon-circle rounded-circle text-center fa fa-2x fa-x-facebook bg-primary"><img src="/Content/SocialMedia/Facebook.svg" class="icon-circle"></i><b class="mx-2">Facebook</b></a>
+        <a class="linkedin mb-2" href="https://www.linkedin.com/in/agriinfrafund/"><i class="icon-circle rounded-circle text-center fa fa-2x fa-x-linkedin bg-primary "><img src="/Content/SocialMedia/LinkedIn.svg" class="icon-circle"></i><b class="mx-2">LinkedIn</b></a>
+        <a class="instagram mb-2" href="https://www.instagram.com/agriinfrafund/">  <i class="icon-circle rounded-circle text-center fa fa-2x fa-x-instagram bg-danger "><img src="/Content/images/instagram_icon.png" class="icon-circle"></i><b class="mx-2">Instagram</b></a>
+        <a class="instagram mb-2" href="/Documents/Publication/99D928734BEF41DCABA6A528D47956AE.pdf">  <i class="icon-circle rounded-circle text-center fa fa-2x fa-x-instagram bg-light border border-danger"><img src="/Content/images/Layer_1.svg" class="icon-circle p-2"></i><b class="ms-2">Publication</b></a>
+    </aside>
+    <section>
+        <div class="container-fluid ps-0 pe-0">
+            <div id="body">
+                
+                <section class="clear-fix">
+                    
+
+
+
+<!-- Hero Image Scroller -->
+<section class="hero_scroller">
+    <div id="main_slider" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="/Content/images/main_slider_integrated processing.png" class="d-block w-100 bg-primary" alt="main_slider_integrated processing">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_drone.png" class="d-block w-100 bg-secondary" alt="main_slider_drone">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_cold_stores.png" class="d-block w-100 bg-dark" alt="main_slider_cold_stores">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_sorting.png" class="d-block w-100 bg-light" alt="main_slider_sorting">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_solar.png" class="d-block w-100 bg-danger" alt="main_slider_solar">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_silos.png" class="d-block w-100" alt="main_slider_silos">
+            </div>
+            <div class="carousel-item">
+                <img src="/Content/images/main_slider_storage.png" class="d-block w-100" alt="main_slider_storage">
+            </div>
+        </div>
+
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="3" aria-label="Slide 4"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="4" aria-label="Slide 5"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="5" aria-label="Slide 6"></button>
+            <button type="button" data-bs-target="#main_slider" data-bs-slide-to="6" aria-label="Slide 7"></button>
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#main_slider" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#main_slider" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</section>
+
+
+<!--Page Main content -->
+<main role="main" id="maincontent">
+
+    <!-- Scheme Details (Performance Dashboard, Beneficiary Corner) -->
+    <section class="agriculture-infrastructure-financing-facility main-container  container-fluid">
+        <div class="row align-items-stretch">
+
+            <div class="aif-facility facility-section col-sm-6  col-lg-6 pb-4">
+                <div class="aif-facility title facility-header d-flex align-items-center ms-3 mt-4">
+                    <img class="facility-icon"
+                         src="/Content/images/yellow_leaf.svg"
+                         width="18"
+                         height="18"
+                         alt="" />
+                    <p class="facility-title mb-0 d-inline-block align-baseline ms-1">
+                        Agriculture Infrastructure Financing Facility
+                    </p>
+                </div>
+                <p class="facility-description py-3 ">
+                    The role of infrastructure is crucial for agriculture development and
+                    for taking the production dynamics to the next level. It is only
+                    through the development of infrastructure, especially at the post
+                    harvest stage that the produce can be optimally utilized with
+                    opportunity for value addition and fair deal for the farmers.
+                    Development of such infrastructure shall also address the vagaries of
+                    nature, the regional disparities, development of human resource and
+                    realization of full potential of our limited land resource.
+                </p>
+
+                <div class="dashboard">
+                    <h1 class="dashboard-title">Overview Insights</h1>
+
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">3,34,749</div>
+                            <div class="metric-label">Registered Beneficiary</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">3,32,597</div>
+                            <div class="metric-label">Number of Applications</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">&#x20B9; 127,910 Cr</div>
+                            <div class="metric-label">Loan Amount of Received Applications</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">4,29,083</div>
+                            <div class="metric-label">Users</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">1,65,010</div>
+                            <div class="metric-label">Total Projects Sanctioned</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">&#x20B9; 81,119 Cr</div>
+                            <div class="metric-label">Amount Sanctioned by Schedule Commercial Bank</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                &#x20B9; 2,408 Cr
+                            </div>
+                            <div class="metric-label">Amount Sanctioned by Cooperative Bank</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                &#x20B9; 83,528 Cr
+                            </div>
+                            <div class="metric-label">Total Amount Sanctioned</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                1,46,789
+                            </div>
+                            <div class="metric-label">Total Projects Disbursed</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value"> &#x20B9; 60,305 Cr</div>
+                            <div class="metric-label">Amount Disbursed by Schedule Commercial Bank</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                &#x20B9; 1,206 Cr
+                            </div>
+                            <div class="metric-label">Amount Disbursed by Cooperative Bank</div>
+                        </div>
+
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                &#x20B9; 61,512 Cr
+                            </div>
+                            <div class="metric-label">Total Amount Disbursed</div>
+                        </div>
+                    </div>
+
+                    <div class="view-all-container">
+                        <a class="view-all-btn" href="/Home/Dashboard">VIEW ALL</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="beneficiary-corner-section col-sm-6  col-lg-6 pb-4">
+                <div class="beneficiary-corner-container my-md-auto ">
+                    <div class="d-flex justify-content-center mt-4 section-header-grid">
+                        <img class="facility-icon"
+                             src="/Content/images/yellow_leaf.svg"
+                             width="18"
+                             height="18"
+                             alt="" />
+                        <p class="facility-title">Beneficiary Corner</p>
+                    </div>
+                    <div></div>
+
+                    <a class="card " href="/Home/Registration">
+                        <img class="card-image"
+                             src="/Content/images/registration.svg" />
+                        <p class="card-title">Beneficiary</p>
+                        <p class="card-subtitle">Registration</p>
+                    </a>
+                    <a class="card " href="/Home/BenefitsUnderOtherScheme">
+                        <img class="card-image"
+                             src="/Content/images/circles.svg" />
+                        <p class="card-title">Benefit Under Other</p>
+                        <p class="card-subtitle">Schemes</p>
+                    </a>
+                    <a class="card " href="/Home/DCCBs">
+                        <img class="card-image"
+                             src="/Content/images/Audience.svg"
+                             width="50%"
+                             height="50%" />
+                        <p class="card-title">Common Users</p>
+                        <p class="card-subtitle">DCCBs</p>
+                    </a>
+                    <a class="card " href="/Home/MoUBank">
+                        <img class="card-image"
+                             src="/Content/images/mou.svg"
+                             width="50%"
+                             height="50%" />
+                        <p class="card-title">MoU with</p>
+                        <p class="card-subtitle">Banks</p>
+                    </a>
+                    <a class="card " href="/Content/DocAttachment/FINALSchemeGuidelinesAIF.pdf">
+                        <img class="card-image"
+                             src="/Content/images/guidelines.svg"
+                             width="50%"
+                             height="50%" />
+                        <p class="card-title">Scheme</p>
+                        <p class="card-subtitle">Guidelines</p>
+                    </a>
+                    <a class="card " href="/Home/InterestRate">
+                        <img class="card-image"
+                             src="/Content/images/intrestRates.svg" />
+                        <p class="card-title">Interest</p>
+                        <p class="card-subtitle">Rates</p>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+    <!-- Main Features -->
+    <section class="feature_section container-fluid">
+        <div class="row">
+            <div class="justify-content-center col-12">
+                <div class="tongue_clip">
+                    <span class="tongue_icon"><img src="/Content/images/yellow_leaf.svg"> </span>
+                    <span class="tongue_text">Main Feature</span>
+                </div>
+                <div class="container-flex p-5">
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 justify-content-stretch">
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Convergence with all schemes</b> of central Government.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Online single window facility</b> in collaboration with participating lending institutions.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Project Management Unit to provide</b> handholding support for projects including project preparation.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Size of the financing facility –</b> ₹ 1 lakh Crore.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Credit Guarantee for loans</b> up to ₹ 2 Crore.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Interest subvention of 3% p.a.,</b> limited to ₹ 2 crore per project in one location, though loan amount can be higher.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Cap on lending rate, so that benefit</b> of interest subsidy reaches the beneficiary and services to farmers remain affordable.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Multiple lending institutions including</b> Commercial Banks, Cooperative Banks, RRBs, Small Finance Banks, NCDC, NBFCs etc.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>One eligible entity puts up projects in</b> different locations then all such projects will be eligible under the scheme for loan upto ₹ 2 crore.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>For a private sector entity, such as farmer,</b> agri entrepreneur, start-up there will be a limit of maximum of 25 such projects.</p></div></div>
+                        <div class="col p-4"><div class="lt-circle-tile p-2 w-100 overflow-hidden text-wrap text-justify"><p><b>Limitation of 25 projects will not be applicable</b> to state agencies, national and state federations of cooperatives, federations of FPOs and federation of SHGs.</p></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Success Stories -->
+    <section class="success_section container-fluid">
+        <div class="row">
+            <div class="justify-content-center col-12">
+                <div class="tongue_clip">
+                    <span class="tongue_icon"><img src="/Content/images/yellow_leaf.svg"> </span>
+                    <span class="tongue_text">AIF in Action</span>
+                </div>
+                <div class="vd-scroll-container container-flex overflow-auto py-5">
+                    <div class="vd-scroll-inner row flex-nowrap vd-scroll-slow overflow-x">
+                        <!-- Video Block 1 -->
+                        <div class="col-auto video-block" tabindex="0">
+                            <div class="video-container align-self-center">
+                                <video class="embed-responsive-item" controls="" poster="../Content/images/RegHindi.png" style="width: 100%; border-radius: 20px;">
+                                    <source src="../Content/video/Agri_pro_Hindi_6.mp4" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                            <div class="video-caption">Loan Application Process Video (Hindi)</div>
+                            <div class="video-duration p-1">
+                                <img src="/Content/images/clock.png" class="clock">
+                                <span class="text-white p-2">06:16</span>
+                            </div>
+                        </div>
+                        <!-- Video Block 2 -->
+                        <div class="col-auto video-block" tabindex="0">
+                            <div class="video-container align-self-center">
+                                <video class="embed-responsive-item" controls="" poster="../Content/images/RegEnglish.png" style="width: 100%; border-radius: 20px;">
+                                    <source src="../Content/video/Agri_pro_English_6.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <div class="video-caption">Loan Application Process Video (English)</div>
+                            <div class="video-duration p-1">
+                                <img src="/Content/images/clock.png" class="clock">
+                                <span class="text-white p-2">06:01</span>
+                            </div>
+                        </div>
+                        <!-- Video Block 3 -->
+                        <div class="col-auto video-block" tabindex="0">
+                            <div class="video-container align-self-center">
+                                <video class="embed-responsive-item" controls="" poster="../Content/images/GeoTagHelp.png" style="width: 100%; border-radius: 20px;">
+                                    <source src="../Content/video/AIF_Geo_tagging_Tutorial.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <div class="video-caption">Geo Tagging Tutorial</div>
+                            <div class="video-duration p-1">
+                                <img src="/Content/images/clock.png" class="clock">
+                                <span class="text-white p-2">02:45</span>
+                            </div>
+                        </div>
+                        <!-- Video Block 4 -->
+                        <div class="col-auto video-block" tabindex="0">
+                            <div class="video-container align-self-center">
+                                <video class="embed-responsive-item" controls="" poster="../Content/images/GeoTagHelp.png" style="width: 100%; border-radius: 20px;">
+                                    <source src="../Content/video/Krishi_Mapper_Tutorial_Full.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <div class="video-caption">Krishi Mapper Geo Tagging Tutorial</div>
+                            <div class="video-duration p-1">
+                                <img src="/Content/images/clock.png" class="clock">
+                                <span class="text-white p-2">02:11</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Links Section (Gallery, Beneficiary Corner, What's New, Help Corner) -->
+    <section class="info-section my-3 mx-2">
+        <div class="row cards-section justify-content-center">
+            <div class="cards-pair col-sm-12 col-lg-6 row">
+                <div class="left-card col-sm-12 col-md-6 ps-2 py-2">
+                    <p class="card-category">Gallery</p>
+                    <div class="card-description-left">
+                        <p class="description-title"></p>
+                        <ul class="description-points">
+                            <li class="infi-scroll"><a href="/Content/Gallery/AIF National Bank Conclave-Mumbai.pdf" target="_blank">AIF National Bank Conclave-Mumbai</a></li>
+                            <li class="infi-scroll"><a href="/Content/Gallery/AIF North East Conclave-Mizoram.pdf" target="_blank">AIF North East Conclave-Mizoram</a></li>
+                            <li class="infi-scroll"><a href="/Content/Gallery/AIF North East Investors Summit- New Delhi 2025.pdf" target="_blank">AIF North East Investors Summit- New Delhi 2025</a></li>
+                            <li class="infi-scroll"><a href="/Content/Gallery/AIF Punjab State Conclave.pdf" target="_blank">AIF Punjab State Conclave</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="right-card col-sm-12 col-md-6 ps-2 py-2">
+                    <p class="card-category">Beneficiary Corner</p>
+                    <div class="card-description-right">
+                        <p class="description-title"></p>
+                        <ul class="description-points">
+                            <li class="infi-scroll"><a href="/Home/TutorialVideos" target="_blank">Various tutorial video links</a></li>
+                            <li class="infi-scroll"><a href="/Home/Registration" target="_blank">Register Now</a></li>
+                            <li class="infi-scroll"><a href="/Content/video/Krishi_Mapper_Tutorial.mp4" target="_blank">Krishi Mapper Tutorial/ Download</a></li>
+                            <li class="infi-scroll"><a href="/Home/ModelDPR" target="_blank">Sample DPR</a></li>
+                            <li class="infi-scroll"><a href="https://www.facebook.com/Agriinfrafund/" target="_blank">Facebook</a></li>
+                            <li class="infi-scroll"><a href="https://www.instagram.com/agriinfrafund/" target="_blank">Instagram</a></li>
+                            <li class="infi-scroll"><a href="https://www.linkedin.com/in/agriinfrafund/" target="_blank">LinkedIn</a></li>
+                            <li class="infi-scroll"><a href="https://twitter.com/AgriInfraFund" target="_blank">Twitter</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="cards-pair col-sm-12  col-lg-6 row ">
+                <div class="left-card col-sm-12 col-md-6 ps-2 py-2">
+                    <p class="card-category">What’s New</p>
+                    <div class="card-description-left">
+                        <p class="description-title"></p>
+                        <ul class="description-points">
+                            <li class="infi-scroll"><a href="/Home/Circulars" target="_blank">Latest Circulars</a></li>
+                            <li class="infi-scroll"><a href="/Home/Publication" target="_blank">Latest Monthly Bulletin</a></li>
+                            <li class="infi-scroll">
+                                <a href="/Home/DashboardState" target="_blank">Information about latest Conference</a>
+                            </li>
+                            <li class="infi-scroll"><a href="/Content/Gallery/AIF National Bank Conclave-Mumbai.pdf" target="_blank">Seminars</a></li>
+                            <li class="infi-scroll"><a href="https://bidplus.gem.gov.in/showbidDocument/8590025" target="_blank">Bid Detail</a></li>
+                            <li class="infi-scroll"><a href="https://bidplus.gem.gov.in/bidding/bid/downloadBuyerDoc/8503190/17646568961501.pdf" target="_blank">RFP</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="right-card col-sm-12 col-md-6 ps-2 py-2">
+                    <p class="card-category">Help Corner</p>
+                    <div class="card-description-right">
+                        <p class="description-title"></p>
+                        <ul class="description-points">
+                            <li class="infi-scroll"><a href="/Documents/Circular/B85D81772DD34C9FB5FD90DEBA022854.pdf" target="_blank">DPR Template (English)</a></li>
+                            <li class="infi-scroll"><a href="/Documents/Circular/DPR_TEMPLATE_HINDI.pdf" target="_blank">DPR Template (Hindi)</a></li>
+                            <li class="infi-scroll"><a href="/Content/DocAttachment/FINALSchemeGuidelinesAIF.pdf" target="_blank">Scheme Guidelines</a></li>
+                            <li class="infi-scroll"><a href="/Home/CheckList" target="_blank">Checklist</a></li>
+                            <li class="infi-scroll"><a href="/Content/Gallery/Refresh_Methods.pdf" target="_blank">Refresh Cache</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Fixed-floating Chatbot Icon -->
+
+
+
+
+
+<aside class="chat-section flex-column">
+
+    <div class="chatbot">
+        <a href="https://chat-vistaar.da.gov.in/chat" id="myBtn" target="_blank">
+            <img src="/Content/images/BV-Eng.png" alt="PMKisan Chatbot" class="smallimg">
+        </a>
+    </div>
+
+</aside>
+
+
+<style>
+    .chatbot {
+        position: fixed;
+        bottom: 0px;
+        right: 2px;
+        z-index: 9;
+    }
+
+    a {
+        text-decoration: none !important;
+    }
+
+
+    .chatbot .animated {
+        animation-duration: 2.5s;
+        animation-fill-mode: both;
+        animation-iteration-count: infinite;
+    }
+
+
+    .chatbot .text {
+        bottom: 90px !important;
+        padding: 5px !important;
+        right: 60px !important;
+        width: 294px !important;
+        border-radius: 10px 10px 0 !important;
+        background: #fba405 !important;
+        position: absolute !important;
+        color: #fff !important;
+        font-size: .7em !important;
+        font-family: sans-serif !important;
+        text-transform: uppercase !important;
+        text-align: center;
+    }
+
+    .chatbot .bounce {
+        animation-name: bounce;
+    }
+
+    .smallimg {
+        width: 180px;
+    }
+</style>
+
+
+
+<div class="modal fade" id="home-model">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="border:none">
+                <h4 class="modal-title fw-bold">Kind Attention</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <span class="h5">
+                    The website will be down for maintenance on 06 feb 2026 from 10 AM to 11 AM.
+                    <br />
+                    We apologize for any inconvenience.
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+                </section>
+            </div>
+        </div>
+    </section>
+    <!-- External Links (Portals, Videos, Playstore App) -->
+    <section class="links_section container-fluid">
+        <div class="row">
+            <div class="bg-line justify-content-center col-12">
+                <div class="tongue_clip">
+                    <span class="tongue_icon"><img src="/Content/images/yellow_leaf.svg"> </span>
+                    <span class="tongue_text">Related Links</span>
+                </div>
+            </div>
+            <div class="px-4 pb-2 w-100">
+                <div class="justify-content-center d-flex flex-wrap text-center align-items-center">
+                    <a class="link p-2" href="https://krishikatha.da.gov.in/en/category/agri-infra-fund/" target="_blank">
+                        <span class="tongue_icon pe-2"><img src="/Content/images/links_icon.svg"> </span>
+                        <span class="link-text pe-2 no-wrap">Krishi Katha</span>
+                    </a>
+                    <a class="link p-2" href="https://krishinivesh.gov.in/" target="_blank"
+                        <span class="tongue_icon pe-2"><img src="/Content/images/links_icon.svg"> </span>
+                        <span class="link-text pe-2 no-wrap">Krishi Nivesh Portal</span>
+                    </a>
+                    <a class="link p-2" href="/Content/video/Agri_pro_English_6.mp4" target="_blank">
+                        <span class="tongue_icon pe-2"><img src="/Content/images/video_icon.svg"> </span>
+                        <span class="link-text pe-2 no-wrap">Loan Application Process Video (English)</span>
+                    </a>
+                    <a class="link p-2" href="/Content/video/Agri_pro_Hindi_6.mp4" target="_blank">
+                        <span class="tongue_icon pe-2"><img src="/Content/images/video_icon.svg"> </span>
+                        <span class="link-text pe-2 no-wrap">Loan Application Process Video (Hindi)</span>
+                    </a>
+                </div>
+                <a class="justify-content-center d-flex " href="https://play.google.com/store/apps/details?id=com.agri.krishimapper" target="_blank">
+                    <div class="android-link rounded-pill m-1 p-2">
+
+                        <span class="tongue_icon"><img src="/Content/images/android.svg"> </span>
+                        <span class="android-text">Download Krishi Mapper</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+    <section class="footer">
+        <!-- Footer -->
+<section class="footer-section">
+    <footer class="footer flex-fill w-100">
+        <nav class="footer-nav flex-wrap">
+            <a href="/">Home</a>
+            <span class="separator">|</span>
+            <a href="/Home/Login">Support</a>
+            <span class="separator">|</span>
+            <a href="/Home/FAQs">FAQ</a>
+            <span class="separator">|</span>
+            <a href="/Home/Sitemap">Sitemap</a>
+            <span class="separator">|</span>
+            <a href="/Home/WebsitePolicies">Website Policies</a>
+            <span class="separator">|</span>
+            <a href="/Home/WebInformationManager">Web Information Manager</a>
+        </nav>
+        <hr class="mb-0"/>
+        <div class="footer-info">
+            <p class="website-belongs m-2">
+                This website belongs to and Website Content Managed by Department of Agriculture & Farmers Welfare
+            </p>
+            <p class="last-updated p-0 m-0"><span class="text-monospace"> 
+                Visitor Counter :
+                <span class="border-info border-rounded p-1">Total Visitor : 1937477
+
+</span>
+                | Today:<span class=" border-info border-rounded p-1">2316</span></span></p>
+            <p class="last-updated p-0 m-0 end"><small class="font-italic float-end align-text-bottom" text-version="8.7.0">Last updated on 10,Sept,2025</small></p>
+        </div>
+    </footer>
+</section>
+    </section>
+    <script type="text/javascript" src="/Scripts/modernizr-2.8.3.js"></script>
+    <script type="text/javascript" src="/Scripts/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" src="/Scripts/jquery.validate.min.js"></script>
+    <script type="text/javascript" src="/Scripts/jquery.validate.unobtrusive.min.js"></script>
+    <script type="text/javascript" src="/Scripts/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/Scripts/bootstrap-datepicker.min.js"></script>
+    <script type="text/javascript" src="/Scripts/MvcGrid/mvc-grid.js"></script>
+    <script type="text/javascript" src="/Scripts/md5.js"></script>
+    <script type="text/javascript" src="/Scripts/Chart.min.js"></script>
+    <script type="text/javascript" src="/Scripts/bootstrap-table.min.js"></script>
+    <script>
+        [].forEach.call(document.getElementsByClassName('mvc-grid'), function (element) {
+            new MvcGrid(element);
+        });
+    </script>
+
+    
+    <script src="/Scripts/App/home-index.js"></script>
+    <script src="/Scripts/dtjs/jquery.min.js"></script>
+    <script>
+        function notification(atag) {
+            var url = $.trim(this.getAttribute("href"));
+            if ((url.startsWith('https://') || url.startsWith('http://'))) {
+                if (url.startsWith('http://localhost:49551/Home/Index') == false && url.startsWith('https://agriinfra.dac.gov.in/') == false && url.startsWith('https://agriinfra.dac.gov.in/') == falseurl.startsWith('https://agriinfra.dac.gov.in/') == false) {
+                    // alert(url);
+
+                    if (confirm("This link shall take you to a page outside the https://agriinfra.dac.gov.in/. For any query regarding the contents of the linked page, please contact the webmaster of the concerned website") == true) {
+                        return true;
+                    } else {
+                        event.preventDefault();
+                        return false;
+                    }
+                }
+
+            }
+        }
+
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            homeIndex.init();
+            //$('#home-model').modal('show');
+        })
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            document.getElementById("increase-font").addEventListener("click", () => adjustFontSize(2));
+            document.getElementById("decrease-font").addEventListener("click", () => adjustFontSize(-2));
+            document.getElementById("reset-font").addEventListener("click", resetFontSize);
+            function adjustFontSize(change) {
+                let root = document.documentElement;
+                let currentSize = parseInt(getComputedStyle(root).getPropertyValue('--font-size'));
+                let newSize = currentSize + change;
+                root.style.setProperty('--font-size', newSize + 'px');
+            }
+            function resetFontSize() {
+                document.documentElement.style.setProperty('--font-size', '16px');
+            }
+        });
+    </script>
+    <!-- Bhashini script at end of body -->
+    <script src="https://translation-plugin.bhashini.co.in/v4/website_translation_utility.js" defer async language-icon-color="black"></script>
+</body>
+</html>

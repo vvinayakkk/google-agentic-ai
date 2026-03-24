@@ -1,0 +1,514 @@
+name,state,district,source
+Pundibari,West Bengal,Coochbehar,data.gov.in_daily_prices
+Toofanganj,West Bengal,Coochbehar,data.gov.in_daily_prices
+Sheoraphuly,West Bengal,Hooghly,data.gov.in_daily_prices
+Anoop Shahar,Uttar Pradesh,Bulandshahar,data.gov.in_daily_prices
+Sikanderabad,Uttar Pradesh,Bulandshahar,data.gov.in_daily_prices
+Sealdah Koley Market,West Bengal,Kolkata,data.gov.in_daily_prices
+Deesa(Deesa Veg Yard),Gujarat,Banaskanth,data.gov.in_daily_prices
+Bharuch,Gujarat,Bharuch,data.gov.in_daily_prices
+Talalagir,Gujarat,Gir Somnath,data.gov.in_daily_prices
+Surat,Gujarat,Surat,data.gov.in_daily_prices
+Padra,Gujarat,Vadodara(Baroda),data.gov.in_daily_prices
+Vadodara(Sayajipura),Gujarat,Vadodara(Baroda),data.gov.in_daily_prices
+Borsad,Gujarat,Anand,data.gov.in_daily_prices
+Junagadh,Gujarat,Junagarh,data.gov.in_daily_prices
+Bardoli,Gujarat,Surat,data.gov.in_daily_prices
+Valod(Buhari),Gujarat,Surat,data.gov.in_daily_prices
+Bhiwani,Haryana,Bhiwani,data.gov.in_daily_prices
+Ch. Dadri,Haryana,Bhiwani,data.gov.in_daily_prices
+Tosham,Haryana,Bhiwani,data.gov.in_daily_prices
+Barwala(Hisar),Haryana,Hissar,data.gov.in_daily_prices
+Barwala,Haryana,Panchkula,data.gov.in_daily_prices
+Narwal Jammu (F&V),Jammu and Kashmir,Jammu,data.gov.in_daily_prices
+Kathua,Jammu and Kashmir,Kathua,data.gov.in_daily_prices
+Ajnala,Punjab,Amritsar,data.gov.in_daily_prices
+Barnala,Punjab,Barnala,data.gov.in_daily_prices
+Meham,Haryana,Rohtak,data.gov.in_daily_prices
+Hamirpur,Himachal Pradesh,Hamirpur,data.gov.in_daily_prices
+Hamirpur(Nadaun),Himachal Pradesh,Hamirpur,data.gov.in_daily_prices
+Gadhwah,Jharkhand,Garhwa,data.gov.in_daily_prices
+Munnar,Kerala,Idukki,data.gov.in_daily_prices
+Kollam,Kerala,Kollam,data.gov.in_daily_prices
+Kottarakkara,Kerala,Kollam,data.gov.in_daily_prices
+Kuruppanthura,Kerala,Kottayam,data.gov.in_daily_prices
+Shillong,Meghalaya,East Khasi Hills,data.gov.in_daily_prices
+Shahdara,NCT of Delhi,Delhi,data.gov.in_daily_prices
+Khamano,Punjab,Fatehgarh,data.gov.in_daily_prices
+Talwandi Bhai,Punjab,Ferozpur,data.gov.in_daily_prices
+Adampur,Punjab,Jalandhar,data.gov.in_daily_prices
+Bilga,Punjab,Jalandhar,data.gov.in_daily_prices
+Lohian Khas,Punjab,Jalandhar,data.gov.in_daily_prices
+Bariwala,Punjab,Muktsar,data.gov.in_daily_prices
+Giddarbaha,Punjab,Muktsar,data.gov.in_daily_prices
+Malout,Punjab,Muktsar,data.gov.in_daily_prices
+Muktsar,Punjab,Muktsar,data.gov.in_daily_prices
+Banga,Punjab,Nawanshahr,data.gov.in_daily_prices
+Ajmer(F&V),Rajasthan,Ajmer,data.gov.in_daily_prices
+Alwar (F&V),Rajasthan,Alwar,data.gov.in_daily_prices
+Bikaner (F&V),Rajasthan,Bikaner,data.gov.in_daily_prices
+Jodhpur (F&V),Rajasthan,Jodhpur,data.gov.in_daily_prices
+Nabha,Punjab,Patiala,data.gov.in_daily_prices
+Morinda,Punjab,Ropar (Rupnagar),data.gov.in_daily_prices
+Lehra Gaga,Punjab,Sangrur,data.gov.in_daily_prices
+Sriganganagar (F&V),Rajasthan,Ganganagar,data.gov.in_daily_prices
+Kiratpur,Uttar Pradesh,Bijnor,data.gov.in_daily_prices
+Unnao,Uttar Pradesh,Unnao,data.gov.in_daily_prices
+Kotadwara,Uttrakhand,Garhwal (Pauri),data.gov.in_daily_prices
+Diamond Harbour,West Bengal,North 24 Parganas,data.gov.in_daily_prices
+Baruipur(Canning),West Bengal,Sounth 24 Parganas,data.gov.in_daily_prices
+Ahmedabad,Gujarat,Ahmedabad,data.gov.in_daily_prices
+Bilimora,Gujarat,Navsari,data.gov.in_daily_prices
+Piravam,Kerala,Ernakulam,data.gov.in_daily_prices
+Punalur,Kerala,Kollam,data.gov.in_daily_prices
+Wadakkanchery,Kerala,Thirssur,data.gov.in_daily_prices
+Anyara(EEC),Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Chala,Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Pothencode,Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Thiruvananthapuram,Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Gunpur,Odisha,Rayagada,data.gov.in_daily_prices
+Chittorgarh,Rajasthan,Chittorgarh,data.gov.in_daily_prices
+Pabiacherra,Tripura,Unokoti,data.gov.in_daily_prices
+Baruwasagar,Uttar Pradesh,Jhansi,data.gov.in_daily_prices
+Gurdaspur,Punjab,Gurdaspur,data.gov.in_daily_prices
+Kalanaur,Punjab,Gurdaspur,data.gov.in_daily_prices
+Quadian,Punjab,Gurdaspur,data.gov.in_daily_prices
+Jalandhar City,Punjab,Jalandhar,data.gov.in_daily_prices
+Phillaur,Punjab,Jalandhar,data.gov.in_daily_prices
+Ludhiana,Punjab,Ludhiana,data.gov.in_daily_prices
+Budalada,Punjab,Mansa,data.gov.in_daily_prices
+Kot ise Khan,Punjab,Moga,data.gov.in_daily_prices
+Dera Bassi,Punjab,Mohali,data.gov.in_daily_prices
+Kharar,Punjab,Mohali,data.gov.in_daily_prices
+Baikunthpur,Madhya Pradesh,Rewa,data.gov.in_daily_prices
+Chaakghat,Madhya Pradesh,Rewa,data.gov.in_daily_prices
+Hanumana,Madhya Pradesh,Rewa,data.gov.in_daily_prices
+Rewa,Madhya Pradesh,Rewa,data.gov.in_daily_prices
+Bina,Madhya Pradesh,Sagar,data.gov.in_daily_prices
+Garhakota,Madhya Pradesh,Sagar,data.gov.in_daily_prices
+Ashta,Madhya Pradesh,Sehore,data.gov.in_daily_prices
+Kalapipal,Madhya Pradesh,Shajapur,data.gov.in_daily_prices
+Momanbadodiya,Madhya Pradesh,Shajapur,data.gov.in_daily_prices
+Sajapur,Madhya Pradesh,Shajapur,data.gov.in_daily_prices
+Susner,Madhya Pradesh,Shajapur,data.gov.in_daily_prices
+Kolaras,Madhya Pradesh,Shivpuri,data.gov.in_daily_prices
+Sidhi,Madhya Pradesh,Sidhi,data.gov.in_daily_prices
+Singroli,Madhya Pradesh,Singroli,data.gov.in_daily_prices
+Tikamgarh,Madhya Pradesh,Tikamgarh,data.gov.in_daily_prices
+Badnagar,Madhya Pradesh,Ujjain,data.gov.in_daily_prices
+Umariya,Madhya Pradesh,Umariya,data.gov.in_daily_prices
+Shamshabad,Madhya Pradesh,Vidisha,data.gov.in_daily_prices
+Kolhapur(Laxmipuri),Maharashtra,Kolhapur,data.gov.in_daily_prices
+Mumbai,Maharashtra,Mumbai,data.gov.in_daily_prices
+Lamlong Bazaar,Manipur,Imphal East,data.gov.in_daily_prices
+Imphal,Manipur,Imphal West,data.gov.in_daily_prices
+Pratapgarh,Rajasthan,Chittorgarh,data.gov.in_daily_prices
+Bhawani Mandi,Rajasthan,Jhalawar,data.gov.in_daily_prices
+Jhalarapatan,Rajasthan,Jhalawar,data.gov.in_daily_prices
+Kota,Rajasthan,Kota,data.gov.in_daily_prices
+Deoli,Rajasthan,Tonk,data.gov.in_daily_prices
+Champaknagar,Tripura,West District,data.gov.in_daily_prices
+Sultanpur,Uttar Pradesh,Amethi,data.gov.in_daily_prices
+Tulsipur,Uttar Pradesh,Balrampur,data.gov.in_daily_prices
+Banda,Uttar Pradesh,Banda,data.gov.in_daily_prices
+Najibabad,Uttar Pradesh,Bijnor,data.gov.in_daily_prices
+Bindki,Uttar Pradesh,Fatehpur,data.gov.in_daily_prices
+Maudaha,Uttar Pradesh,Hamirpur,data.gov.in_daily_prices
+Hardoi,Uttar Pradesh,Hardoi,data.gov.in_daily_prices
+Madhoganj,Uttar Pradesh,Hardoi,data.gov.in_daily_prices
+Sahebganj,Jharkhand,Sahebgang,data.gov.in_daily_prices
+Chaibasa,Jharkhand,West Singbhum,data.gov.in_daily_prices
+Bangalore,Karnataka,Bangalore,data.gov.in_daily_prices
+Sringeri,Karnataka,Chikmagalur,data.gov.in_daily_prices
+Hassan,Karnataka,Hassan,data.gov.in_daily_prices
+Bangarpet,Karnataka,Kolar,data.gov.in_daily_prices
+Mysore (Bandipalya),Karnataka,Mysore,data.gov.in_daily_prices
+Bhadravathi,Karnataka,Shimoga,data.gov.in_daily_prices
+Shimoga,Karnataka,Shimoga,data.gov.in_daily_prices
+Kuttoor,Kerala,Pathanamthitta,data.gov.in_daily_prices
+Dholpur,Rajasthan,Dholpur,data.gov.in_daily_prices
+Anupgarh,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Gajsinghpur,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Jaitsar,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Kesarisinghpur,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Padampur,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Raisingh Nagar,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Rawla,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Sadulshahar,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Sri Karanpur,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Sri Vijayanagar,Rajasthan,Ganganagar,data.gov.in_daily_prices
+Sriganganagar (Grain),Rajasthan,Ganganagar,data.gov.in_daily_prices
+Bhadara,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Goluwala,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Hanumangarh,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Nohar,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Pilibanga,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Rawatsar,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Sangriya,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Suratgarh,Rajasthan,Hanumangarh,data.gov.in_daily_prices
+Bagru,Rajasthan,Jaipur,data.gov.in_daily_prices
+Bassi,Rajasthan,Jaipur,data.gov.in_daily_prices
+Chaksu,Rajasthan,Jaipur,data.gov.in_daily_prices
+Chomu (Grain),Rajasthan,Jaipur,data.gov.in_daily_prices
+Jaipur (Grain),Rajasthan,Jaipur,data.gov.in_daily_prices
+Jaipur(Grain)(Chandpole),Rajasthan,Jaipur,data.gov.in_daily_prices
+Kishan Renwal(Fulera),Rajasthan,Jaipur,data.gov.in_daily_prices
+Pandalam,Kerala,Pathanamthitta,data.gov.in_daily_prices
+Parakkodu,Kerala,Pathanamthitta,data.gov.in_daily_prices
+Ranniangadi,Kerala,Pathanamthitta,data.gov.in_daily_prices
+Chalakudy,Kerala,Thirssur,data.gov.in_daily_prices
+Irinjalakkuda,Kerala,Thirssur,data.gov.in_daily_prices
+Kodumgalloor,Kerala,Thirssur,data.gov.in_daily_prices
+Thrissur,Kerala,Thirssur,data.gov.in_daily_prices
+Kattakada,Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Pune,Maharashtra,Pune,data.gov.in_daily_prices
+Pune(Khadiki),Maharashtra,Pune,data.gov.in_daily_prices
+Dhari,Gujarat,Amreli,data.gov.in_daily_prices
+"Anand(Veg,Yard,Anand)",Gujarat,Anand,data.gov.in_daily_prices
+Dahod(Veg. Market),Gujarat,Dahod,data.gov.in_daily_prices
+Jhalod,Gujarat,Dahod,data.gov.in_daily_prices
+Alappuzha,Kerala,Alappuzha,data.gov.in_daily_prices
+Chanthroor,Kerala,Alappuzha,data.gov.in_daily_prices
+Anchal,Kerala,Kollam,data.gov.in_daily_prices
+vadakarapathy,Kerala,Palakad,data.gov.in_daily_prices
+Wokha Town,Nagaland,Wokha,data.gov.in_daily_prices
+Azadpur,NCT of Delhi,Delhi,data.gov.in_daily_prices
+Katpadi(Uzhavar Santhai),Tamil Nadu,Vellore,data.gov.in_daily_prices
+Shadabad,Uttar Pradesh,Hathras,data.gov.in_daily_prices
+Sikandraraau,Uttar Pradesh,Hathras,data.gov.in_daily_prices
+Madhogarh,Uttar Pradesh,Jalaun (Orai),data.gov.in_daily_prices
+Chhibramau,Uttar Pradesh,Kannuj,data.gov.in_daily_prices
+Uttaripura,Uttar Pradesh,Kanpur,data.gov.in_daily_prices
+Jhijhank,Uttar Pradesh,Kanpur Dehat,data.gov.in_daily_prices
+Rura,Uttar Pradesh,Kanpur Dehat,data.gov.in_daily_prices
+Kasganj,Uttar Pradesh,Kasganj,data.gov.in_daily_prices
+Ajuha,Uttar Pradesh,Prayagraj,data.gov.in_daily_prices
+Deoband,Uttar Pradesh,Saharanpur,data.gov.in_daily_prices
+Bhehjoi,Uttar Pradesh,Sambhal,data.gov.in_daily_prices
+Chandausi,Uttar Pradesh,Sambhal,data.gov.in_daily_prices
+Sambhal,Uttar Pradesh,Sambhal,data.gov.in_daily_prices
+Bangarmau,Uttar Pradesh,Unnao,data.gov.in_daily_prices
+Rishikesh,Uttrakhand,Dehradoon,data.gov.in_daily_prices
+Roorkee,Uttrakhand,Haridwar,data.gov.in_daily_prices
+Bhawanipatna,Odisha,Kalahandi,data.gov.in_daily_prices
+Kesinga,Odisha,Kalahandi,data.gov.in_daily_prices
+Nawarangpur,Odisha,Nowarangpur,data.gov.in_daily_prices
+Gevrai,Maharashtra,Beed,data.gov.in_daily_prices
+Kendupatna(Niali),Odisha,Cuttack,data.gov.in_daily_prices
+Baripada,Odisha,Mayurbhanja,data.gov.in_daily_prices
+Rayagada,Odisha,Rayagada,data.gov.in_daily_prices
+Rayagada(Muniguda),Odisha,Rayagada,data.gov.in_daily_prices
+Achalda,Uttar Pradesh,Auraiya,data.gov.in_daily_prices
+Fatehabad,Haryana,Fatehabad,data.gov.in_daily_prices
+Jakhal,Haryana,Fatehabad,data.gov.in_daily_prices
+Ratia,Haryana,Fatehabad,data.gov.in_daily_prices
+Sohna,Haryana,Gurgaon,data.gov.in_daily_prices
+Hansi,Haryana,Hissar,data.gov.in_daily_prices
+Uklana,Haryana,Hissar,data.gov.in_daily_prices
+Jind,Haryana,Jind,data.gov.in_daily_prices
+Jullana,Haryana,Jind,data.gov.in_daily_prices
+Narwana,Haryana,Jind,data.gov.in_daily_prices
+Pillukhera,Haryana,Jind,data.gov.in_daily_prices
+Safidon,Haryana,Jind,data.gov.in_daily_prices
+Uchana,Haryana,Jind,data.gov.in_daily_prices
+Cheeka,Haryana,Kaithal,data.gov.in_daily_prices
+Dhand,Haryana,Kaithal,data.gov.in_daily_prices
+Kaithal,Haryana,Kaithal,data.gov.in_daily_prices
+Huliyar,Karnataka,Tumkur,data.gov.in_daily_prices
+Anjad,Madhya Pradesh,Badwani,data.gov.in_daily_prices
+Narela,NCT of Delhi,Delhi,data.gov.in_daily_prices
+Jaleswar,Odisha,Balasore,data.gov.in_daily_prices
+Kotkapura,Punjab,Faridkot,data.gov.in_daily_prices
+Atarra,Uttar Pradesh,Banda,data.gov.in_daily_prices
+Jhansi,Uttar Pradesh,Jhansi,data.gov.in_daily_prices
+Lucknow,Uttar Pradesh,Lucknow,data.gov.in_daily_prices
+Gopalpatti,Tamil Nadu,Dindigul,data.gov.in_daily_prices
+Natham,Tamil Nadu,Dindigul,data.gov.in_daily_prices
+Denkanikottai,Tamil Nadu,Krishnagiri,data.gov.in_daily_prices
+Krishnagiri,Tamil Nadu,Krishnagiri,data.gov.in_daily_prices
+Bowenpally,Telangana,Hyderabad,data.gov.in_daily_prices
+Hyderabad (F&V),Telangana,Hyderabad,data.gov.in_daily_prices
+Chevella,Telangana,Ranga Reddy,data.gov.in_daily_prices
+Cachar,Assam,Cachar,data.gov.in_daily_prices
+P.O. Uparhali Guwahati,Assam,Kamrup,data.gov.in_daily_prices
+Tinsukia,Assam,Tinsukia,data.gov.in_daily_prices
+Dhanbad,Jharkhand,Dhanbad,data.gov.in_daily_prices
+Aralamoodu,Kerala,Thiruvananthapuram,data.gov.in_daily_prices
+Khair,Uttar Pradesh,Aligarh,data.gov.in_daily_prices
+Denduluru,Andhra Pradesh,West Godavari,data.gov.in_daily_prices
+Bohorihat,Assam,Barpeta,data.gov.in_daily_prices
+Howly,Assam,Barpeta,data.gov.in_daily_prices
+Gauripur,Assam,Dhubri,data.gov.in_daily_prices
+Dibrugarh,Assam,Dibrugarh,data.gov.in_daily_prices
+Goalpara,Assam,Goalpara,data.gov.in_daily_prices
+Golaghat,Assam,Golaghat,data.gov.in_daily_prices
+Jorhat,Assam,Jorhat,data.gov.in_daily_prices
+Nalbari,Assam,Nalbari,data.gov.in_daily_prices
+Giridih,Jharkhand,Giridih,data.gov.in_daily_prices
+Koderma,Jharkhand,Koderma,data.gov.in_daily_prices
+Latehar,Jharkhand,Latehar,data.gov.in_daily_prices
+Khunti,Jharkhand,Ranchi,data.gov.in_daily_prices
+Cherthala,Kerala,Alappuzha,data.gov.in_daily_prices
+Harippad,Kerala,Alappuzha,data.gov.in_daily_prices
+Moovattupuzha,Kerala,Ernakulam,data.gov.in_daily_prices
+Kannur,Kerala,Kannur,data.gov.in_daily_prices
+Thalasserry,Kerala,Kannur,data.gov.in_daily_prices
+Kanjangadu,Kerala,Kasargod,data.gov.in_daily_prices
+Kasargod,Kerala,Kasargod,data.gov.in_daily_prices
+Neeleswaram,Kerala,Kasargod,data.gov.in_daily_prices
+Ettumanoor,Kerala,Kottayam,data.gov.in_daily_prices
+Kottayam,Kerala,Kottayam,data.gov.in_daily_prices
+Kottakkal,Kerala,Malappuram,data.gov.in_daily_prices
+Manjeri,Kerala,Malappuram,data.gov.in_daily_prices
+Ezhamkulam,Kerala,Pathanamthitta,data.gov.in_daily_prices
+Allagadda,Andhra Pradesh,Kurnool,data.gov.in_daily_prices
+Anantapur,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Dharmavaram,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Gooti,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Guntakal,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Kadiri,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Kalyandurg,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Penukonda,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Tadipatri,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Tenakallu,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Urvakonda,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Srikalahasti,Andhra Pradesh,Chittor,data.gov.in_daily_prices
+Rayachoti,Andhra Pradesh,Cuddapah,data.gov.in_daily_prices
+Nagari,Chattisgarh,Dhamtari,data.gov.in_daily_prices
+Manendragarh,Chattisgarh,Koria,data.gov.in_daily_prices
+Amreli,Gujarat,Amreli,data.gov.in_daily_prices
+Rajula,Gujarat,Amreli,data.gov.in_daily_prices
+Savarkundla,Gujarat,Amreli,data.gov.in_daily_prices
+Jamnagar,Gujarat,Jamnagar,data.gov.in_daily_prices
+Mangrol,Gujarat,Junagarh,data.gov.in_daily_prices
+Visavadar,Gujarat,Junagarh,data.gov.in_daily_prices
+Dhoraji,Gujarat,Rajkot,data.gov.in_daily_prices
+Gondal,Gujarat,Rajkot,data.gov.in_daily_prices
+Hindupur,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Phaltan,Maharashtra,Satara,data.gov.in_daily_prices
+Vaduj,Maharashtra,Satara,data.gov.in_daily_prices
+Akluj,Maharashtra,Sholapur,data.gov.in_daily_prices
+Barshi,Maharashtra,Sholapur,data.gov.in_daily_prices
+Karmala,Maharashtra,Sholapur,data.gov.in_daily_prices
+Kurdwadi,Maharashtra,Sholapur,data.gov.in_daily_prices
+Kurdwadi(Modnimb),Maharashtra,Sholapur,data.gov.in_daily_prices
+Mangal Wedha,Maharashtra,Sholapur,data.gov.in_daily_prices
+Pandharpur,Maharashtra,Sholapur,data.gov.in_daily_prices
+Sangola,Maharashtra,Sholapur,data.gov.in_daily_prices
+Solapur,Maharashtra,Sholapur,data.gov.in_daily_prices
+Kalyan,Maharashtra,Thane,data.gov.in_daily_prices
+Ulhasnagar,Maharashtra,Thane,data.gov.in_daily_prices
+Karanja,Maharashtra,Vashim,data.gov.in_daily_prices
+Manora,Maharashtra,Vashim,data.gov.in_daily_prices
+Pusad,Maharashtra,Yavatmal,data.gov.in_daily_prices
+Najafgarh,NCT of Delhi,Delhi,data.gov.in_daily_prices
+Parlakhemundi,Odisha,Gajapati,data.gov.in_daily_prices
+Ajmer (Grain),Rajasthan,Ajmer,data.gov.in_daily_prices
+Beawar,Rajasthan,Ajmer,data.gov.in_daily_prices
+Gulabpura,Rajasthan,Ajmer,data.gov.in_daily_prices
+Kekri,Rajasthan,Ajmer,data.gov.in_daily_prices
+Madanganj Kishangarh,Rajasthan,Ajmer,data.gov.in_daily_prices
+Vijaynagar,Rajasthan,Ajmer,data.gov.in_daily_prices
+Alwar,Rajasthan,Alwar,data.gov.in_daily_prices
+Khairthal,Rajasthan,Alwar,data.gov.in_daily_prices
+Kherli,Rajasthan,Alwar,data.gov.in_daily_prices
+Baran,Rajasthan,Baran,data.gov.in_daily_prices
+Balotra,Rajasthan,Barmer,data.gov.in_daily_prices
+Barmer,Rajasthan,Barmer,data.gov.in_daily_prices
+Bayana,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Bharatpur,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Deeg,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Kama,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Kumher,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Nadwai,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Nagar,Rajasthan,Bharatpur,data.gov.in_daily_prices
+Bhilwara,Rajasthan,Bhilwara,data.gov.in_daily_prices
+Khajuwala,Rajasthan,Bikaner,data.gov.in_daily_prices
+Lunkaransar,Rajasthan,Bikaner,data.gov.in_daily_prices
+Sridungargarh,Rajasthan,Bikaner,data.gov.in_daily_prices
+Bundi,Rajasthan,Bundi,data.gov.in_daily_prices
+Sumerganj,Rajasthan,Bundi,data.gov.in_daily_prices
+Churu,Rajasthan,Churu,data.gov.in_daily_prices
+Sujangarh,Rajasthan,Churu,data.gov.in_daily_prices
+Dausa,Rajasthan,Dausa,data.gov.in_daily_prices
+Lalsot,Rajasthan,Dausa,data.gov.in_daily_prices
+Mandawari,Rajasthan,Dausa,data.gov.in_daily_prices
+Achnera,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Fatehabad,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Fatehpur Sikri,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Jagnair,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Khairagarh,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Samsabad,Uttar Pradesh,Agra,data.gov.in_daily_prices
+Aligarh,Uttar Pradesh,Aligarh,data.gov.in_daily_prices
+Auraiya,Uttar Pradesh,Auraiya,data.gov.in_daily_prices
+Badayoun,Uttar Pradesh,Badaun,data.gov.in_daily_prices
+Bilsi,Uttar Pradesh,Badaun,data.gov.in_daily_prices
+Visoli,Uttar Pradesh,Badaun,data.gov.in_daily_prices
+Anwala,Uttar Pradesh,Bareilly,data.gov.in_daily_prices
+Divai,Uttar Pradesh,Bulandshahar,data.gov.in_daily_prices
+Sikarpur,Uttar Pradesh,Bulandshahar,data.gov.in_daily_prices
+Aliganj,Uttar Pradesh,Etah,data.gov.in_daily_prices
+Etah,Uttar Pradesh,Etah,data.gov.in_daily_prices
+Jasvantnagar,Uttar Pradesh,Etawah,data.gov.in_daily_prices
+Kishunpur,Uttar Pradesh,Fatehpur,data.gov.in_daily_prices
+Firozabad,Uttar Pradesh,Firozabad,data.gov.in_daily_prices
+Shikohabad,Uttar Pradesh,Firozabad,data.gov.in_daily_prices
+Tundla,Uttar Pradesh,Firozabad,data.gov.in_daily_prices
+Haathras,Uttar Pradesh,Hathras,data.gov.in_daily_prices
+Muzzafarnagar,Uttar Pradesh,Muzaffarnagar,data.gov.in_daily_prices
+Siddhpur,Gujarat,Patan,data.gov.in_daily_prices
+Bilaspur,Himachal Pradesh,Bilaspur,data.gov.in_daily_prices
+Aluva,Kerala,Ernakulam,data.gov.in_daily_prices
+Angamaly,Kerala,Ernakulam,data.gov.in_daily_prices
+Perumbavoor,Kerala,Ernakulam,data.gov.in_daily_prices
+Sasthamkotta,Kerala,Kollam,data.gov.in_daily_prices
+Athirampuzha,Kerala,Kottayam,data.gov.in_daily_prices
+Kanjirappally,Kerala,Kottayam,data.gov.in_daily_prices
+Pampady,Kerala,Kottayam,data.gov.in_daily_prices
+Mukkom,Kerala,Kozhikode(Calicut),data.gov.in_daily_prices
+Palayam,Kerala,Kozhikode(Calicut),data.gov.in_daily_prices
+Koduvayoor,Kerala,Palakad,data.gov.in_daily_prices
+Kollengode,Kerala,Palakad,data.gov.in_daily_prices
+Madakasira,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Rayadurg,Andhra Pradesh,Anantapur,data.gov.in_daily_prices
+Bobbili,Andhra Pradesh,Vijayanagaram,data.gov.in_daily_prices
+Kurupam,Andhra Pradesh,Vijayanagaram,data.gov.in_daily_prices
+Parvathipuram,Andhra Pradesh,Vijayanagaram,data.gov.in_daily_prices
+Saluru,Andhra Pradesh,Vijayanagaram,data.gov.in_daily_prices
+Jalaun,Uttar Pradesh,Jalaun (Orai),data.gov.in_daily_prices
+Moth,Uttar Pradesh,Jhansi,data.gov.in_daily_prices
+Lalitpur,Uttar Pradesh,Lalitpur,data.gov.in_daily_prices
+Gadaura,Uttar Pradesh,Maharajganj,data.gov.in_daily_prices
+Charkhari,Uttar Pradesh,Mahoba,data.gov.in_daily_prices
+Ghiraur,Uttar Pradesh,Mainpuri,data.gov.in_daily_prices
+Vishalpur,Uttar Pradesh,Pillibhit,data.gov.in_daily_prices
+Allahabad,Uttar Pradesh,Prayagraj,data.gov.in_daily_prices
+Vilaspur,Uttar Pradesh,Rampur,data.gov.in_daily_prices
+Gangoh,Uttar Pradesh,Saharanpur,data.gov.in_daily_prices
+Jalalabad,Uttar Pradesh,Shahjahanpur,data.gov.in_daily_prices
+Payagpur,Uttar Pradesh,Shravasti,data.gov.in_daily_prices
+Purwa,Uttar Pradesh,Unnao,data.gov.in_daily_prices
+Varanasi,Uttar Pradesh,Varanasi,data.gov.in_daily_prices
+Varanasi(F&V),Uttar Pradesh,Varanasi,data.gov.in_daily_prices
+Haldwani,Uttrakhand,Nanital,data.gov.in_daily_prices
+Sitarganj,Uttrakhand,UdhamSinghNagar,data.gov.in_daily_prices
+Bara Bazar (Posta Bazar),West Bengal,Kolkata,data.gov.in_daily_prices
+Samsi,West Bengal,Malda,data.gov.in_daily_prices
+Midnapore Sadar,West Bengal,Medinipur(W),data.gov.in_daily_prices
+Faizabad,Uttar Pradesh,Ayodhya,data.gov.in_daily_prices
+Bahedi,Uttar Pradesh,Bareilly,data.gov.in_daily_prices
+Bareilly,Uttar Pradesh,Bareilly,data.gov.in_daily_prices
+Basti,Uttar Pradesh,Basti,data.gov.in_daily_prices
+Nagina,Uttar Pradesh,Bijnor,data.gov.in_daily_prices
+Gorakhpur,Uttar Pradesh,Gorakhpur,data.gov.in_daily_prices
+Sandila,Uttar Pradesh,Hardoi,data.gov.in_daily_prices
+Chintamani,Karnataka,Kolar,data.gov.in_daily_prices
+Pandavapura,Karnataka,Mandya,data.gov.in_daily_prices
+Sira,Karnataka,Tumkur,data.gov.in_daily_prices
+Tumkur,Karnataka,Tumkur,data.gov.in_daily_prices
+Kondotty,Kerala,Malappuram,data.gov.in_daily_prices
+Kurawar,Madhya Pradesh,Rajgarh,data.gov.in_daily_prices
+Ahmednagar,Maharashtra,Ahmednagar,data.gov.in_daily_prices
+Kada,Maharashtra,Beed,data.gov.in_daily_prices
+Kaij,Maharashtra,Beed,data.gov.in_daily_prices
+Chattrapati Sambhajinagar,Maharashtra,Chattrapati Sambhajinagar,data.gov.in_daily_prices
+Kalamb (Dharashiv),Maharashtra,Dharashiv(Usmanabad),data.gov.in_daily_prices
+Gondiya,Maharashtra,Gondiya,data.gov.in_daily_prices
+Ausa,Maharashtra,Latur,data.gov.in_daily_prices
+Latur,Maharashtra,Latur,data.gov.in_daily_prices
+Udgir,Maharashtra,Latur,data.gov.in_daily_prices
+Nagpur(Mahatma Phule Market),Maharashtra,Nagpur,data.gov.in_daily_prices
+Devala,Maharashtra,Nashik,data.gov.in_daily_prices
+Kalvan,Maharashtra,Nashik,data.gov.in_daily_prices
+Shirur,Maharashtra,Pune,data.gov.in_daily_prices
+Papparapatti,Tamil Nadu,Dharmapuri,data.gov.in_daily_prices
+Pappireddipatti,Tamil Nadu,Dharmapuri,data.gov.in_daily_prices
+Jagdalpur,Chattisgarh,Bastar,data.gov.in_daily_prices
+Pathalgaon,Chattisgarh,Jashpur,data.gov.in_daily_prices
+Keshkal,Chattisgarh,Kondagaon,data.gov.in_daily_prices
+Kondagoan,Chattisgarh,Kondagaon,data.gov.in_daily_prices
+Surajpur,Chattisgarh,Surajpur,data.gov.in_daily_prices
+Sitapur,Chattisgarh,Surguja,data.gov.in_daily_prices
+Vadodara,Gujarat,Vadodara(Baroda),data.gov.in_daily_prices
+Lohardaga,Jharkhand,Lohardaga,data.gov.in_daily_prices
+Simdega,Jharkhand,Simdega,data.gov.in_daily_prices
+Chogawan,Punjab,Amritsar,data.gov.in_daily_prices
+Gehri,Punjab,Amritsar,data.gov.in_daily_prices
+Mehta,Punjab,Amritsar,data.gov.in_daily_prices
+Bhadaur,Punjab,Barnala,data.gov.in_daily_prices
+Bhadaur(Sehna),Punjab,Barnala,data.gov.in_daily_prices
+Dhanaula,Punjab,Barnala,data.gov.in_daily_prices
+Mehal Kalan,Punjab,Barnala,data.gov.in_daily_prices
+Tapa(Tapa Mandi),Punjab,Barnala,data.gov.in_daily_prices
+Bhagta Bhai Ka,Punjab,Bhatinda,data.gov.in_daily_prices
+Bhucho,Punjab,Bhatinda,data.gov.in_daily_prices
+Maur,Punjab,Bhatinda,data.gov.in_daily_prices
+Raman,Punjab,Bhatinda,data.gov.in_daily_prices
+Rampuraphul(Chowke),Punjab,Bhatinda,data.gov.in_daily_prices
+Rampuraphul(Nabha Mandi),Punjab,Bhatinda,data.gov.in_daily_prices
+Sangat,Punjab,Bhatinda,data.gov.in_daily_prices
+Faridkot,Punjab,Faridkot,data.gov.in_daily_prices
+Jaitu,Punjab,Faridkot,data.gov.in_daily_prices
+Jaitu(Bajakhana),Punjab,Faridkot,data.gov.in_daily_prices
+Sadiq,Punjab,Faridkot,data.gov.in_daily_prices
+Amloh,Punjab,Fatehgarh,data.gov.in_daily_prices
+Amloh(Gobind Garh Mandi),Punjab,Fatehgarh,data.gov.in_daily_prices
+Bassi Pathana,Punjab,Fatehgarh,data.gov.in_daily_prices
+Chanarthal,Punjab,Fatehgarh,data.gov.in_daily_prices
+Sirhind,Punjab,Fatehgarh,data.gov.in_daily_prices
+Abohar,Punjab,Fazilka,data.gov.in_daily_prices
+Jalalabad,Punjab,Fazilka,data.gov.in_daily_prices
+Firozepur City,Punjab,Ferozpur,data.gov.in_daily_prices
+Guru Har Sahai,Punjab,Ferozpur,data.gov.in_daily_prices
+Makhu,Punjab,Ferozpur,data.gov.in_daily_prices
+Mallanwala,Punjab,Ferozpur,data.gov.in_daily_prices
+Talwandi Bhai(Mudki),Punjab,Ferozpur,data.gov.in_daily_prices
+Dhenkanal,Odisha,Dhenkanal,data.gov.in_daily_prices
+Kamakhyanagar,Odisha,Dhenkanal,data.gov.in_daily_prices
+Kasinagar,Odisha,Gajapati,data.gov.in_daily_prices
+Bhanjanagar,Odisha,Ganjam,data.gov.in_daily_prices
+Digapahandi,Odisha,Ganjam,data.gov.in_daily_prices
+Jagatsinghpur,Odisha,Jagatsinghpur,data.gov.in_daily_prices
+Jajpur,Odisha,Jajpur,data.gov.in_daily_prices
+Jharsuguda,Odisha,Jharsuguda,data.gov.in_daily_prices
+Junagarh,Odisha,Kalahandi,data.gov.in_daily_prices
+Anandapur,Odisha,Keonjhar,data.gov.in_daily_prices
+Amgaon,Maharashtra,Gondiya,data.gov.in_daily_prices
+Arjuni,Maharashtra,Gondiya,data.gov.in_daily_prices
+Goregaon,Maharashtra,Gondiya,data.gov.in_daily_prices
+Tiroda,Maharashtra,Gondiya,data.gov.in_daily_prices
+Nanded,Maharashtra,Nanded,data.gov.in_daily_prices
+Navapur,Maharashtra,Nandurbar,data.gov.in_daily_prices
+Ghoti,Maharashtra,Nashik,data.gov.in_daily_prices
+Alibagh,Maharashtra,Raigad,data.gov.in_daily_prices
+Karjat(Raigad),Maharashtra,Raigad,data.gov.in_daily_prices
+Padampur,Odisha,Bargarh,data.gov.in_daily_prices
+Sohela,Odisha,Bargarh,data.gov.in_daily_prices
+Bhadrak,Odisha,Bhadrak,data.gov.in_daily_prices
+Chandabali,Odisha,Bhadrak,data.gov.in_daily_prices
+Sahidngar,Odisha,Bhadrak,data.gov.in_daily_prices
+Banki,Odisha,Cuttack,data.gov.in_daily_prices
+Kendupatna,Odisha,Cuttack,data.gov.in_daily_prices
+Deogarh,Odisha,Deogarh,data.gov.in_daily_prices
+Kalayat,Haryana,Kaithal,data.gov.in_daily_prices
+Pundri,Haryana,Kaithal,data.gov.in_daily_prices
+kalanwali,Haryana,Sirsa,data.gov.in_daily_prices
+Chail Chowk,Himachal Pradesh,Mandi,data.gov.in_daily_prices
+Dhanotu (Mandi),Himachal Pradesh,Mandi,data.gov.in_daily_prices
+Mandi(Mandi),Himachal Pradesh,Mandi,data.gov.in_daily_prices
+Mandi(Takoli),Himachal Pradesh,Mandi,data.gov.in_daily_prices
+Gumla,Jharkhand,Gumla,data.gov.in_daily_prices
+Shikaripura,Karnataka,Shimoga,data.gov.in_daily_prices
+Sheopurkalan,Madhya Pradesh,Sheopur,data.gov.in_daily_prices
+Amritsar(Amritsar Mewa Mandi),Punjab,Amritsar,data.gov.in_daily_prices
+Hospet,Karnataka,Bellary,data.gov.in_daily_prices
+Tarikere,Karnataka,Chikmagalur,data.gov.in_daily_prices
+Challakere,Karnataka,Chitradurga,data.gov.in_daily_prices
+Arasikere,Karnataka,Hassan,data.gov.in_daily_prices
+Belur,Karnataka,Hassan,data.gov.in_daily_prices
+Holenarsipura,Karnataka,Hassan,data.gov.in_daily_prices
+Fatehpur,Rajasthan,Sikar,data.gov.in_daily_prices
+Neem Ka Thana,Rajasthan,Sikar,data.gov.in_daily_prices
+Sikar,Rajasthan,Sikar,data.gov.in_daily_prices
+Sri Madhopur,Rajasthan,Sikar,data.gov.in_daily_prices
+Surajgarh,Rajasthan,Sikar,data.gov.in_daily_prices

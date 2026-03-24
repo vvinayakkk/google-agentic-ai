@@ -1,0 +1,780 @@
+name,state,district,source,latitude,longitude
+Pundibari,West Bengal,Coochbehar,derived_data_gov,,
+Toofanganj,West Bengal,Coochbehar,derived_data_gov,,
+Sheoraphuly,West Bengal,Hooghly,derived_data_gov,,
+Anoop Shahar,Uttar Pradesh,Bulandshahar,derived_data_gov,,
+Sikanderabad,Uttar Pradesh,Bulandshahar,derived_data_gov,,
+Sealdah Koley Market,West Bengal,Kolkata,derived_data_gov,22.56263,88.36304
+Deesa(Deesa Veg Yard),Gujarat,Banaskanth,derived_data_gov,,
+Bharuch,Gujarat,Bharuch,derived_data_gov,21.69482,72.9805
+Talalagir,Gujarat,Gir Somnath,derived_data_gov,,
+Surat,Gujarat,Surat,derived_data_gov,21.19594,72.83023
+Padra,Gujarat,Vadodara(Baroda),derived_data_gov,,
+Vadodara(Sayajipura),Gujarat,Vadodara(Baroda),derived_data_gov,,
+Borsad,Gujarat,Anand,derived_data_gov,22.55251,72.9552
+Junagadh,Gujarat,Junagarh,derived_data_gov,19.85993,82.93385
+Bardoli,Gujarat,Surat,derived_data_gov,21.19594,72.83023
+Valod(Buhari),Gujarat,Surat,derived_data_gov,21.19594,72.83023
+Bhiwani,Haryana,Bhiwani,derived_data_gov,28.79304,76.13968
+Ch. Dadri,Haryana,Bhiwani,derived_data_gov,28.79304,76.13968
+Tosham,Haryana,Bhiwani,derived_data_gov,28.79304,76.13968
+Barwala(Hisar),Haryana,Hissar,derived_data_gov,36.0633,48.581
+Barwala,Haryana,Panchkula,derived_data_gov,30.69461,76.8504
+Narwal Jammu (F&V),Jammu and Kashmir,Jammu,derived_data_gov,32.73528,74.86167
+Kathua,Jammu and Kashmir,Kathua,derived_data_gov,32.36941,75.52539
+Ajnala,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Barnala,Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Meham,Haryana,Rohtak,derived_data_gov,28.89447,76.58917
+Hamirpur,Himachal Pradesh,Hamirpur,derived_data_gov,25.9553,80.14842
+Hamirpur(Nadaun),Himachal Pradesh,Hamirpur,derived_data_gov,25.9553,80.14842
+Gadhwah,Jharkhand,Garhwa,derived_data_gov,24.16002,83.80755
+Munnar,Kerala,Idukki,derived_data_gov,9.85,76.96667
+Kollam,Kerala,Kollam,derived_data_gov,8.88113,76.58469
+Kottarakkara,Kerala,Kollam,derived_data_gov,8.88113,76.58469
+Kuruppanthura,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Shillong,Meghalaya,East Khasi Hills,derived_data_gov,,
+Shahdara,NCT of Delhi,Delhi,derived_data_gov,28.65195,77.23149
+Khamano,Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Talwandi Bhai,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Adampur,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Bilga,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Lohian Khas,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Bariwala,Punjab,Muktsar,derived_data_gov,30.47426,74.5166
+Giddarbaha,Punjab,Muktsar,derived_data_gov,30.47426,74.5166
+Malout,Punjab,Muktsar,derived_data_gov,30.47426,74.5166
+Muktsar,Punjab,Muktsar,derived_data_gov,30.47426,74.5166
+Banga,Punjab,Nawanshahr,derived_data_gov,31.1245,76.11613
+Ajmer(F&V),Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Alwar (F&V),Rajasthan,Alwar,derived_data_gov,27.56246,76.625
+Bikaner (F&V),Rajasthan,Bikaner,derived_data_gov,28.01762,73.31495
+Jodhpur (F&V),Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Nabha,Punjab,Patiala,derived_data_gov,30.33625,76.3922
+Morinda,Punjab,Ropar (Rupnagar),derived_data_gov,,
+Lehra Gaga,Punjab,Sangrur,derived_data_gov,30.24506,75.84488
+Sriganganagar (F&V),Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Kiratpur,Uttar Pradesh,Bijnor,derived_data_gov,29.373,78.13636
+Unnao,Uttar Pradesh,Unnao,derived_data_gov,26.54706,80.48781
+Kotadwara,Uttrakhand,Garhwal (Pauri),derived_data_gov,,
+Diamond Harbour,West Bengal,North 24 Parganas,derived_data_gov,,
+Baruipur(Canning),West Bengal,Sounth 24 Parganas,derived_data_gov,,
+Ahmedabad,Gujarat,Ahmedabad,derived_data_gov,23.02579,72.58727
+Bilimora,Gujarat,Navsari,derived_data_gov,20.94237,72.92467
+Piravam,Kerala,Ernakulam,derived_data_gov,9.93988,76.26022
+Punalur,Kerala,Kollam,derived_data_gov,8.88113,76.58469
+Wadakkanchery,Kerala,Thirssur,derived_data_gov,,
+Anyara(EEC),Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Chala,Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Pothencode,Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Thiruvananthapuram,Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Gunpur,Odisha,Rayagada,derived_data_gov,19.17132,83.41428
+Chittorgarh,Rajasthan,Chittorgarh,derived_data_gov,24.88963,74.62403
+Pabiacherra,Tripura,Unokoti,derived_data_gov,,
+Baruwasagar,Uttar Pradesh,Jhansi,derived_data_gov,25.45887,78.57994
+Gurdaspur,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Kalanaur,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Quadian,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Jalandhar City,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Phillaur,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Ludhiana,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Rayagada(Muniguda),Odisha,Rayagada,derived_data_gov,19.17132,83.41428
+Achalda,Uttar Pradesh,Auraiya,derived_data_gov,26.46517,79.50918
+Fatehabad,Haryana,Fatehabad,derived_data_gov,29.51525,75.45554
+Jakhal,Haryana,Fatehabad,derived_data_gov,29.51525,75.45554
+Ratia,Haryana,Fatehabad,derived_data_gov,29.51525,75.45554
+Sohna,Haryana,Gurgaon,derived_data_gov,28.4601,77.02635
+Hansi,Haryana,Hissar,derived_data_gov,36.0633,48.581
+Uklana,Haryana,Hissar,derived_data_gov,36.0633,48.581
+Jind,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Jullana,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Narwana,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Pillukhera,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Safidon,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Uchana,Haryana,Jind,derived_data_gov,29.31577,76.31502
+Cheeka,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Dhand,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Kaithal,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Shimoga,Karnataka,Shimoga,derived_data_gov,13.93157,75.56791
+Huliyar,Karnataka,Tumkur,derived_data_gov,13.34136,77.1022
+Anjad,Madhya Pradesh,Badwani,derived_data_gov,32.84671,74.59616
+Kolhapur(Laxmipuri),Maharashtra,Kolhapur,derived_data_gov,16.69563,74.23167
+Mumbai,Maharashtra,Mumbai,derived_data_gov,19.07283,72.88261
+Lamlong Bazaar,Manipur,Imphal East,derived_data_gov,,
+Imphal,Manipur,Imphal West,derived_data_gov,,
+Narela,NCT of Delhi,Delhi,derived_data_gov,28.65195,77.23149
+Jaleswar,Odisha,Balasore,derived_data_gov,21.49266,86.93348
+Kotkapura,Punjab,Faridkot,derived_data_gov,30.67399,74.75579
+Chaksu,Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Atarra,Uttar Pradesh,Banda,derived_data_gov,25.47758,80.33491
+Banda,Uttar Pradesh,Banda,derived_data_gov,25.47758,80.33491
+Jhansi,Uttar Pradesh,Jhansi,derived_data_gov,25.45887,78.57994
+Uttaripura,Uttar Pradesh,Kanpur,derived_data_gov,26.46523,80.34975
+Lucknow,Uttar Pradesh,Lucknow,derived_data_gov,26.83928,80.92313
+Deoband,Uttar Pradesh,Saharanpur,derived_data_gov,29.9679,77.54522
+Rishikesh,Uttrakhand,Dehradoon,derived_data_gov,,
+Alappuzha,Kerala,Alappuzha,derived_data_gov,9.49004,76.3264
+Gopalpatti,Tamil Nadu,Dindigul,derived_data_gov,10.36896,77.98036
+Natham,Tamil Nadu,Dindigul,derived_data_gov,10.36896,77.98036
+Denkanikottai,Tamil Nadu,Krishnagiri,derived_data_gov,12.51921,78.21382
+Krishnagiri,Tamil Nadu,Krishnagiri,derived_data_gov,12.51921,78.21382
+Katpadi(Uzhavar Santhai),Tamil Nadu,Vellore,derived_data_gov,12.9184,79.13255
+Bowenpally,Telangana,Hyderabad,derived_data_gov,17.38405,78.45636
+Hyderabad (F&V),Telangana,Hyderabad,derived_data_gov,17.38405,78.45636
+Chevella,Telangana,Ranga Reddy,derived_data_gov,,
+Cachar,Assam,Cachar,derived_data_gov,-9.13333,13.83333
+P.O. Uparhali Guwahati,Assam,Kamrup,derived_data_gov,,
+Tinsukia,Assam,Tinsukia,derived_data_gov,27.48905,95.35992
+Dhanbad,Jharkhand,Dhanbad,derived_data_gov,23.79759,86.42992
+Aralamoodu,Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Baripada,Odisha,Mayurbhanja,derived_data_gov,,
+Khair,Uttar Pradesh,Aligarh,derived_data_gov,27.88145,78.07464
+Denduluru,Andhra Pradesh,West Godavari,derived_data_gov,,
+Bohorihat,Assam,Barpeta,derived_data_gov,26.32293,91.00632
+Howly,Assam,Barpeta,derived_data_gov,26.32293,91.00632
+Gauripur,Assam,Dhubri,derived_data_gov,26.01856,89.98564
+Dibrugarh,Assam,Dibrugarh,derived_data_gov,27.47989,94.90837
+Goalpara,Assam,Goalpara,derived_data_gov,26.17668,90.62634
+Golaghat,Assam,Golaghat,derived_data_gov,26.51167,93.95951
+Jorhat,Assam,Jorhat,derived_data_gov,26.75751,94.20306
+Madhogarh,Uttar Pradesh,Jalaun (Orai),derived_data_gov,,
+Moth,Uttar Pradesh,Jhansi,derived_data_gov,25.45887,78.57994
+Lalitpur,Uttar Pradesh,Lalitpur,derived_data_gov,24.69007,78.41915
+Gadaura,Uttar Pradesh,Maharajganj,derived_data_gov,26.25914,83.11643
+Charkhari,Uttar Pradesh,Mahoba,derived_data_gov,25.2905,79.87533
+Ghiraur,Uttar Pradesh,Mainpuri,derived_data_gov,27.22857,79.02882
+Vishalpur,Uttar Pradesh,Pillibhit,derived_data_gov,,
+Allahabad,Uttar Pradesh,Prayagraj,derived_data_gov,25.44478,81.84322
+Vilaspur,Uttar Pradesh,Rampur,derived_data_gov,28.81014,79.02699
+Gangoh,Uttar Pradesh,Saharanpur,derived_data_gov,29.9679,77.54522
+Bhehjoi,Uttar Pradesh,Sambhal,derived_data_gov,28.58498,78.56959
+Sambhal,Uttar Pradesh,Sambhal,derived_data_gov,28.58498,78.56959
+Jalalabad,Uttar Pradesh,Shahjahanpur,derived_data_gov,27.88165,79.90918
+Payagpur,Uttar Pradesh,Shravasti,derived_data_gov,27.50198,82.02675
+Bangarmau,Uttar Pradesh,Unnao,derived_data_gov,26.54706,80.48781
+Purwa,Uttar Pradesh,Unnao,derived_data_gov,26.54706,80.48781
+Varanasi,Uttar Pradesh,Varanasi,derived_data_gov,25.31668,83.01041
+Varanasi(F&V),Uttar Pradesh,Varanasi,derived_data_gov,25.31668,83.01041
+Roorkee,Uttrakhand,Haridwar,derived_data_gov,29.94791,78.16025
+Haldwani,Uttrakhand,Nanital,derived_data_gov,,
+Sitarganj,Uttrakhand,UdhamSinghNagar,derived_data_gov,,
+Bara Bazar (Posta Bazar),West Bengal,Kolkata,derived_data_gov,22.56263,88.36304
+Samsi,West Bengal,Malda,derived_data_gov,25.00447,88.14573
+Midnapore Sadar,West Bengal,Medinipur(W),derived_data_gov,,
+Faizabad,Uttar Pradesh,Ayodhya,derived_data_gov,26.79909,82.2047
+Bilsi,Uttar Pradesh,Badaun,derived_data_gov,33.75803,70.80705
+Anwala,Uttar Pradesh,Bareilly,derived_data_gov,28.36678,79.43167
+Bahedi,Uttar Pradesh,Bareilly,derived_data_gov,28.36678,79.43167
+Bareilly,Uttar Pradesh,Bareilly,derived_data_gov,28.36678,79.43167
+Basti,Uttar Pradesh,Basti,derived_data_gov,26.78817,82.71617
+Nagina,Uttar Pradesh,Bijnor,derived_data_gov,29.373,78.13636
+Najibabad,Uttar Pradesh,Bijnor,derived_data_gov,29.373,78.13636
+Sikarpur,Uttar Pradesh,Bulandshahar,derived_data_gov,,
+Aliganj,Uttar Pradesh,Etah,derived_data_gov,27.55879,78.65692
+Gorakhpur,Uttar Pradesh,Gorakhpur,derived_data_gov,29.44768,75.67206
+Sandila,Uttar Pradesh,Hardoi,derived_data_gov,27.39491,80.13165
+Chintamani,Karnataka,Kolar,derived_data_gov,13.13768,78.12999
+Pandavapura,Karnataka,Mandya,derived_data_gov,12.5223,76.89746
+Mysore (Bandipalya),Karnataka,Mysore,derived_data_gov,12.29791,76.63925
+Sira,Karnataka,Tumkur,derived_data_gov,13.34136,77.1022
+Tumkur,Karnataka,Tumkur,derived_data_gov,13.34136,77.1022
+Kondotty,Kerala,Malappuram,derived_data_gov,11.04199,76.08154
+Kurawar,Madhya Pradesh,Rajgarh,derived_data_gov,28.64201,75.38612
+Ahmednagar,Maharashtra,Ahmednagar,derived_data_gov,19.09457,74.73843
+Kada,Maharashtra,Beed,derived_data_gov,18.98921,75.75634
+Kaij,Maharashtra,Beed,derived_data_gov,18.98921,75.75634
+Chattrapati Sambhajinagar,Maharashtra,Chattrapati Sambhajinagar,derived_data_gov,,
+Kalamb (Dharashiv),Maharashtra,Dharashiv(Usmanabad),derived_data_gov,,
+Gondiya,Maharashtra,Gondiya,derived_data_gov,,
+Ausa,Maharashtra,Latur,derived_data_gov,18.39721,76.56784
+Latur,Maharashtra,Latur,derived_data_gov,18.39721,76.56784
+Udgir,Maharashtra,Latur,derived_data_gov,18.39721,76.56784
+Nagpur(Mahatma Phule Market),Maharashtra,Nagpur,derived_data_gov,21.14631,79.08491
+Devala,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Kalvan,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Shirur,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Barshi,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Parlakhemundi,Odisha,Gajapati,derived_data_gov,18.27936,83.33647
+Nawarangpur,Odisha,Nowarangpur,derived_data_gov,,
+Nalbari,Assam,Nalbari,derived_data_gov,26.43937,91.44041
+Giridih,Jharkhand,Giridih,derived_data_gov,24.18622,86.30875
+Koderma,Jharkhand,Koderma,derived_data_gov,41.76667,19.61611
+Latehar,Jharkhand,Latehar,derived_data_gov,23.74423,84.49984
+Khunti,Jharkhand,Ranchi,derived_data_gov,23.34316,85.3094
+Sahebganj,Jharkhand,Sahebgang,derived_data_gov,,
+Cherthala,Kerala,Alappuzha,derived_data_gov,9.49004,76.3264
+Harippad,Kerala,Alappuzha,derived_data_gov,9.49004,76.3264
+Moovattupuzha,Kerala,Ernakulam,derived_data_gov,9.93988,76.26022
+Kannur,Kerala,Kannur,derived_data_gov,11.86752,75.35763
+Thalasserry,Kerala,Kannur,derived_data_gov,11.86752,75.35763
+Kanjangadu,Kerala,Kasargod,derived_data_gov,,
+Kasargod,Kerala,Kasargod,derived_data_gov,,
+Neeleswaram,Kerala,Kasargod,derived_data_gov,,
+Ettumanoor,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Kottayam,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Kottakkal,Kerala,Malappuram,derived_data_gov,11.04199,76.08154
+Manjeri,Kerala,Malappuram,derived_data_gov,11.04199,76.08154
+Ezhamkulam,Kerala,Pathanamthitta,derived_data_gov,9.26667,76.78333
+Kuttoor,Kerala,Pathanamthitta,derived_data_gov,9.26667,76.78333
+Pandalam,Kerala,Pathanamthitta,derived_data_gov,9.26667,76.78333
+Parakkodu,Kerala,Pathanamthitta,derived_data_gov,9.26667,76.78333
+Ranniangadi,Kerala,Pathanamthitta,derived_data_gov,9.26667,76.78333
+Allagadda,Andhra Pradesh,Kurnool,derived_data_gov,15.82887,78.03602
+Anantapur,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Dharmavaram,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Gooti,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Guntakal,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Kadiri,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Kalyandurg,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Penukonda,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Tadipatri,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Tenakallu,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Urvakonda,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Srikalahasti,Andhra Pradesh,Chittor,derived_data_gov,24.88963,74.62403
+Rayachoti,Andhra Pradesh,Cuddapah,derived_data_gov,14.47995,78.82346
+Nagari,Chattisgarh,Dhamtari,derived_data_gov,20.70718,81.54874
+Manendragarh,Chattisgarh,Koria,derived_data_gov,60.84614,26.60755
+Amreli,Gujarat,Amreli,derived_data_gov,21.59983,71.21169
+Rajula,Gujarat,Amreli,derived_data_gov,21.59983,71.21169
+Savarkundla,Gujarat,Amreli,derived_data_gov,21.59983,71.21169
+Jamnagar,Gujarat,Jamnagar,derived_data_gov,22.47292,70.06673
+Mangrol,Gujarat,Junagarh,derived_data_gov,19.85993,82.93385
+Visavadar,Gujarat,Junagarh,derived_data_gov,19.85993,82.93385
+Dhoraji,Gujarat,Rajkot,derived_data_gov,22.29161,70.79322
+Gondal,Gujarat,Rajkot,derived_data_gov,22.29161,70.79322
+Hindupur,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Phaltan,Maharashtra,Satara,derived_data_gov,17.68589,73.99333
+Vaduj,Maharashtra,Satara,derived_data_gov,17.68589,73.99333
+Akluj,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Karmala,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Kurdwadi,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Kurdwadi(Modnimb),Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Mangal Wedha,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Pandharpur,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Sangola,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Solapur,Maharashtra,Sholapur,derived_data_gov,17.67152,75.91044
+Kalyan,Maharashtra,Thane,derived_data_gov,19.19704,72.96355
+Ulhasnagar,Maharashtra,Thane,derived_data_gov,19.19704,72.96355
+Karanja,Maharashtra,Vashim,derived_data_gov,,
+Manora,Maharashtra,Vashim,derived_data_gov,,
+Pusad,Maharashtra,Yavatmal,derived_data_gov,20.39324,78.13201
+Najafgarh,NCT of Delhi,Delhi,derived_data_gov,28.65195,77.23149
+Kot ise Khan,Punjab,Moga,derived_data_gov,30.81383,75.16878
+Ajmer (Grain),Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Beawar,Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Gulabpura,Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Kekri,Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Madanganj Kishangarh,Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Vijaynagar,Rajasthan,Ajmer,derived_data_gov,26.4521,74.63867
+Alwar,Rajasthan,Alwar,derived_data_gov,27.56246,76.625
+Khairthal,Rajasthan,Alwar,derived_data_gov,27.56246,76.625
+Kherli,Rajasthan,Alwar,derived_data_gov,27.56246,76.625
+Baran,Rajasthan,Baran,derived_data_gov,25.1,76.51667
+Balotra,Rajasthan,Barmer,derived_data_gov,25.74572,71.39211
+Barmer,Rajasthan,Barmer,derived_data_gov,25.74572,71.39211
+Bayana,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Bharatpur,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Deeg,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Kama,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Kumher,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Nadwai,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Nagar,Rajasthan,Bharatpur,derived_data_gov,27.6768,84.43589
+Bhilwara,Rajasthan,Bhilwara,derived_data_gov,25.34707,74.64081
+Khajuwala,Rajasthan,Bikaner,derived_data_gov,28.01762,73.31495
+Lunkaransar,Rajasthan,Bikaner,derived_data_gov,28.01762,73.31495
+Sridungargarh,Rajasthan,Bikaner,derived_data_gov,28.01762,73.31495
+Bundi,Rajasthan,Bundi,derived_data_gov,25.43855,75.63735
+Sumerganj,Rajasthan,Bundi,derived_data_gov,25.43855,75.63735
+Churu,Rajasthan,Churu,derived_data_gov,28.30415,74.96718
+Sujangarh,Rajasthan,Churu,derived_data_gov,28.30415,74.96718
+Dausa,Rajasthan,Dausa,derived_data_gov,26.89,76.33584
+Lalsot,Rajasthan,Dausa,derived_data_gov,26.89,76.33584
+Mandawari,Rajasthan,Dausa,derived_data_gov,26.89,76.33584
+Dholpur,Rajasthan,Dholpur,derived_data_gov,24.57186,90.08251
+Achnera,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Fatehabad,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Fatehpur Sikri,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Jagnair,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Khairagarh,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Samsabad,Uttar Pradesh,Agra,derived_data_gov,27.18333,78.01667
+Aligarh,Uttar Pradesh,Aligarh,derived_data_gov,27.88145,78.07464
+Auraiya,Uttar Pradesh,Auraiya,derived_data_gov,26.46517,79.50918
+Badayoun,Uttar Pradesh,Badaun,derived_data_gov,33.75803,70.80705
+Visoli,Uttar Pradesh,Badaun,derived_data_gov,33.75803,70.80705
+Divai,Uttar Pradesh,Bulandshahar,derived_data_gov,,
+Howrah,West Bengal,Howrah,derived_data_gov,22.57688,88.31857
+Ramkrishanpur(Howrah),West Bengal,Howrah,derived_data_gov,22.57688,88.31857
+Jalpaiguri Sadar,West Bengal,Jalpaiguri,derived_data_gov,26.51667,88.73333
+English Bazar,West Bengal,Malda,derived_data_gov,25.00447,88.14573
+Kovvur,Andhra Pradesh,West Godavari,derived_data_gov,,
+Kharupetia,Assam,Darrang,derived_data_gov,26.79193,91.5094
+Ambala City,Haryana,Ambala,derived_data_gov,30.36099,76.79782
+Mullana,Haryana,Ambala,derived_data_gov,30.36099,76.79782
+Ballabhgarh,Haryana,Faridabad,derived_data_gov,28.41124,77.31316
+Kalayat,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Pundri,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Sargipali,Odisha,Sundergarh,derived_data_gov,22.11667,84.03333
+Sultanpur,Uttar Pradesh,Amethi,derived_data_gov,26.15696,81.80519
+Bahraich,Uttar Pradesh,Bahraich,derived_data_gov,27.57429,81.59474
+Chitwadagaon,Uttar Pradesh,Ballia,derived_data_gov,25.42139,86.31445
+Barabanki,Uttar Pradesh,Barabanki,derived_data_gov,20.43592,82.73042
+Mugrabaadshahpur,Uttar Pradesh,Jaunpur,derived_data_gov,25.75356,82.68689
+Puranpur,Uttar Pradesh,Pillibhit,derived_data_gov,,
+Raibareilly,Uttar Pradesh,Raebarelli,derived_data_gov,,
+Khateema,Uttrakhand,UdhamSinghNagar,derived_data_gov,,
+Rudrapur,Uttrakhand,UdhamSinghNagar,derived_data_gov,,
+Alipurduar,West Bengal,Alipurduar,derived_data_gov,26.4835,89.52286
+Baxirhat,West Bengal,Coochbehar,derived_data_gov,,
+Coochbehar,West Bengal,Coochbehar,derived_data_gov,,
+Thattanchavady,Pondicherry,Pondicherry,derived_data_gov,11.93381,79.82979
+Amritsar,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Zira,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Batala,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+F.G.Churian,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Kahnuwan,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Dasuya,Punjab,Hoshiarpur,derived_data_gov,31.53723,75.91269
+Garh Shankar,Punjab,Hoshiarpur,derived_data_gov,31.53723,75.91269
+Hoshiarpur,Punjab,Hoshiarpur,derived_data_gov,31.53723,75.91269
+Tanda Urmur,Punjab,Hoshiarpur,derived_data_gov,31.53723,75.91269
+Bhogpur,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Goraya,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Jalandhar Cantt (Jamshedpur Dana Mandi),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Jalandhar Cantt.,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Jalandhar City(Faintan Ganj),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Jalandhar City(Jalandhar),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Jalandhar City(Kartar Pur Dana mandi),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Mehatpur,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Nakodar,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Nakodar(Sarih),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Noor Mehal,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Noor Mehal(Kot Badal Khan),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Phillaur(Apra Mandi),Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Shahkot,Punjab,Jalandhar,derived_data_gov,31.32556,75.57917
+Bhulath,Punjab,kapurthala,derived_data_gov,31.38011,75.38105
+Dhilwan,Punjab,kapurthala,derived_data_gov,31.38011,75.38105
+Kapurthala,Punjab,kapurthala,derived_data_gov,31.38011,75.38105
+Phagwara,Punjab,kapurthala,derived_data_gov,31.38011,75.38105
+Sultanpur,Punjab,kapurthala,derived_data_gov,31.38011,75.38105
+Doraha,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Hathur,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Jagraon,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Khanna,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Budalada,Punjab,Mansa,derived_data_gov,-11.19976,28.89431
+Dera Bassi,Punjab,Mohali,derived_data_gov,30.67995,76.72211
+Kharar,Punjab,Mohali,derived_data_gov,30.67995,76.72211
+Baikunthpur,Madhya Pradesh,Rewa,derived_data_gov,24.53256,81.29234
+Chaakghat,Madhya Pradesh,Rewa,derived_data_gov,24.53256,81.29234
+Hanumana,Madhya Pradesh,Rewa,derived_data_gov,24.53256,81.29234
+Rewa,Madhya Pradesh,Rewa,derived_data_gov,24.53256,81.29234
+Bina,Madhya Pradesh,Sagar,derived_data_gov,23.83877,78.73874
+Garhakota,Madhya Pradesh,Sagar,derived_data_gov,23.83877,78.73874
+Ashta,Madhya Pradesh,Sehore,derived_data_gov,23.2,77.08333
+Kalapipal,Madhya Pradesh,Shajapur,derived_data_gov,23.42637,76.27775
+Momanbadodiya,Madhya Pradesh,Shajapur,derived_data_gov,23.42637,76.27775
+Sajapur,Madhya Pradesh,Shajapur,derived_data_gov,23.42637,76.27775
+Susner,Madhya Pradesh,Shajapur,derived_data_gov,23.42637,76.27775
+Kolaras,Madhya Pradesh,Shivpuri,derived_data_gov,25.42378,77.66223
+Sidhi,Madhya Pradesh,Sidhi,derived_data_gov,24.4038,81.87954
+Singroli,Madhya Pradesh,Singroli,derived_data_gov,,
+Tikamgarh,Madhya Pradesh,Tikamgarh,derived_data_gov,24.74327,78.83061
+Badnagar,Madhya Pradesh,Ujjain,derived_data_gov,23.18239,75.77643
+Umariya,Madhya Pradesh,Umariya,derived_data_gov,24.23465,76.4032
+Shamshabad,Madhya Pradesh,Vidisha,derived_data_gov,23.52604,77.81092
+Pratapgarh,Rajasthan,Chittorgarh,derived_data_gov,24.88963,74.62403
+Bhawani Mandi,Rajasthan,Jhalawar,derived_data_gov,24.59633,76.16499
+Jhalarapatan,Rajasthan,Jhalawar,derived_data_gov,24.59633,76.16499
+Kota,Rajasthan,Kota,derived_data_gov,25.18254,75.83907
+Deoli,Rajasthan,Tonk,derived_data_gov,26.16638,75.78824
+Champaknagar,Tripura,West District,derived_data_gov,41.74399,-72.88566
+Tulsipur,Uttar Pradesh,Balrampur,derived_data_gov,23.61219,83.61115
+Bindki,Uttar Pradesh,Fatehpur,derived_data_gov,25.92774,80.81266
+Maudaha,Uttar Pradesh,Hamirpur,derived_data_gov,25.9553,80.14842
+Hardoi,Uttar Pradesh,Hardoi,derived_data_gov,27.39491,80.13165
+Madhoganj,Uttar Pradesh,Hardoi,derived_data_gov,27.39491,80.13165
+Chaibasa,Jharkhand,West Singbhum,derived_data_gov,,
+Bangalore,Karnataka,Bangalore,derived_data_gov,12.97194,77.59369
+Sringeri,Karnataka,Chikmagalur,derived_data_gov,13.32231,75.774
+Hassan,Karnataka,Hassan,derived_data_gov,13.00715,76.0962
+Bangarpet,Karnataka,Kolar,derived_data_gov,13.13768,78.12999
+Bhadravathi,Karnataka,Shimoga,derived_data_gov,13.93157,75.56791
+Anupgarh,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Gajsinghpur,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Jaitsar,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Kesarisinghpur,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Padampur,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Raisingh Nagar,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Rawla,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Sadulshahar,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Sri Karanpur,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Sri Vijayanagar,Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Sriganganagar (Grain),Rajasthan,Ganganagar,derived_data_gov,29.92009,73.87496
+Bhadara,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Goluwala,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Hanumangarh,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Nohar,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Surajgarh,Rajasthan,Sikar,derived_data_gov,27.61206,75.13996
+Abu Road,Rajasthan,Sirohi,derived_data_gov,24.88838,72.84794
+Gangapur City,Rajasthan,Swai Madhopur,derived_data_gov,,
+Gangapurcity(Old Lal mandi),Rajasthan,Swai Madhopur,derived_data_gov,,
+Sawai Madhopur,Rajasthan,Swai Madhopur,derived_data_gov,,
+Malpura,Rajasthan,Tonk,derived_data_gov,26.16638,75.78824
+Malpura(Todaraisingh),Rajasthan,Tonk,derived_data_gov,26.16638,75.78824
+Niwai,Rajasthan,Tonk,derived_data_gov,26.16638,75.78824
+Tonk,Rajasthan,Tonk,derived_data_gov,26.16638,75.78824
+Udaipur (Grain),Rajasthan,Udaipur,derived_data_gov,24.58584,73.71346
+Ariyalur Market,Tamil Nadu,Ariyalur,derived_data_gov,11.13849,79.07556
+Karamadai,Tamil Nadu,Coimbatore,derived_data_gov,11.00555,76.96612
+Thiruppur,Tamil Nadu,Coimbatore,derived_data_gov,11.00555,76.96612
+Theni,Tamil Nadu,Theni,derived_data_gov,10.01115,77.47772
+Thiruvannamalai,Tamil Nadu,Thiruvannamalai,derived_data_gov,,
+Vilathikulam,Tamil Nadu,Tuticorin,derived_data_gov,8.76735,78.13425
+Vellore,Tamil Nadu,Vellore,derived_data_gov,12.9184,79.13255
+Achampet,Telangana,Mahbubnagar,derived_data_gov,16.74385,77.98597
+Armoor,Telangana,Nizamabad,derived_data_gov,18.67154,78.0988
+Nizamabad,Telangana,Nizamabad,derived_data_gov,18.67154,78.0988
+Kishan Renwal(Fulera),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Kishangarh Renwal,Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Kotputli,Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Kotputli(Pawla),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Sambhar (Kishangarh renwal),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Jaisalmer,Rajasthan,Jaisalmer,derived_data_gov,26.91763,70.90387
+Bhinmal,Rajasthan,Jalore,derived_data_gov,45.15343,4.00527
+Sanchore,Rajasthan,Jalore,derived_data_gov,45.15343,4.00527
+Chirawa,Rajasthan,Jhunjunu,derived_data_gov,,
+Jhunjhunu,Rajasthan,Jhunjunu,derived_data_gov,,
+Nawalgarh,Rajasthan,Jhunjunu,derived_data_gov,,
+Bhagat Ki Kothi,Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Bhagat Kii Phalodi,Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Bilara,Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Jodhpur (Grain),Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Pipar City,Rajasthan,Jodhpur,derived_data_gov,26.26841,73.00594
+Hindoun,Rajasthan,Karauli,derived_data_gov,26.49831,77.02755
+Baparwarkala (Kota) (Grain),Rajasthan,Kota,derived_data_gov,25.18254,75.83907
+Deedwana,Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Deedwana(Choti Khatu),Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Degana,Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Kuchaman City,Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Merta City,Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Nagaur,Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Pali,Rajasthan,Pali,derived_data_gov,25.77276,73.32335
+Sojat Road,Rajasthan,Pali,derived_data_gov,25.77276,73.32335
+Rajsamand,Rajasthan,Rajasamand,derived_data_gov,,
+Fatehpur,Rajasthan,Sikar,derived_data_gov,27.61206,75.13996
+Nandurbar,Maharashtra,Nandurbar,derived_data_gov,21.36671,74.24051
+Shahada,Maharashtra,Nandurbar,derived_data_gov,21.36671,74.24051
+Chandvad,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Ghoti,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Malegaon,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Manmad,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Papparapatti,Tamil Nadu,Dharmapuri,derived_data_gov,12.1277,78.15794
+Pappireddipatti,Tamil Nadu,Dharmapuri,derived_data_gov,12.1277,78.15794
+Saluru,Andhra Pradesh,Vijayanagaram,derived_data_gov,19.45441,83.2659
+Jagdalpur,Chattisgarh,Bastar,derived_data_gov,19.20306,81.92959
+Pathalgaon,Chattisgarh,Jashpur,derived_data_gov,23.42006,89.55522
+Keshkal,Chattisgarh,Kondagaon,derived_data_gov,19.59083,81.664
+Kondagoan,Chattisgarh,Kondagaon,derived_data_gov,19.59083,81.664
+Surajpur,Chattisgarh,Surajpur,derived_data_gov,23.21347,82.86836
+Sitapur,Chattisgarh,Surguja,derived_data_gov,24.26459,84.41159
+Vadodara,Gujarat,Vadodara(Baroda),derived_data_gov,,
+Lohardaga,Jharkhand,Lohardaga,derived_data_gov,23.43305,84.67992
+Simdega,Jharkhand,Simdega,derived_data_gov,22.61523,84.50208
+Chogawan,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Gehri,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Mehta,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Bhadaur,Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Bhadaur(Sehna),Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Dhanaula,Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Mehal Kalan,Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Tapa(Tapa Mandi),Punjab,Barnala,derived_data_gov,30.37451,75.5487
+Bhagta Bhai Ka,Punjab,Bhatinda,derived_data_gov,,
+Bhucho,Punjab,Bhatinda,derived_data_gov,,
+Maur,Punjab,Bhatinda,derived_data_gov,,
+Raman,Punjab,Bhatinda,derived_data_gov,,
+Rampuraphul(Chowke),Punjab,Bhatinda,derived_data_gov,,
+Rampuraphul(Nabha Mandi),Punjab,Bhatinda,derived_data_gov,,
+Sangat,Punjab,Bhatinda,derived_data_gov,,
+Faridkot,Punjab,Faridkot,derived_data_gov,30.67399,74.75579
+Jaitu,Punjab,Faridkot,derived_data_gov,30.67399,74.75579
+Jaitu(Bajakhana),Punjab,Faridkot,derived_data_gov,30.67399,74.75579
+Sadiq,Punjab,Faridkot,derived_data_gov,30.67399,74.75579
+Amloh,Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Amloh(Gobind Garh Mandi),Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Bassi Pathana,Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Chanarthal,Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Sirhind,Punjab,Fatehgarh,derived_data_gov,27.36409,79.63111
+Abohar,Punjab,Fazilka,derived_data_gov,30.40207,74.02836
+Jalalabad,Punjab,Fazilka,derived_data_gov,30.40207,74.02836
+Firozepur City,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Guru Har Sahai,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Makhu,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Mallanwala,Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Talwandi Bhai(Mudki),Punjab,Ferozpur,derived_data_gov,30.93198,72.83818
+Dhenkanal,Odisha,Dhenkanal,derived_data_gov,20.65744,85.59693
+Kamakhyanagar,Odisha,Dhenkanal,derived_data_gov,20.65744,85.59693
+Kasinagar,Odisha,Gajapati,derived_data_gov,18.27936,83.33647
+Bhanjanagar,Odisha,Ganjam,derived_data_gov,19.38705,85.05079
+Digapahandi,Odisha,Ganjam,derived_data_gov,19.38705,85.05079
+Jagatsinghpur,Odisha,Jagatsinghpur,derived_data_gov,25.96371,85.73202
+Jajpur,Odisha,Jajpur,derived_data_gov,20.84852,86.33729
+Jharsuguda,Odisha,Jharsuguda,derived_data_gov,21.85531,84.00698
+Bhawanipatna,Odisha,Kalahandi,derived_data_gov,20.13661,85.0799
+Junagarh,Odisha,Kalahandi,derived_data_gov,20.13661,85.0799
+Kesinga,Odisha,Kalahandi,derived_data_gov,20.13661,85.0799
+Anandapur,Odisha,Keonjhar,derived_data_gov,21.6318,85.59686
+Amgaon,Maharashtra,Gondiya,derived_data_gov,,
+Arjuni,Maharashtra,Gondiya,derived_data_gov,,
+Goregaon,Maharashtra,Gondiya,derived_data_gov,,
+Tiroda,Maharashtra,Gondiya,derived_data_gov,,
+Nanded,Maharashtra,Nanded,derived_data_gov,19.16023,77.31497
+Navapur,Maharashtra,Nandurbar,derived_data_gov,21.36671,74.24051
+Alibagh,Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Karjat(Raigad),Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Padampur,Odisha,Bargarh,derived_data_gov,21.33348,83.61905
+Sohela,Odisha,Bargarh,derived_data_gov,21.33348,83.61905
+Bhadrak,Odisha,Bhadrak,derived_data_gov,21.05447,86.5156
+Chandabali,Odisha,Bhadrak,derived_data_gov,21.05447,86.5156
+Sahidngar,Odisha,Bhadrak,derived_data_gov,21.05447,86.5156
+Banki,Odisha,Cuttack,derived_data_gov,20.46497,85.87927
+Kendupatna,Odisha,Cuttack,derived_data_gov,20.46497,85.87927
+Kendupatna(Niali),Odisha,Cuttack,derived_data_gov,20.46497,85.87927
+Deogarh,Odisha,Deogarh,derived_data_gov,21.53827,84.73337
+kalanwali,Haryana,Sirsa,derived_data_gov,29.53489,75.02898
+Bilaspur,Himachal Pradesh,Bilaspur,derived_data_gov,22.08005,82.15543
+Chail Chowk,Himachal Pradesh,Mandi,derived_data_gov,31.71194,76.93273
+Dhanotu (Mandi),Himachal Pradesh,Mandi,derived_data_gov,31.71194,76.93273
+Mandi(Mandi),Himachal Pradesh,Mandi,derived_data_gov,31.71194,76.93273
+Mandi(Takoli),Himachal Pradesh,Mandi,derived_data_gov,31.71194,76.93273
+Gumla,Jharkhand,Gumla,derived_data_gov,23.04268,84.54429
+Shikaripura,Karnataka,Shimoga,derived_data_gov,13.93157,75.56791
+Sheopurkalan,Madhya Pradesh,Sheopur,derived_data_gov,25.66472,76.69616
+Amritsar(Amritsar Mewa Mandi),Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Hospet,Karnataka,Bellary,derived_data_gov,15.14205,76.92398
+Tarikere,Karnataka,Chikmagalur,derived_data_gov,13.32231,75.774
+Challakere,Karnataka,Chitradurga,derived_data_gov,14.22262,76.40038
+Arasikere,Karnataka,Hassan,derived_data_gov,13.00715,76.0962
+Belur,Karnataka,Hassan,derived_data_gov,13.00715,76.0962
+Holenarsipura,Karnataka,Hassan,derived_data_gov,13.00715,76.0962
+Neem Ka Thana,Rajasthan,Sikar,derived_data_gov,27.61206,75.13996
+Sikar,Rajasthan,Sikar,derived_data_gov,27.61206,75.13996
+Sri Madhopur,Rajasthan,Sikar,derived_data_gov,27.61206,75.13996
+Nandgaon,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Satana,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Sinner,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Yeola,Maharashtra,Nashik,derived_data_gov,19.99727,73.79096
+Sonpeth,Maharashtra,Parbhani,derived_data_gov,19.26855,76.77081
+Baramati,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Dound,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Indapur,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Khed(Chakan),Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Nira,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Pune,Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Pune(Khadiki),Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Pune(Pimpri),Maharashtra,Pune,derived_data_gov,18.51957,73.85535
+Aatpadi,Maharashtra,Sangli,derived_data_gov,16.85438,74.56417
+Sangli,Maharashtra,Sangli,derived_data_gov,16.85438,74.56417
+"Sangli(Phale, Bhajipura Market)",Maharashtra,Sangli,derived_data_gov,16.85438,74.56417
+Lonand,Maharashtra,Satara,derived_data_gov,17.68589,73.99333
+Fazilka (Ladhuka),Punjab,Fazilka,derived_data_gov,30.40207,74.02836
+Dera Baba Nanak,Punjab,Gurdaspur,derived_data_gov,32.03933,75.40318
+Raikot,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Banur,Punjab,Mohali,derived_data_gov,30.67995,76.72211
+Balachaur,Punjab,Nawanshahr,derived_data_gov,31.1245,76.11613
+Nawan Shahar(Mandi Aur),Punjab,Nawanshahr,derived_data_gov,31.1245,76.11613
+Nawan Shahar(MandiRaho),Punjab,Nawanshahr,derived_data_gov,31.1245,76.11613
+Nawan Shahar(Subzi Mandi),Punjab,Nawanshahr,derived_data_gov,31.1245,76.11613
+Khanauri,Punjab,Sangrur,derived_data_gov,30.24506,75.84488
+Bapauli,Haryana,Panipat,derived_data_gov,29.38747,76.96825
+Visakhapatnam,Andhra Pradesh,Visakhapatnam,derived_data_gov,17.68009,83.20161
+"Anand(Veg,Yard,Anand)",Gujarat,Anand,derived_data_gov,22.55251,72.9552
+Bhuna,Haryana,Fatehabad,derived_data_gov,29.51525,75.45554
+Etah,Uttar Pradesh,Etah,derived_data_gov,27.55879,78.65692
+Jasvantnagar,Uttar Pradesh,Etawah,derived_data_gov,26.77615,79.02133
+Kishunpur,Uttar Pradesh,Fatehpur,derived_data_gov,25.92774,80.81266
+Firozabad,Uttar Pradesh,Firozabad,derived_data_gov,27.15092,78.39781
+Shikohabad,Uttar Pradesh,Firozabad,derived_data_gov,27.15092,78.39781
+Tundla,Uttar Pradesh,Firozabad,derived_data_gov,27.15092,78.39781
+Haathras,Uttar Pradesh,Hathras,derived_data_gov,27.59551,78.05201
+Shadabad,Uttar Pradesh,Hathras,derived_data_gov,27.59551,78.05201
+Muzzafarnagar,Uttar Pradesh,Muzaffarnagar,derived_data_gov,29.47091,77.70332
+Dahod(Veg. Market),Gujarat,Dahod,derived_data_gov,22.83283,74.25986
+Siddhpur,Gujarat,Patan,derived_data_gov,27.67658,85.31417
+Aluva,Kerala,Ernakulam,derived_data_gov,9.93988,76.26022
+Angamaly,Kerala,Ernakulam,derived_data_gov,9.93988,76.26022
+Perumbavoor,Kerala,Ernakulam,derived_data_gov,9.93988,76.26022
+Anchal,Kerala,Kollam,derived_data_gov,8.88113,76.58469
+Sasthamkotta,Kerala,Kollam,derived_data_gov,8.88113,76.58469
+Athirampuzha,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Kanjirappally,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Pampady,Kerala,Kottayam,derived_data_gov,9.58692,76.52132
+Mukkom,Kerala,Kozhikode(Calicut),derived_data_gov,,
+Palayam,Kerala,Kozhikode(Calicut),derived_data_gov,,
+Koduvayoor,Kerala,Palakad,derived_data_gov,12.15979,79.91297
+Kollengode,Kerala,Palakad,derived_data_gov,12.15979,79.91297
+Madakasira,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Rayadurg,Andhra Pradesh,Anantapur,derived_data_gov,14.67784,77.60813
+Bobbili,Andhra Pradesh,Vijayanagaram,derived_data_gov,19.45441,83.2659
+Kurupam,Andhra Pradesh,Vijayanagaram,derived_data_gov,19.45441,83.2659
+Parvathipuram,Andhra Pradesh,Vijayanagaram,derived_data_gov,19.45441,83.2659
+Jalaun,Uttar Pradesh,Jalaun (Orai),derived_data_gov,,
+Pilibanga,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Rawatsar,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Sangriya,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Suratgarh,Rajasthan,Hanumangarh,derived_data_gov,29.58182,74.32938
+Bagru,Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Bassi,Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Chomu (Grain),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Jaipur (Grain),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Jaipur(Grain)(Chandpole),Rajasthan,Jaipur,derived_data_gov,26.91962,75.78781
+Chalakudy,Kerala,Thirssur,derived_data_gov,,
+Irinjalakkuda,Kerala,Thirssur,derived_data_gov,,
+Kodumgalloor,Kerala,Thirssur,derived_data_gov,,
+Thrissur,Kerala,Thirssur,derived_data_gov,,
+Kattakada,Kerala,Thiruvananthapuram,derived_data_gov,8.4855,76.94924
+Dhari,Gujarat,Amreli,derived_data_gov,21.59983,71.21169
+Jhalod,Gujarat,Dahod,derived_data_gov,22.83283,74.25986
+Chanthroor,Kerala,Alappuzha,derived_data_gov,9.49004,76.3264
+vadakarapathy,Kerala,Palakad,derived_data_gov,12.15979,79.91297
+Wokha Town,Nagaland,Wokha,derived_data_gov,26.09717,94.25817
+Azadpur,NCT of Delhi,Delhi,derived_data_gov,28.65195,77.23149
+Sikandraraau,Uttar Pradesh,Hathras,derived_data_gov,27.59551,78.05201
+Chhibramau,Uttar Pradesh,Kannuj,derived_data_gov,,
+Jhijhank,Uttar Pradesh,Kanpur Dehat,derived_data_gov,,
+Rura,Uttar Pradesh,Kanpur Dehat,derived_data_gov,,
+Kasganj,Uttar Pradesh,Kasganj,derived_data_gov,27.80882,78.64579
+Ajuha,Uttar Pradesh,Prayagraj,derived_data_gov,25.44478,81.84322
+Chandausi,Uttar Pradesh,Sambhal,derived_data_gov,28.58498,78.56959
+Gevrai,Maharashtra,Beed,derived_data_gov,18.98921,75.75634
+Rayagada,Odisha,Rayagada,derived_data_gov,19.17132,83.41428
+Kila Raipur,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Ludhiana(Mandi gill Road),Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Ludhiana(Salem Tabri),Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Machhiwara,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Maloud,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Mullanpur,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Sahnewal,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Samrala,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Sidhwan Bet,Punjab,Ludhiana,derived_data_gov,30.91204,75.85379
+Bhikhi,Punjab,Mansa,derived_data_gov,-11.19976,28.89431
+Mansa,Punjab,Mansa,derived_data_gov,-11.19976,28.89431
+Ajitwal,Punjab,Moga,derived_data_gov,30.81383,75.16878
+Badhni Kalan,Punjab,Moga,derived_data_gov,30.81383,75.16878
+Baghapurana,Punjab,Moga,derived_data_gov,30.81383,75.16878
+Nihal Singh Wala,Punjab,Moga,derived_data_gov,30.81383,75.16878
+Mahad,Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Mangaon,Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Pen,Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Roha,Maharashtra,Raigad,derived_data_gov,42.25191,-7.18074
+Shahapur,Maharashtra,Thane,derived_data_gov,19.19704,72.96355
+Vasai,Maharashtra,Thane,derived_data_gov,19.19704,72.96355
+Aarni,Maharashtra,Yavatmal,derived_data_gov,20.39324,78.13201
+Champua,Odisha,Keonjhar,derived_data_gov,21.6318,85.59686
+Saharpada,Odisha,Keonjhar,derived_data_gov,21.6318,85.59686
+Balugaon,Odisha,Khurda,derived_data_gov,20.18268,85.61629
+Jatni,Odisha,Khurda,derived_data_gov,20.18268,85.61629
+Jeypore,Odisha,Koraput,derived_data_gov,18.81199,82.71048
+Jeypore(Kotpad),Odisha,Koraput,derived_data_gov,18.81199,82.71048
+Malkanagiri,Odisha,Malkangiri,derived_data_gov,18.36428,81.888
+Karanjia,Odisha,Mayurbhanja,derived_data_gov,,
+Udala,Odisha,Mayurbhanja,derived_data_gov,,
+Bahadajholla,Odisha,Nayagarh,derived_data_gov,20.12882,85.09626
+Nabarangpur(Umerkote),Odisha,Nowarangpur,derived_data_gov,,
+Khariar Road,Odisha,Nuapada,derived_data_gov,20.8167,82.5333
+Nimapara,Odisha,Puri,derived_data_gov,19.79825,85.82494
+Puri(Brahmagiri),Odisha,Puri,derived_data_gov,19.79825,85.82494
+Sakhigopal,Odisha,Puri,derived_data_gov,19.79825,85.82494
+Attari,Punjab,Amritsar,derived_data_gov,31.62234,74.87534
+Ghaziabad,Uttar Pradesh,Ghaziabad,derived_data_gov,28.66535,77.43915
+Gonda,Uttar Pradesh,Gonda,derived_data_gov,-17.56889,34.32444
+Pilibhit,Uttar Pradesh,Pillibhit,derived_data_gov,,
+Jasra,Uttar Pradesh,Prayagraj,derived_data_gov,25.44478,81.84322
+Bachranwa,Uttar Pradesh,Raebarelli,derived_data_gov,,
+Jayas,Uttar Pradesh,Raebarelli,derived_data_gov,,
+Salon,Uttar Pradesh,Raebarelli,derived_data_gov,,
+Rampur,Uttar Pradesh,Rampur,derived_data_gov,28.81014,79.02699
+Shahabad,Uttar Pradesh,Rampur,derived_data_gov,28.81014,79.02699
+Saharanpur,Uttar Pradesh,Saharanpur,derived_data_gov,29.9679,77.54522
+Muradabad,Uttar Pradesh,Sambhal,derived_data_gov,28.58498,78.56959
+Khalilabad,Uttar Pradesh,Sant Kabir Nagar,derived_data_gov,,
+Mahoba,Uttar Pradesh,Mahoba,derived_data_gov,25.2905,79.87533
+Kosikalan,Uttar Pradesh,Mathura,derived_data_gov,27.5035,77.67215
+Mathura,Uttar Pradesh,Mathura,derived_data_gov,27.5035,77.67215
+Kopaganj,Uttar Pradesh,Mau(Maunathbhanjan),derived_data_gov,,
+Mawana,Uttar Pradesh,Meerut,derived_data_gov,28.98002,77.70636
+Meerut,Uttar Pradesh,Meerut,derived_data_gov,28.98002,77.70636
+Parikshitgarh,Uttar Pradesh,Meerut,derived_data_gov,28.98002,77.70636
+Ahirora,Uttar Pradesh,Mirzapur,derived_data_gov,25.1449,82.56534
+Mirzapur,Uttar Pradesh,Mirzapur,derived_data_gov,25.1449,82.56534
+Khatauli,Uttar Pradesh,Muzaffarnagar,derived_data_gov,29.47091,77.70332
+Haldibari,West Bengal,Coochbehar,derived_data_gov,,
+Kadi,Gujarat,Mehsana,derived_data_gov,,
+Godhra,Gujarat,Panchmahals,derived_data_gov,,
+Gogamba,Gujarat,Panchmahals,derived_data_gov,,
+Lunavada,Gujarat,Panchmahals,derived_data_gov,,
+Dongargaon,Chattisgarh,Rajnandgaon,derived_data_gov,,
+Dongargarh,Chattisgarh,Rajnandgaon,derived_data_gov,,
+Gandai,Chattisgarh,Rajnandgaon,derived_data_gov,,
+Kheragarh,Chattisgarh,Rajnandgaon,derived_data_gov,,
+Rajnandgaon,Chattisgarh,Rajnandgaon,derived_data_gov,,
+Konta,Chattisgarh,Sukma,derived_data_gov,18.39014,81.65941
+Pratappur,Chattisgarh,Surajpur,derived_data_gov,23.21347,82.86836
+Nilokheri,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Nissing,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Tarori,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Babain,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Iamailabad,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Ladwa,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Pehowa,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Pipli,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Shahabad,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Thanesar,Haryana,Kurukshetra,derived_data_gov,29.9657,76.837
+Rampurhat,West Bengal,Birbhum,derived_data_gov,,
+Sainthia(Suri),West Bengal,Birbhum,derived_data_gov,,
+Pai,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Siwan,Haryana,Kaithal,derived_data_gov,29.80153,76.39959
+Asandh,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Jundla,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Kunjpura,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Nigdu,Haryana,Karnal,derived_data_gov,29.69197,76.98448
+Ambikapur,Chattisgarh,Surguja,derived_data_gov,24.26459,84.41159
+Nagaur(Jayal),Rajasthan,Nagaur,derived_data_gov,27.20201,73.73394
+Jaitaran,Rajasthan,Pali,derived_data_gov,25.77276,73.32335
+Sanad,Gujarat,Ahmedabad,derived_data_gov,23.02579,72.58727
+Bhabhar,Gujarat,Banaskanth,derived_data_gov,,
+Tharad,Gujarat,Banaskanth,derived_data_gov,,
+Bhavnagar,Gujarat,Bhavnagar,derived_data_gov,21.76287,72.15331
+Palitana,Gujarat,Bhavnagar,derived_data_gov,21.76287,72.15331
+Botad,Gujarat,Botad,derived_data_gov,22.16917,71.66671
+Kalol,Gujarat,Gandhinagar,derived_data_gov,23.21667,72.68333
+Mansa,Gujarat,Gandhinagar,derived_data_gov,23.21667,72.68333
+Una,Gujarat,Gir Somnath,derived_data_gov,,
+Anjar,Gujarat,Kachchh,derived_data_gov,34.6937,73.2467
+Bhuj,Gujarat,Kachchh,derived_data_gov,34.6937,73.2467
+Mundra,Gujarat,Kachchh,derived_data_gov,34.6937,73.2467
+Rapar,Gujarat,Kachchh,derived_data_gov,34.6937,73.2467
+Kapadvanj,Gujarat,Kheda,derived_data_gov,22.75218,72.68533
+Becharaji,Gujarat,Mehsana,derived_data_gov,,
+Vijapur,Gujarat,Mehsana,derived_data_gov,,
+Visnagar,Gujarat,Mehsana,derived_data_gov,,
+Halvad,Gujarat,Morbi,derived_data_gov,22.81731,70.8377
+Vankaner,Gujarat,Morbi,derived_data_gov,22.81731,70.8377
+Patan,Gujarat,Patan,derived_data_gov,27.67658,85.31417
+Radhanpur,Gujarat,Patan,derived_data_gov,27.67658,85.31417
+Jetpur(Dist.Rajkot),Gujarat,Rajkot,derived_data_gov,22.29161,70.79322
+Talod,Gujarat,Sabarkantha,derived_data_gov,,
+Mahuva,Gujarat,Surat,derived_data_gov,21.19594,72.83023
+Chotila,Gujarat,Surendranagar,derived_data_gov,22.72706,71.64856
+Ding,Haryana,Sirsa,derived_data_gov,29.53489,75.02898
+Patharia,Madhya Pradesh,Damoh,derived_data_gov,23.83312,79.4419
+Harda,Madhya Pradesh,Harda,derived_data_gov,22.34414,77.09536
+Timarni,Madhya Pradesh,Harda,derived_data_gov,22.34414,77.09536
+Jabalpur,Madhya Pradesh,Jabalpur,derived_data_gov,23.16697,79.95006
+Sihora,Madhya Pradesh,Jabalpur,derived_data_gov,23.16697,79.95006
+Mandla,Madhya Pradesh,Mandla,derived_data_gov,22.59879,80.37115
+Bikaner (Grain),Rajasthan,Bikaner,derived_data_gov,28.01762,73.31495
+Goreswar,Assam,Kamrup,derived_data_gov,,
+Lanka,Assam,Nagaon,derived_data_gov,26.35,92.66667
+Bhatapara,Chattisgarh,Balodabazar,derived_data_gov,,
+Ramanujganj,Chattisgarh,Balrampur,derived_data_gov,23.61219,83.61115
+Bilaspur,Chattisgarh,Bilaspur,derived_data_gov,22.08005,82.15543
+Bilaspur,Haryana,Yamuna Nagar,derived_data_gov,30.12796,77.28371
+Bermo,Jharkhand,Bokaro,derived_data_gov,23.66934,86.15161
+Bokaro (Chas),Jharkhand,Bokaro,derived_data_gov,23.66934,86.15161
+Chakulia,Jharkhand,East Singhbhum,derived_data_gov,,

@@ -1,0 +1,1 @@
+# Notification-specific deps (base covers everything)

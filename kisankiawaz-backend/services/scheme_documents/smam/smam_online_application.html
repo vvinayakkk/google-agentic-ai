@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="DIRECT BENEFIT TRANSFER (DBT)" />
+    <meta name="description" content="Department Of Agriculture and Farmers Welfare, Ministry Of Agriculture & Farmers Welfare" />
+    <meta name="author" content="NIC | DAC" />
+    <link rel="icon" href="../favicon.ico" />
+
+    <meta charset="utf-8" />
+
+        <title>  NotFound </title>
+
+    <link href="/Css/bootstrap/css/bootstrap.css" rel="stylesheet"/>
+
+    <link href="/Css/bootstrap/css/bootstrap-theme.css" rel="stylesheet"/>
+
+    <link href="/Css/scrolling.css" rel="stylesheet"/>
+
+    <link href="/Css/Layout.css" rel="stylesheet"/>
+
+
+    <script src="/Scripts/jquery-1.12.4.js"></script>
+
+    
+    <script src="/Css/bootstrap/js/bootstrap.js"></script>
+
+    <script src="/Scripts/global.js"></script>
+
+    <script src="/AngulerJs/angular.js"></script>
+
+    <script src="/AngulerJs/angular-route.js"></script>
+    <script src="/AngulerJs/app.js"></script>
+    <script src="/AngulerJs/FarmMachinery.js"></script>
+    <script src="/AngulerJs/Interceptor/GlobalInterceptor.js"></script>
+    
+    <link href="/Css/bootstrapmodified.css" rel="stylesheet"/>
+
+    <link href="/Css/AdminLTE.css" rel="stylesheet"/>
+
+    <link href="/Css/ionicons.min.css" rel="stylesheet"/>
+
+    <link href="/Css/style.css" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+
+    <link href="/Css/_all-skins.min.css" rel="stylesheet"/>
+
+    <script src="/Scripts/jquery-ui.js"></script>
+    <link href="/Scripts/calander/jquery-ui.css" rel="stylesheet" />
+    <link href="/Scripts/calander/Datetime.css" rel="stylesheet" />
+
+
+
+    <style type="text/css">
+        body {
+            font-family: 'Ubuntu', sans-serif !important;
+        }
+
+
+        h1, .PH, h2 {
+            margin-top: 0px !important;
+            margin-bottom: 0px;
+        }
+
+        .navbar-inverse .navbar-brand, .navbar-inverse .navbar-nav > li > a {
+            font-weight: bold;
+            color: white;
+        }
+
+        .navbar-inverse .navbar-brand, .navbar-inverse .navbar-nav > li > ul > li > a {
+            font-weight: normal !important;
+            color: black;
+        }
+
+        .navbar-inverse .navbar-brand, .navbar-inverse .navbar-nav > li > a:hover {
+            color: gray;
+        }
+    </style>
+
+    <script type="text/javascript">
+
+
+        $(document).ready(function () {
+
+            $(".dropdown").click(function () {
+
+                var cl = $(this).attr('class').split(' ');
+                if (cl.length == 1) {
+                    $("#" + $(this).attr('id')).addClass('open');
+                }
+                if (cl.length == 2) {
+                    $("#" + $(this).attr('id')).removeClass('open');
+                }
+            });
+
+
+        });
+    </script>
+
+
+
+
+
+
+
+
+    
+</head>
+
+<body ng-app="App" oncontextmenu="return false;">
+    <header>
+        <div class="navbar navbar-default bg-blue-active" style="margin-bottom:0px;">
+            <div class="row">
+                <div>
+
+                    <ul class="nav navbar-nav navbar-right col-lg-12">
+                        <li class="col-lg-8"><a href="#" class="text-maroon"></a></li>
+
+                        <li class="border-right text-right col-lg-2"><a href="#MainContent">Skip to main content</a></li>
+
+                        <li class="col-lg-2"><a href="index/ScreenReader">Screen reader access</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="LoadPopup">
+
+            <img src="/Images/Layout/fancybox_loading.gif" style="height: 20px; width: 20px;" />
+            <b>Please Wait....</b>
+        </div>
+
+        <div class="overPopup"></div>
+
+        <div id="MessagePopUp" class="modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header text-primary">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"></button>
+                        <h4 class="modal-title h1" id="ModalHeading"></h4>
+                    </div>
+                    <div class="modal-body">
+
+                        <div id="ModalMessage" class="h3"></div>
+
+
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" ng-click="ClearAll()" data-dismiss="modal">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+
+        <div class="alert">
+
+            <div class="row logo-header">
+                <div class="col-sm-1">
+                    <img src='/Images/Layout/Emblem_of_India.svg' class="img logo" />
+                </div>
+                
+                <a href="">
+                    <div class="col-sm-8 text-justify">
+
+                        <h1 class="logoheading">Direct Benefit Transfer In Agriculture Mechanization </h1>
+                        <p class="punchline"><b> Department of Agriculture and Farmers Welfare  <br /> Ministry of Agriculture & Farmers Welfare, Govt. of India  </b></p>
+                    </div>
+                </a>
+                <div class="col-sm-2 text-center" style="padding-right:0px; padding-left:0px;">
+                    <img src='/Images/logoDigitalIndia.png' style="height:100px; width:200px;" class="img" />
+                </div>
+                
+
+                <div class="col-sm-1 center-image hidden-xs" style="padding-right:0px; padding-left:0px;">
+                    <a href="https://g20.org/en" target="_blank"> <img src='/Images/Layout/logo_G20.jpg' style="height:auto;  margin-top:2vw; width:8vw;" class="img" /></a>
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="alert">
+
+
+            <div class="navbar navbar-inverse">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                        <span class="sr-only"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    
+                    <a class="navbar-brand" href="" style="color: white; display: none;">DBT Farm Machinery</a>
+                </div>
+
+        
+
+
+                <div id="navbar" class="navbar-collapse collapse bg-blue-active text-capitalize">
+
+
+                    <ul class="nav navbar-nav" style="margin-left: auto;">
+                        
+                        <li>
+                            <a href="/">HOME</a>
+                        </li>
+
+                        <li class="dropdown" id="citizenCorner">
+
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">    CITIZEN CORNER <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+                                <li><a href="/CitizenCorner/CitizenCorner">KNOW MANUFACTURER / DEALER DETAILS</a></li>
+
+                            </ul>
+                        </li>
+                        <li><a href="/index/assistanceCalculator">SUBSIDY CALCULATOR</a></li>
+                        <li class="dropdown" id="track">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">   TRACKING <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+                                <li><a href="/index/ApplicationTracking">TRACK APPLICATION</a></li>
+                                <li><a href="/Report/Report/TrackImplement?target=blank">TRACK IMPLEMENT</a></li>
+                                <li><a href="/index/TrackMachinery?target=blank">TRACK Serial pattern</a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown" id="reg">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">    REGISTRATION <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+                                <li><a href="/Farmer/Management/Index">FARMER</a></li>
+                                <li><a href="/Manufacturer/Registration">MANUFACTURER/IMPORTER</a></li>
+                                <li><a href="/Farmer/Entrepreneur/Registration">ENTREPRENEUR</a></li>
+                                <li><a href="/Farmer/SHGGroups/Registration">SOCIETIES/SHG/FPO</a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown" id="cont">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#"> CONTACT US<span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+
+                                <li><a href="/index/ContactUs">CENTER OFFICER</a></li>
+                                <li><a href="/Master/User/StateWiseNoduleOfficerReport">STATE OFFICER</a></li>
+
+                            </ul>
+                        </li>
+
+                        <li class="dropdown" id="reg1">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">    USER MANNUAL <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+                                <li><a href="/Files/Product/Initial Preparatory.pdf" target="_blank">INITIAL PREPARATORY STEPS & SOPs</a></li>
+                                <li><a href="/Files/Product/DBT-FarmerManual----PDF.pdf" target="_blank">FARMER</a></li>
+                                <li><a href="../Files/Product/ManufacturerAndDealer-Mannual.pdf" target="_blank">MANUFACTURER & DEALER</a></li>
+                                <li><a href="../Files/Product/DBT-Govt. Officer Manual.pdf" target="_blank">GOVT. OFFICER</a></li>
+                                <li><a href="../Files/CHC.pdf" target="_blank">CHC (FARMER, ENTREPRENEUR & SOCIETIES)</a></li>
+                                <li><a href="../Files/CHCAPP.pdf" target="_blank">CHC MOBILE APP</a></li>
+                                <li><a href="../Files/CHCVideo.mp4" target="_blank">CHC APP VIDEO</a></li>
+                                <li><a href="../Files/FAQ_CHC_MobAPP.pdf" target="_blank">FAQ FOR CHC MOBILE APP</a></li>
+                                <li><a href="../Files/FAQFMDBT.pdf" target="_blank">FAQ FOR FMDBT </a></li>
+
+                            </ul>
+                        </li>
+
+
+
+                        <li>
+                            <a href="/Index/ReportViewr" target="_blank">REPORT</a>
+                            
+
+
+                        </li>
+                        <li class="dropdown" id="reg5">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">    DASHBOARD <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+
+                                
+                                <li><a href="../GraphReport/SMAMFmtti/SMAMFmtti.aspx" target="_blank">SMAM & CHCs APP</a></li>
+
+
+                            </ul>
+                        </li>
+                        
+                        <li class="dropdown" id="reg6">
+
+
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">   GUIDELINE <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+                                <li><a href="/Files/Guidelines/Guidelines_SMAM2024.pdf" target="_blank">SMAM ( 2024 )</a></li>
+                                <li><a href="/Files/Guidelines/Guidelines_CRM2024.pdf" target="_blank">CRM ( 2024 )</a></li>
+                                <li><a href="/Files/Guidelines/SMAMGiudeline2020-21.pdf" target="_blank">SMAM ( 2020-21 )</a></li>
+                                <li><a href="/Files/Guidelines/CRMGuideline2020-21.pdf" target="_blank">CRM ( 2020-21 )</a></li>
+                                <li><a href="/Files/Guidelines/smam1920.pdf" target="_blank">SMAM (Revised F(21.02.2019))</a></li>
+                                <li><a href="/Files/Guidelines/smam1920.pdf" target="_blank">SMAM (Revised F(21.02.2019))</a></li>
+                                <li><a href="/Files/Guidelines/smam1819.pdf" target="_blank">SMAM (Revised in 2018-19)</a></li>
+                                <li><a href="/Files/Guidelines/smam.pdf" target="_blank">SMAM (Revised in 2016-17)</a></li>
+                                <li><a href="/Files/Guidelines/CRM.pdf" target="_blank">CRM (Revised in 2019-20) </a></li>
+
+
+
+                            </ul>
+
+
+
+                        </li>
+                        <li class="dropdown" id="reg9">
+
+
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">    DOWNLOAD <span class="caret"></span>  </a>
+                            <ul class="dropdown-menu" style="padding:0px;">
+
+                                
+                                <li><a href="" target="_blank">1. LG DIRECTORY</a></li>
+                                <li><a href="/Files/Guidelines/Implement_Master.xlsx" target="_blank">2. IMPLEMENT MASTER</a></li>
+                                <li><a href="/Files/Guidelines/GuidelineOnlineDataShare_New.pdf" target="_blank">3. GUIDELINE FOR SHARING BENEFICIERY DATA </a></li>
+
+                            </ul>
+                        </li>
+
+                    </ul>
+                    <ul class="nav navbar-right">
+                        <li>
+                                <a href="/index/Level" id="Login" class="btn btn-default btn-flat"> <span class="glyphicon glyphicon-log-in"></span> SIGN IN</a>
+
+                        </li>
+                    </ul>
+
+                </div>
+
+
+
+
+            </div>
+            <div class="navbar-collapse collapse bg-success">
+                <marquee onmouseover="this.stop()" onmouseout="this.start()">
+                    <span class="text-red"><strong>Important Notice : </strong> </span> <span>
+                        <b>
+                            <strong>
+                                <img src="/Images/new.gif">
+                                1. Target Assignment Date and Time for Uttrakhand State : 23.02.2026 11:00 AM
+
+                                <a href="/Index/TargetInfo" target="_blank">view details</a>
+                                <img src="/Images/new.gif">
+                                2. State may apply for Annual Action Plan of financial year : '2025-26'
+                                under scheme 'SMAM' and Target Distribution(District/Block) may be done after target allocation by Center.
+                                <img src="/Images/new.gif">
+                                3. Wait listed application for 2024-25 will not be consider in 2025-26, For 2025-26 farmer has to apply freshly.
+                                Waiting list will be valid only for current financial year.
+                                <img src="/Images/new.gif">
+                                4. The applications for individual machinery will be forwarded to physical verification officer automatically if the manufacturers are not recommending
+                                the applications which are uploaded by their dealer within state specified time limit,
+                                for more information may contact to concerned State nodal officer.
+                                <img src="/Images/new.gif">
+                                5. Manufacturer and Dealer has to enter their product price financial year wise and State/District officer will Approve them
+
+                            </strong>   &nbsp;  &nbsp;  &nbsp;
+                        </b>
+                    </span>
+                </marquee>
+            </div>
+        </div>
+
+
+
+    </header>
+
+    <div class="alert">
+
+
+        <div class="body" id="MainContent" style="padding-top: 0px; margin-top:0px;">
+            
+
+<script src="/AngulerJs/Filters/Filters.js"></script>
+<script src="/AngulerJs/FarmMachinery.js"></script>
+<script src="/AngulerJs/App1_0.js"></script>
+<script src="/AngulerJs/Services/ManufacturerProductDetailService.js"></script>
+<script src="/AngulerJs/Interceptor/GlobalInterceptor.js"></script>
+<script src="/AngulerJs/directive/xml2json.js"></script>
+<script src="/Css/DropDown/customSelect.js"></script>
+<script src="/Css/Layout.css"></script>
+<script src="/AngulerJs/Services/DropdownService.js"></script>
+<script src="/AngulerJs/directive/SDirective.js"></script>
+<script src="/AngulerJs/Controllers/CitizenCornerController.js"></script>
+<script src="/AngulerJs/Services/CitizenService.js"></script>
+<link href="/Css/DropDown/styleDropDown.css" rel="stylesheet" />
+<link href="/Css/scrolling.css" rel="stylesheet" />
+<link href="/Css/Layout.css" rel="stylesheet" />
+
+<link href="/Css/_all-skins.min.css" rel="stylesheet"/>
+
+
+
+<script type="text/javascript">
+
+
+    $(document).ready(function () {
+        $(".dropdown").click(function () {
+
+            var cl = $(this).attr('class').split(' ');
+            if (cl.length == 1) {
+                $("#" + $(this).attr('id')).addClass('open');
+            }
+            if (cl.length == 2) {
+                $("#" + $(this).attr('id')).removeClass('open');
+            }
+        });
+
+
+    });
+
+</script>
+
+<div class="container" style="height:600px;">
+
+
+    <section class="content-header">
+        <h1>
+
+            <small> </small>
+        </h1>
+    </section>
+
+    <div class="pad margin no-print">
+        <div class="callout callout-danger" style="margin-bottom: 0!important; text-align:center;">
+            <h2><i class="fa fa-info"></i> Page Not Found  </h2>
+           
+        </div>
+    </div>
+
+
+</div>
+
+
+
+        </div>
+    </div>
+
+    <div id="footerPanel" class="alert  text-center navbar-default">
+        <div id="footer">
+
+            <div class="row text-white">
+
+
+
+                <div class="col-md-12">
+                    <p style="text-align:center!important; padding-top:20px;" class="text-white">
+                        For Any Query and Suggestions Please Write to Helpdesk :
+                        <span style="text-decoration:underline">  <i class="fa fa-envelope"></i>support-agrimech[at]gov[dot]in</span>
+                    </p>
+                    <p style="text-align:center;">
+                        Website Content Managed by Mechanization & Training Division, Department of Agriculture & Farmers Welfare | MoA&FW |
+                        GoI Designed and Developed by DAD/IT, DA & FW, Ministry of Agriculture. GoI
+                    </p>
+                </div>
+
+
+
+
+
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</body>
+
+
+
+</html>
+
+
+
+
+
+

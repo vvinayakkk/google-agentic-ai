@@ -1,0 +1,110 @@
+"""Equipment business logic."""
+
+import uuid
+from datetime import datetime, timezone
+
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+from shared.core.constants import Firestore
+from shared.errors import not_found, bad_request, unauthorized, ErrorCode
+
+
+class EquipmentService:
+    """Static methods for equipment CRUD operations."""
+
+    # ── List equipment ───────────────────────────────────────────
+
+    @staticmethod
+    async def list_equipment(db, farmer_id: str) -> dict:
+        """Return all equipment belonging to the farmer."""
+        query = db.collection(Firestore.EQUIPMENT).where(
+            filter=FieldFilter("farmer_id", "==", farmer_id)
+        )
+        docs = [d async for d in query.stream()]
+        items = []
+        for doc in docs:
+            item = doc.to_dict()
+            item["id"] = doc.id
+            items.append(item)
+        return {"items": items, "count": len(items)}
+
+    # ── Add equipment ────────────────────────────────────────────
+
+    @staticmethod
+    async def add_equipment(db, farmer_id: str, data: dict) -> dict:
+        """Create a new equipment entry for the farmer."""
+        required = ["name", "type"]
+        for field in required:
+            if field not in data:
+                raise bad_request(f"Missing required field: {field}")
+
+        equipment_id = uuid.uuid4().hex
+        now = datetime.now(timezone.utc).isoformat()
+
+        doc = {
+            **data,
+            "farmer_id": farmer_id,
+            "status": data.get("status", "available"),
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.collection(Firestore.EQUIPMENT).document(equipment_id).set(doc)
+
+        doc["id"] = equipment_id
+        return doc
+
+    # ── Get equipment ────────────────────────────────────────────
+
+    @staticmethod
+    async def get_equipment(db, equipment_id: str, farmer_id: str) -> dict:
+        """Return a single equipment item with ownership check."""
+        doc = await db.collection(Firestore.EQUIPMENT).document(equipment_id).get()
+        if not doc.exists:
+            raise not_found("Equipment not found")
+
+        result = doc.to_dict()
+        if result.get("farmer_id") != farmer_id:
+            raise unauthorized("You do not own this equipment")
+
+        result["id"] = doc.id
+        return result
+
+    # ── Update equipment ─────────────────────────────────────────
+
+    @staticmethod
+    async def update_equipment(db, equipment_id: str, farmer_id: str, data: dict) -> dict:
+        """Update an equipment item with ownership check."""
+        ref = db.collection(Firestore.EQUIPMENT).document(equipment_id)
+        existing = await ref.get()
+        if not existing.exists:
+            raise not_found("Equipment not found")
+
+        existing_data = existing.to_dict()
+        if existing_data.get("farmer_id") != farmer_id:
+            raise unauthorized("You do not own this equipment")
+
+        # Prevent overwriting farmer_id
+        data.pop("farmer_id", None)
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(data)
+
+        updated = await ref.get()
+        result = updated.to_dict()
+        result["id"] = updated.id
+        return result
+
+    # ── Delete equipment ─────────────────────────────────────────
+
+    @staticmethod
+    async def delete_equipment(db, equipment_id: str, farmer_id: str) -> None:
+        """Delete an equipment item with ownership check."""
+        ref = db.collection(Firestore.EQUIPMENT).document(equipment_id)
+        existing = await ref.get()
+        if not existing.exists:
+            raise not_found("Equipment not found")
+
+        existing_data = existing.to_dict()
+        if existing_data.get("farmer_id") != farmer_id:
+            raise unauthorized("You do not own this equipment")
+
+        await ref.delete()

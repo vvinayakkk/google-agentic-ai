@@ -1,0 +1,114 @@
+"""Soil moisture integration using data.gov.in APIs."""
+
+from __future__ import annotations
+
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
+
+
+SOIL_RESOURCE_ID = "4554a3c8-74e3-4f93-8727-8fd92161e345"
+DATA_GOV_BASE_URL = "https://api.data.gov.in/resource"
+
+
+def _parse_date(value: str) -> datetime:
+    if not value:
+        return datetime.min
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+        "%Y/%m/%d",
+    ):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    return datetime.min
+
+
+def _find_moisture_value(record: Dict[str, Any]) -> Optional[Any]:
+    for key, value in record.items():
+        k = key.lower()
+        if "moisture" in k:
+            return value
+    return None
+
+
+async def get_soil_moisture_data(
+    state: str,
+    district: Optional[str] = None,
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    limit: int = 1000,
+) -> Dict[str, Any]:
+    api_key = (os.getenv("DATA_GOV_API_KEY") or "").strip()
+    if not api_key:
+        raise ValueError("DATA_GOV_API_KEY is not configured")
+
+    params = {
+        "api-key": api_key,
+        "format": "json",
+        "offset": "0",
+        "limit": str(min(max(limit, 1), 1000)),
+        "filters[State]": state.strip(),
+    }
+    if district and district.strip():
+        params["filters[District]"] = district.strip()
+    if year and year.strip():
+        params["filters[Year]"] = year.strip()
+    if month and month.strip():
+        params["filters[Month]"] = month.strip().capitalize()
+
+    url = f"{DATA_GOV_BASE_URL}/{SOIL_RESOURCE_ID}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, params=params)
+        response.raise_for_status()
+        payload = response.json()
+
+    if str(payload.get("status", "")).lower() == "error":
+        raise ValueError(payload.get("message", "data.gov.in returned error"))
+
+    raw_records = payload.get("records", []) or []
+    latest_by_region: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+    for record in raw_records:
+        state_name = (record.get("State") or record.get("state") or "").strip()
+        district_name = (record.get("District") or record.get("district") or "").strip()
+        date_value = str(record.get("Date") or record.get("date") or "")
+        key = (state_name, district_name)
+
+        current = latest_by_region.get(key)
+        if not current:
+            latest_by_region[key] = record
+            continue
+
+        if _parse_date(date_value) > _parse_date(str(current.get("Date") or current.get("date") or "")):
+            latest_by_region[key] = record
+
+    latest_records: List[Dict[str, Any]] = []
+    for rec in latest_by_region.values():
+        latest_records.append(
+            {
+                "state": rec.get("State") or rec.get("state"),
+                "district": rec.get("District") or rec.get("district"),
+                "date": rec.get("Date") or rec.get("date"),
+                "soil_moisture": _find_moisture_value(rec),
+                "raw": rec,
+            }
+        )
+
+    latest_records.sort(key=lambda x: _parse_date(str(x.get("date") or "")), reverse=True)
+
+    return {
+        "source": "data.gov.in",
+        "resource_id": SOIL_RESOURCE_ID,
+        "total_records": len(raw_records),
+        "latest_records": latest_records,
+        "count": len(latest_records),
+    }

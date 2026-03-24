@@ -1,0 +1,40 @@
+# Environment
+.env
+.env.local
+.env.production
+venv/
+myenv/
+__pycache__/
+*.pyc
+*.pyo
+creds/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Build
+dist/
+build/
+*.egg-info/

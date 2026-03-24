@@ -1,0 +1,220 @@
+SHARED FOLDER AUDIT
+Generated at: 2026-03-22T21:24:38.891554+00:00
+Shared root: shared
+
+TOTAL FILES (excluding __pycache__): 34
+FULL FILE STRUCTURE:
+  - __init__.py
+  - auth/__init__.py
+  - auth/deps.py
+  - auth/security.py
+  - cache/__init__.py
+  - cache/market_cache.py
+  - core/__init__.py
+  - core/config.py
+  - core/constants.py
+  - db/__init__.py
+  - db/firebase.py
+  - db/redis.py
+  - errors/__init__.py
+  - errors/codes.py
+  - errors/exceptions.py
+  - errors/handlers.py
+  - middleware/__init__.py
+  - middleware/auth.py
+  - middleware/logging.py
+  - middleware/rate_limiter.py
+  - middleware/security.py
+  - patterns/__init__.py
+  - patterns/bloom_filter.py
+  - patterns/circuit_breaker.py
+  - patterns/service_client.py
+  - schemas/__init__.py
+  - schemas/auth.py
+  - schemas/common.py
+  - schemas/crop.py
+  - schemas/equipment.py
+  - schemas/farmer.py
+  - schemas/livestock.py
+  - services/api_key_allocator.py
+  - services/knowledge_base_service.py
+
+MODULE: auth
+PATH: shared/auth
+ROLE: authentication/authorization support
+TOTAL FILES: 3
+FILES:
+  - auth/__init__.py
+  - auth/deps.py
+  - auth/security.py
+APIs / SYMBOLS BY FILE:
+  - auth/__init__.py
+    (no top-level symbols detected)
+  - auth/deps.py
+    functions: get_current_user, get_current_farmer, get_current_admin
+  - auth/security.py
+    functions: hash_password, verify_password, _build_token, create_access_token, create_refresh_token, decode_token
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: cache
+PATH: shared/cache
+ROLE: caching layer
+TOTAL FILES: 2
+FILES:
+  - cache/__init__.py
+  - cache/market_cache.py
+APIs / SYMBOLS BY FILE:
+  - cache/__init__.py
+    (no top-level symbols detected)
+  - cache/market_cache.py
+    functions: _key, cache_get, cache_set, cache_delete, get_cached_live_prices, set_cached_live_prices, get_cached_schemes, set_cached_schemes, get_cached_scheme, set_cached_scheme, get_cached_equipment_rates, set_cached_equipment_rates, get_cached_msp, set_cached_msp
+    constants: LIVE_PRICES_TTL, MSP_PRICES_TTL, SCHEMES_LIST_TTL, SCHEME_DETAIL_TTL, EQUIPMENT_RATES_TTL, MANDI_LIST_TTL, DOCUMENT_SESSION_TTL
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: core
+PATH: shared/core
+ROLE: global config/constants
+TOTAL FILES: 3
+FILES:
+  - core/__init__.py
+  - core/config.py
+  - core/constants.py
+APIs / SYMBOLS BY FILE:
+  - core/__init__.py
+    (no top-level symbols detected)
+  - core/config.py
+    classes: Settings
+    functions: get_settings
+  - core/constants.py
+    classes: Firestore, Qdrant, UserRole, CropSeason
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: db
+PATH: shared/db
+ROLE: database client/integration layer
+TOTAL FILES: 3
+FILES:
+  - db/__init__.py
+  - db/firebase.py
+  - db/redis.py
+APIs / SYMBOLS BY FILE:
+  - db/__init__.py
+    (no top-level symbols detected)
+  - db/firebase.py
+    functions: init_firebase, get_firestore, get_db, close_firebase
+  - db/redis.py
+    functions: get_redis, close_redis
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: errors
+PATH: shared/errors
+ROLE: error codes, exceptions, handlers
+TOTAL FILES: 4
+FILES:
+  - errors/__init__.py
+  - errors/codes.py
+  - errors/exceptions.py
+  - errors/handlers.py
+APIs / SYMBOLS BY FILE:
+  - errors/__init__.py
+    (no top-level symbols detected)
+  - errors/codes.py
+    classes: HttpStatus, ErrorCode
+  - errors/exceptions.py
+    classes: AppError
+    functions: bad_request, unauthorized, forbidden, not_found, conflict, internal_error, service_unavailable
+  - errors/handlers.py
+    functions: global_exception_handler
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: middleware
+PATH: shared/middleware
+ROLE: request/response middleware and guards
+TOTAL FILES: 5
+FILES:
+  - middleware/__init__.py
+  - middleware/auth.py
+  - middleware/logging.py
+  - middleware/rate_limiter.py
+  - middleware/security.py
+APIs / SYMBOLS BY FILE:
+  - middleware/__init__.py
+    (no top-level symbols detected)
+  - middleware/auth.py
+    route: GET /protected
+  - middleware/logging.py
+    classes: RequestLoggingMiddleware
+  - middleware/rate_limiter.py
+    classes: RateLimiterMiddleware
+  - middleware/security.py
+    classes: SecurityHeadersMiddleware
+DETECTED ROUTES IN MODULE: 1
+
+MODULE: patterns
+PATH: shared/patterns
+ROLE: cross-service resilience/reuse patterns
+TOTAL FILES: 4
+FILES:
+  - patterns/__init__.py
+  - patterns/bloom_filter.py
+  - patterns/circuit_breaker.py
+  - patterns/service_client.py
+APIs / SYMBOLS BY FILE:
+  - patterns/__init__.py
+    (no top-level symbols detected)
+  - patterns/bloom_filter.py
+    classes: BloomFilter
+    functions: get_phone_bloom, get_session_bloom
+  - patterns/circuit_breaker.py
+    classes: _State, CircuitBreakerOpen, CircuitBreaker
+  - patterns/service_client.py
+    classes: ServiceClient
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: schemas
+PATH: shared/schemas
+ROLE: data models and validation schemas
+TOTAL FILES: 7
+FILES:
+  - schemas/__init__.py
+  - schemas/auth.py
+  - schemas/common.py
+  - schemas/crop.py
+  - schemas/equipment.py
+  - schemas/farmer.py
+  - schemas/livestock.py
+APIs / SYMBOLS BY FILE:
+  - schemas/__init__.py
+    (no top-level symbols detected)
+  - schemas/auth.py
+    classes: RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, ChangePasswordRequest, OTPRequest, OTPVerify, ResetPasswordRequest
+  - schemas/common.py
+    classes: PaginationParams, PaginatedResponse, MessageResponse
+    constants: T
+  - schemas/crop.py
+    classes: CropCreate, CropUpdate
+  - schemas/equipment.py
+    classes: EquipmentCreate, EquipmentUpdate, BookingCreate
+  - schemas/farmer.py
+    classes: FarmerProfileCreate, FarmerProfileUpdate
+  - schemas/livestock.py
+    classes: LivestockCreate, LivestockUpdate
+DETECTED ROUTES IN MODULE: 0
+
+MODULE: services
+PATH: shared/services
+ROLE: shared utility/domain services
+TOTAL FILES: 2
+FILES:
+  - services/api_key_allocator.py
+  - services/knowledge_base_service.py
+APIs / SYMBOLS BY FILE:
+  - services/api_key_allocator.py
+    classes: KeyState, KeyLease, ApiKeyAllocator
+    functions: get_api_key_allocator
+  - services/knowledge_base_service.py
+    classes: KnowledgeBaseService
+DETECTED ROUTES IN MODULE: 0
+
+ROUTE ROLLUP ACROSS SHARED:
+  - middleware/auth.py: GET /protected

@@ -1,0 +1,20 @@
+TESTS FOLDER AUDIT
+Generated at: 2026-03-22T21:26:19.738327+00:00
+Path: tests
+Total files: 3
+
+FULL FILE STRUCTURE:
+  - materials/audio/voice_pipeline_test.wav
+  - test_all_endpoints.py
+  - test_e2e_new_features.py
+
+TEST MODULES SUMMARY:
+  - file: test_all_endpoints.py
+    classes: TestLiveMarket, TestDocumentBuilder, TestEquipmentRentalRates, TestAgentChat
+    functions: _login_if_needed, _headers, _get, _post, _run_class, main
+  - file: test_e2e_new_features.py
+    test_cases: test_government_schemes, test_document_builder, test_document_builder_api, test_mandi_data_fetcher, test_live_market_api, test_equipment_rental_data, test_equipment_rental_api, test_knowledge_base, test_constants_integration
+
+INFERRED PURPOSE:
+  - Endpoint integration/e2e coverage for backend APIs.
+  - Validates full request-response behavior across services.

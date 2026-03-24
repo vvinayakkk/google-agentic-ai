@@ -1,0 +1,158 @@
+DATA_INGESTION FOLDER AUDIT
+Generated at: 2026-03-22T21:40:24.344076+00:00
+Path: scripts/data_ingestion
+Total python files: 6
+
+FILE STRUCTURE:
+  - generate_data_gov_extraction_snapshots.py
+  - generate_farmer_schemes_data.py
+  - generate_legacy_api_feeds.py
+  - generate_master_reference_tables.py
+  - generate_recovery_pipeline_data.py
+  - generate_staging_backfill_data.py
+
+FILE: generate_data_gov_extraction_snapshots.py
+PURPOSE: Fetches selected canonical data.gov datasets and writes strict snapshot CSVs.
+KEY FUNCTIONS:
+  - api_key
+  - fetch_resource
+  - normalize
+  - write_csv
+  - enforce_strict
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - TARGET
+  - DATA_GOV_BASE
+  - EXPECTED_HEADERS
+  - RESOURCE_IDS
+OUTPUT PATHS:
+  - scripts/reports/data_gov_extraction_snapshots
+DEPENDENCIES / REQUIREMENTS:
+  - Requires DATA_GOV_API_KEY from .env
+  - Uses data.gov.in resource API
+  - Uses HTTP requests to external APIs
+  - Loads environment variables using python-dotenv
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+FILE: generate_farmer_schemes_data.py
+PURPOSE: Pulls farmer-related schemes from india.gov.in keyword search and writes master schemes CSV.
+KEY FUNCTIONS:
+  - fetch_rows
+  - write_csv
+  - enforce_strict
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - TARGET
+  - OUT_FILE
+  - HEADERS
+  - API
+  - KEYWORDS
+OUTPUT PATHS:
+  - scripts/reports/farmer_schemes_data
+DEPENDENCIES / REQUIREMENTS:
+  - Uses india.gov.in schemes API
+  - Uses HTTP requests to external APIs
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+FILE: generate_legacy_api_feeds.py
+PURPOSE: Derives legacy feed outputs from existing reports (geocoded mandi + vegetable pulls).
+KEY FUNCTIONS:
+  - build_geocoded
+  - build_veg_pulls
+  - enforce_strict
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - REPORTS
+  - TARGET
+  - GEO_HEADERS
+  - VEG_HEADERS
+OUTPUT PATHS:
+  - scripts/reports/legacy_api_feeds
+DEPENDENCIES / REQUIREMENTS:
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+FILE: generate_master_reference_tables.py
+PURPOSE: Builds reference tables (mandi directory + normalized rental providers table).
+KEY FUNCTIONS:
+  - api_key
+  - fetch_mandis
+  - write_csv
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - TARGET
+  - MANDI_HEADERS
+  - RENT_HEADERS
+OUTPUT PATHS:
+  - scripts/reports/master_reference_tables
+DEPENDENCIES / REQUIREMENTS:
+  - Requires DATA_GOV_API_KEY from .env
+  - Uses data.gov.in resource API
+  - Uses HTTP requests to external APIs
+  - Loads environment variables using python-dotenv
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+FILE: generate_recovery_pipeline_data.py
+PURPOSE: Builds recovery_pipeline_data category CSVs from live resource IDs and writes a recovery status report.
+KEY FUNCTIONS:
+  - api_key
+  - fetch
+  - write_csv
+  - flatten_rows
+  - ensure_categories
+  - enforce_strict
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - REPORTS
+  - TARGET
+  - CATEGORIES
+  - TARGET_RESOURCES
+OUTPUT PATHS:
+  - scripts/reports/recovery_pipeline_data
+DEPENDENCIES / REQUIREMENTS:
+  - Requires DATA_GOV_API_KEY from .env
+  - Uses data.gov.in resource API
+  - Uses HTTP requests to external APIs
+  - Loads environment variables using python-dotenv
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+FILE: generate_staging_backfill_data.py
+PURPOSE: Creates staging/backfill CSVs by merging market and soil datasets and derived mandi master.
+KEY FUNCTIONS:
+  - api_key
+  - fetch
+  - write_csv
+  - main
+KEY CONSTANTS:
+  - ROOT
+  - REPORTS
+  - TARGET
+  - HEADERS
+OUTPUT PATHS:
+  - scripts/reports/staging_backfill_data
+DEPENDENCIES / REQUIREMENTS:
+  - Requires DATA_GOV_API_KEY from .env
+  - Uses data.gov.in resource API
+  - Uses HTTP requests to external APIs
+  - Loads environment variables using python-dotenv
+  - Reads/writes CSV files
+NOTES:
+  - Enforces strict output set and removes unexpected files in target report folder.
+
+RUNNING NOTE:
+  - Run scripts individually to regenerate their corresponding report folders.
+  - Final recovery data script: generate_recovery_pipeline_data.py

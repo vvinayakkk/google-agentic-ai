@@ -1,0 +1,216 @@
+===================================================================
+KISAN KI AWAZ — BACKEND REDESIGN v2.0 — CHANGE LOG
+Date: March 2026
+===================================================================
+
+This document summarizes ALL changes made during the full backend
+architectural redesign from the farmer_app_architecture_plan.md.
+
+===================================================================
+PHASE 1 — SHARED LIBRARY & FOUNDATION
+===================================================================
+
+1.  shared/core/constants.py  [MODIFIED]
+    • Added 14 new Firestore ref_* collections:
+      ref_mandi_prices, ref_mandi_directory, ref_farmer_schemes,
+      ref_soil_health, ref_equipment_providers, ref_cold_storage,
+      ref_reservoir_data, ref_crop_varieties, ref_pmfby_data,
+      ref_msp_prices, ref_fertilizer_data, ref_pesticide_advisory,
+      ref_fasal_data, ref_pin_master
+    • Added admin collections: admin_users, admin_audit_logs,
+      app_config, analytics_snapshots
+    • Added agentic collections: agent_conversations,
+      notification_preferences, voice_sessions
+    • Added ref_data_ingestion_meta for tracking data freshness
+    • Added 6 Qdrant collection names:
+      schemes_semantic, schemes_faq, mandi_price_intelligence,
+      crop_advisory_kb, geo_location_index, equipment_semantic
+    • Added SUPER_ADMIN role to UserRole enum
+    • Updated EMBEDDING_DIM from 384 to 768
+
+2.  shared/schemas/  [6 NEW FILES]
+    • scheme.py   — SchemeSearchRequest, SchemeResponse,
+                    EligibilityCheck, PMFBYData
+    • market.py   — MarketPrice, PriceTrend, MSPPrice,
+                    ColdStorage, Reservoir, MandiDirectory
+    • agent.py    — ChatRequest, ChatResponse, ConversationMessage,
+                    SessionSummary
+    • admin.py    — AdminLoginRequest, AdminUserCreate,
+                    AppConfigUpdate, AuditLog, DataFreshness,
+                    AnalyticsOverview, FarmerStatusUpdate
+    • geo.py      — PinLookupResponse, VillageSearchRequest,
+                    DistrictList, StateList
+    • notification.py — PriceAlert, NotificationPreferencesUpdate,
+                    BroadcastRequest
+
+3.  shared/schemas/__init__.py  [MODIFIED]
+    • Exports all 6 new schema modules
+
+4.  shared/core/config.py  [MODIFIED]
+    • Added 4 new service URLs:
+      SCHEMES_SERVICE_URL  (port 8009)
+      GEO_SERVICE_URL      (port 8010)
+      ADMIN_SERVICE_URL    (port 8011)
+      ANALYTICS_SERVICE_URL (port 8012)
+    • Removed deprecated CALENDAR_SERVICE_URL
+
+5.  shared/auth/deps.py  [MODIFIED]
+    • Admin users now looked up from admin_users collection
+    • Added get_current_super_admin dependency
+    • Updated get_current_admin for both ADMIN + SUPER_ADMIN
+
+6.  shared/errors/codes.py  [MODIFIED]
+    • Added error codes: SCHEME_NOT_FOUND, MARKET_DATA_NOT_FOUND,
+      GEO_PINCODE_NOT_FOUND, ADMIN_USER_EXISTS,
+      ANALYTICS_NOT_AVAILABLE, NOTIFICATION_LIMIT_EXCEEDED,
+      QDRANT_ERROR
+
+7.  shared/services/qdrant_service.py  [NEW]
+    • Shared Qdrant vector service
+    • Uses paraphrase-multilingual-mpnet-base-v2 (768-dim)
+    • Lazy initialization of model + client
+    • Methods: embed_text, embed_batch, search, ensure_collection,
+      recreate_collection, upsert
+
+===================================================================
+PHASE 2 — NEW SCRIPTS
+===================================================================
+
+8.  scripts/seed_reference_data.py  [NEW]
+    • Seeds ALL 14 ref_* Firestore collections from CSV files
+    • Reads from scripts/reports/ subdirectories
+    • Also seeds app_config with default global settings
+    • Logs ingestion metadata to ref_data_ingestion_meta
+
+9.  scripts/seed_admin.py  [NEW]
+    • Creates 2 admin users (superadmin + admin)
+    • Hashes passwords with bcrypt
+    • Outputs credentials to audit CSV
+
+10. scripts/generate_qdrant_indexes.py  [NEW]
+    • Builds all 6 Qdrant vector collections from Firestore data
+    • Uses multilingual-mpnet embeddings
+    • Logs ingestion metadata
+
+11. scripts/generate_analytics_snapshots.py  [NEW]
+    • Generates daily analytics snapshots
+    • Counts: total farmers, new today, DAU, agent queries,
+      voice sessions, top commodities, notifications
+
+===================================================================
+PHASE 3 — NEW SERVICES (4)
+===================================================================
+
+12. services/schemes/ (port 8009)  [NEW SERVICE]
+    • main.py, routes/__init__.py, services/schemes_service.py
+    • Dockerfile, requirements.txt
+    • Routes: list schemes, get by ID, semantic search via Qdrant,
+      eligibility check, PMFBY data, fertilizer advisory,
+      pesticide advisory
+
+13. services/geo/ (port 8010)  [NEW SERVICE]
+    • main.py, routes/__init__.py, services/geo_service.py
+    • Dockerfile, requirements.txt
+    • Routes: PIN code lookup, fuzzy village search via Qdrant,
+      district listing, state listing
+
+14. services/admin/ (port 8011)  [NEW SERVICE]
+    • main.py, routes/__init__.py
+    • Dockerfile, requirements.txt
+    • Routes: admin login, dashboard stats, data freshness,
+      farmer CRUD (list/get/status/conversations),
+      scheme CRUD (list/create/update/delete),
+      equipment provider CRUD, mandi price browsing,
+      ingestion logs, analytics overview,
+      config management, feature flags,
+      admin user management (SUPER_ADMIN only)
+
+15. services/analytics/ (port 8012)  [NEW SERVICE]
+    • main.py, routes/__init__.py
+    • Dockerfile, requirements.txt
+    • Routes: overview, trends, farmer growth, agent usage,
+      popular commodities, personal farmer summary
+
+===================================================================
+PHASE 4 — MODIFIED EXISTING SERVICES
+===================================================================
+
+16. services/market/routes/ref_data.py  [NEW FILE]
+    • New ref data routes added to market service:
+      cold storage, reservoir, MSP from Firestore,
+      mandi directory, price trends with trend calculation
+
+17. services/market/routes/__init__.py  [MODIFIED]
+    • Includes new ref_data router
+
+18. services/notification/routes/preferences.py  [NEW FILE]
+    • Notification preferences routes:
+      GET/PUT user preferences with price alerts
+
+19. services/notification/routes/__init__.py  [MODIFIED]
+    • Includes new preferences router
+
+20. services/agent/routes/conversations.py  [NEW FILE]
+    • Conversation history routes:
+      list, get, delete conversations from Firestore
+
+21. services/agent/routes/__init__.py  [MODIFIED]
+    • Includes new conversations router
+
+===================================================================
+PHASE 5 — INFRASTRUCTURE
+===================================================================
+
+22. nginx/nginx.conf  [MODIFIED]
+    • Added 4 new upstream blocks:
+      schemes_service → schemes-service:8009
+      geo_service     → geo-service:8010
+      admin_service   → admin-service:8011
+      analytics_service → analytics-service:8012
+    • Added admin rate limiting zone
+    • Added 4 new location blocks for routing
+
+23. docker-compose.yml  [MODIFIED]
+    • Added 4 new service entries:
+      schemes-service, geo-service, admin-service, analytics-service
+    • Gateway now depends on all 12 services
+    • All new services share common env (Firebase, Redis, Qdrant)
+
+24. workers/tasks/data_tasks.py  [NEW]
+    • Celery tasks: refresh_qdrant_indexes,
+      generate_analytics_snapshot, check_price_alerts
+
+25. workers/tasks/embedding_tasks.py  [MODIFIED]
+    • Updated to use shared QdrantService with multilingual model
+    • embed_text and embed_batch tasks rewritten
+
+===================================================================
+SERVICE ARCHITECTURE (12 SERVICES TOTAL)
+===================================================================
+
+ Port  | Service              | Status
+-------|----------------------|--------
+ 8001  | auth_service         | existing
+ 8002  | farmer_service       | existing
+ 8003  | crop_service         | existing
+ 8004  | market_service       | existing (enhanced)
+ 8005  | equipment_service    | existing
+ 8006  | agent_service        | existing (enhanced)
+ 8007  | voice_service        | existing
+ 8008  | notification_service | existing (enhanced)
+ 8009  | schemes_service      | NEW
+ 8010  | geo_service          | NEW
+ 8011  | admin_service        | NEW
+ 8012  | analytics_service    | NEW
+
+===================================================================
+NOTES
+===================================================================
+
+• STT/TTS: Unchanged — still uses Sarvam AI
+• Cron jobs: Not implemented (user will handle later)
+• All services use Docker containers with shared/ library
+• Embedding model: paraphrase-multilingual-mpnet-base-v2 (768-dim)
+• Auth: admin users in separate admin_users collection
+• Role hierarchy: farmer < admin < super_admin
+• Lint warnings: Pyre import errors are expected (Docker path)
