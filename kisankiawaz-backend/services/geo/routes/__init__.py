@@ -20,7 +20,8 @@ async def get_pin(pincode: str, user: dict = Depends(get_current_user)):
 @router.post("/village/search", status_code=HttpStatus.OK)
 async def search_village(body: VillageSearchRequest, user: dict = Depends(get_current_user)):
     """Search for a village by name (fuzzy via Qdrant)."""
-    return await GeoService.search_village(query=body.query, state=body.state, limit=body.limit)
+    db = get_async_db()
+    return await GeoService.search_village(db=db, query=body.query, state=body.state, limit=body.limit)
 
 
 @router.get("/district/{state}", status_code=HttpStatus.OK)

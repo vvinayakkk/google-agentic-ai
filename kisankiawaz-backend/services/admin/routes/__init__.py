@@ -24,6 +24,19 @@ from services.bulk_import_service import bulk_import_equipment as run_bulk_impor
 router = APIRouter()
 
 
+def _admin_browseable_collections() -> set[str]:
+    names = set()
+    for attr, value in vars(MongoCollections).items():
+        if attr.startswith("_"):
+            continue
+        if isinstance(value, str):
+            names.add(value)
+    return names
+
+
+ADMIN_BROWSEABLE_COLLECTIONS = _admin_browseable_collections()
+
+
 # ── Auth ─────────────────────────────────────────────────────────
 @router.post("/login", status_code=HttpStatus.OK)
 async def admin_login(body: AdminLoginRequest):
@@ -72,6 +85,49 @@ async def get_data_freshness(admin: dict = Depends(get_current_admin)):
         data = doc.to_dict()
         items.append({"collection": data.get("dataset", doc.id), "last_run_at": data.get("last_run_at"), "row_count": data.get("row_count", 0), "status": data.get("status", "")})
     return {"items": items}
+
+
+@router.get("/data/collection/{collection_name}", status_code=HttpStatus.OK)
+async def browse_collection(
+    collection_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=500),
+    search: str = Query(None),
+    admin: dict = Depends(get_current_admin),
+):
+    """Generic collection browser for admin dashboard database explorer."""
+    if collection_name not in ADMIN_BROWSEABLE_COLLECTIONS:
+        raise bad_request(f"Collection '{collection_name}' is not allowed")
+
+    db = get_async_db()
+    docs = []
+    query_text = (search or "").strip().lower()
+
+    async for doc in db.collection(collection_name).stream():
+        data = doc.to_dict() or {}
+        data["id"] = doc.id
+
+        if collection_name in {MongoCollections.USERS, MongoCollections.ADMIN_USERS}:
+            data.pop("password_hash", None)
+
+        if query_text and query_text not in str(data).lower():
+            continue
+
+        docs.append(data)
+
+    docs.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or item.get("_ingested_at") or ""), reverse=True)
+    total = len(docs)
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    return {
+        "collection": collection_name,
+        "items": docs[start:end],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": math.ceil(total / per_page) if per_page else 0,
+    }
 
 
 # ── Farmer Management ────────────────────────────────────────────
