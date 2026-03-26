@@ -1,1 +1,0 @@
-cache = {}  # Global cache dictionary
