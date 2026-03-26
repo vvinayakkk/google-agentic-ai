@@ -49,7 +49,7 @@ def conflict(detail: str = "Resource already exists", code: ErrorCode = ErrorCod
     return AppError(HttpStatus.CONFLICT, code, detail)
 
 
-def internal_error(detail: str = "Internal server error", code: ErrorCode = ErrorCode.FIREBASE_ERROR) -> AppError:
+def internal_error(detail: str = "Internal server error", code: ErrorCode = ErrorCode.INTERNAL_ERROR) -> AppError:
     """Return a 500 Internal Server Error."""
     return AppError(HttpStatus.INTERNAL_ERROR, code, detail)
 

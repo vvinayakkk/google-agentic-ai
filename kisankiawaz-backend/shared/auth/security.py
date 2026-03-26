@@ -1,6 +1,7 @@
 """JWT creation / verification and bcrypt password helpers."""
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import bcrypt
 import jwt
@@ -41,7 +42,7 @@ def create_refresh_token(user_id: str, role: str) -> str:
     """Create a long-lived refresh token."""
     settings = get_settings()
     return _build_token(
-        {"sub": user_id, "role": role, "type": "refresh"},
+        {"sub": user_id, "role": role, "type": "refresh", "jti": str(uuid4())},
         timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS),
     )
 

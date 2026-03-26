@@ -1,0 +1,33 @@
+NOTIFICATION SERVICE AUDIT
+Generated at: 2026-03-26T04:08:00+05:30
+Path: services/notification
+Total files (excluding __pycache__): 9
+
+FULL FILE STRUCTURE:
+  - __init__.py
+  - Dockerfile
+  - main.py
+  - requirements.txt
+  - routes\__init__.py
+  - routes\notifications.py
+  - routes\preferences.py
+  - services\__init__.py
+  - services\notification_service.py
+
+ROUTES (prefix: /api/v1/notifications):
+  - GET /api/v1/notifications/  (file: routes\notifications.py, handler: list_notifications)
+  - GET /api/v1/notifications/unread/count  (file: routes\notifications.py, handler: unread_count)
+  - GET /api/v1/notifications/{notification_id}  (file: routes\notifications.py, handler: get_notification)
+  - PUT /api/v1/notifications/{notification_id}/read  (file: routes\notifications.py, handler: mark_read)
+  - PUT /api/v1/notifications/read-all  (file: routes\notifications.py, handler: mark_all_read)
+  - DELETE /api/v1/notifications/{notification_id}  (file: routes\notifications.py, handler: delete_notification)
+  - POST /api/v1/notifications/  (file: routes\notifications.py, handler: create_notification)
+  - POST /api/v1/notifications/broadcast  (file: routes\notifications.py, handler: broadcast)
+  - GET /api/v1/notifications/preferences/  (file: routes\preferences.py, handler: get_preferences)
+  - PUT /api/v1/notifications/preferences/  (file: routes\preferences.py, handler: update_preferences)
+
+KEY NOTES:
+  - CORS uses shared allowed_origins_list from config.
+  - Global exception handlers registered for AppError and Exception.
+  - Preferences endpoints are included via routes/preferences.py.
+  - Admin create/broadcast endpoints now use shared typed schemas (CreateNotificationRequest, BroadcastRequest).

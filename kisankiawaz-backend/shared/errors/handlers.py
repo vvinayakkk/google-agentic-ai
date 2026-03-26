@@ -27,7 +27,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(
         status_code=HttpStatus.INTERNAL_ERROR,
         content={
-            "error": ErrorCode.FIREBASE_ERROR.value,
+            "error": ErrorCode.INTERNAL_ERROR.value,
             "detail": "An unexpected error occurred",
         },
     )

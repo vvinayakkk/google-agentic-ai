@@ -57,6 +57,11 @@ TARGET_RESOURCES = {
     "f17a1608-5f10-4610-bb50-a63c80d83974": "pin_master",
 }
 
+# Keep pin_master deeper than other feeds because geo lookup quality depends heavily on pincode coverage.
+MAX_ROWS_BY_RESOURCE = {
+    "f17a1608-5f10-4610-bb50-a63c80d83974": 5000,
+}
+
 def api_key() -> str:
     load_dotenv(ROOT / ".env")
     key = (os.getenv("DATA_GOV_API_KEY") or "").strip()
@@ -152,8 +157,9 @@ def main() -> None:
     for rid in TARGET_RESOURCES.keys():
         print(f"Fetching {rid}...")
         rows = []
+        max_rows = MAX_ROWS_BY_RESOURCE.get(rid, 200)
         for _ in range(3):
-            rows = fetch(rid)
+            rows = fetch(rid, max_rows=max_rows)
             if rows:
                 break
             time.sleep(0.6)

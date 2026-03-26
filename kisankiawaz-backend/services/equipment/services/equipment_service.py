@@ -10,6 +10,17 @@ from shared.errors import not_found, bad_request, unauthorized, ErrorCode
 
 
 class EquipmentService:
+    _ALLOWED_FIELDS = {
+        "name",
+        "type",
+        "status",
+        "rate_per_hour",
+        "rate_per_day",
+        "location",
+        "contact_phone",
+        "description",
+    }
+
     """Static methods for equipment CRUD operations."""
 
     # ── List equipment ───────────────────────────────────────────
@@ -33,6 +44,7 @@ class EquipmentService:
     @staticmethod
     async def add_equipment(db, farmer_id: str, data: dict) -> dict:
         """Create a new equipment entry for the farmer."""
+        data = {k: v for k, v in data.items() if k in EquipmentService._ALLOWED_FIELDS}
         required = ["name", "type"]
         for field in required:
             if field not in data:
@@ -83,10 +95,11 @@ class EquipmentService:
         if existing_data.get("farmer_id") != farmer_id:
             raise unauthorized("You do not own this equipment")
 
-        # Prevent overwriting farmer_id
-        data.pop("farmer_id", None)
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await ref.update(data)
+        updates = {k: v for k, v in data.items() if k in EquipmentService._ALLOWED_FIELDS}
+        if not updates:
+            raise bad_request("No valid fields to update")
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(updates)
 
         updated = await ref.get()
         result = updated.to_dict()

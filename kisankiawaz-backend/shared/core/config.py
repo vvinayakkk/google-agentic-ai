@@ -10,6 +10,9 @@ from pydantic import Field
 class Settings(BaseSettings):
     """All environment variables consumed by KisanKiAwaaz services."""
 
+    # ── Environment ─────────────────────────────────────────────
+    APP_ENV: str = Field(default="development", description="Runtime environment name")
+
     # ── MongoDB ────────────────────────────────────────────────
     MONGODB_URI: str = Field(
         default="mongodb://localhost:27017",
@@ -41,7 +44,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379/0", description="Redis DSN")
 
     # ── JWT ──────────────────────────────────────────────────────
-    JWT_SECRET: str = Field(default="change-me-in-production", description="JWT signing secret")
+    JWT_SECRET: str = Field(
+        default="change-me-in-production-please-override-with-a-long-random-secret",
+        description="JWT signing secret",
+    )
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
     JWT_EXPIRE_MINUTES: int = Field(default=60, description="Access-token TTL in minutes")
     JWT_REFRESH_EXPIRE_DAYS: int = Field(default=7, description="Refresh-token TTL in days")
@@ -74,6 +80,26 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> List[str]:
         """Return ALLOWED_ORIGINS as a list of strings."""
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def app_env_normalized(self) -> str:
+        return (self.APP_ENV or "development").strip().lower()
+
+    @property
+    def is_production_like(self) -> bool:
+        return self.app_env_normalized in {"prod", "production", "staging"}
+
+    def model_post_init(self, __context) -> None:  # noqa: ANN001
+        weak_defaults = {
+            "change-me-in-production",
+            "change-me-in-production-please-override-with-a-long-random-secret",
+        }
+        if self.is_production_like and self.JWT_SECRET in weak_defaults:
+            raise ValueError("JWT_SECRET must be overridden in production-like environments")
+        if self.is_production_like and len(self.JWT_SECRET or "") < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters in production-like environments")
+        if self.is_production_like and "*" in self.allowed_origins_list:
+            raise ValueError("Wildcard CORS origin is not allowed in production-like environments")
 
     @staticmethod
     def _split_csv(raw: str) -> List[str]:

@@ -1,0 +1,49 @@
+ANALYTICS SERVICE AUDIT
+Generated at: 2026-03-26T06:10:00+05:30
+Service path: services/analytics
+
+SUMMARY
+- Upgraded from basic snapshot reads to a full deterministic insight engine.
+- No external AI API calls are used. All insights are computed from internal data.
+- Added dedicated service layer at services/analytics/services/insight_service.py.
+- Expanded API surface for admin strategy, segmentation, operations, and farmer benchmarks.
+
+FILES
+- main.py
+- Dockerfile
+- requirements.txt
+- routes/__init__.py
+- services/__init__.py
+- services/insight_service.py
+
+ROUTES (base: /api/v1/analytics)
+- GET /overview
+- GET /insights/kpis
+- GET /insights/engagement
+- GET /insights/operational
+- GET /insights/opportunities
+- GET /insights/market
+- GET /insights/recommendations
+- GET /segments/farmers
+- GET /trends
+- POST /snapshots/generate
+- GET /snapshots/{date}
+- GET /snapshots/trends
+- GET /farmer/{farmer_id}/summary
+- GET /farmer/{farmer_id}/benchmarks
+- GET /overview/live
+- GET /overview/today
+
+INSIGHT DOMAINS
+- Growth: registrations, conversation and booking growth windows.
+- Engagement: activation rate, retention risk, channel intensity.
+- Operational: profile completeness, unread backlog, freshness lag.
+- Market: commodity momentum and average price signals.
+- Opportunities: inactive farmers, no-crop users, coverage gaps.
+- Recommendations: deterministic playbooks derived from KPI thresholds.
+
+NOTES
+- Route authorization:
+  - Admin role required for platform-wide analytics endpoints.
+  - Farmer summary/benchmarks allow self access or admin access.
+- Snapshot generation persists to analytics_snapshots.

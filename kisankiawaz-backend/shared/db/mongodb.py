@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, AsyncIterator, Iterator, Optional
 
+import certifi
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import AutoReconnect, ConnectionFailure, NetworkTimeout, ServerSelectionTimeoutError
@@ -486,12 +487,21 @@ def init_mongodb() -> MongoClient:
         return _sync_client
 
     settings = get_settings()
+    mongo_kwargs: dict[str, Any] = {
+        "retryWrites": True,
+        "connectTimeoutMS": 30000,
+        "serverSelectionTimeoutMS": 30000,
+        "socketTimeoutMS": 60000,
+    }
+
+    # Atlas/DNS SRV deployments are TLS by default; pin CA bundle explicitly for container stability.
+    if str(settings.MONGODB_URI).startswith("mongodb+srv://"):
+        mongo_kwargs["tls"] = True
+        mongo_kwargs["tlsCAFile"] = certifi.where()
+
     _sync_client = MongoClient(
         settings.MONGODB_URI,
-        retryWrites=True,
-        connectTimeoutMS=30000,
-        serverSelectionTimeoutMS=30000,
-        socketTimeoutMS=60000,
+        **mongo_kwargs,
     )
     _sync_db = _sync_client[settings.MONGODB_DB_NAME]
     logger.info("MongoDB client initialised")

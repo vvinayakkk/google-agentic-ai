@@ -1,36 +1,57 @@
 NGINX FOLDER AUDIT
-Generated at: 2026-03-22T21:26:19.754879+00:00
+Generated at: 2026-03-26T06:15:00+05:30
 Path: nginx
-Total files: 2
+Total files: 3
 
 FULL FILE STRUCTURE:
   - Dockerfile
+  - info.txt
   - nginx.conf
 
 NGINX CONFIG SUMMARY:
-  - upstream blocks: auth_service, farmer_service, crop_service, market_service, equipment_service, agent_service, voice_service, notification_service
   - listen directives: 8000
-  - server_name values: _
+  - runtime upstream variables:
+    - auth_upstream -> auth-service:8001
+    - farmer_upstream -> farmer-service:8002
+    - crop_upstream -> crop-service:8003
+    - market_upstream -> market-service:8004
+    - equipment_upstream -> equipment-service:8005
+    - agent_upstream -> agent-service:8006
+    - voice_upstream -> voice-service:8007
+    - notification_upstream -> notification-service:8008
+    - schemes_upstream -> schemes-service:8009
+    - geo_upstream -> geo-service:8010
+    - admin_upstream -> admin-service:8011
+    - analytics_upstream -> analytics-service:8012
   - location routes:
     - /health
-    - /api/v1/auth/
-    - /api/v1/farmers/
-    - /api/v1/crops/
-    - /api/v1/market/
-    - /api/v1/equipment/
-    - /api/v1/agent/
-    - /api/v1/voice/
-    - /api/v1/notifications/
+    - /api/v1/auth
+    - /api/v1/farmers
+    - /api/v1/crops
+    - /api/v1/market
+    - /api/v1/equipment
+    - /api/v1/agent
+    - /api/v1/voice
+    - /api/v1/notifications
+    - /api/v1/schemes
+    - /api/v1/geo
+    - /api/v1/admin
+    - /api/v1/analytics
     - /
   - proxy_pass targets:
-    - http://auth_service
-    - http://farmer_service
-    - http://crop_service
-    - http://market_service
-    - http://equipment_service
-    - http://agent_service
-    - http://voice_service
-    - http://notification_service
-INFERRED PURPOSE:
-  - Reverse proxy and traffic routing to backend microservices.
-  - Central ingress for API path-based service dispatch.
+    - http://$auth_upstream
+    - http://$farmer_upstream
+    - http://$crop_upstream
+    - http://$market_upstream
+    - http://$equipment_upstream
+    - http://$agent_upstream
+    - http://$voice_upstream
+    - http://$notification_upstream
+    - http://$schemes_upstream
+    - http://$geo_upstream
+    - http://$admin_upstream
+    - http://$analytics_upstream
+  - notification routing note:
+    - location /api/v1/notifications covers nested preferences endpoints (/preferences/*) via same upstream mapping.
+  - analytics routing note:
+    - location /api/v1/analytics now has proxy_read_timeout=180s to support heavier deterministic insight generation responses.

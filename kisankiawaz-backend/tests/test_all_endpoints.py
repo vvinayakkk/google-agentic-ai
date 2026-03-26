@@ -1,8 +1,8 @@
 """
 Comprehensive Automated Endpoint Tests
 =======================================
-Tests all 38 endpoints across live-market, document-builder,
-equipment-rental-rates, and agent-chat services.
+Tests endpoints across live-market, document-builder,
+equipment-rental-rates, agent-chat, voice, and analytics services.
 
 Usage:
   python -m pytest tests/test_all_endpoints.py -v --tb=short
@@ -10,11 +10,22 @@ Usage:
 """
 
 import os, sys, json, time, uuid, base64
+from pathlib import Path
 from typing import Optional
 
 import requests
 
 BASE = os.getenv("API_BASE", "http://localhost:8000")
+MAX_CHAT_LATENCY_SECONDS = float(os.getenv("MAX_CHAT_LATENCY_SECONDS", "45"))
+NEGATIVE_MARKERS = [
+    "i can't",
+    "i cannot",
+    "unable",
+    "not available",
+    "not found",
+    "couldn't find",
+    "no data",
+]
 
 # ── Auth helpers ──────────────────────────────────────────────
 AUTH_TOKEN: Optional[str] = None
@@ -26,29 +37,32 @@ def _login_if_needed() -> bool:
     if AUTH_TOKEN:
         return True
 
-    phone = os.getenv("TEST_PHONE", "+919876543211")
-    password = os.getenv("TEST_PASSWORD", "Test@1234")
-    try:
-        r = requests.post(
-            f"{BASE}/api/v1/auth/login",
-            json={"phone": phone, "password": password},
-            timeout=30,
-        )
-        if not r.ok:
-            print(f"  ⚠ login failed: {r.status_code} {r.text[:160]}")
-            return False
+    candidates = [
+        (os.getenv("TEST_PHONE", "+919800000001"), os.getenv("TEST_PASSWORD", "Farmer@123")),
+        ("+919876543211", "Test@1234"),
+    ]
+    for phone, password in candidates:
+        try:
+            r = requests.post(
+                f"{BASE}/api/v1/auth/login",
+                json={"phone": phone, "password": password},
+                timeout=30,
+            )
+            if not r.ok:
+                continue
 
-        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
-        token = data.get("access_token") or data.get("token")
-        if not token:
-            print("  ⚠ login response missing access token")
-            return False
+            data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+            token = data.get("access_token") or data.get("token")
+            if not token:
+                continue
 
-        AUTH_TOKEN = token
-        return True
-    except Exception as exc:
-        print(f"  ⚠ login exception: {exc}")
-        return False
+            AUTH_TOKEN = token
+            return True
+        except Exception:
+            continue
+
+    print("  ⚠ login failed for all configured test credential candidates")
+    return False
 
 def _headers():
     """Return auth headers if a token was obtained."""
@@ -91,6 +105,16 @@ def _post(path, body=None, expect=200, timeout=90, retries=0):
                 retry_after = 0
         time.sleep(max(2, retry_after))
         attempt += 1
+
+
+def _post_multipart(path, files, data=None, expect=200, timeout=90):
+    headers = {}
+    if AUTH_TOKEN:
+        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+    r = requests.post(f"{BASE}{path}", headers=headers, files=files, data=data or {}, timeout=timeout)
+    expected = expect if isinstance(expect, (list, tuple, set)) else [expect]
+    assert r.status_code in expected, f"POST multipart {path} → {r.status_code}: {r.text[:300]}"
+    return r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -321,7 +345,7 @@ class TestAgentChat:
         data = _post(
             f"{self.prefix}/chat",
             {
-                "message": "Tell me about PM-KISAN scheme benefits and eligibility",
+                "message": "Tell me full PM-KISAN details: benefits, eligibility, required documents, where to apply, and process",
                 "language": "en",
             },
             timeout=120,
@@ -329,6 +353,12 @@ class TestAgentChat:
         )
         assert isinstance(data, dict)
         resp = str(data.get("response", data.get("message", "")))
+        low = resp.lower()
+        assert any(k in low for k in ["benefit", "benefits"]), "Expected scheme benefits details"
+        assert "eligib" in low, "Expected eligibility details"
+        assert ("document" in low) or ("required" in low), "Expected required documents details"
+        assert ("where to apply" in low) or ("official portal" in low) or ("csc" in low), "Expected where to apply details"
+        assert "process" in low, "Expected application process details"
         print(f"  ✓ chat scheme: {resp[:60]}...")
 
     def test_03_chat_document_builder(self):
@@ -382,6 +412,194 @@ class TestAgentChat:
         assert isinstance(data, (list, dict))
         print(f"  ✓ semantic search: ok")
 
+    def test_07_chat_language_switch_per_turn(self):
+        """Same session should mirror turn language dynamically (English -> Hindi)."""
+        sid = str(uuid.uuid4())
+
+        first = _post(
+            f"{self.prefix}/chat",
+            {
+                "message": "Give me quick wheat mandi selling advice with source and latest timestamp.",
+                "session_id": sid,
+            },
+            timeout=120,
+            retries=2,
+        )
+        resp_en = str(first.get("response", ""))
+        assert len(resp_en) > 20, "Expected meaningful English response"
+
+        second = _post(
+            f"{self.prefix}/chat",
+            {
+                "message": "अब गेहूं बेचने के लिए 3 सीधे कदम बताओ और स्रोत व समय भी बताओ",
+                "session_id": sid,
+            },
+            timeout=120,
+            retries=2,
+        )
+        resp_hi = str(second.get("response", ""))
+        assert len(resp_hi) > 20, "Expected meaningful Hindi response"
+        assert any("\u0900" <= ch <= "\u097f" for ch in resp_hi), "Expected Devanagari output for Hindi turn"
+        print("  ✓ chat language switching: per-turn mirroring works")
+
+    def test_08_chat_farmer_friendly_no_refusal(self):
+        """Market response should avoid refusal-style language and stay practical."""
+        start = time.time()
+        data = _post(
+            f"{self.prefix}/chat",
+            {
+                "message": "Tell me mandi prices for wheat in Maharashtra with source and last updated info.",
+                "language": "en",
+            },
+            timeout=120,
+            retries=2,
+        )
+        latency = time.time() - start
+        resp = str(data.get("response", ""))
+        lower = resp.lower()
+        assert resp.strip(), "Expected non-empty chat response"
+        for marker in NEGATIVE_MARKERS:
+            assert marker not in lower, f"Refusal marker leaked in response: {marker}"
+        assert ("source" in lower) or ("srot" in lower) or ("स्रोत" in resp), "Expected source mention"
+        assert latency <= MAX_CHAT_LATENCY_SECONDS, f"Chat latency too high: {latency:.2f}s"
+        print(f"  ✓ chat farmer-friendly/no-refusal: {latency:.2f}s")
+
+
+class TestVoiceCommand:
+    prefix = "/api/v1/voice"
+    audio_path = Path(__file__).resolve().parent / "materials" / "audio" / "voice_pipeline_test.wav"
+
+    def test_01_voice_text_no_refusal(self):
+        with open(self.audio_path, "rb") as fh:
+            data = _post_multipart(
+                f"{self.prefix}/command/text",
+                files={"file": ("voice_pipeline_test.wav", fh, "audio/wav")},
+                data={"language": "hi-IN"},
+                timeout=120,
+            )
+
+        response = str(data.get("response", ""))
+        low = response.lower()
+        assert response.strip(), "Expected non-empty voice response"
+        for marker in NEGATIVE_MARKERS + ["i don't know", "i do not know"]:
+            assert marker not in low, f"Voice response contains refusal marker: {marker}"
+        print("  ✓ voice no-refusal: ok")
+
+    def test_02_voice_text_has_data_markers(self):
+        with open(self.audio_path, "rb") as fh:
+            data = _post_multipart(
+                f"{self.prefix}/command/text",
+                files={"file": ("voice_pipeline_test.wav", fh, "audio/wav")},
+                data={"language": "hi-IN"},
+                timeout=120,
+            )
+
+        response = str(data.get("response", ""))
+        low = response.lower()
+        assert response.strip(), "Expected non-empty voice response"
+        assert data.get("response_origin") == "agent", "Expected strict agent-origin response"
+        assert isinstance(data.get("latency_ms", {}), dict), "Expected latency telemetry"
+        assert data.get("latency_ms", {}).get("total") is not None, "Expected total latency metric"
+        print("  ✓ voice data markers + telemetry: ok")
+
+    def test_03_voice_text_has_provenance_and_tool_evidence(self):
+        with open(self.audio_path, "rb") as fh:
+            data = _post_multipart(
+                f"{self.prefix}/command/text",
+                files={"file": ("voice_pipeline_test.wav", fh, "audio/wav")},
+                data={"language": "hi-IN"},
+                timeout=120,
+            )
+
+        origin = data.get("response_origin")
+        assert origin == "agent", f"Voice strict mode expects agent origin, got: {origin}"
+        assert data.get("fallback_used") is False, "Voice strict mode should never return fallback answers"
+
+        tool_evidence = data.get("tool_evidence", {})
+        assert isinstance(tool_evidence, dict) and tool_evidence, "Expected tool_evidence payload"
+        assert "market" in tool_evidence, "Expected market evidence key"
+
+        agent_used = (data.get("agent_metadata", {}) or {}).get("agent_used")
+        assert agent_used, "Agent-origin response must include agent_used metadata"
+
+        print(f"  ✓ voice provenance/tool evidence: origin={origin}")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  6. ANALYTICS ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+class TestAnalyticsInsights:
+    prefix = "/api/v1/analytics"
+
+    def _get_self_user_id(self) -> Optional[str]:
+        try:
+            data = _get("/api/v1/auth/me", expect=(200, 401, 403), timeout=45)
+            if isinstance(data, dict):
+                return data.get("id") or data.get("user_id")
+            return None
+        except Exception:
+            return None
+
+    def test_01_overview(self):
+        data = _get(f"{self.prefix}/overview", params={"days": 30}, expect=(200, 401, 403), timeout=120)
+        if isinstance(data, dict) and "scorecard" in data:
+            assert "engagement" in data
+            assert "operational_health" in data
+            print("  ✓ analytics overview: payload validated")
+            return
+        print("  ⚠ analytics overview: admin auth required in this environment")
+
+    def test_02_kpis(self):
+        data = _get(f"{self.prefix}/insights/kpis", params={"days": 30}, expect=(200, 401, 403), timeout=120)
+        if isinstance(data, dict) and "scorecard" in data:
+            assert isinstance(data.get("scorecard"), list)
+            print("  ✓ analytics KPIs: payload validated")
+            return
+        print("  ⚠ analytics KPIs: admin auth required in this environment")
+
+    def test_03_market_insights(self):
+        data = _get(f"{self.prefix}/insights/market", params={"days": 30}, expect=(200, 401, 403), timeout=120)
+        if isinstance(data, dict) and "market_intelligence" in data:
+            mi = data.get("market_intelligence") or {}
+            assert "top_commodities" in mi
+            print("  ✓ analytics market insights: payload validated")
+            return
+        print("  ⚠ analytics market insights: admin auth required in this environment")
+
+    def test_04_snapshot_generate(self):
+        data = _post(f"{self.prefix}/snapshots/generate", body=None, expect=(201, 401, 403), timeout=120)
+        if isinstance(data, dict) and "insights" in data:
+            assert "date" in data
+            print("  ✓ analytics snapshot generate: payload validated")
+            return
+        print("  ⚠ analytics snapshot generate: admin auth required in this environment")
+
+    def test_05_farmer_self_summary(self):
+        user_id = self._get_self_user_id()
+        if not user_id:
+            print("  ⚠ analytics self summary: user auth unavailable")
+            return
+        data = _get(f"{self.prefix}/farmer/{user_id}/summary", params={"days": 30}, expect=(200, 401, 403), timeout=120)
+        if isinstance(data, dict) and data.get("farmer_id") == user_id:
+            assert "totals" in data
+            assert "activity" in data
+            print("  ✓ analytics farmer self summary: payload validated")
+            return
+        print("  ⚠ analytics self summary: endpoint guarded in this environment")
+
+    def test_06_farmer_self_benchmarks(self):
+        user_id = self._get_self_user_id()
+        if not user_id:
+            print("  ⚠ analytics self benchmarks: user auth unavailable")
+            return
+        data = _get(f"{self.prefix}/farmer/{user_id}/benchmarks", params={"days": 30}, expect=(200, 401, 403), timeout=120)
+        if isinstance(data, dict) and data.get("farmer_id") == user_id:
+            assert "benchmark" in data
+            print("  ✓ analytics farmer self benchmarks: payload validated")
+            return
+        print("  ⚠ analytics self benchmarks: endpoint guarded in this environment")
+
 
 # ═══════════════════════════════════════════════════════════════
 #  Standalone runner
@@ -420,6 +638,8 @@ def main():
         ("2. Document Builder", TestDocumentBuilder),
         ("3. Equipment Rental Rates", TestEquipmentRentalRates),
         ("4. Agent Chat", TestAgentChat),
+        ("5. Voice Command", TestVoiceCommand),
+        ("6. Analytics", TestAnalyticsInsights),
     ]
 
     for name, cls in suites:

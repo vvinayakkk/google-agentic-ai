@@ -1,20 +1,36 @@
 TESTS FOLDER AUDIT
-Generated at: 2026-03-22T21:26:19.738327+00:00
+Generated at: 2026-03-26T07:28:00+05:30
 Path: tests
-Total files: 3
+Total files: 5
 
 FULL FILE STRUCTURE:
-  - materials/audio/voice_pipeline_test.wav
+  - info.txt
+  - materials\audio\voice_pipeline_test.wav
   - test_all_endpoints.py
+  - test_dynamic_pentest.py
   - test_e2e_new_features.py
 
-TEST MODULES SUMMARY:
+TEST SCRIPT DETAILS:
   - file: test_all_endpoints.py
-    classes: TestLiveMarket, TestDocumentBuilder, TestEquipmentRentalRates, TestAgentChat
-    functions: _login_if_needed, _headers, _get, _post, _run_class, main
+    classes: TestLiveMarket, TestDocumentBuilder, TestEquipmentRentalRates, TestAgentChat, TestVoiceCommand, TestAnalyticsInsights
+    test_functions_count: 43
+    test_functions: test_01_commodities, test_02_states, test_03_msp_all, test_04_msp_wheat, test_05_prices_default, test_06_prices_state, test_07_prices_all_india, test_08_prices_bulk, test_09_mandis, test_10_sync, test_01_list_schemes, test_02_get_scheme, test_03_scheme_docs_summary, test_04_scheme_docs_pmkisan, test_05_start_session, test_06_get_session, test_07_submit_answer, test_08_extract_text, test_09_list_sessions, test_01_list_all, test_02_categories, test_03_by_category, test_04_by_state, test_05_search, test_06_chc_info, test_07_specific_equipment, test_01_chat_crop_query, test_02_chat_scheme_query, test_03_chat_document_builder, test_04_chat_equipment_rental, test_05_chat_market_query, test_06_search, test_07_chat_language_switch_per_turn, test_08_chat_farmer_friendly_no_refusal, test_01_voice_text_no_refusal, test_02_voice_text_has_data_markers, test_03_voice_text_has_provenance_and_tool_evidence, test_01_overview, test_02_kpis, test_03_market_insights, test_04_snapshot_generate, test_05_farmer_self_summary, test_06_farmer_self_benchmarks
+    helper_functions: _login_if_needed, _headers, setup_module, _get, _post, _post_multipart, _run_class, main
   - file: test_e2e_new_features.py
-    test_cases: test_government_schemes, test_document_builder, test_document_builder_api, test_mandi_data_fetcher, test_live_market_api, test_equipment_rental_data, test_equipment_rental_api, test_knowledge_base, test_constants_integration
+    classes: (none)
+    test_functions_count: 10
+    test_functions: test_government_schemes, test_document_builder, test_document_builder_api, test_mandi_data_fetcher, test_live_market_api, test_equipment_rental_data, test_equipment_rental_api, test_knowledge_base, test_constants_integration, test_analytics_api
+    helper_functions: log, get_auth_token, auth_headers, run_all_tests
+  - file: test_dynamic_pentest.py
+    classes: (none)
+    test_functions_count: 0
+    test_functions: (standalone runtime security checks)
+    helper_functions: _log, _require_health, _login_farmer, _check_key_pool_admin_only, _check_refresh_rotation, _check_default_secret_forgery_rejected, _check_cors_not_wildcard, run_pentest
 
-INFERRED PURPOSE:
-  - Endpoint integration/e2e coverage for backend APIs.
-  - Validates full request-response behavior across services.
+NOTES:
+  - test_all_endpoints.py includes live-market, document-builder, equipment, agent, voice command, and analytics validations.
+  - Analytics tests are auth-aware: they validate payloads on success and tolerate guarded environments (401/403) for admin-only endpoints.
+  - test_e2e_new_features.py supports strict admin analytics assertions when E2E_ADMIN_PHONE and E2E_ADMIN_PASSWORD are set.
+  - test_e2e_new_features.py covers service-level data/integration checks for schemes, document builder, mandi, equipment, KB, and constants.
+  - test_e2e_new_features.py now also validates analytics service health and auth-aware analytics route behavior.
+  - test_dynamic_pentest.py verifies runtime hardening: refresh token replay protection, admin-only key-pool status, non-wildcard agent CORS, and forged default-secret token rejection.

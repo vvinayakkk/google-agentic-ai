@@ -27,3 +27,25 @@ class LivestockUpdate(BaseModel):
     health_status: Optional[str] = Field(default=None, max_length=50)
 
     model_config = {"strict": True}
+
+
+class LivestockRecordCreate(BaseModel):
+    """Payload for farmer livestock record create."""
+
+    type: str = Field(..., min_length=1, max_length=100)
+    breed: str = Field(..., min_length=1, max_length=120)
+    count: int = Field(..., gt=0)
+    health_status: Optional[str] = Field(default="healthy", max_length=50)
+
+    model_config = {"strict": True, "extra": "forbid"}
+
+
+class LivestockRecordUpdate(BaseModel):
+    """Payload for farmer livestock record update."""
+
+    type: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    breed: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    count: Optional[int] = Field(default=None, gt=0)
+    health_status: Optional[str] = Field(default=None, max_length=50)
+
+    model_config = {"strict": True, "extra": "forbid"}

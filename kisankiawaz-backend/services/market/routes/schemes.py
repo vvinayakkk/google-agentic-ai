@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from shared.auth.deps import get_current_user, get_current_admin
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.market import AdminSchemeUpsert
 
 from services.scheme_service import SchemeService
 
@@ -47,23 +48,27 @@ async def get_scheme(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def create_scheme(
-    body: dict,
+    body: AdminSchemeUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a government scheme."""
     db = get_async_db()
-    return await SchemeService.create_scheme(db=db, data=body)
+    return await SchemeService.create_scheme(db=db, data=body.model_dump(exclude_none=True))
 
 
 @router.put("/{scheme_id}", status_code=HttpStatus.OK)
 async def update_scheme(
     scheme_id: str,
-    body: dict,
+    body: AdminSchemeUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a government scheme."""
     db = get_async_db()
-    return await SchemeService.update_scheme(db=db, scheme_id=scheme_id, data=body)
+    return await SchemeService.update_scheme(
+        db=db,
+        scheme_id=scheme_id,
+        data=body.model_dump(exclude_none=True),
+    )
 
 
 @router.delete("/{scheme_id}", status_code=HttpStatus.NO_CONTENT)

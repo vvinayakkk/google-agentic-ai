@@ -8,7 +8,18 @@ from shared.auth.security import hash_password, verify_password, create_access_t
 from shared.db.mongodb import get_async_db
 from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus, bad_request, not_found, conflict, ErrorCode
-from shared.schemas.admin import AdminLoginRequest, AdminUserCreate, AppConfigUpdate, FarmerStatusUpdate
+from shared.schemas.admin import (
+    AdminLoginRequest,
+    AdminUserCreate,
+    AppConfigUpdate,
+    FarmerStatusUpdate,
+    BulkImportRequest,
+    SchemeUpsertRequest,
+    ProviderUpsertRequest,
+    FeatureFlagsUpdate,
+)
+from services.bulk_import_service import bulk_import_schemes as run_bulk_import_schemes
+from services.bulk_import_service import bulk_import_equipment as run_bulk_import_equipment
 
 router = APIRouter()
 
@@ -143,31 +154,33 @@ async def list_schemes(page: int = Query(1, ge=1), per_page: int = Query(20, ge=
 
 
 @router.post("/data/schemes", status_code=HttpStatus.CREATED)
-async def create_scheme(data: dict, admin: dict = Depends(get_current_admin)):
+async def create_scheme(data: SchemeUpsertRequest, admin: dict = Depends(get_current_admin)):
     db = get_async_db()
+    payload = data.model_dump(exclude_none=True)
     now = datetime.now(timezone.utc).isoformat()
-    data["_ingested_at"] = now
-    data["_created_by"] = admin.get("id", "")
-    scheme_id = data.get("scheme_id", "")
+    payload["_ingested_at"] = now
+    payload["_created_by"] = admin.get("id", "")
+    scheme_id = payload.get("scheme_id", "")
     doc_id = f"scheme_{scheme_id}" if scheme_id else None
     if doc_id:
-        await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).set(data, merge=True)
+        await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).set(payload, merge=True)
     else:
-        _, ref = await db.collection(MongoCollections.REF_FARMER_SCHEMES).add(data)
+        _, ref = await db.collection(MongoCollections.REF_FARMER_SCHEMES).add(payload)
         doc_id = ref.id
     await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add({"admin_id": admin.get("id", ""), "action": "CREATE_SCHEME", "target_collection": "ref_farmer_schemes", "target_doc_id": doc_id, "timestamp": now})
     return {"detail": "Scheme created", "id": doc_id}
 
 
 @router.put("/data/schemes/{scheme_id}", status_code=HttpStatus.OK)
-async def update_scheme(scheme_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+async def update_scheme(scheme_id: str, data: SchemeUpsertRequest, admin: dict = Depends(get_current_admin)):
     db = get_async_db()
     doc_id = f"scheme_{scheme_id}" if not scheme_id.startswith("scheme_") else scheme_id
     doc = await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).get()
     if not doc.exists:
         raise not_found("Scheme not found")
-    data["_ingested_at"] = datetime.now(timezone.utc).isoformat()
-    await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).update(data)
+    payload = data.model_dump(exclude_none=True)
+    payload["_ingested_at"] = datetime.now(timezone.utc).isoformat()
+    await db.collection(MongoCollections.REF_FARMER_SCHEMES).document(doc_id).update(payload)
     return {"detail": "Scheme updated"}
 
 
@@ -191,25 +204,61 @@ async def list_providers(admin: dict = Depends(get_current_admin)):
 
 
 @router.post("/data/equipment-providers", status_code=HttpStatus.CREATED)
-async def create_provider(data: dict, admin: dict = Depends(get_current_admin)):
+async def create_provider(data: ProviderUpsertRequest, admin: dict = Depends(get_current_admin)):
     db = get_async_db()
-    data["_ingested_at"] = datetime.now(timezone.utc).isoformat()
-    rental_id = data.get("rental_id", "")
+    payload = data.model_dump(exclude_none=True)
+    payload["_ingested_at"] = datetime.now(timezone.utc).isoformat()
+    rental_id = payload.get("rental_id", "")
     if rental_id:
-        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).set(data, merge=True)
+        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).set(payload, merge=True)
     else:
-        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).add(data)
+        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).add(payload)
     return {"detail": "Provider created"}
 
 
 @router.put("/data/equipment-providers/{rental_id}", status_code=HttpStatus.OK)
-async def update_provider(rental_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+async def update_provider(rental_id: str, data: ProviderUpsertRequest, admin: dict = Depends(get_current_admin)):
     db = get_async_db()
     doc = await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).get()
     if not doc.exists:
         raise not_found("Provider not found")
-    await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).update(data)
+    payload = data.model_dump(exclude_none=True)
+    await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).update(payload)
     return {"detail": "Provider updated"}
+
+
+@router.post("/data/import/schemes", status_code=HttpStatus.OK)
+async def bulk_import_schemes(body: BulkImportRequest, admin: dict = Depends(get_current_super_admin)):
+    result = run_bulk_import_schemes(body.input_file, body.reembed)
+    db = get_async_db()
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "BULK_IMPORT_SCHEMES",
+            "target_collection": "ref_farmer_schemes",
+            "target_doc_id": "bulk-import",
+            "payload_summary": f"{result['input_file']} inserted={result.get('inserted', 0)} skipped_db={result.get('skipped_duplicate_in_db', 0)} skipped_file={result.get('skipped_duplicate_in_file', 0)} reembed={body.reembed}",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    return result
+
+
+@router.post("/data/import/equipment", status_code=HttpStatus.OK)
+async def bulk_import_equipment(body: BulkImportRequest, admin: dict = Depends(get_current_super_admin)):
+    result = run_bulk_import_equipment(body.input_file, body.reembed)
+    db = get_async_db()
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "BULK_IMPORT_EQUIPMENT",
+            "target_collection": "ref_equipment_providers",
+            "target_doc_id": "bulk-import",
+            "payload_summary": f"{result['input_file']} inserted={result.get('inserted', 0)} skipped_db={result.get('skipped_duplicate_in_db', 0)} skipped_file={result.get('skipped_duplicate_in_file', 0)} reembed={body.reembed}",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    return result
 
 
 @router.get("/data/mandi-prices", status_code=HttpStatus.OK)
@@ -248,7 +297,13 @@ async def get_ingestion_logs(admin: dict = Depends(get_current_admin)):
 @router.post("/ingestion/trigger/{script_name}", status_code=HttpStatus.OK)
 async def trigger_ingestion(script_name: str, admin: dict = Depends(get_current_super_admin)):
     """Trigger a data ingestion script. SUPER_ADMIN only."""
-    allowed = ["seed_reference_data", "generate_qdrant_indexes", "generate_analytics_snapshots"]
+    allowed = [
+        "seed_reference_data",
+        "generate_qdrant_indexes",
+        "generate_analytics_snapshots",
+        "upsert_schemes_from_file",
+        "upsert_equipment_from_file",
+    ]
     if script_name not in allowed:
         raise bad_request(f"Script '{script_name}' is not allowed. Allowed: {allowed}")
     db = get_async_db()
@@ -298,10 +353,10 @@ async def update_config(body: AppConfigUpdate, admin: dict = Depends(get_current
 
 
 @router.put("/config/feature-flags", status_code=HttpStatus.OK)
-async def update_feature_flags(flags: dict, admin: dict = Depends(get_current_super_admin)):
+async def update_feature_flags(body: FeatureFlagsUpdate, admin: dict = Depends(get_current_super_admin)):
     db = get_async_db()
     now = datetime.now(timezone.utc).isoformat()
-    await db.collection(MongoCollections.APP_CONFIG).document("global").update({"feature_flags": flags, "updated_at": now, "updated_by": admin.get("id", "")})
+    await db.collection(MongoCollections.APP_CONFIG).document("global").update({"feature_flags": body.flags, "updated_at": now, "updated_by": admin.get("id", "")})
     return {"detail": "Feature flags updated"}
 
 

@@ -771,28 +771,32 @@ class EquipmentRentalSyncService:
     async def seed_to_mongo(self, db) -> dict:
         """Seed all equipment rental data into MongoCollections."""
         from datetime import datetime, timezone
+        import asyncio
 
         now = datetime.now(timezone.utc).isoformat()
         count = 0
-        batch = db.batch()
+        tasks = []
 
         for equip in EQUIPMENT_RENTAL_DATA:
             doc_id = equip["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
             doc_ref = db.collection("equipment").document(doc_id)
-            batch.set(doc_ref, {
-                **equip,
-                "is_active": True,
-                "created_at": now,
-                "updated_at": now,
-            })
+            tasks.append(
+                doc_ref.set({
+                    **equip,
+                    "is_active": True,
+                    "created_at": now,
+                    "updated_at": now,
+                    "is_seed_data": True,
+                }, merge=True)
+            )
             count += 1
 
             if count % 400 == 0:
-                await batch.commit()
-                batch = db.batch()
+                await asyncio.gather(*tasks)
+                tasks = []
 
-        if count % 400 != 0:
-            await batch.commit()
+        if tasks:
+            await asyncio.gather(*tasks)
 
         return {"seeded": count, "message": f"Seeded {count} equipment items to MongoCollections"}
 

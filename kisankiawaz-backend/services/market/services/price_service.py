@@ -10,6 +10,18 @@ from shared.errors import not_found, bad_request, ErrorCode
 
 
 class PriceService:
+    _ALLOWED_FIELDS = {
+        "crop_name",
+        "mandi_name",
+        "state",
+        "district",
+        "modal_price",
+        "min_price",
+        "max_price",
+        "date",
+        "source",
+    }
+
     """Static methods for market price operations."""
 
     # ── List prices ──────────────────────────────────────────────
@@ -63,6 +75,7 @@ class PriceService:
     @staticmethod
     async def create_price(db, data: dict) -> dict:
         """Create a new market price entry."""
+        data = {k: v for k, v in data.items() if k in PriceService._ALLOWED_FIELDS}
         required = ["crop_name", "mandi_name", "state", "modal_price"]
         for field in required:
             if field not in data:
@@ -91,8 +104,11 @@ class PriceService:
         if not existing.exists:
             raise not_found("Market price entry not found")
 
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await ref.update(data)
+        updates = {k: v for k, v in data.items() if k in PriceService._ALLOWED_FIELDS}
+        if not updates:
+            raise bad_request("No valid fields to update")
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(updates)
 
         updated = await ref.get()
         result = updated.to_dict()

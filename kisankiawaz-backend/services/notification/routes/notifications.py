@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_user, get_current_admin
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.notification import CreateNotificationRequest, BroadcastRequest
 
 from services.notification_service import NotificationService
 
@@ -83,25 +84,25 @@ async def delete_notification(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def create_notification(
-    body: dict,
-    admin: dict = Depends(get_current_admin),
+    body: CreateNotificationRequest,
+    _admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a notification for a specific user."""
     db = get_async_db()
-    return await NotificationService.create_notification(db=db, data=body)
+    return await NotificationService.create_notification(db=db, data=body.model_dump(by_alias=True))
 
 
 @router.post("/broadcast", status_code=HttpStatus.CREATED)
 async def broadcast(
-    body: dict,
-    admin: dict = Depends(get_current_admin),
+    body: BroadcastRequest,
+    _admin: dict = Depends(get_current_admin),
 ):
     """Admin broadcasts a notification to all users or filtered by role."""
     db = get_async_db()
     return await NotificationService.broadcast(
         db=db,
-        title=body["title"],
-        message=body["message"],
-        notification_type=body.get("type", "broadcast"),
-        role=body.get("role"),
+        title=body.title,
+        message=body.message,
+        notification_type=body.notification_type,
+        role=body.role,
     )

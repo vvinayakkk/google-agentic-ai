@@ -14,7 +14,10 @@ from shared.auth.security import (
     decode_token,
 )
 from shared.core.constants import MongoCollections
+from shared.core.config import get_settings
 from shared.errors import (
+    AppError,
+    HttpStatus,
     bad_request,
     unauthorized,
     not_found,
@@ -24,6 +27,9 @@ from shared.errors import (
 
 
 _OTP_TTL_SECONDS = 300  # 5 minutes
+_OTP_SEND_COOLDOWN_SECONDS = 60
+_OTP_MAX_VERIFY_ATTEMPTS = 5
+_OTP_LOCKOUT_SECONDS = 600
 
 
 class AuthService:
@@ -125,8 +131,8 @@ class AuthService:
     # ── Refresh ──────────────────────────────────────────────────
 
     @staticmethod
-    def refresh(refresh_token: str) -> dict:
-        """Issue a new access token from a valid refresh token."""
+    async def refresh(db, redis, refresh_token: str) -> dict:
+        """Rotate refresh token, issue a new access token, and revoke used refresh jti."""
         try:
             payload = decode_token(refresh_token)
         except pyjwt.ExpiredSignatureError:
@@ -137,8 +143,41 @@ class AuthService:
         if payload.get("type") != "refresh":
             raise unauthorized("Invalid token type", ErrorCode.AUTH_TOKEN_INVALID)
 
-        access = create_access_token(payload["sub"], payload["role"])
-        return {"access_token": access, "token_type": "bearer"}
+        user_id = payload.get("sub", "")
+        role = payload.get("role", "")
+        jti = payload.get("jti", "")
+        if not user_id or not role or not jti:
+            raise unauthorized("Invalid refresh token claims", ErrorCode.AUTH_TOKEN_INVALID)
+
+        replay_key = f"auth:refresh:used:{jti}"
+        replayed = await redis.get(replay_key)
+        if replayed:
+            raise unauthorized("Refresh token has already been used", ErrorCode.AUTH_TOKEN_REVOKED)
+
+        collection = (
+            MongoCollections.ADMIN_USERS
+            if role in {"admin", "super_admin"}
+            else MongoCollections.USERS
+        )
+        doc = await db.collection(collection).document(user_id).get()
+        if not doc.exists:
+            raise unauthorized("User not found", ErrorCode.AUTH_USER_NOT_FOUND)
+
+        current_user = doc.to_dict()
+        if not current_user.get("is_active", False):
+            raise unauthorized("Account is deactivated", ErrorCode.AUTH_USER_INACTIVE)
+
+        settings = get_settings()
+        ttl_seconds = max(60, int(settings.JWT_REFRESH_EXPIRE_DAYS) * 24 * 60 * 60)
+        await redis.set(replay_key, "1", ex=ttl_seconds)
+
+        access = create_access_token(user_id, role)
+        refresh = create_refresh_token(user_id, role)
+        return {
+            "access_token": access,
+            "refresh_token": refresh,
+            "token_type": "bearer",
+        }
 
     # ── Get user ─────────────────────────────────────────────────
 
@@ -189,19 +228,61 @@ class AuthService:
     @staticmethod
     async def send_otp(redis, phone: str) -> None:
         """Generate a 6-digit OTP and store in Redis with 5-min TTL."""
+        lock_key = f"otp:lock:{phone}"
+        cooldown_key = f"otp:cooldown:{phone}"
+
+        if await redis.get(lock_key):
+            raise AppError(
+                status_code=HttpStatus.TOO_MANY_REQUESTS,
+                error_code=ErrorCode.RATE_LIMITED,
+                detail="Too many OTP attempts. Try again later.",
+            )
+
+        if await redis.get(cooldown_key):
+            raise AppError(
+                status_code=HttpStatus.TOO_MANY_REQUESTS,
+                error_code=ErrorCode.RATE_LIMITED,
+                detail="OTP recently sent. Please wait before requesting again.",
+            )
+
         otp = f"{random.randint(100000, 999999)}"
         await redis.set(f"otp:{phone}", otp, ex=_OTP_TTL_SECONDS)
+        await redis.set(cooldown_key, "1", ex=_OTP_SEND_COOLDOWN_SECONDS)
+        await redis.delete(f"otp:attempts:{phone}")
 
     # ── OTP verify ───────────────────────────────────────────────
 
     @staticmethod
     async def verify_otp(redis, phone: str, otp: str) -> None:
         """Check that *otp* matches the stored value for *phone*."""
+        lock_key = f"otp:lock:{phone}"
+        attempts_key = f"otp:attempts:{phone}"
+        if await redis.get(lock_key):
+            raise AppError(
+                status_code=HttpStatus.TOO_MANY_REQUESTS,
+                error_code=ErrorCode.RATE_LIMITED,
+                detail="OTP verification is temporarily locked. Try again later.",
+            )
+
         stored = await redis.get(f"otp:{phone}")
         if stored is None:
             raise bad_request("OTP expired or not sent", ErrorCode.AUTH_OTP_EXPIRED)
         if stored != otp:
+            attempts = await redis.incr(attempts_key)
+            if attempts == 1:
+                await redis.expire(attempts_key, _OTP_TTL_SECONDS)
+            if attempts >= _OTP_MAX_VERIFY_ATTEMPTS:
+                await redis.set(lock_key, "1", ex=_OTP_LOCKOUT_SECONDS)
+                await redis.delete(f"otp:{phone}")
+                await redis.delete(attempts_key)
+                raise AppError(
+                    status_code=HttpStatus.TOO_MANY_REQUESTS,
+                    error_code=ErrorCode.RATE_LIMITED,
+                    detail="Too many invalid OTP attempts. Try again later.",
+                )
             raise bad_request("Invalid OTP", ErrorCode.AUTH_OTP_INVALID)
+
+        await redis.delete(attempts_key)
 
     # ── Reset password ───────────────────────────────────────────
 

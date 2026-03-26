@@ -3,6 +3,7 @@ Real-time mandi and market data routes.
 Integrates live data.gov.in API for massive mandi information.
 """
 
+from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query
@@ -27,6 +28,63 @@ from services.mandi_data_fetcher import (
 router = APIRouter(prefix="/live-market", tags=["Live Market Data"])
 
 
+def _parse_any_date(value: str) -> datetime:
+    if not value:
+        return datetime.min
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%d/%m/%y"):
+        try:
+            return datetime.strptime(str(value), fmt)
+        except ValueError:
+            continue
+    return datetime.min
+
+
+def _price_freshness(prices: list[dict]) -> dict:
+    if not prices:
+        return {"as_of_latest_arrival_date": None, "data_last_ingested_at": None}
+
+    latest_arrival = None
+    latest_arrival_dt = datetime.min
+    latest_ingested = None
+    latest_ingested_dt = datetime.min
+
+    for p in prices:
+        arr = str(p.get("arrival_date", "") or "")
+        arr_dt = _parse_any_date(arr)
+        if arr_dt > latest_arrival_dt:
+            latest_arrival_dt = arr_dt
+            latest_arrival = arr or None
+
+        ing = str(p.get("ingested_at", "") or "")
+        ing_dt = _parse_any_date(ing[:10]) if ing else datetime.min
+        if ing_dt > latest_ingested_dt:
+            latest_ingested_dt = ing_dt
+            latest_ingested = ing or None
+
+    return {
+        "as_of_latest_arrival_date": latest_arrival,
+        "data_last_ingested_at": latest_ingested,
+    }
+
+
+def _build_match_metadata(
+    state: Optional[str],
+    commodity: Optional[str],
+    district: Optional[str],
+    fallback_mode: str = "none",
+) -> dict:
+    return {
+        "requested_filters": {
+            "state": state,
+            "commodity": commodity,
+            "district": district,
+        },
+        "match_scope": "strict" if fallback_mode in {"none", "strict"} else "relaxed",
+        "fallback_mode": fallback_mode,
+        "strict_match": fallback_mode in {"none", "strict"},
+    }
+
+
 async def _query_mongo_prices(
     db,
     state: Optional[str] = None,
@@ -34,7 +92,7 @@ async def _query_mongo_prices(
     district: Optional[str] = None,
     limit: int = 100,
 ) -> list[dict]:
-    """Load market prices from MongoCollections in live-market response shape."""
+    """Load market prices in live-market shape with fallback to ref_mandi_prices."""
     query = db.collection(MongoCollections.MARKET_PRICES)
 
     if state:
@@ -61,10 +119,40 @@ async def _query_mongo_prices(
                 "unit": data.get("unit", "quintal"),
                 "arrival_date": data.get("date", ""),
                 "source": data.get("source", "mongo"),
+                "ingested_at": data.get("created_at", ""),
             }
         )
 
-    items.sort(key=lambda x: x.get("arrival_date", ""), reverse=True)
+    if not items:
+        ref_query = db.collection(MongoCollections.REF_MANDI_PRICES)
+        if state:
+            ref_query = ref_query.where(filter=FieldFilter("state", "==", state.strip()))
+        if commodity:
+            ref_query = ref_query.where(filter=FieldFilter("commodity", "==", commodity.strip()))
+        if district:
+            ref_query = ref_query.where(filter=FieldFilter("district", "==", district.strip()))
+
+        ref_docs = [d async for d in ref_query.limit(min(limit, 1000)).stream()]
+        for doc in ref_docs:
+            data = doc.to_dict()
+            items.append(
+                {
+                    "market": data.get("market", ""),
+                    "commodity": data.get("commodity", ""),
+                    "variety": data.get("variety", ""),
+                    "state": data.get("state", ""),
+                    "district": data.get("district", ""),
+                    "min_price": float(data.get("min_price", 0) or 0),
+                    "max_price": float(data.get("max_price", 0) or 0),
+                    "modal_price": float(data.get("modal_price", 0) or 0),
+                    "unit": "quintal",
+                    "arrival_date": data.get("arrival_date", ""),
+                    "source": "ref_mandi_prices",
+                    "ingested_at": data.get("_ingested_at", ""),
+                }
+            )
+
+    items.sort(key=lambda x: _parse_any_date(x.get("arrival_date", "")), reverse=True)
     return items[:limit]
 
 
@@ -73,7 +161,7 @@ async def _query_mongo_mandis(
     state: Optional[str] = None,
     limit: int = 200,
 ) -> list[dict]:
-    """Load mandi directory from MongoCollections."""
+    """Load mandi directory with fallback to ref_mandi_directory."""
     query = db.collection(MongoCollections.MANDIS)
     if state:
         query = query.where(filter=FieldFilter("state", "==", state.strip()))
@@ -90,6 +178,22 @@ async def _query_mongo_mandis(
                 "source": data.get("source", "mongo"),
             }
         )
+
+    if not items:
+        ref_query = db.collection(MongoCollections.REF_MANDI_DIRECTORY)
+        if state:
+            ref_query = ref_query.where(filter=FieldFilter("state", "==", state.strip()))
+        ref_docs = [d async for d in ref_query.limit(min(limit, 1000)).stream()]
+        for doc in ref_docs:
+            data = doc.to_dict()
+            items.append(
+                {
+                    "name": data.get("name", ""),
+                    "state": data.get("state", ""),
+                    "district": data.get("district", ""),
+                    "source": data.get("source", "ref_mandi_directory"),
+                }
+            )
     return items
 
 
@@ -122,12 +226,15 @@ async def get_live_prices(
             limit=limit,
         )
         if cached_prices:
+            freshness = _price_freshness(cached_prices)
             return {
                 "prices": cached_prices,
                 "total": len(cached_prices),
                 "source": "mongo",
                 "filters": {"state": state, "commodity": commodity, "district": district},
                 "cache_hit": True,
+                **_build_match_metadata(state, commodity, district, fallback_mode="none"),
+                **freshness,
             }
 
     fetcher = MandiDataFetcher()
@@ -138,6 +245,18 @@ async def get_live_prices(
             district=district,
             limit=limit,
         )
+        if prices and (state or commodity or district):
+            def _match(row: dict) -> bool:
+                if state and str(row.get("state", "")).strip().lower() != state.strip().lower():
+                    return False
+                if commodity and str(row.get("commodity", "")).strip().lower() != commodity.strip().lower():
+                    return False
+                if district and str(row.get("district", "")).strip().lower() != district.strip().lower():
+                    return False
+                return True
+
+            prices = [p for p in prices if _match(p)]
+
         if not prices:
             cached_prices = await _query_mongo_prices(
                 db=db,
@@ -147,12 +266,15 @@ async def get_live_prices(
                 limit=limit,
             )
             if cached_prices:
+                freshness = _price_freshness(cached_prices)
                 return {
                     "prices": cached_prices,
                     "total": len(cached_prices),
                     "source": "mongo_fallback",
                     "filters": {"state": state, "commodity": commodity, "district": district},
                     "cache_hit": True,
+                    **_build_match_metadata(state, commodity, district, fallback_mode="strict"),
+                    **freshness,
                 }
             relaxed_prices = await _query_mongo_prices(
                 db=db,
@@ -162,6 +284,7 @@ async def get_live_prices(
                 limit=limit,
             )
             if relaxed_prices:
+                freshness = _price_freshness(relaxed_prices)
                 return {
                     "prices": relaxed_prices,
                     "total": len(relaxed_prices),
@@ -173,13 +296,18 @@ async def get_live_prices(
                         "relaxed": True,
                     },
                     "cache_hit": True,
+                    **_build_match_metadata(state, commodity, district, fallback_mode="relaxed"),
+                    **freshness,
                 }
+        freshness = _price_freshness(prices)
         return {
             "prices": prices,
             "total": len(prices),
             "source": "data.gov.in",
             "filters": {"state": state, "commodity": commodity, "district": district},
             "cache_hit": False,
+            **_build_match_metadata(state, commodity, district, fallback_mode="none"),
+            **freshness,
         }
     finally:
         await fetcher.close()
@@ -201,12 +329,15 @@ async def get_all_india_prices(
             limit=limit,
         )
         if cached_prices:
+            freshness = _price_freshness(cached_prices)
             return {
                 "commodity": commodity,
                 "prices": cached_prices,
                 "total": len(cached_prices),
                 "source": "mongo",
                 "cache_hit": True,
+                **_build_match_metadata(state=None, commodity=commodity, district=None, fallback_mode="none"),
+                **freshness,
             }
 
     fetcher = MandiDataFetcher()
@@ -219,12 +350,15 @@ async def get_all_india_prices(
                 limit=limit,
             )
             if cached_prices:
+                freshness = _price_freshness(cached_prices)
                 return {
                     "commodity": commodity,
                     "prices": cached_prices,
                     "total": len(cached_prices),
                     "source": "mongo_fallback",
                     "cache_hit": True,
+                    **_build_match_metadata(state=None, commodity=commodity, district=None, fallback_mode="strict"),
+                    **freshness,
                 }
             relaxed_prices = await _query_mongo_prices(
                 db=db,
@@ -232,19 +366,25 @@ async def get_all_india_prices(
                 limit=limit,
             )
             if relaxed_prices:
+                freshness = _price_freshness(relaxed_prices)
                 return {
                     "commodity": commodity,
                     "prices": relaxed_prices,
                     "total": len(relaxed_prices),
                     "source": "mongo_relaxed_fallback",
                     "cache_hit": True,
+                    **_build_match_metadata(state=None, commodity=commodity, district=None, fallback_mode="relaxed"),
+                    **freshness,
                 }
+        freshness = _price_freshness(prices)
         return {
             "commodity": commodity,
             "prices": prices,
             "total": len(prices),
             "source": "data.gov.in",
             "cache_hit": False,
+            **_build_match_metadata(state=None, commodity=commodity, district=None, fallback_mode="none"),
+            **freshness,
         }
     finally:
         await fetcher.close()
@@ -293,8 +433,18 @@ async def get_live_mandi_list(
     refresh: bool = Query(default=False, description="Force live fetch from data.gov.in"),
     user: dict = Depends(get_current_user),
 ):
-    """Fetch mandi list with live-first strategy and MongoCollections fallback."""
+    """Fetch mandi list with DB-first strategy and optional live refresh."""
     db = get_async_db()
+
+    if not refresh:
+        cached_mandis = await _query_mongo_mandis(db=db, state=state, limit=limit)
+        if cached_mandis:
+            return {
+                "mandis": cached_mandis,
+                "total": len(cached_mandis),
+                "source": "mongo",
+                "cache_hit": True,
+            }
 
     fetcher = MandiDataFetcher()
     try:

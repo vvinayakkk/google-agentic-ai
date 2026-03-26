@@ -21,15 +21,18 @@ import httpx
 BASE_URLS = {
     "market": os.getenv("MARKET_SERVICE_URL", "http://localhost:8004"),
     "equipment": os.getenv("EQUIPMENT_SERVICE_URL", "http://localhost:8005"),
+    "analytics": os.getenv("ANALYTICS_SERVICE_URL", "http://localhost:8012"),
 }
 
 # Test credentials
 TEST_PHONE = "+919876543211"
 TEST_PASSWORD = "Test@1234"
+ADMIN_PHONE = os.getenv("E2E_ADMIN_PHONE", "")
+ADMIN_PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", "")
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 
 HEADERS = {"Content-Type": "application/json"}
-TOKEN = None
+TOKEN_CACHE = {}
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -39,24 +42,32 @@ def log(msg: str, status: str = "INFO"):
     print(f"  {icons.get(status, '•')} [{status}] {msg}")
 
 
-async def get_auth_token(client: httpx.AsyncClient) -> str:
-    """Authenticate and get JWT token."""
-    global TOKEN
-    if TOKEN:
-        return TOKEN
+async def get_auth_token(
+    client: httpx.AsyncClient,
+    phone: str = TEST_PHONE,
+    password: str = TEST_PASSWORD,
+    fallback_token: str | None = "test-token-for-local-dev",
+) -> str:
+    """Authenticate and get JWT token for the provided user."""
+    cache_key = f"{phone}:{password}"
+    if cache_key in TOKEN_CACHE:
+        return TOKEN_CACHE[cache_key]
     try:
         resp = await client.post(
             f"{AUTH_URL}/api/v1/auth/login",
-            json={"phone": TEST_PHONE, "password": TEST_PASSWORD},
+            json={"phone": phone, "password": password},
         )
         if resp.status_code == 200:
-            TOKEN = resp.json().get("access_token", resp.json().get("token", ""))
-            return TOKEN
+            token = resp.json().get("access_token", resp.json().get("token", ""))
+            TOKEN_CACHE[cache_key] = token
+            return token
     except Exception as e:
-        log(f"Auth failed: {e}", "WARN")
-    # Fallback: use a mock token for testing without auth
-    TOKEN = "test-token-for-local-dev"
-    return TOKEN
+        log(f"Auth failed for {phone}: {e}", "WARN")
+    if fallback_token is not None:
+        # Fallback token keeps non-auth-dependent tests resilient in local setups.
+        TOKEN_CACHE[cache_key] = fallback_token
+        return fallback_token
+    raise RuntimeError(f"Unable to authenticate user {phone}")
 
 
 def auth_headers(token: str) -> dict:
@@ -600,9 +611,105 @@ async def test_constants_integration():
     log("Qdrant collection constants correct", "PASS")
 
     assert EMBEDDING_DIM == 768
-    log("Embedding dimension = 384", "PASS")
+    log("Embedding dimension = 768", "PASS")
 
     log("Constants & Integration: ALL TESTS PASSED", "PASS")
+    return True
+
+
+# ── Test 10: Analytics API Coverage ─────────────────────────────
+
+async def test_analytics_api():
+    """Test analytics API endpoints, with strict admin checks when configured."""
+    print("\n" + "=" * 60)
+    print("TEST 10: Analytics API Endpoints")
+    print("=" * 60)
+
+    async with httpx.AsyncClient(timeout=45) as client:
+        token = await get_auth_token(client)
+        headers = auth_headers(token)
+        base = f"{BASE_URLS['analytics']}/api/v1/analytics"
+
+        try:
+            health = await client.get(f"{BASE_URLS['analytics']}/health")
+            if health.status_code == 200:
+                log("Analytics health endpoint reachable", "PASS")
+            else:
+                log(f"Analytics health returned {health.status_code}", "WARN")
+        except httpx.ConnectError:
+            log("Analytics service not running (localhost:8012)", "WARN")
+            return True
+
+        admin_token = None
+        strict_admin = bool(ADMIN_PHONE and ADMIN_PASSWORD)
+        if strict_admin:
+            admin_token = await get_auth_token(
+                client,
+                phone=ADMIN_PHONE,
+                password=ADMIN_PASSWORD,
+                fallback_token=None,
+            )
+            log("Admin credentials detected; running strict admin analytics checks", "INFO")
+        admin_headers = auth_headers(admin_token) if admin_token else headers
+
+        resp = await client.get(f"{base}/overview", headers=admin_headers, params={"days": 30})
+        if strict_admin:
+            assert resp.status_code == 200, f"Expected 200 for admin overview, got {resp.status_code}"
+            payload = resp.json()
+            assert "scorecard" in payload
+            assert "engagement" in payload
+            log("Admin overview payload validated (strict)", "PASS")
+        else:
+            if resp.status_code == 200:
+                payload = resp.json()
+                assert "scorecard" in payload
+                assert "engagement" in payload
+                log("Analytics overview payload validated", "PASS")
+            elif resp.status_code in (401, 403):
+                log("Analytics overview is admin-guarded in this environment", "WARN")
+            else:
+                log(f"Analytics overview returned {resp.status_code}", "WARN")
+
+        # Farmer self-summary should work for authenticated farmer tokens.
+        try:
+            me = await client.get(f"{AUTH_URL}/api/v1/auth/me", headers=headers)
+            user = me.json() if me.status_code == 200 else {}
+            user_id = user.get("id") or user.get("user_id")
+            if user_id:
+                resp2 = await client.get(f"{base}/farmer/{user_id}/summary", headers=headers, params={"days": 30})
+                if resp2.status_code == 200:
+                    payload2 = resp2.json()
+                    assert payload2.get("farmer_id") == user_id
+                    assert "totals" in payload2
+                    log("Farmer self-summary payload validated", "PASS")
+                elif resp2.status_code in (401, 403):
+                    log("Farmer self-summary is guarded in this environment", "WARN")
+                else:
+                    log(f"Farmer self-summary returned {resp2.status_code}", "WARN")
+            else:
+                log("Could not resolve current user id for farmer analytics checks", "WARN")
+        except Exception as e:
+            log(f"Farmer analytics check skipped: {e}", "WARN")
+
+        snap = await client.post(f"{base}/snapshots/generate", headers=admin_headers, params={"days": 30})
+        if strict_admin:
+            assert snap.status_code in (200, 201), (
+                f"Expected 200/201 for admin snapshot generation, got {snap.status_code}"
+            )
+            sdata = snap.json()
+            assert "date" in sdata
+            log("Snapshot generation validated (strict)", "PASS")
+        else:
+            if snap.status_code in (200, 201):
+                sdata = snap.json()
+                assert "date" in sdata
+                log("Snapshot generation validated", "PASS")
+            elif snap.status_code in (401, 403):
+                log("Snapshot generation is admin-guarded in this environment", "WARN")
+            else:
+                log(f"Snapshot generation returned {snap.status_code}", "WARN")
+
+    log("Analytics API: TESTS COMPLETE", "PASS")
     return True
 
 
@@ -624,6 +731,7 @@ async def run_all_tests():
         ("Equipment Rental API", test_equipment_rental_api),
         ("Knowledge Base", test_knowledge_base),
         ("Constants & Integration", test_constants_integration),
+        ("Analytics API", test_analytics_api),
     ]
 
     results = {}

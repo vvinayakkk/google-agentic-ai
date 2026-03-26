@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from shared.auth.deps import get_current_farmer
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.livestock import LivestockRecordCreate, LivestockRecordUpdate
 
 from services.livestock_service import LivestockService
 
@@ -22,12 +23,12 @@ async def list_livestock(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def add_livestock(
-    body: dict,
+    body: LivestockRecordCreate,
     user: dict = Depends(get_current_farmer),
 ):
     """Add livestock."""
     db = get_async_db()
-    return await LivestockService.add_livestock(db=db, farmer_id=user["id"], data=body)
+    return await LivestockService.add_livestock(db=db, farmer_id=user["id"], data=body.model_dump())
 
 
 @router.get("/{livestock_id}", status_code=HttpStatus.OK)
@@ -43,13 +44,16 @@ async def get_livestock(
 @router.put("/{livestock_id}", status_code=HttpStatus.OK)
 async def update_livestock(
     livestock_id: str,
-    body: dict,
+    body: LivestockRecordUpdate,
     user: dict = Depends(get_current_farmer),
 ):
     """Update livestock (ownership check)."""
     db = get_async_db()
     return await LivestockService.update_livestock(
-        db=db, livestock_id=livestock_id, farmer_id=user["id"], data=body,
+        db=db,
+        livestock_id=livestock_id,
+        farmer_id=user["id"],
+        data=body.model_dump(exclude_none=True),
     )
 
 

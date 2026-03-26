@@ -15,12 +15,13 @@ elif settings.GEMINI_API_KEY:
     os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
 
 from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from shared.db.mongodb import init_mongodb, close_mongodb
 from shared.db.redis import get_redis, close_redis
 from shared.errors.handlers import global_exception_handler
-from shared.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
+from shared.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, RateLimiterMiddleware
 from routes import router as api_router
 from services.embedding_service import EmbeddingService
 from loguru import logger
@@ -31,7 +32,8 @@ embedding_service = EmbeddingService()
 async def lifespan(app: FastAPI):
     init_mongodb()
     await get_redis()
-    await embedding_service.initialize()
+    # Warm embeddings in background so service health is not blocked by model download/load latency.
+    asyncio.create_task(embedding_service.initialize())
     logger.info("Agent service started")
     yield
     await close_redis()
@@ -41,7 +43,14 @@ app = FastAPI(title="KisanKiAwaaz Agent Service", version="2.0.0", lifespan=life
 app.add_exception_handler(Exception, global_exception_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(RateLimiterMiddleware, max_requests=100, window_seconds=60)
 app.include_router(api_router, prefix="/api/v1/agent")
 app.state.embedding_service = embedding_service
 

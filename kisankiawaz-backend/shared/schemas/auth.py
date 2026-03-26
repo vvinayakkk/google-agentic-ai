@@ -1,6 +1,6 @@
 """Authentication and authorisation request / response schemas."""
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,10 +12,10 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=6, max_length=128, description="Plain-text password")
     name: str = Field(..., min_length=1, max_length=100, description="Full name")
     email: Optional[str] = Field(default=None, description="Optional email")
-    role: str = Field(default="farmer", description="User role")
+    role: Literal["farmer"] = Field(default="farmer", description="User role")
     language: str = Field(default="hi", description="Preferred language code")
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class LoginRequest(BaseModel):
@@ -24,7 +24,7 @@ class LoginRequest(BaseModel):
     phone: str = Field(..., min_length=10, max_length=15)
     password: str = Field(..., min_length=1, max_length=128)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class TokenResponse(BaseModel):
@@ -40,7 +40,7 @@ class RefreshRequest(BaseModel):
 
     refresh_token: str = Field(..., min_length=1)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class ChangePasswordRequest(BaseModel):
@@ -49,7 +49,7 @@ class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=6, max_length=128)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class OTPRequest(BaseModel):
@@ -57,7 +57,7 @@ class OTPRequest(BaseModel):
 
     phone: str = Field(..., min_length=10, max_length=15)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class OTPVerify(BaseModel):
@@ -66,7 +66,7 @@ class OTPVerify(BaseModel):
     phone: str = Field(..., min_length=10, max_length=15)
     otp: str = Field(..., min_length=4, max_length=6)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
 
 
 class ResetPasswordRequest(BaseModel):
@@ -76,4 +76,14 @@ class ResetPasswordRequest(BaseModel):
     otp: str = Field(..., min_length=4, max_length=6)
     new_password: str = Field(..., min_length=6, max_length=128)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "extra": "forbid"}
+
+
+class UserUpdateRequest(BaseModel):
+    """Authenticated profile update payload."""
+
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    email: Optional[str] = Field(default=None, max_length=255)
+    language: Optional[str] = Field(default=None, min_length=2, max_length=12)
+
+    model_config = {"strict": True, "extra": "forbid"}

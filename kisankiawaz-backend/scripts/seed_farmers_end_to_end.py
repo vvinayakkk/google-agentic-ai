@@ -8,8 +8,10 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,14 +26,25 @@ from shared.auth.security import hash_password  # noqa: E402
 from shared.core.constants import MongoCollections  # noqa: E402
 from shared.db.mongodb import get_db, init_mongodb  # noqa: E402
 
-SEED_PASSWORD = "Farmer@123"
+DEFAULT_SEED_PASSWORD = "Farmer@123"
+
+
+def resolve_seed_password(allow_default_credentials: bool) -> str:
+    env_password = (os.getenv("SEED_FARMER_PASSWORD") or "").strip()
+    if env_password:
+        return env_password
+    if allow_default_credentials:
+        return DEFAULT_SEED_PASSWORD
+    raise SystemExit(
+        "SEED_FARMER_PASSWORD is required. For local testing only, pass --allow-default-credentials."
+    )
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def seed_farmers() -> dict[str, int]:
+def seed_farmers(seed_password: str) -> dict[str, int]:
     init_mongodb()
     db = get_db()
 
@@ -100,7 +113,7 @@ def seed_farmers() -> dict[str, int]:
         ts = now_iso()
         user_doc = {
             "phone": farmer["phone"],
-            "password_hash": hash_password(SEED_PASSWORD),
+            "password_hash": hash_password(seed_password),
             "name": farmer["name"],
             "role": "farmer",
             "language": farmer["preferred_language"],
@@ -182,7 +195,7 @@ def seed_farmers() -> dict[str, int]:
         created_equipment += 1
 
         credentials_rows.append(
-            [farmer["name"], farmer["phone"], SEED_PASSWORD, farmer["user_id"], farmer["state"], farmer["district"]]
+            [farmer["name"], farmer["phone"], seed_password, farmer["user_id"], farmer["state"], farmer["district"]]
         )
 
     booking_doc = {
@@ -221,7 +234,7 @@ def seed_farmers() -> dict[str, int]:
 
     report = {
         "seeded_at": now_iso(),
-        "default_password": SEED_PASSWORD,
+        "default_password": seed_password,
         "counts": {
             "users": created_users,
             "profiles": created_profiles,
@@ -242,4 +255,11 @@ def seed_farmers() -> dict[str, int]:
 
 
 if __name__ == "__main__":
-    seed_farmers()
+    parser = argparse.ArgumentParser(description="Seed complete farmer records for E2E testing")
+    parser.add_argument(
+        "--allow-default-credentials",
+        action="store_true",
+        help="Allow built-in default password (for local development only)",
+    )
+    args = parser.parse_args()
+    seed_farmers(seed_password=resolve_seed_password(args.allow_default_credentials))

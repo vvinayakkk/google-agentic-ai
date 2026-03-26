@@ -6,6 +6,7 @@ and farming knowledge into Qdrant for the chatbot and agentic systems.
 
 import uuid
 import logging
+import warnings
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 
@@ -22,7 +23,15 @@ class KnowledgeBaseService:
     def _get_model(self):
         if self._model is None:
             from fastembed import TextEmbedding
-            self._model = TextEmbedding(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+            with warnings.catch_warnings():
+                # fastembed >=0.6 emits a model-behavior warning for this encoder.
+                # We intentionally keep this model for multilingual parity.
+                warnings.filterwarnings(
+                    "ignore",
+                    message=".*now uses mean pooling instead of CLS embedding.*",
+                    category=UserWarning,
+                )
+                self._model = TextEmbedding(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
         return self._model
 
     def _embed_text(self, text: str) -> List[float]:
@@ -281,7 +290,7 @@ class KnowledgeBaseService:
         """Semantic search across knowledge base."""
         from shared.core.constants import Qdrant
 
-        model = self._get_model()
+        self._get_model()
         client = self._get_qdrant()
         vector = self._embed_text(query)
 
@@ -297,11 +306,19 @@ class KnowledgeBaseService:
             if coll not in existing:
                 continue
             try:
-                hits = client.search(
-                    collection_name=coll,
-                    query_vector=vector,
-                    limit=limit,
-                )
+                if hasattr(client, "search"):
+                    hits = client.search(
+                        collection_name=coll,
+                        query_vector=vector,
+                        limit=limit,
+                    )
+                else:
+                    queried = client.query_points(
+                        collection_name=coll,
+                        query=vector,
+                        limit=limit,
+                    )
+                    hits = list(getattr(queried, "points", []) or [])
                 for hit in hits:
                     all_results.append({
                         "text": hit.payload.get("text", ""),

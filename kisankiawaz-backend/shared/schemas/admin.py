@@ -1,6 +1,6 @@
 """Admin-facing schemas."""
 
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -68,6 +68,15 @@ class FarmerStatusUpdate(BaseModel):
     model_config = {"strict": True}
 
 
+class BulkImportRequest(BaseModel):
+    """Bulk import request body for admin data pipelines."""
+
+    input_file: str = Field(..., min_length=3)
+    reembed: bool = False
+
+    model_config = {"strict": True}
+
+
 class AuditLogEntry(BaseModel):
     """Audit log for admin actions."""
 
@@ -101,3 +110,38 @@ class AnalyticsOverview(BaseModel):
     top_queried_schemes: List[str] = Field(default_factory=list)
     top_states: List[str] = Field(default_factory=list)
     notification_sent_count: int = 0
+
+
+class SchemeUpsertRequest(BaseModel):
+    """Validated request for admin scheme create/update."""
+
+    scheme_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    scheme_name: str = Field(..., min_length=2, max_length=240)
+    category: Optional[str] = Field(default=None, max_length=120)
+    state: Optional[str] = Field(default=None, max_length=120)
+    is_active: Optional[bool] = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {"strict": True}
+
+
+class ProviderUpsertRequest(BaseModel):
+    """Validated request for equipment provider create/update."""
+
+    rental_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    provider_name: str = Field(..., min_length=2, max_length=240)
+    state: Optional[str] = Field(default=None, max_length=120)
+    district: Optional[str] = Field(default=None, max_length=120)
+    contact_phone: Optional[str] = Field(default=None, max_length=20)
+    is_active: Optional[bool] = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {"strict": True}
+
+
+class FeatureFlagsUpdate(BaseModel):
+    """Typed feature flag update payload."""
+
+    flags: Dict[str, bool] = Field(default_factory=dict)
+
+    model_config = {"strict": True}

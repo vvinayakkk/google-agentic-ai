@@ -1,119 +1,229 @@
-"""Analytics service routes — pre-computed analytics endpoints."""
+"""Analytics service routes — comprehensive rule-based platform insights."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
+
 from shared.auth.deps import get_current_admin, get_current_user
+from shared.core.constants import UserRole
 from shared.db.mongodb import get_async_db
-from shared.core.constants import MongoCollections
-from shared.errors import HttpStatus
+from shared.errors import HttpStatus, forbidden
+from shared.schemas.analytics import AdminInsightOverview, FarmerInsightSummary
 
-router = APIRouter()
+from services.insight_service import InsightService
+
+router = APIRouter(tags=["Analytics"])
 
 
-@router.get("/overview", status_code=HttpStatus.OK)
-async def get_overview(date: str = Query(None), admin: dict = Depends(get_current_admin)):
-    """Get daily analytics overview."""
+@router.get("/overview", status_code=HttpStatus.OK, response_model=AdminInsightOverview)
+async def get_overview(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Unified god-level admin insights across growth, engagement, risk, and opportunity."""
     db = get_async_db()
-    if not date:
-        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    doc = await db.collection(MongoCollections.ANALYTICS_SNAPSHOTS).document(date).get()
-    if doc.exists:
-        return doc.to_dict()
-    return {"date": date, "message": "No snapshot available"}
+    return await InsightService.build_admin_overview(db=db, days=days)
+
+
+@router.get("/insights/kpis", status_code=HttpStatus.OK)
+async def get_kpis(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """High-level KPI scorecards optimized for admin dashboard cards."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {"window_days": days, "generated_at": overview["generated_at"], "scorecard": overview["scorecard"]}
+
+
+@router.get("/insights/engagement", status_code=HttpStatus.OK)
+async def get_engagement_insights(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Engagement intensity, retention risk, and channel adoption metrics."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "engagement": overview["engagement"],
+        "growth_trends": overview["growth_trends"],
+    }
+
+
+@router.get("/insights/operational", status_code=HttpStatus.OK)
+async def get_operational_insights(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Operational quality metrics: profile health, freshness lag, and reliability score."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "operational_health": overview["operational_health"],
+    }
+
+
+@router.get("/insights/opportunities", status_code=HttpStatus.OK)
+async def get_opportunity_insights(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Actionable opportunity map for admin growth playbooks."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "opportunities": overview["opportunities"],
+        "recommendations": overview["recommendations"],
+    }
+
+
+@router.get("/insights/market", status_code=HttpStatus.OK)
+async def get_market_insights(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Market momentum and commodity-level intelligence for strategic planning."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "market_intelligence": overview["market_intelligence"],
+    }
+
+
+@router.get("/insights/recommendations", status_code=HttpStatus.OK)
+async def get_recommendations(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Prioritized admin actions derived from deterministic insight rules."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "recommendations": overview["recommendations"],
+    }
+
+
+@router.get("/segments/farmers", status_code=HttpStatus.OK)
+async def get_farmer_segments(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Farmer segmentation view for outreach planning."""
+    db = get_async_db()
+    overview = await InsightService.build_admin_overview(db=db, days=days)
+    segments = {
+        "highly_active": overview["engagement"]["active_farmers"],
+        "at_risk": overview["opportunities"]["inactive_farmers"],
+        "without_crops": overview["opportunities"]["farmers_without_crops"],
+        "top_states": overview["operational_health"].get("top_states", []),
+    }
+    return {
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "segments": segments,
+    }
 
 
 @router.get("/trends", status_code=HttpStatus.OK)
-async def get_trends(days: int = Query(7, ge=1, le=90), admin: dict = Depends(get_current_admin)):
-    """Get analytics trend over multiple days."""
+async def get_trends(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Time-series trendlines for core adoption and usage indicators."""
     db = get_async_db()
-    now = datetime.now(timezone.utc)
-    results = []
-    for i in range(days):
-        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        doc = await db.collection(MongoCollections.ANALYTICS_SNAPSHOTS).document(d).get()
-        if doc.exists:
-            results.append(doc.to_dict())
-    return {"days": days, "snapshots": results}
-
-
-@router.get("/farmers/growth", status_code=HttpStatus.OK)
-async def farmer_growth(days: int = Query(30, ge=1, le=365), admin: dict = Depends(get_current_admin)):
-    """Farmer registration growth over time."""
-    db = get_async_db()
-    now = datetime.now(timezone.utc)
-    daily_counts = {}
-    async for doc in db.collection(MongoCollections.USERS).where("role", "==", "farmer").stream():
-        data = doc.to_dict()
-        created = data.get("created_at", "")
-        if isinstance(created, str) and len(created) >= 10:
-            day = created[:10]
-            daily_counts[day] = daily_counts.get(day, 0) + 1
-
-    series = []
-    for i in range(days):
-        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        series.append({"date": d, "count": daily_counts.get(d, 0)})
-    series.reverse()
-    return {"days": days, "series": series}
-
-
-@router.get("/agent/usage", status_code=HttpStatus.OK)
-async def agent_usage(days: int = Query(7, ge=1, le=30), admin: dict = Depends(get_current_admin)):
-    """Agent query usage over time."""
-    db = get_async_db()
-    now = datetime.now(timezone.utc)
-    daily_counts = {}
-    async for doc in db.collection(MongoCollections.AGENT_CONVERSATIONS).stream():
-        data = doc.to_dict()
-        last_msg = data.get("last_message_at", "")
-        if isinstance(last_msg, str) and len(last_msg) >= 10:
-            day = last_msg[:10]
-            daily_counts[day] = daily_counts.get(day, 0) + data.get("message_count", 1)
-
-    series = []
-    for i in range(days):
-        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        series.append({"date": d, "queries": daily_counts.get(d, 0)})
-    series.reverse()
-    return {"days": days, "series": series}
-
-
-@router.get("/market/popular-commodities", status_code=HttpStatus.OK)
-async def popular_commodities(limit: int = Query(20, ge=1, le=50), admin: dict = Depends(get_current_admin)):
-    """Most queried/available commodities by mandi price count."""
-    db = get_async_db()
-    from collections import Counter
-    counter = Counter()
-    async for doc in db.collection(MongoCollections.REF_MANDI_PRICES).limit(5000).stream():
-        commodity = doc.to_dict().get("commodity", "")
-        if commodity:
-            counter[commodity] += 1
-    return {"commodities": [{"commodity": c, "count": n} for c, n in counter.most_common(limit)]}
-
-
-@router.get("/farmer/{farmer_id}/summary", status_code=HttpStatus.OK)
-async def farmer_summary(farmer_id: str, user: dict = Depends(get_current_user)):
-    """Personal analytics for a farmer (their own usage)."""
-    db = get_async_db()
-    # Count conversations
-    convo_count = 0
-    async for _ in db.collection(MongoCollections.AGENT_CONVERSATIONS).where("user_id", "==", farmer_id).stream():
-        convo_count += 1
-
-    # Count crops
-    crop_count = 0
-    async for _ in db.collection(MongoCollections.CROPS).where("farmer_id", "==", farmer_id).stream():
-        crop_count += 1
-
-    # Count bookings
-    booking_count = 0
-    async for _ in db.collection(MongoCollections.EQUIPMENT_BOOKINGS).where("renter_id", "==", farmer_id).stream():
-        booking_count += 1
-
+    overview = await InsightService.build_admin_overview(db=db, days=days)
     return {
-        "farmer_id": farmer_id,
-        "total_conversations": convo_count,
-        "total_crops": crop_count,
-        "total_bookings": booking_count,
+        "window_days": days,
+        "generated_at": overview["generated_at"],
+        "growth_trends": overview["growth_trends"],
     }
+
+
+@router.post("/snapshots/generate", status_code=HttpStatus.CREATED)
+async def generate_snapshot(
+    date: str | None = Query(default=None),
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Generate and persist a deterministic analytics snapshot for admin reporting."""
+    db = get_async_db()
+    return await InsightService.generate_snapshot(db=db, date_str=date, days=days)
+
+
+@router.get("/snapshots/{date}", status_code=HttpStatus.OK)
+async def get_snapshot(
+    date: str,
+    _admin: dict = Depends(get_current_admin),
+):
+    """Fetch a previously generated analytics snapshot by date (YYYY-MM-DD)."""
+    db = get_async_db()
+    return await InsightService.get_snapshot(db=db, date_str=date)
+
+
+@router.get("/snapshots/trends", status_code=HttpStatus.OK)
+async def get_snapshot_trends(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Read recent snapshots for historical performance tracking."""
+    db = get_async_db()
+    return await InsightService.get_snapshot_trends(db=db, days=days)
+
+
+@router.get("/farmer/{farmer_id}/summary", status_code=HttpStatus.OK, response_model=FarmerInsightSummary)
+async def farmer_summary(
+    farmer_id: str,
+    days: int = Query(30, ge=7, le=180),
+    user: dict = Depends(get_current_user),
+):
+    """Personalized farmer insight summary (self-access or admin-access)."""
+    is_admin = user.get("role") in (UserRole.ADMIN.value, UserRole.SUPER_ADMIN.value)
+    if not is_admin and user.get("id") != farmer_id:
+        raise forbidden("You can only access your own summary")
+
+    db = get_async_db()
+    return await InsightService.build_farmer_summary(db=db, farmer_id=farmer_id, days=days)
+
+
+@router.get("/farmer/{farmer_id}/benchmarks", status_code=HttpStatus.OK)
+async def farmer_benchmarks(
+    farmer_id: str,
+    days: int = Query(30, ge=7, le=180),
+    user: dict = Depends(get_current_user),
+):
+    """Benchmark farmer performance against broader network behavior."""
+    is_admin = user.get("role") in (UserRole.ADMIN.value, UserRole.SUPER_ADMIN.value)
+    if not is_admin and user.get("id") != farmer_id:
+        raise forbidden("You can only access your own benchmarks")
+
+    db = get_async_db()
+    return await InsightService.build_farmer_benchmarks(db=db, farmer_id=farmer_id, days=days)
+
+
+@router.get("/overview/live", status_code=HttpStatus.OK)
+async def get_live_overview(
+    _admin: dict = Depends(get_current_admin),
+):
+    """Fast default view used by admin dashboards for real-time monitoring."""
+    db = get_async_db()
+    return await InsightService.build_admin_overview(db=db, days=30)
+
+
+@router.get("/overview/today", status_code=HttpStatus.OK)
+async def get_today_snapshot(
+    _admin: dict = Depends(get_current_admin),
+):
+    """Convenience endpoint to fetch today's persisted snapshot."""
+    db = get_async_db()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return await InsightService.get_snapshot(db=db, date_str=today)

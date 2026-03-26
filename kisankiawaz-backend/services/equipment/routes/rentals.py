@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from shared.auth.deps import get_current_farmer
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.equipment import RentalRequestCreate
 
 from services.rental_service import RentalService
 
@@ -22,12 +23,12 @@ async def list_rentals(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def create_rental(
-    body: dict,
+    body: RentalRequestCreate,
     user: dict = Depends(get_current_farmer),
 ):
     """Create a rental request for equipment."""
     db = get_async_db()
-    return await RentalService.create_rental(db=db, renter_id=user["id"], data=body)
+    return await RentalService.create_rental(db=db, renter_id=user["id"], data=body.model_dump())
 
 
 @router.get("/{rental_id}", status_code=HttpStatus.OK)

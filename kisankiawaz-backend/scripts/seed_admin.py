@@ -8,6 +8,7 @@ Usage:
 """
 
 import csv
+import argparse
 import os
 import sys
 import uuid
@@ -20,7 +21,7 @@ from shared.auth.security import hash_password
 from shared.core.constants import MongoCollections
 
 
-ADMIN_USERS = [
+DEFAULT_ADMIN_USERS = [
     {
         "email": "superadmin@kisankiawaz.in",
         "password": "SuperAdmin@2026",
@@ -36,7 +37,47 @@ ADMIN_USERS = [
 ]
 
 
+def _build_admin_users(allow_default_credentials: bool) -> list[dict]:
+    super_email = (os.getenv("SEED_SUPER_ADMIN_EMAIL") or "").strip()
+    super_password = (os.getenv("SEED_SUPER_ADMIN_PASSWORD") or "").strip()
+    admin_email = (os.getenv("SEED_ADMIN_EMAIL") or "").strip()
+    admin_password = (os.getenv("SEED_ADMIN_PASSWORD") or "").strip()
+
+    has_env_credentials = all([super_email, super_password, admin_email, admin_password])
+    if has_env_credentials:
+        return [
+            {
+                "email": super_email,
+                "password": super_password,
+                "name": os.getenv("SEED_SUPER_ADMIN_NAME", "Super Admin").strip() or "Super Admin",
+                "role": "super_admin",
+            },
+            {
+                "email": admin_email,
+                "password": admin_password,
+                "name": os.getenv("SEED_ADMIN_NAME", "Admin User").strip() or "Admin User",
+                "role": "admin",
+            },
+        ]
+
+    if allow_default_credentials:
+        return DEFAULT_ADMIN_USERS
+
+    raise SystemExit(
+        "Missing seed admin credentials. Set SEED_SUPER_ADMIN_EMAIL, SEED_SUPER_ADMIN_PASSWORD, "
+        "SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD or use --allow-default-credentials for local testing."
+    )
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Seed admin users")
+    parser.add_argument(
+        "--allow-default-credentials",
+        action="store_true",
+        help="Allow built-in default passwords (for local development only)",
+    )
+    args = parser.parse_args()
+
     print("=" * 50)
     print("KISAN KI AWAZ — ADMIN SEEDER")
     print("=" * 50)
@@ -47,7 +88,8 @@ def main():
     now = datetime.now(timezone.utc).isoformat()
     seeded = []
 
-    for admin_data in ADMIN_USERS:
+    admin_users = _build_admin_users(args.allow_default_credentials)
+    for admin_data in admin_users:
         admin_id = f"admin_{admin_data['email'].split('@')[0].replace('.', '_')}"
 
         # Check if already exists

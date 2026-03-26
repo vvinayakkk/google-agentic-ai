@@ -99,13 +99,23 @@ class QdrantService:
                     conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
             qdrant_filter = Filter(must=conditions)
 
-        results = cls._client.search(
+        # qdrant-client renamed `search` to `query_points` in newer versions.
+        # Keep compatibility with both client APIs.
+        if hasattr(cls._client, "search"):
+            return cls._client.search(
+                collection_name=collection,
+                query_vector=vector,
+                limit=limit,
+                query_filter=qdrant_filter,
+            )
+
+        queried = cls._client.query_points(
             collection_name=collection,
-            query_vector=vector,
+            query=vector,
             limit=limit,
             query_filter=qdrant_filter,
         )
-        return results
+        return list(getattr(queried, "points", []) or [])
 
     @classmethod
     def upsert(cls, collection: str, points: List) -> None:

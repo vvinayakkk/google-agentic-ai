@@ -1,11 +1,12 @@
 from uuid import uuid4
+import asyncio
 import os
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from shared.auth.deps import get_current_user
+from shared.auth.deps import get_current_admin
 from shared.core.config import get_settings
 from services.chat_service import ChatService
-from services.groq_fallback_service import generate_groq_reply
 from shared.services.api_key_allocator import get_api_key_allocator
 from loguru import logger
 
@@ -15,8 +16,9 @@ _chat_service = ChatService()
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=5000)
-    language: str = "hi"
+    language: str | None = None
     session_id: str | None = None
+    allow_fallback: bool = True
 
 
 class SearchRequest(BaseModel):
@@ -25,12 +27,30 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=20)
 
 
+def _infer_ui_redirect_tag(message: str, result: dict) -> str:
+    msg = (message or "").lower()
+    agent_used = str((result or {}).get("agent_used") or "").lower()
+
+    if any(k in msg for k in ["equipment", "rental", "tractor", "harvester", "sprayer", "drone", "weeder", "rotavator"]):
+        return "equipment"
+    if "weather" in agent_used or any(k in msg for k in ["weather", "rain", "forecast", "temperature", "soil"]):
+        return "weather"
+    if "market" in agent_used or any(k in msg for k in ["mandi", "price", "rate", "market", "sell", "bhav", "daam"]):
+        return "market"
+    if "scheme" in agent_used or any(k in msg for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "eligibility", "document"]):
+        return "schemes"
+    if any(k in msg for k in ["livestock", "dairy", "cattle", "goat", "poultry"]):
+        return "livestock"
+    return "home"
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request, user=Depends(get_current_user)):
     session_id = body.session_id or str(uuid4())
     settings = get_settings()
     allocator = get_api_key_allocator()
     last_rate_limit_error: Exception | None = None
+    primary_timeout_seconds = max(5.0, float(os.getenv("AGENT_PRIMARY_TIMEOUT_SECONDS", "12")))
 
     for _ in range(settings.key_router_max_retries):
         gemini_lease = None
@@ -40,15 +60,36 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
             os.environ["GEMINI_API_KEY"] = gemini_lease.key
 
         try:
-            result = await _chat_service.process_message(
-                user_id=user["id"],
-                session_id=session_id,
-                message=body.message,
-                language=body.language,
+            result = await asyncio.wait_for(
+                _chat_service.process_message(
+                    user_id=user["id"],
+                    session_id=session_id,
+                    message=body.message,
+                    language=body.language,
+                ),
+                timeout=primary_timeout_seconds,
             )
             if gemini_lease:
                 allocator.report_success(gemini_lease)
+            if isinstance(result, dict):
+                result["ui_redirect_tag"] = _infer_ui_redirect_tag(body.message, result)
             return result
+        except asyncio.TimeoutError as e:
+            if gemini_lease:
+                allocator.report_rate_limited(gemini_lease, f"primary_timeout_{primary_timeout_seconds}s")
+            logger.warning(f"Primary model timeout for user {user['id']} after {primary_timeout_seconds}s; using fast fallback")
+            if body.allow_fallback and allocator.has_provider("groq"):
+                result = await _chat_service.process_message_with_groq_fallback(
+                    user_id=user["id"],
+                    session_id=session_id,
+                    message=body.message,
+                    language=body.language,
+                )
+                if isinstance(result, dict):
+                    result["ui_redirect_tag"] = _infer_ui_redirect_tag(body.message, result)
+                return result
+            last_rate_limit_error = e
+            continue
         except Exception as e:
             err_str = str(e).lower()
             is_retryable_capacity_error = (
@@ -74,17 +115,17 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
                 continue
             raise
 
-    if last_rate_limit_error is not None and allocator.has_provider("groq"):
+    if last_rate_limit_error is not None and body.allow_fallback and allocator.has_provider("groq"):
         logger.warning(f"Falling back to Groq for user {user['id']} after Gemini retries")
-        fallback = generate_groq_reply(message=body.message, language=body.language)
-        return {
-            "session_id": session_id,
-            "response": fallback["response"],
-            "language": body.language,
-            "agent_used": "groq_fallback",
-            "provider": fallback["provider"],
-            "model": fallback["model"],
-        }
+        result = await _chat_service.process_message_with_groq_fallback(
+            user_id=user["id"],
+            session_id=session_id,
+            message=body.message,
+            language=body.language,
+        )
+        if isinstance(result, dict):
+            result["ui_redirect_tag"] = _infer_ui_redirect_tag(body.message, result)
+        return result
 
     if last_rate_limit_error is not None:
         from fastapi.responses import JSONResponse
@@ -98,7 +139,7 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
 
 
 @router.get("/key-pool/status")
-async def key_pool_status(user=Depends(get_current_user)):
+async def key_pool_status(_admin=Depends(get_current_admin)):
     """Return anonymized allocator activity/load status for monitoring."""
     allocator = get_api_key_allocator()
     return allocator.snapshot()
@@ -127,6 +168,7 @@ async def delete_session(session_id: str, user=Depends(get_current_user)):
 @router.post("/search")
 async def search(body: SearchRequest, request: Request, user=Depends(get_current_user)):
     embedding_service = request.app.state.embedding_service
+    await embedding_service.initialize()
     results = embedding_service.search(
         collection=body.collection,
         query=body.query,

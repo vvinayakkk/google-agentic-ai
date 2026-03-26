@@ -81,3 +81,45 @@ class MandiDirectoryResponse(BaseModel):
     longitude: Optional[float] = None
     geocode_quality: Optional[str] = None
     source: str = ""
+
+
+class AdminPriceUpsert(BaseModel):
+    """Admin payload for market price create/update."""
+
+    crop_name: str = Field(..., min_length=1, max_length=120)
+    mandi_name: str = Field(..., min_length=1, max_length=160)
+    state: str = Field(..., min_length=1, max_length=120)
+    district: Optional[str] = Field(default=None, max_length=120)
+    modal_price: float = Field(..., gt=0)
+    min_price: Optional[float] = Field(default=None, ge=0)
+    max_price: Optional[float] = Field(default=None, ge=0)
+    date: Optional[str] = Field(default=None, max_length=40)
+    source: Optional[str] = Field(default=None, max_length=120)
+
+    model_config = {"strict": True, "extra": "forbid"}
+
+
+class AdminMandiUpsert(BaseModel):
+    """Admin payload for mandi create/update."""
+
+    name: str = Field(..., min_length=1, max_length=160)
+    state: str = Field(..., min_length=1, max_length=120)
+    district: str = Field(..., min_length=1, max_length=120)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = Field(default=None, max_length=400)
+    source: Optional[str] = Field(default=None, max_length=120)
+
+    model_config = {"strict": True, "extra": "forbid"}
+
+
+class AdminSchemeUpsert(BaseModel):
+    """Admin payload for scheme create/update."""
+
+    name: str = Field(..., min_length=1, max_length=180)
+    description: str = Field(..., min_length=1, max_length=3000)
+    category: Optional[str] = Field(default=None, max_length=120)
+    state: Optional[str] = Field(default=None, max_length=120)
+    is_active: Optional[bool] = True
+
+    model_config = {"strict": True, "extra": "forbid"}

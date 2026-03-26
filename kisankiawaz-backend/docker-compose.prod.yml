@@ -1,0 +1,46 @@
+services:
+  gateway:
+    ports:
+      - "8000:8000"
+
+  auth-service:
+    ports: []
+
+  farmer-service:
+    ports: []
+
+  crop-service:
+    ports: []
+
+  market-service:
+    ports: []
+
+  equipment-service:
+    ports: []
+
+  agent-service:
+    ports: []
+
+  voice-service:
+    ports: []
+
+  notification-service:
+    ports: []
+
+  schemes-service:
+    ports: []
+
+  geo-service:
+    ports: []
+
+  admin-service:
+    ports: []
+
+  analytics-service:
+    ports: []
+
+  redis:
+    ports: []
+
+  qdrant:
+    ports: []

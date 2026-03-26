@@ -10,6 +10,14 @@ from shared.errors import not_found, bad_request, ErrorCode
 
 
 class SchemeService:
+    _ALLOWED_FIELDS = {
+        "name",
+        "description",
+        "category",
+        "state",
+        "is_active",
+    }
+
     """Static methods for government scheme operations."""
 
     # ── List schemes ─────────────────────────────────────────────
@@ -85,6 +93,7 @@ class SchemeService:
     @staticmethod
     async def create_scheme(db, data: dict) -> dict:
         """Create a new government scheme."""
+        data = {k: v for k, v in data.items() if k in SchemeService._ALLOWED_FIELDS}
         required = ["name", "description"]
         for field in required:
             if field not in data:
@@ -114,8 +123,11 @@ class SchemeService:
         if not existing.exists:
             raise not_found("Government scheme not found")
 
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await ref.update(data)
+        updates = {k: v for k, v in data.items() if k in SchemeService._ALLOWED_FIELDS}
+        if not updates:
+            raise bad_request("No valid fields to update")
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(updates)
 
         updated = await ref.get()
         result = updated.to_dict()

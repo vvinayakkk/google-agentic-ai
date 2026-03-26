@@ -35,6 +35,12 @@ class ExtractRequest(BaseModel):
     filename: str = Field(..., description="Original filename with extension")
 
 
+class ExtractTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=12000)
+    document_type: str = Field(default="auto", max_length=50)
+    target_fields: list[str] | None = None
+
+
 # ── Scheme Discovery ─────────────────────────────────────────────
 
 @router.get("/schemes", status_code=HttpStatus.OK)
@@ -334,27 +340,21 @@ async def serve_scheme_document(
 
 @router.post("/extract-text", status_code=HttpStatus.OK)
 async def extract_from_text_endpoint(
-    body: dict,
+    body: ExtractTextRequest,
     user: dict = Depends(get_current_user),
 ):
     """
     Extract structured data from text using LangExtract.
     Body: { "text": "...", "document_type": "aadhaar|land_record|bank_passbook|auto", "target_fields": [...] }
     """
-    text = body.get("text", "")
-    if not text:
-        raise AppError(
-            status=HttpStatus.BAD_REQUEST,
-            message="'text' field is required",
-            error_code="MISSING_TEXT",
-        )
+    text = body.text
     
     try:
         from services.langextract_service import extract_from_text
         result = extract_from_text(
             text=text,
-            target_fields=body.get("target_fields"),
-            document_type=body.get("document_type", "auto"),
+            target_fields=body.target_fields,
+            document_type=body.document_type,
         )
         return result
     except ImportError:

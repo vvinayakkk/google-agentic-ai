@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_user, get_current_admin
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.market import AdminPriceUpsert
 
 from services.price_service import PriceService
 
@@ -40,23 +41,27 @@ async def get_price(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def create_price(
-    body: dict,
+    body: AdminPriceUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a market price entry."""
     db = get_async_db()
-    return await PriceService.create_price(db=db, data=body)
+    return await PriceService.create_price(db=db, data=body.model_dump(exclude_none=True))
 
 
 @router.put("/{price_id}", status_code=HttpStatus.OK)
 async def update_price(
     price_id: str,
-    body: dict,
+    body: AdminPriceUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a market price entry."""
     db = get_async_db()
-    return await PriceService.update_price(db=db, price_id=price_id, data=body)
+    return await PriceService.update_price(
+        db=db,
+        price_id=price_id,
+        data=body.model_dump(exclude_none=True),
+    )
 
 
 @router.delete("/{price_id}", status_code=HttpStatus.NO_CONTENT)

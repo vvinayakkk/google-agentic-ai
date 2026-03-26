@@ -1,0 +1,172 @@
+SCRIPTS FOLDER INVENTORY
+Generated at: 2026-03-26T03:24:12.7950529+05:30
+Path: scripts
+Total files (excluding __pycache__): 51
+
+FULL FILE STRUCTURE (recursive):
+  - data_ingestion\generate_data_gov_extraction_snapshots.py
+  - data_ingestion\generate_farmer_schemes_data.py
+  - data_ingestion\generate_legacy_api_feeds.py
+  - data_ingestion\generate_master_reference_tables.py
+  - data_ingestion\generate_recovery_pipeline_data.py
+  - data_ingestion\generate_staging_backfill_data.py
+  - data_ingestion\info.txt
+  - generate_qdrant_indexes.py
+  - replace_equipment_providers_from_json.py
+  - replace_schemes_from_json.py
+  - reports\data_assets\audit\seed_farmers_end_to_end_report.json
+  - reports\data_assets\audit\seeded_farmers_credentials.csv
+  - reports\data_gov_extraction_snapshots\35985678-0d79-46b4-9ed6-6f13308a1d24.csv
+  - reports\data_gov_extraction_snapshots\4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+  - reports\data_gov_extraction_snapshots\9ef84268-d588-465a-a308-a864a43d0070.csv
+  - reports\equipment_rental_pan_india_2026.json
+  - reports\farmer_schemes_data\farmer_schemes_master.csv
+  - reports\legacy_api_feeds\mandi_directory_derived_geocoded.csv
+  - reports\legacy_api_feeds\vegetable_api_pulls.csv
+  - reports\master_reference_tables\mandi_directory_india.csv
+  - reports\master_reference_tables\manual_rental_providers.csv
+  - reports\recovery_pipeline_data\agromet\049d64ee-24ed-483f-b84f-00b525516552.csv
+  - reports\recovery_pipeline_data\arrivals\02e72f1b-d82d-4512-a105-7b4373d6fa85.csv
+  - reports\recovery_pipeline_data\cold_storage\a75195de-8cd6-4ecf-a818-54c761dfa24a.csv
+  - reports\recovery_pipeline_data\cost_cultivation\48bcec64-5573-4f3d-b38e-c474253a6a9d.csv
+  - reports\recovery_pipeline_data\crop_yield_varieties\7b9f57f0-5f8a-4442-9759-352dacb9d71b.csv
+  - reports\recovery_pipeline_data\crop_yield_varieties\cf80173e-fece-439d-a0b1-6e9cb510593d.csv
+  - reports\recovery_pipeline_data\fasal\14f6f0d0-311d-4b71-acfe-ac08bbecfd1c.csv
+  - reports\recovery_pipeline_data\fertilizer\5c2f62fe-5afa-4119-a499-fec9d604d5bd.csv
+  - reports\recovery_pipeline_data\fpo\28287ce1-424a-4c43-85f4-de8a38924a69.csv
+  - reports\recovery_pipeline_data\groundwater\6f81905b-5c66-458f-baa3-74f870de5cd0.csv
+  - reports\recovery_pipeline_data\kcc\2bbff406-a8a8-4920-90c3-095adebf531f.csv
+  - reports\recovery_pipeline_data\labour_wages\67722646-54ac-4b26-b73e-124d4bc22bda.csv
+  - reports\recovery_pipeline_data\market_prices\9ef84268-d588-465a-a308-a864a43d0070.csv
+  - reports\recovery_pipeline_data\msp\5e6056c8-b644-40a8-a346-3da6b3d8e67e.csv
+  - reports\recovery_pipeline_data\pesticides\7c568619-b9b4-40bb-b563-68c28c27a6c1.csv
+  - reports\recovery_pipeline_data\pesticides\98a33686-715f-4076-97da-fa3dcf6bc61b.csv
+  - reports\recovery_pipeline_data\pin_master\f17a1608-5f10-4610-bb50-a63c80d83974.csv
+  - reports\recovery_pipeline_data\pmfby\a330e681-6562-4552-a94b-58f1df7eccf3.csv
+  - reports\recovery_pipeline_data\reservoir\247146af-5216-47ff-80f6-ddea261f1139.csv
+  - reports\recovery_pipeline_data\soil_health\4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+  - reports\recovery_pipeline_data\supporting_assets\recovery_generation_report.csv
+  - reports\scheme.json
+  - reports\staging_backfill_data\4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+  - reports\staging_backfill_data\all_data_gov_rows.csv
+  - reports\staging_backfill_data\mandi_master_derived_geocoded.csv
+  - seed.py
+  - seed_admin.py
+  - seed_farmers_end_to_end.py
+  - seed_reference_data.py
+  - setup_cron.sh
+
+FOLDER-WISE BREAKDOWN:
+  - folder: .
+    files_count: 8
+    * generate_qdrant_indexes.py
+    * replace_equipment_providers_from_json.py
+    * replace_schemes_from_json.py
+    * seed.py
+    * seed_admin.py
+    * seed_farmers_end_to_end.py
+    * seed_reference_data.py
+    * setup_cron.sh
+  - folder: data_ingestion
+    files_count: 7
+    * generate_data_gov_extraction_snapshots.py
+    * generate_farmer_schemes_data.py
+    * generate_legacy_api_feeds.py
+    * generate_master_reference_tables.py
+    * generate_recovery_pipeline_data.py
+    * generate_staging_backfill_data.py
+    * info.txt
+  - folder: reports
+    files_count: 2
+    * equipment_rental_pan_india_2026.json
+    * scheme.json
+  - folder: reports\data_assets
+    files_count: 0
+    * (no direct files)
+  - folder: reports\data_assets\audit
+    files_count: 2
+    * seed_farmers_end_to_end_report.json
+    * seeded_farmers_credentials.csv
+  - folder: reports\data_gov_extraction_snapshots
+    files_count: 3
+    * 35985678-0d79-46b4-9ed6-6f13308a1d24.csv
+    * 4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+    * 9ef84268-d588-465a-a308-a864a43d0070.csv
+  - folder: reports\farmer_schemes_data
+    files_count: 1
+    * farmer_schemes_master.csv
+  - folder: reports\legacy_api_feeds
+    files_count: 2
+    * mandi_directory_derived_geocoded.csv
+    * vegetable_api_pulls.csv
+  - folder: reports\master_reference_tables
+    files_count: 2
+    * mandi_directory_india.csv
+    * manual_rental_providers.csv
+  - folder: reports\recovery_pipeline_data
+    files_count: 0
+    * (no direct files)
+  - folder: reports\recovery_pipeline_data\agromet
+    files_count: 1
+    * 049d64ee-24ed-483f-b84f-00b525516552.csv
+  - folder: reports\recovery_pipeline_data\arrivals
+    files_count: 1
+    * 02e72f1b-d82d-4512-a105-7b4373d6fa85.csv
+  - folder: reports\recovery_pipeline_data\cold_storage
+    files_count: 1
+    * a75195de-8cd6-4ecf-a818-54c761dfa24a.csv
+  - folder: reports\recovery_pipeline_data\cost_cultivation
+    files_count: 1
+    * 48bcec64-5573-4f3d-b38e-c474253a6a9d.csv
+  - folder: reports\recovery_pipeline_data\crop_yield_varieties
+    files_count: 2
+    * 7b9f57f0-5f8a-4442-9759-352dacb9d71b.csv
+    * cf80173e-fece-439d-a0b1-6e9cb510593d.csv
+  - folder: reports\recovery_pipeline_data\fasal
+    files_count: 1
+    * 14f6f0d0-311d-4b71-acfe-ac08bbecfd1c.csv
+  - folder: reports\recovery_pipeline_data\fertilizer
+    files_count: 1
+    * 5c2f62fe-5afa-4119-a499-fec9d604d5bd.csv
+  - folder: reports\recovery_pipeline_data\fpo
+    files_count: 1
+    * 28287ce1-424a-4c43-85f4-de8a38924a69.csv
+  - folder: reports\recovery_pipeline_data\groundwater
+    files_count: 1
+    * 6f81905b-5c66-458f-baa3-74f870de5cd0.csv
+  - folder: reports\recovery_pipeline_data\kcc
+    files_count: 1
+    * 2bbff406-a8a8-4920-90c3-095adebf531f.csv
+  - folder: reports\recovery_pipeline_data\labour_wages
+    files_count: 1
+    * 67722646-54ac-4b26-b73e-124d4bc22bda.csv
+  - folder: reports\recovery_pipeline_data\market_prices
+    files_count: 1
+    * 9ef84268-d588-465a-a308-a864a43d0070.csv
+  - folder: reports\recovery_pipeline_data\msp
+    files_count: 1
+    * 5e6056c8-b644-40a8-a346-3da6b3d8e67e.csv
+  - folder: reports\recovery_pipeline_data\pesticides
+    files_count: 2
+    * 7c568619-b9b4-40bb-b563-68c28c27a6c1.csv
+    * 98a33686-715f-4076-97da-fa3dcf6bc61b.csv
+  - folder: reports\recovery_pipeline_data\pin_master
+    files_count: 1
+    * f17a1608-5f10-4610-bb50-a63c80d83974.csv
+  - folder: reports\recovery_pipeline_data\pmfby
+    files_count: 1
+    * a330e681-6562-4552-a94b-58f1df7eccf3.csv
+  - folder: reports\recovery_pipeline_data\reservoir
+    files_count: 1
+    * 247146af-5216-47ff-80f6-ddea261f1139.csv
+  - folder: reports\recovery_pipeline_data\soil_health
+    files_count: 1
+    * 4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+  - folder: reports\recovery_pipeline_data\supporting_assets
+    files_count: 1
+    * recovery_generation_report.csv
+  - folder: reports\staging_backfill_data
+    files_count: 3
+    * 4554a3c8-74e3-4f93-8727-8fd92161e345.csv
+    * all_data_gov_rows.csv
+    * mandi_master_derived_geocoded.csv

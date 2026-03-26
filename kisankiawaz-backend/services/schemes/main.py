@@ -11,7 +11,7 @@ from shared.db.mongodb import init_mongodb, close_mongodb
 from shared.db.redis import get_redis, close_redis
 from shared.errors import AppError
 from shared.errors.handlers import global_exception_handler
-from shared.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
+from shared.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, RateLimiterMiddleware
 from routes import router as api_router
 from loguru import logger
 
@@ -38,6 +38,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimiterMiddleware, max_requests=120, window_seconds=60)
 app.include_router(api_router, prefix="/api/v1/schemes")
 
 

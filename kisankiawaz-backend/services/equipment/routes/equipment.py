@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from shared.auth.deps import get_current_farmer
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.equipment import EquipmentRecordCreate, EquipmentRecordUpdate
 
 from services.equipment_service import EquipmentService
 
@@ -22,12 +23,12 @@ async def list_equipment(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def add_equipment(
-    body: dict,
+    body: EquipmentRecordCreate,
     user: dict = Depends(get_current_farmer),
 ):
     """Add a piece of equipment."""
     db = get_async_db()
-    return await EquipmentService.add_equipment(db=db, farmer_id=user["id"], data=body)
+    return await EquipmentService.add_equipment(db=db, farmer_id=user["id"], data=body.model_dump())
 
 
 @router.get("/{equipment_id}", status_code=HttpStatus.OK)
@@ -43,13 +44,16 @@ async def get_equipment(
 @router.put("/{equipment_id}", status_code=HttpStatus.OK)
 async def update_equipment(
     equipment_id: str,
-    body: dict,
+    body: EquipmentRecordUpdate,
     user: dict = Depends(get_current_farmer),
 ):
     """Update equipment (ownership check)."""
     db = get_async_db()
     return await EquipmentService.update_equipment(
-        db=db, equipment_id=equipment_id, farmer_id=user["id"], data=body,
+        db=db,
+        equipment_id=equipment_id,
+        farmer_id=user["id"],
+        data=body.model_dump(exclude_none=True),
     )
 
 

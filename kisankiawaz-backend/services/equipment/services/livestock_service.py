@@ -10,6 +10,13 @@ from shared.errors import not_found, bad_request, unauthorized, ErrorCode
 
 
 class LivestockService:
+    _ALLOWED_FIELDS = {
+        "type",
+        "breed",
+        "count",
+        "health_status",
+    }
+
     """Static methods for livestock CRUD operations."""
 
     # ── List livestock ───────────────────────────────────────────
@@ -33,6 +40,7 @@ class LivestockService:
     @staticmethod
     async def add_livestock(db, farmer_id: str, data: dict) -> dict:
         """Create a new livestock record for the farmer."""
+        data = {k: v for k, v in data.items() if k in LivestockService._ALLOWED_FIELDS}
         required = ["type", "breed", "count"]
         for field in required:
             if field not in data:
@@ -83,10 +91,11 @@ class LivestockService:
         if existing_data.get("farmer_id") != farmer_id:
             raise unauthorized("You do not own this livestock record")
 
-        # Prevent overwriting farmer_id
-        data.pop("farmer_id", None)
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await ref.update(data)
+        updates = {k: v for k, v in data.items() if k in LivestockService._ALLOWED_FIELDS}
+        if not updates:
+            raise bad_request("No valid fields to update")
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(updates)
 
         updated = await ref.get()
         result = updated.to_dict()

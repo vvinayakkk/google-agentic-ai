@@ -127,7 +127,7 @@ class MandiDataFetcher:
     ) -> List[Dict]:
         """Fetch daily commodity prices from data.gov.in API."""
         if not DATA_GOV_API_KEY:
-            logger.error("DATA_GOV_API_KEY is not configured")
+            logger.debug("DATA_GOV_API_KEY is not configured; using fallback data paths")
             return []
         
         # Normalize commodity name
@@ -237,7 +237,7 @@ class MandiDataFetcher:
     async def fetch_mandi_list(self, state: str = None, limit: int = 500) -> List[Dict]:
         """Fetch list of mandis from data.gov.in API."""
         if not DATA_GOV_API_KEY:
-            logger.error("DATA_GOV_API_KEY is not configured")
+            logger.debug("DATA_GOV_API_KEY is not configured; using fallback data paths")
             return []
         params = {
             "api-key": DATA_GOV_API_KEY,
@@ -343,35 +343,36 @@ class MandiDataSyncService:
         if not prices:
             return {"synced": 0, "message": "No prices fetched from API"}
         
-        batch_size = 400  # MongoCollections batch limit is 500
+        batch_size = 250
         synced = 0
         now = datetime.now(timezone.utc).isoformat()
-        
+
         for i in range(0, len(prices), batch_size):
             chunk = prices[i:i + batch_size]
-            batch = db.batch()
-            
+            tasks = []
             for price in chunk:
                 price_id = uuid.uuid4().hex
                 doc_ref = db.collection("market_prices").document(price_id)
-                
-                batch.set(doc_ref, {
-                    "crop_name": price["commodity"],
-                    "variety": price.get("variety", ""),
-                    "mandi_name": price["market"],
-                    "state": price["state"],
-                    "district": price.get("district", ""),
-                    "min_price": price["min_price"],
-                    "max_price": price["max_price"],
-                    "modal_price": price["modal_price"],
-                    "unit": "quintal",
-                    "date": price.get("arrival_date", now[:10]),
-                    "source": price.get("source", "data.gov.in"),
-                    "created_at": now,
-                })
+                tasks.append(
+                    doc_ref.set({
+                        "crop_name": price["commodity"],
+                        "variety": price.get("variety", ""),
+                        "mandi_name": price["market"],
+                        "state": price["state"],
+                        "district": price.get("district", ""),
+                        "min_price": price["min_price"],
+                        "max_price": price["max_price"],
+                        "modal_price": price["modal_price"],
+                        "unit": "quintal",
+                        "date": price.get("arrival_date", now[:10]),
+                        "source": price.get("source", "data.gov.in"),
+                        "created_at": now,
+                    })
+                )
                 synced += 1
-            
-            await batch.commit()
+
+            if tasks:
+                await asyncio.gather(*tasks)
         
         logger.info(f"Synced {synced} market prices to MongoCollections")
         return {"synced": synced, "source": "data.gov.in", "timestamp": now}
@@ -401,27 +402,29 @@ class MandiDataSyncService:
         
         now = datetime.now(timezone.utc).isoformat()
         synced = 0
-        batch_size = 400
+        batch_size = 250
         
         for i in range(0, len(unique_mandis), batch_size):
             chunk = unique_mandis[i:i + batch_size]
-            batch = db.batch()
-            
+            tasks = []
             for mandi in chunk:
                 mandi_id = uuid.uuid4().hex
                 doc_ref = db.collection("mandis").document(mandi_id)
-                
-                batch.set(doc_ref, {
-                    "name": mandi["name"],
-                    "state": mandi["state"],
-                    "district": mandi.get("district", ""),
-                    "source": mandi.get("source", "data.gov.in"),
-                    "created_at": now,
-                    "updated_at": now,
-                })
+
+                tasks.append(
+                    doc_ref.set({
+                        "name": mandi["name"],
+                        "state": mandi["state"],
+                        "district": mandi.get("district", ""),
+                        "source": mandi.get("source", "data.gov.in"),
+                        "created_at": now,
+                        "updated_at": now,
+                    })
+                )
                 synced += 1
-            
-            await batch.commit()
+
+            if tasks:
+                await asyncio.gather(*tasks)
         
         logger.info(f"Synced {synced} mandis to MongoCollections")
         return {"synced": synced, "total_fetched": len(all_mandis), "unique": len(unique_mandis)}

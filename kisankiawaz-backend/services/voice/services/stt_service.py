@@ -1,13 +1,26 @@
 import httpx
+import os
 from shared.core.config import get_settings
 from shared.errors import bad_request
 from loguru import logger
 
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text-translate"
 MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10MB
+STT_TIMEOUT_SECONDS = max(4.0, float(os.getenv("VOICE_STT_TIMEOUT_SECONDS", "12")))
 
 
 class STTService:
+    _client: httpx.AsyncClient | None = None
+
+    @classmethod
+    def _get_client(cls) -> httpx.AsyncClient:
+        if cls._client is None:
+            cls._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(STT_TIMEOUT_SECONDS, connect=3.0),
+                limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+            )
+        return cls._client
+
     @staticmethod
     async def transcribe(audio_bytes: bytes, language: str = "hi-IN", filename: str = "audio.wav") -> dict:
         if not audio_bytes:
@@ -29,8 +42,8 @@ class STTService:
             "language_code": language,
         }
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(SARVAM_STT_URL, files=files, data=data, headers=headers)
+        client = STTService._get_client()
+        response = await client.post(SARVAM_STT_URL, files=files, data=data, headers=headers)
         
         if response.status_code != 200:
             logger.error(f"Sarvam STT error: {response.status_code} - {response.text}")

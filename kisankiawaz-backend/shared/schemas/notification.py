@@ -36,12 +36,25 @@ class NotificationPreferencesResponse(BaseModel):
     updated_at: str = ""
 
 
+class CreateNotificationRequest(BaseModel):
+    """Admin request to create a single-user notification."""
+
+    user_id: str = Field(..., min_length=1, max_length=128)
+    title: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=1000)
+    notification_type: str = Field(default="general", alias="type", max_length=64)
+    data: dict = Field(default_factory=dict)
+
+    model_config = {"strict": True, "populate_by_name": True}
+
+
 class BroadcastRequest(BaseModel):
     """Admin broadcast notification."""
 
     title: str = Field(..., min_length=1, max_length=200)
     message: str = Field(..., min_length=1, max_length=1000)
+    role: Optional[str] = Field(default=None, max_length=64)
     target_states: Optional[List[str]] = None
-    notification_type: str = "broadcast"
+    notification_type: str = Field(default="broadcast", alias="type", max_length=64)
 
-    model_config = {"strict": True}
+    model_config = {"strict": True, "populate_by_name": True}

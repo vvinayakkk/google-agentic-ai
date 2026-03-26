@@ -1,3 +1,5 @@
+import asyncio
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, Distance, VectorParams, models
 from fastembed import TextEmbedding
@@ -10,12 +12,23 @@ class EmbeddingService:
     def __init__(self):
         self.client = None
         self.model = None
+        self._initialized = False
+        self._init_lock = asyncio.Lock()
 
     async def initialize(self):
-        settings = get_settings()
-        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
-        self.model = TextEmbedding(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-        logger.info("Embedding service initialized")
+        if self._initialized:
+            return
+        async with self._init_lock:
+            if self._initialized:
+                return
+            settings = get_settings()
+            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+            self.model = await asyncio.to_thread(
+                TextEmbedding,
+                model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+            )
+            self._initialized = True
+            logger.info("Embedding service initialized")
 
     def embed(self, text: str) -> list[float]:
         return next(self.model.embed([text])).tolist()

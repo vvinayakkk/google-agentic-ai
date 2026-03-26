@@ -10,6 +10,16 @@ from shared.errors import not_found, bad_request, ErrorCode
 
 
 class MandiService:
+    _ALLOWED_FIELDS = {
+        "name",
+        "state",
+        "district",
+        "latitude",
+        "longitude",
+        "address",
+        "source",
+    }
+
     """Static methods for mandi operations."""
 
     # ── List mandis ──────────────────────────────────────────────
@@ -61,6 +71,7 @@ class MandiService:
     @staticmethod
     async def create_mandi(db, data: dict) -> dict:
         """Create a new mandi."""
+        data = {k: v for k, v in data.items() if k in MandiService._ALLOWED_FIELDS}
         required = ["name", "state", "district"]
         for field in required:
             if field not in data:
@@ -89,8 +100,11 @@ class MandiService:
         if not existing.exists:
             raise not_found("Mandi not found")
 
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await ref.update(data)
+        updates = {k: v for k, v in data.items() if k in MandiService._ALLOWED_FIELDS}
+        if not updates:
+            raise bad_request("No valid fields to update")
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await ref.update(updates)
 
         updated = await ref.get()
         result = updated.to_dict()

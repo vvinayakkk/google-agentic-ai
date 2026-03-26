@@ -58,19 +58,71 @@ class SchemesService:
 
     @staticmethod
     async def semantic_search(query: str, state: str = None, ministry: str = None, limit: int = 10) -> dict:
-        """Semantic search over schemes using Qdrant."""
+        """Scheme search with Mongo lexical-first strategy and Qdrant fallback."""
+        q = (query or "").strip().lower()
+
+        # Fast lexical search from Mongo first to avoid cold-start latency in semantic stack.
+        try:
+            from shared.db.mongodb import get_async_db
+            db = get_async_db()
+            docs = [d async for d in db.collection(MongoCollections.REF_FARMER_SCHEMES).limit(1500).stream()]
+
+            scored = []
+            for doc in docs:
+                item = doc.to_dict() or {}
+                states = item.get("beneficiary_state", []) if isinstance(item.get("beneficiary_state", []), list) else []
+                if state and states and state not in states:
+                    continue
+                if ministry and str(item.get("ministry", "")) != ministry:
+                    continue
+
+                title = str(item.get("title", "") or "")
+                summary = str(item.get("summary", "") or "")
+                tags = " ".join(item.get("tags", []) if isinstance(item.get("tags", []), list) else [])
+                hay = f"{title} {summary} {tags}".lower()
+
+                score = 0
+                if q and q in hay:
+                    score += 4
+                for token in [t for t in q.split() if len(t) > 2][:8]:
+                    if token in hay:
+                        score += 1
+
+                if score > 0:
+                    scored.append((score, {
+                        "scheme_id": item.get("scheme_id", ""),
+                        "title": title,
+                        "ministry": item.get("ministry", ""),
+                        "beneficiary_state": states,
+                        "categories": item.get("categories", []),
+                        "similarity_score": round(min(1.0, score / 10), 4),
+                        "search_source": "mongo_lexical",
+                        "last_updated": item.get("_ingested_at", ""),
+                    }))
+
+            scored.sort(key=lambda x: x[0], reverse=True)
+            if scored:
+                items = [x[1] for x in scored[:limit]]
+                return {"query": query, "results": items, "total": len(items), "source": "mongo_lexical"}
+        except Exception:
+            # Continue to semantic fallback below.
+            pass
+
         filter_payload = {}
         if state:
             filter_payload["beneficiary_state"] = [state]
         if ministry:
             filter_payload["ministry"] = ministry
 
-        results = QdrantService.search(
-            collection=Qdrant.SCHEMES_SEMANTIC,
-            query_text=query,
-            limit=limit,
-            filter_payload=filter_payload if filter_payload else None,
-        )
+        try:
+            results = QdrantService.search(
+                collection=Qdrant.SCHEMES_SEMANTIC,
+                query_text=query,
+                limit=limit,
+                filter_payload=filter_payload if filter_payload else None,
+            )
+        except Exception:
+            return {"query": query, "results": [], "total": 0, "source": "unavailable"}
 
         items = []
         for result in results:
@@ -82,9 +134,10 @@ class SchemesService:
                 "beneficiary_state": payload.get("beneficiary_state", []),
                 "categories": payload.get("categories", []),
                 "similarity_score": round(result.score, 4),
+                "search_source": "qdrant_semantic",
             })
 
-        return {"query": query, "results": items, "total": len(items)}
+        return {"query": query, "results": items, "total": len(items), "source": "qdrant_semantic"}
 
     @staticmethod
     async def check_eligibility(db, scheme_id: str, farmer_id: str) -> dict:

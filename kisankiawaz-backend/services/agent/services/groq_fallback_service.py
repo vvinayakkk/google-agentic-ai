@@ -39,6 +39,24 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
     for _ in range(max(1, settings.key_router_max_retries)):
         lease = allocator.acquire("groq")
         try:
+            lang = (language or "hi").strip().lower()
+            if lang.startswith("en"):
+                system_prompt = (
+                    "You are KisanMitra assistant for Indian farmers. "
+                    "Respond with practical, accurate, concise guidance in English only."
+                )
+            elif lang.startswith("hinglish"):
+                system_prompt = (
+                    "You are KisanMitra assistant for Indian farmers. "
+                    "Respond with practical, accurate, concise guidance in Hinglish (Roman Hindi + English mix)."
+                )
+            else:
+                system_prompt = (
+                    "You are KisanMitra assistant for Indian farmers. "
+                    "Respond with practical, accurate, concise guidance. "
+                    "Prefer Hindi unless user asked another language."
+                )
+
             with httpx.Client(timeout=45.0) as client:
                 response = client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
@@ -52,11 +70,7 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
                         "messages": [
                             {
                                 "role": "system",
-                                "content": (
-                                    "You are KisanMitra assistant for Indian farmers. "
-                                    "Respond with practical, accurate, concise guidance. "
-                                    "Prefer Hindi unless user asked another language."
-                                ),
+                                "content": system_prompt,
                             },
                             {
                                 "role": "user",

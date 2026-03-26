@@ -242,7 +242,9 @@ def build_geo_location_index(db) -> int:
         ))
 
     if points:
-        QdrantService.upsert(Qdrant.GEO_LOCATION_INDEX, points)
+        batch_size = 256
+        for i in range(0, len(points), batch_size):
+            QdrantService.upsert(Qdrant.GEO_LOCATION_INDEX, points[i:i + batch_size])
     print(f"    → {len(points)} vectors")
     return len(points)
 

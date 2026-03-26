@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from shared.auth.deps import get_current_user, get_current_admin
 from shared.db.mongodb import get_async_db
 from shared.errors import HttpStatus
+from shared.schemas.market import AdminMandiUpsert
 
 from services.mandi_service import MandiService
 
@@ -39,23 +40,27 @@ async def get_mandi(
 
 @router.post("/", status_code=HttpStatus.CREATED)
 async def create_mandi(
-    body: dict,
+    body: AdminMandiUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin creates a mandi."""
     db = get_async_db()
-    return await MandiService.create_mandi(db=db, data=body)
+    return await MandiService.create_mandi(db=db, data=body.model_dump(exclude_none=True))
 
 
 @router.put("/{mandi_id}", status_code=HttpStatus.OK)
 async def update_mandi(
     mandi_id: str,
-    body: dict,
+    body: AdminMandiUpsert,
     admin: dict = Depends(get_current_admin),
 ):
     """Admin updates a mandi."""
     db = get_async_db()
-    return await MandiService.update_mandi(db=db, mandi_id=mandi_id, data=body)
+    return await MandiService.update_mandi(
+        db=db,
+        mandi_id=mandi_id,
+        data=body.model_dump(exclude_none=True),
+    )
 
 
 @router.delete("/{mandi_id}", status_code=HttpStatus.NO_CONTENT)

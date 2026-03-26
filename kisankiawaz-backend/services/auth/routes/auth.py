@@ -14,6 +14,7 @@ from shared.schemas.auth import (
     OTPRequest,
     OTPVerify,
     ResetPasswordRequest,
+    UserUpdateRequest,
 )
 
 from services.auth_service import AuthService
@@ -48,7 +49,9 @@ async def login(body: LoginRequest):
 @router.post("/refresh", status_code=HttpStatus.OK)
 async def refresh(body: RefreshRequest):
     """Rotate access token using a refresh token."""
-    result = AuthService.refresh(refresh_token=body.refresh_token)
+    db = get_async_db()
+    redis = await get_redis()
+    result = await AuthService.refresh(db=db, redis=redis, refresh_token=body.refresh_token)
     return result
 
 
@@ -61,10 +64,14 @@ async def get_me(user: dict = Depends(get_current_user)):
 
 
 @router.put("/me", status_code=HttpStatus.OK)
-async def update_me(data: dict, user: dict = Depends(get_current_user)):
+async def update_me(data: UserUpdateRequest, user: dict = Depends(get_current_user)):
     """Update the authenticated user's basic info."""
     db = get_async_db()
-    result = await AuthService.update_user(db=db, user_id=user["id"], data=data)
+    result = await AuthService.update_user(
+        db=db,
+        user_id=user["id"],
+        data=data.model_dump(exclude_none=True),
+    )
     return result
 
 
