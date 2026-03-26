@@ -1,598 +1,1011 @@
-# 🌾 Kisan Sahayak - AI-Powered Agricultural Assistant
+<div align="center">
 
-> *Empowering farmers with intelligent solutions through cutting-edge AI technology*
+<img src="https://img.shields.io/badge/KisanKiAwaaz-Farmer's%20Voice-FFD700?style=for-the-badge&labelColor=1C1C1C" alt="KisanKiAwaaz"/>
 
-[![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)](https://firebase.google.com/)
+# 🌾 KisanKiAwaaz — किसान की आवाज़
 
----
+### AI-Powered Agricultural Intelligence Platform for Indian Farmers
 
-## 🚀 Quick Start Overview
-
-Kisan Sahayak is a revolutionary agricultural assistant that combines AI agents, speech processing, and real-time data to help farmers make informed decisions. Our architecture consists of:
-
-- **📱 Mobile App** - React Native frontend
-- **🔧 Individual APIs Backend** - Core functionalities (Port 8000)
-- **🤖 GCP Agents Backend** - AI-powered services (Port 8001)
+*Voice-first. Multilingual. Built for Bharat.*
 
 ---
 
-## 📁 Project Structure
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactjs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
+[![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-DC143C?style=flat-square&logo=data:image/svg+xml;base64,PHN2Zy8+)](https://qdrant.tech)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![Celery](https://img.shields.io/badge/Celery-5.x-37814A?style=flat-square&logo=celery&logoColor=white)](https://docs.celeryq.dev)
+[![License](https://img.shields.io/badge/License-MIT-FFD700?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
+
+---
+
+**176 API Routes · 12 Microservices · Voice Pipeline · Multi-Agent AI · 38 MongoDB Collections · 6 Qdrant Indexes**
+
+[Overview](#-overview) · [Architecture](#-architecture) · [Services](#-microservices) · [Setup](#-getting-started) · [API Reference](#-api-reference) · [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 📖 Overview
+
+**KisanKiAwaaz** (Hindi: *Farmer's Voice*) is a full-stack, production-grade AI platform designed to bridge the information gap for Indian farmers. Built with a voice-first philosophy, it enables rural farmers — many of whom are not comfortable with text-based interfaces — to access real-time market prices, government scheme eligibility, crop disease detection, equipment rental, and AI-powered agricultural advisory in their native language.
+
+### The Problem
+
+India has 150+ million farming households. The vast majority lack access to:
+- **Live mandi (market) price data** — forcing them to sell at whatever price middlemen quote
+- **Government scheme awareness** — over ₹1 lakh crore in agricultural subsidies go unclaimed annually
+- **Agronomy advice** — crop disease identification and treatment guidance is inaccessible without agronomists
+- **Equipment access** — small farmers cannot afford equipment ownership, and rental markets are opaque
+
+### What KisanKiAwaaz Does
+
+| Feature | Description |
+|---|---|
+| 🎤 **Voice AI Pipeline** | STT → Multi-Agent → TTS in Indian languages via Sarvam AI |
+| 📊 **Live Market Intelligence** | Real-time mandi prices, MSP tracking, price trend analysis |
+| 🌾 **Crop Management** | Crop lifecycle tracking, disease detection, recommendations |
+| 📋 **Scheme Discovery** | AI-powered government scheme search + eligibility checking |
+| 🚜 **Equipment Rental** | Peer-to-peer farm equipment and livestock rental marketplace |
+| 🤖 **Multi-Agent System** | Orchestrated AI agent with market, scheme, crop, geo tools |
+| 📍 **Geo Intelligence** | Full India pincode/village/district lookup and mapping |
+| 📈 **Analytics Engine** | Deterministic insight dashboards for admins and farmers |
+| 🔔 **Smart Notifications** | Price alerts, scheme alerts, crop advisories, broadcasts |
+| 🛡️ **Admin Console** | Full platform governance, data management, ingestion control |
+
+---
+
+## 🏗️ Architecture
+
+### System Topology
 
 ```
-📦 google-agentic-ai/
-├── 📱 MyApp/                    # React Native Mobile Application
-├── 🔧 backend/                  # Individual APIs & Core Services
-├── 🤖 gcp_agents_off_backend/   # GCP AI Agents & Intelligence Layer
-└── 👤 vinayak/                  # Configuration & Credentials
+                          ┌─────────────────────────┐
+                          │     CLIENT LAYER         │
+                          │  Farmer App (React Native)│
+                          │  Admin Dashboard (React)  │
+                          └────────────┬────────────┘
+                                       │ HTTPS
+                          ┌────────────▼────────────┐
+                          │    NGINX GATEWAY :8000   │
+                          │  Rate Limiting · CORS    │
+                          │  Prefix-based Routing    │
+                          └────────────┬────────────┘
+                                       │
+          ┌────────────────────────────┼────────────────────────────┐
+          │                            │                            │
+   ┌──────▼──────┐            ┌────────▼────────┐          ┌───────▼──────┐
+   │  AUTH :8001 │            │ FARMER   :8002  │          │  CROP  :8003 │
+   │  JWT · OTP  │            │ Profiles · Dash │          │ CRUD · AI    │
+   └─────────────┘            └─────────────────┘          └──────────────┘
+          │                            │                            │
+   ┌──────▼──────┐            ┌────────▼────────┐          ┌───────▼──────┐
+   │ MARKET :8004│            │EQUIPMENT :8005  │          │ AGENT  :8006 │
+   │ 52 routes   │            │ Rental · Livestock│         │ Orchestrator │
+   └─────────────┘            └─────────────────┘          └──────────────┘
+          │                            │                            │
+   ┌──────▼──────┐            ┌────────▼────────┐          ┌───────▼──────┐
+   │ VOICE :8007 │            │NOTIF.   :8008   │          │SCHEMES :8009 │
+   │ STT·TTS     │            │ Alerts · Prefs  │          │ Search · Elig│
+   └─────────────┘            └─────────────────┘          └──────────────┘
+          │                            │                            │
+   ┌──────▼──────┐            ┌────────▼────────┐          ┌───────▼──────┐
+   │  GEO  :8010 │            │ ADMIN    :8011  │          │ANALYTICS:8012│
+   │ Pincode·Map │            │ Governance · Config│        │ Insights     │
+   └─────────────┘            └─────────────────┘          └──────────────┘
+                                       │
+          ┌────────────────────────────┼─────────────────────────┐
+          │                            │                          │
+   ┌──────▼──────┐            ┌────────▼────────┐       ┌────────▼────────┐
+   │  MONGODB    │            │     REDIS        │       │    QDRANT       │
+   │  38 Colls   │            │  Cache·Sessions  │       │  6 Vector Idx   │
+   │  Transact.  │            │  Rate Limits·OTP │       │  768-dim embed  │
+   │  + Ref Data │            │  Celery Broker   │       │  Semantic Search│
+   └─────────────┘            └─────────────────┘       └─────────────────┘
+                                       │
+                          ┌────────────▼────────────┐
+                          │    CELERY WORKER         │
+                          │  Embeddings · Analytics  │
+                          │  Notifications · Indexes │
+                          └─────────────────────────┘
+```
+
+### Request Flow
+
+```
+1.  Client  ──►  nginx:8000
+2.  Nginx   ──►  /api/v1/<prefix>  →  target microservice
+3.  Service ──►  Auth middleware  →  validation  →  business logic
+4.  Service ──►  MongoDB read/write  +  Redis cache  +  Qdrant search
+5.  Response ◄──  through gateway  →  client
+```
+
+### Voice Pipeline
+
+```
+Farmer speaks (any Indian language)
+        │
+        ▼
+┌──────────────────┐
+│  Voice Service   │  POST /api/v1/voice/command
+│  :8007           │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│   Sarvam STT     │  Audio → Text (Hindi/Marathi/Punjabi/Telugu/...)
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  Agent Service   │  Multi-tool orchestration
+│  :8006           │  ├── Market Tool  →  market-service:8004
+│                  │  ├── Schemes Tool →  schemes-service:8009
+│                  │  ├── Crop Tool    →  crop-service:8003
+│                  │  ├── Weather Tool →  market-service:8004
+│                  │  └── Geo Tool     →  geo-service:8010
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│   Sarvam TTS     │  Text → Audio (base64, farmer's language)
+└──────┬───────────┘
+       │
+       ▼
+  Response with
+  audio + latency metadata
 ```
 
 ---
 
-## 🛠️ Prerequisites
+## 📦 Microservices
 
-Before diving in, ensure you have:
+| Service | Port | Routes | Responsibility |
+|---|---|---|---|
+| **auth-service** | 8001 | 9 | JWT lifecycle, OTP, refresh token replay protection |
+| **farmer-service** | 8002 | 7 | Farmer profiles, dashboard aggregation |
+| **crop-service** | 8003 | 9 | Crop CRUD, disease detection, recommendations, cycle reference |
+| **market-service** | 8004 | 52 | Mandi prices, MSP, document builder, weather, soil, ref data |
+| **equipment-service** | 8005 | 25 | Equipment/livestock CRUD, rental lifecycle, provider intelligence |
+| **agent-service** | 8006 | 9 | Multi-agent chat orchestration, session management, key pool |
+| **voice-service** | 8007 | 2 | STT→Agent→TTS pipeline with latency telemetry |
+| **notification-service** | 8008 | 10 | Notifications, broadcasting, preference management |
+| **schemes-service** | 8009 | 7 | Scheme search (Mongo-first + Qdrant fallback), eligibility, PMFBY |
+| **geo-service** | 8010 | 4 | Pincode decode, village search, district/state index |
+| **admin-service** | 8011 | 26 | Platform governance, ingestion control, audit logs, config |
+| **analytics-service** | 8012 | 16 | Deterministic insight engine, snapshots, farmer benchmarks |
 
-- **Node.js** (v16 or higher) 📦
-- **Python** (v3.8 or higher) 🐍
-- **Expo CLI** 📱
-- **Google Cloud Platform Account** ☁️
-- **Firebase Project** 🔥
-- **Twilio Account** 📞
-- **Bland AI Account** 🤖
-
----
-
-## 🎯 Step-by-Step Setup Guide
-
-### 📱 **STEP 1: Mobile App Setup**
-
-Navigate to the mobile app directory and install dependencies:
-
-```bash
-cd MyApp
-npm install
-```
-
-**Start the application:**
-```bash
-# For development with cache clearing
-npx expo start --clear
-
-# Alternative start command
-npm start
-```
+**Total: 176 API routes**
 
 ---
 
-### 🔧 **STEP 2: Individual APIs Backend (Port 8000)**
+## 🗄️ Database Structure
 
-This backend handles core functionalities like speech processing, communications, and individual API services.
+### MongoDB Collections
 
-#### **Environment Setup:**
+#### Operational (Transactional)
+| Collection | Description |
+|---|---|
+| `users` | Farmer accounts (phone, hashed password, role, language) |
+| `farmer_profiles` | Extended profile (village, district, state, pin, land, soil, irrigation) |
+| `crops` | Farmer-owned crop records (name, season, area, sowing/harvest dates) |
+| `crop_cycles` | Static crop cycle reference data |
+| `livestock` | Livestock records per farmer (type, breed, count, health) |
+| `market_prices` | Live and historical mandi price records |
+| `mandis` | Mandi directory (name, state, district, lat, long) |
+| `equipment` | Equipment listings (name, type, rate, availability, location) |
+| `equipment_bookings` | Booking records with status lifecycle |
+| `equipment_rental_rates` | DB-backed provider rate rows |
+| `notifications` | Per-user notifications (title, message, type, read status) |
+| `notification_preferences` | Per-user preference flags (price/scheme/crop/language) |
+| `agent_conversations` | Full conversation records per session |
+| `voice_sessions` | Voice pipeline session metadata + latency telemetry |
+| `chat_messages` | Individual message records with agent/tool metadata |
+| `chat_sessions` | Session-level records (session_id, farmer, timestamps) |
+| `documents` | Generated document records |
+| `document_builder_sessions` | Multi-step document builder session state |
+| `calendar_events` | Farmer calendar and sowing/harvest event tracking |
+| `feedback` | General platform feedback |
+| `farmer_feedback` | Farmer-specific feedback records |
+| `health_records` | Livestock health records |
+| `crop_expenses` | Crop expense tracking per farmer |
 
-```bash
-cd backend
+#### Reference Data (`ref_*`) — Ingested from data.gov.in
+| Collection | Description |
+|---|---|
+| `ref_mandi_prices` | Bulk historical mandi price dataset |
+| `ref_mandi_directory` | Pan-India mandi directory with geocoding |
+| `ref_msp_prices` | Minimum Support Price official data |
+| `ref_farmer_schemes` | Government scheme master dataset |
+| `ref_equipment_providers` | Curated equipment rental provider dataset |
+| `ref_soil_health` | Soil health card reference data |
+| `ref_cold_storage` | Cold storage facility directory |
+| `ref_reservoir_data` | Reservoir water level data |
+| `ref_crop_varieties` | Crop variety reference (yield, region, season) |
+| `ref_pmfby_data` | PMFBY (crop insurance) scheme data |
+| `ref_fertilizer_data` | Fertilizer advisory reference |
+| `ref_pesticide_advisory` | Pesticide safety and dosage reference |
+| `ref_fasal_data` | FASAL crop forecasting reference data |
+| `ref_pin_master` | Full India pincode master (village → district → state hierarchy) |
+| `ref_data_ingestion_meta` | Ingestion timestamps and freshness metadata per collection |
+
+#### Governance & Admin
+| Collection | Description |
+|---|---|
+| `admin_users` | Admin accounts with role (admin / super_admin) |
+| `admin_audit_logs` | Immutable audit trail of all admin actions |
+| `app_config` | Runtime platform configuration key-value store |
+| `analytics_snapshots` | Point-in-time analytics snapshot records |
+| `support_tickets` | Farmer support ticket records |
+
+### Qdrant Vector Collections (768-dim · multilingual-mpnet)
+
+| Collection | Purpose |
+|---|---|
+| `schemes_semantic` | Semantic search over government schemes |
+| `schemes_faq` | FAQ-style scheme query matching |
+| `mandi_price_intelligence` | Intelligent market price querying |
+| `crop_advisory_kb` | Crop disease and advisory knowledge base |
+| `geo_location_index` | Geographic entity vector index |
+| `equipment_semantic` | Equipment and provider semantic search |
+
+---
+
+## 🔒 Security
+
+KisanKiAwaaz implements production-grade security controls:
+
+### Authentication & Token Security
+- **JWT access + refresh token model** with unique `jti` per token
+- **Refresh token replay protection** — used tokens are revoked in Redis for the full TTL
+- **Role-aware identity resolution** — `users` vs `admin_users` collections
+- **Inactive user lockout** — blocked at token refresh and login
+
+### Credential Hardening
+- `JWT_SECRET` validated at startup — weak/default secrets rejected in production
+- Minimum secret length enforced for prod/staging environments
+- Wildcard CORS (`*`) hard-rejected in non-development environments
+
+### OTP Abuse Prevention
+- 5-minute OTP validity TTL
+- Send cooldown between requests
+- Attempt counters tracked in Redis
+- Lockout window after repeated failed verifications
+
+### Rate Limiting (Two Layers)
+- **Nginx gateway zones:** `auth: 5 req/s`, `api: 30 req/s`, `admin: 20 req/s`
+- **Service-level:** Redis sliding-window rate limiter middleware with `Retry-After` headers
+- Safe-fail: allows requests if Redis limiter temporarily unavailable
+
+### HTTP Security Headers
+```
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000
+Referrer-Policy: strict-origin-when-cross-origin
 ```
 
-**Create Virtual Environment:**
+### API Surface Protection
+- Admin route families are separated and role-guarded (`admin` / `super_admin`)
+- Key-pool status (internal infra) restricted to admin callers only
+- Farmer data access checks on analytics and profile endpoints
+- Centralized exception handler — unexpected errors return generic `INTERNAL_ERROR` without leaking internals
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+| Tool | Version | Notes |
+|---|---|---|
+| Docker | 24+ | Required for all services |
+| Docker Compose | 2.x | Included in Docker Desktop |
+| Python | 3.12 | For local dev / scripts only |
+| Node.js | 18+ | For frontend only |
+| Git | Any | — |
+
+### 1. Clone the Repository
+
 ```bash
-python -m venv myenv
-myenv\Scripts\activate  # Windows
-# source myenv/bin/activate  # macOS/Linux
+git clone https://github.com/vvinayakkk/kisankiawaz.git
+cd kisankiawaz
 ```
 
-**Install Dependencies:**
+### 2. Configure Environment
+
 ```bash
-pip install -r requirements.txt
+# Copy the example env file
+cp kisankiawaz-backend/.env.example kisankiawaz-backend/.env
 ```
 
-#### **Environment Variables (.env):**
-
-Create a `.env` file in the `backend/` directory:
+Open `kisankiawaz-backend/.env` and fill in your values:
 
 ```env
-# Bland AI Configuration
-BLAND_API_KEY=your_bland_api_key_here
-BLAND_PATHWAY_ID=your_bland_pathway_id
-BLAND_PHONE_NUMBER=your_bland_phone_number
-BLAND_API_URL=https://api.bland.ai
+# ── Required ─────────────────────────────────────────────────
+JWT_SECRET=<generate with: openssl rand -hex 64>
+MONGODB_URI=mongodb://localhost:27017
+REDIS_URL=redis://localhost:6379/0
 
-# Google Services
-GOOGLE_API_KEY=your_google_api_key_here
+# ── AI / Voice ────────────────────────────────────────────────
+SARVAM_API_KEY=<from sarvam.ai>
+GEMINI_API_KEY=<from aistudio.google.com>
+GROQ_API_KEY=<from console.groq.com>
 
-# Twilio Configuration
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-TWILIO_API_KEY=your_twilio_api_key
-TWILIO_API_SECRET=your_twilio_api_secret
+# ── Market Data ───────────────────────────────────────────────
+OPENWEATHERMAP_API_KEY=<from openweathermap.org>
+DATA_GOV_API_KEY=<from data.gov.in>   # optional — enables live feed
 ```
 
-#### **GCP Credentials:**
+> **Security note:** Never commit your `.env` file. It is in `.gitignore` by default.
 
-Place your `creds_gcp.json` file in the `backend/` directory with the following APIs enabled:
-- ✅ Speech-to-Text API
-- ✅ Text-to-Speech API
-- ✅ Cloud Translation API (if needed)
+Generate a strong JWT secret:
+```bash
+openssl rand -hex 64
+```
 
-#### **Start the Backend:**
+### 3. Build the Base Docker Image
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+cd kisankiawaz-backend
+docker build -f Dockerfile.base -t kisan-base:latest .
+```
+
+### 4. Start All Services (Development)
+
+```bash
+docker-compose up --build
+```
+
+This starts:
+- All 12 FastAPI microservices (ports 8001–8012)
+- Nginx gateway (port 8000)
+- MongoDB
+- Redis
+- Qdrant
+- Celery worker
+
+Wait for all healthchecks to pass (typically 30–60 seconds on first build).
+
+Verify the gateway is up:
+```bash
+curl http://localhost:8000/api/v1/auth/health
+# → {"status": "ok"}
+```
+
+### 5. Seed Reference Data
+
+Seed the admin user and reference datasets:
+
+```bash
+# Seed admin user
+docker-compose exec auth-service python /app/scripts/seed_admin.py
+
+# Seed reference data (mandi directory, schemes, pincode master, etc.)
+docker-compose exec market-service python /app/scripts/seed_reference_data.py
+
+# Build Qdrant vector indexes
+docker-compose exec agent-service python /app/scripts/generate_qdrant_indexes.py
+```
+
+Or trigger all via the admin API after logging in:
+```bash
+curl -X POST http://localhost:8000/api/v1/admin/ingestion/trigger \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+### 6. Production Deployment
+
+Use the production compose file which closes all internal ports:
+
+```bash
+# Set APP_ENV in .env
+APP_ENV=production
+
+# Start with prod overrides
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+In production:
+- Only port `8000` (Nginx gateway) is externally exposed
+- All internal service/infra ports are closed (`ports: []`)
+- JWT secret and CORS validation are enforced at startup
+
+### 7. Set Up Cron Jobs
+
+```bash
+bash scripts/setup_cron.sh
+```
+
+This installs scheduled jobs:
+
+| Time (IST) | Job |
+|---|---|
+| 02:00 | Seed reference data from data.gov.in |
+| 02:30 | Rebuild Qdrant vector indexes |
+| 03:00 | Generate analytics snapshots |
+
+---
+
+## 🗂️ Repository Structure
+
+```
+kisankiawaz/
+├── kisankiawaz-backend/          # All backend microservices
+│   ├── Dockerfile.base           # Shared Python 3.12 base image
+│   ├── docker-compose.yml        # Development orchestration
+│   ├── docker-compose.prod.yml   # Production overrides
+│   ├── nginx/
+│   │   └── nginx.conf            # Gateway routing, rate limits
+│   │
+│   ├── services/                 # 12 FastAPI microservices
+│   │   ├── auth/                 # :8001
+│   │   ├── farmer/               # :8002
+│   │   ├── crop/                 # :8003
+│   │   ├── market/               # :8004
+│   │   │   └── scheme_documents/ # HTML/PDF scheme document assets
+│   │   ├── equipment/            # :8005
+│   │   ├── agent/                # :8006
+│   │   ├── voice/                # :8007
+│   │   ├── notification/         # :8008
+│   │   ├── schemes/              # :8009
+│   │   ├── geo/                  # :8010
+│   │   ├── admin/                # :8011
+│   │   └── analytics/            # :8012
+│   │
+│   ├── shared/                   # Cross-service shared library
+│   │   ├── auth/                 # JWT helpers, auth dependencies
+│   │   ├── cache/                # Market cache helpers
+│   │   ├── core/                 # Settings, constants, enums
+│   │   ├── db/                   # MongoDB + Redis connectors
+│   │   ├── errors/               # Error codes, exceptions, handlers
+│   │   ├── middleware/           # Logging, security, rate limiter
+│   │   ├── patterns/             # Circuit breaker, bloom filter, service client
+│   │   ├── schemas/              # Centralized Pydantic contracts (all services)
+│   │   └── services/             # Key allocator, knowledge base, Qdrant service
+│   │
+│   ├── workers/                  # Celery async task workers
+│   │   ├── celery_app.py
+│   │   └── tasks/
+│   │       ├── data_tasks.py     # refresh_qdrant_indexes, generate_analytics_snapshot, check_price_alerts
+│   │       ├── embedding_tasks.py # embed_text, embed_batch
+│   │       └── notification_tasks.py # send_notification, send_broadcast
+│   │
+│   ├── scripts/                  # Operational scripts
+│   │   ├── seed.py
+│   │   ├── seed_admin.py
+│   │   ├── seed_reference_data.py
+│   │   ├── seed_farmers_end_to_end.py
+│   │   ├── generate_qdrant_indexes.py
+│   │   ├── generate_analytics_snapshots.py
+│   │   ├── replace_schemes_from_json.py
+│   │   ├── replace_equipment_providers_from_json.py
+│   │   ├── setup_cron.sh
+│   │   └── data_ingestion/       # data.gov.in extraction pipelines
+│   │
+│   ├── tests/
+│   │   ├── test_all_endpoints.py     # Full endpoint integration suite
+│   │   ├── test_e2e_new_features.py  # Feature E2E flows
+│   │   └── test_dynamic_pentest.py   # Auth, CORS, token replay security tests
+│   │
+│   └── creds/
+│       └── .gitkeep              # Never commit real credentials here
+│
+├── farmer_app/                   # React Native farmer application
+├── admin-dashboard/              # React admin console
+└── README.md
+```
+
+### Service Internal Structure
+
+Each microservice follows a consistent pattern:
+
+```
+services/<name>/
+├── Dockerfile
+├── requirements.txt
+├── main.py              # FastAPI app, middleware, router registration
+├── routes/
+│   └── *.py             # Route handlers (thin layer — auth, validate, call service)
+└── services/
+    └── *_service.py     # Business logic, DB queries, external API calls
 ```
 
 ---
 
-### 🤖 **STEP 3: GCP Agents Backend (Port 8001)**
+## 🔌 API Reference
 
-This backend powers the AI intelligence layer with Google Cloud Platform agents.
+All requests go through the Nginx gateway at `http://localhost:8000`.
 
-#### **Setup Directory Structure:**
+### Authentication
+
+```http
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+GET  /api/v1/auth/me
+PUT  /api/v1/auth/me
+POST /api/v1/auth/change-password
+POST /api/v1/auth/otp/send
+POST /api/v1/auth/otp/verify
+POST /api/v1/auth/password/reset
+```
+
+**Login Example:**
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+919800000001", "password": "Farmer@123"}'
+
+# Response
+{
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "token_type": "bearer",
+  "user": { "id": "...", "name": "...", "role": "farmer" }
+}
+```
+
+### Farmer
+
+```http
+POST   /api/v1/farmers/profile          # Create profile
+GET    /api/v1/farmers/profile          # Get my profile
+PUT    /api/v1/farmers/profile          # Update profile
+DELETE /api/v1/farmers/profile          # Delete profile
+GET    /api/v1/farmers/dashboard        # Aggregated farmer dashboard
+GET    /api/v1/farmers/                 # [Admin] List all farmers
+GET    /api/v1/farmers/{farmer_id}      # [Admin] Get farmer detail
+```
+
+### Crops
+
+```http
+GET    /api/v1/crops/                   # My crops
+POST   /api/v1/crops/                   # Add crop
+GET    /api/v1/crops/{crop_id}          # Get crop
+PUT    /api/v1/crops/{crop_id}          # Update crop
+DELETE /api/v1/crops/{crop_id}          # Delete crop
+GET    /api/v1/crops/cycles             # Crop cycle reference
+POST   /api/v1/crops/disease/detect     # AI disease detection (image)
+GET    /api/v1/crops/recommendations    # Crop recommendations
+POST   /api/v1/crops/cycles             # Create cycle record
+```
+
+### Market (52 routes)
+
+```http
+# Live market data
+GET  /api/v1/market/prices              # Query mandi prices
+GET  /api/v1/market/msp                 # Minimum Support Prices
+GET  /api/v1/market/mandis              # Mandi directory
+GET  /api/v1/market/trends              # Price trends
+GET  /api/v1/market/weather             # Weather data
+GET  /api/v1/market/soil                # Soil health data
+
+# Reference data (read-only)
+GET  /api/v1/market/cold-storage        # Cold storage facilities
+GET  /api/v1/market/reservoir           # Reservoir levels
+GET  /api/v1/market/fasal               # FASAL crop data
+GET  /api/v1/market/fertilizer          # Fertilizer advisory
+GET  /api/v1/market/pesticide           # Pesticide advisory
+GET  /api/v1/market/pmfby               # PMFBY insurance data
+
+# Document builder (multi-step)
+POST /api/v1/market/documents/session   # Start builder session
+POST /api/v1/market/documents/extract   # Extract document data
+GET  /api/v1/market/documents/download  # Download generated document
+
+# Admin CRUD
+POST   /api/v1/market/admin/price       # Upsert price record
+POST   /api/v1/market/admin/mandi       # Upsert mandi
+POST   /api/v1/market/admin/scheme      # Upsert market scheme
+DELETE /api/v1/market/admin/price/{id}
+POST   /api/v1/market/admin/sync        # Trigger live data sync
+```
+
+### Agent
+
+```http
+POST /api/v1/agent/chat                 # Send chat message
+GET  /api/v1/agent/sessions             # List my sessions
+GET  /api/v1/agent/sessions/{id}        # Session detail + transcript
+DELETE /api/v1/agent/sessions/{id}      # Delete session
+GET  /api/v1/agent/sessions/{id}/messages
+GET  /api/v1/agent/keys/status          # [Admin] Key pool health
+POST /api/v1/agent/search               # Knowledge base search
+GET  /api/v1/agent/health
+```
+
+**Chat Example:**
+```bash
+curl -X POST http://localhost:8000/api/v1/agent/chat \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "आज दिल्ली में टमाटर का भाव क्या है?",
+    "session_id": null,
+    "language": "hi"
+  }'
+```
+
+### Voice
+
+```http
+POST /api/v1/voice/command              # Audio → text response
+POST /api/v1/voice/speak                # Audio → base64 TTS response
+```
+
+**Voice Pipeline Example:**
+```bash
+curl -X POST http://localhost:8000/api/v1/voice/command \
+  -H "Authorization: Bearer <token>" \
+  -F "audio=@/path/to/audio.wav" \
+  -F "language=hi"
+
+# Response includes latency metadata
+{
+  "text": "दिल्ली में आज टमाटर का मंडी भाव ₹2,400 प्रति क्विंटल है।",
+  "session_id": "...",
+  "latency_ms": { "stt": 820, "agent": 1240, "total": 2060 }
+}
+```
+
+### Schemes
+
+```http
+POST /api/v1/schemes/search             # Search schemes
+POST /api/v1/schemes/eligibility        # Check eligibility
+GET  /api/v1/schemes/pmfby              # PMFBY crop insurance
+GET  /api/v1/schemes/advisory           # Scheme advisory
+GET  /api/v1/schemes/{scheme_id}
+GET  /api/v1/schemes/
+GET  /api/v1/schemes/health
+```
+
+**Scheme Search Example:**
+```bash
+curl -X POST http://localhost:8000/api/v1/schemes/search \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "drip irrigation subsidy", "state": "Maharashtra", "limit": 5}'
+```
+
+### Equipment
+
+```http
+# Equipment
+GET    /api/v1/equipment/               # My equipment listings
+POST   /api/v1/equipment/               # Add equipment
+PUT    /api/v1/equipment/{id}
+DELETE /api/v1/equipment/{id}
+
+# Livestock
+GET    /api/v1/equipment/livestock
+POST   /api/v1/equipment/livestock
+PUT    /api/v1/equipment/livestock/{id}
+DELETE /api/v1/equipment/livestock/{id}
+
+# Rentals
+POST   /api/v1/equipment/rentals        # Create rental request
+GET    /api/v1/equipment/rentals        # My rental requests
+PUT    /api/v1/equipment/rentals/{id}/approve
+PUT    /api/v1/equipment/rentals/{id}/reject
+PUT    /api/v1/equipment/rentals/{id}/complete
+PUT    /api/v1/equipment/rentals/{id}/cancel
+
+# Rates & Providers
+GET    /api/v1/equipment/rates          # Rental rate intelligence
+POST   /api/v1/equipment/providers/replace  # [Admin] Bulk provider seed
+```
+
+### Notifications
+
+```http
+GET    /api/v1/notifications/           # My notifications
+PUT    /api/v1/notifications/{id}/read  # Mark as read
+DELETE /api/v1/notifications/{id}
+POST   /api/v1/notifications/           # [Admin] Create targeted notification
+POST   /api/v1/notifications/broadcast  # [Admin] Broadcast by role/state
+GET    /api/v1/notifications/preferences
+PUT    /api/v1/notifications/preferences
+GET    /api/v1/notifications/health
+```
+
+### Geo
+
+```http
+GET /api/v1/geo/pincode/{pincode}       # Full pincode decode
+POST /api/v1/geo/village/search         # Village search
+GET /api/v1/geo/districts               # District index by state
+GET /api/v1/geo/states                  # All Indian states
+```
+
+### Admin
+
+```http
+# Platform stats & health
+GET  /api/v1/admin/stats
+GET  /api/v1/admin/health
+GET  /api/v1/admin/freshness
+
+# Configuration
+GET  /api/v1/admin/config
+PUT  /api/v1/admin/config
+GET  /api/v1/admin/flags
+PUT  /api/v1/admin/flags
+
+# Farmer management
+GET  /api/v1/admin/farmers
+PUT  /api/v1/admin/farmers/{id}/status
+
+# Admin user management
+GET    /api/v1/admin/users
+POST   /api/v1/admin/users
+PUT    /api/v1/admin/users/{id}
+DELETE /api/v1/admin/users/{id}
+
+# Scheme & provider management
+POST /api/v1/admin/schemes/upsert
+POST /api/v1/admin/schemes/import
+POST /api/v1/admin/providers/upsert
+
+# Ingestion triggers
+POST /api/v1/admin/ingestion/trigger
+POST /api/v1/admin/ingestion/qdrant
+
+# Audit
+GET  /api/v1/admin/audit
+```
+
+### Analytics
+
+```http
+GET  /api/v1/analytics/admin/overview           # Full admin insight overview
+GET  /api/v1/analytics/admin/snapshot           # Latest snapshot
+POST /api/v1/analytics/admin/generate           # Generate new snapshot
+GET  /api/v1/analytics/admin/trends             # Trend data
+GET  /api/v1/analytics/farmer/{id}/summary      # Farmer insight summary
+GET  /api/v1/analytics/farmer/{id}/benchmarks   # Farmer vs district benchmarks
+GET  /api/v1/analytics/growth
+GET  /api/v1/analytics/engagement
+GET  /api/v1/analytics/market
+GET  /api/v1/analytics/operational
+GET  /api/v1/analytics/opportunities
+```
+
+---
+
+## 🧪 Testing
+
+### Run Full Test Suite
 
 ```bash
-cd gcp_agents_off_backend
-mkdir creds
+cd kisankiawaz-backend
+
+# Install test dependencies
+pip install -r requirements-base.txt pytest pytest-asyncio httpx
+
+# Run endpoint integration tests
+pytest tests/test_all_endpoints.py -v
+
+# Run E2E feature flows
+pytest tests/test_e2e_new_features.py -v
+
+# Run security/pentest suite
+pytest tests/test_dynamic_pentest.py -v
 ```
 
-#### **Credentials Setup:**
+### Test Configuration
 
-Place the following files in `gcp_agents_off_backend/creds/`:
-- `creds_gcp.json` - Google Cloud Platform service account
-- `serviceAccountKey.json` - Firebase service account
+Set these in your `.env` (or export before running):
 
-#### **Environment Variables (.env):**
-
-Create a `.env` file in the `gcp_agents_off_backend/` directory:
-
-````markdown
-# ⚡ Agentic Farm OS — Multimodal, Voice-First, Role‑Based AI Platform (built in 7 days)
-
-> End-to-end agentic AI system: real-time voice agents, offline-first RAG, WhatsApp automation, safety guardrails, and a production mobile app — shipped fast, battle-tested, and scalable.
-
-[![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/)
-[![Vertex AI](https://img.shields.io/badge/Vertex%20AI-1A73E8?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/vertex-ai)
-[![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
-
-
-## 🔥 Executive Summary
-
-- Built a full agentic platform in 7 days: mobile app (React Native), two FastAPI backends, and GCP agent runner.
-- Live voice agents with end-to-end context, speech-to-text and text-to-speech, streaming responses, and WhatsApp workflows.
-- Safety-critical suicide-prevention flow with auto-detection triggers and live calling integration (Bland AI/Twilio-ready).
-- Hybrid online/offline RAG with embeddings, intent detection, and graceful fallback — works in low-connectivity environments.
-- Document builder with professional PDF generation (ReportLab), document templating, and WhatsApp delivery.
-- Production-minded engineering: stateless services, CORS, typed models, health endpoints, test scripts, and docs.
-
-
-## 🏗️ Monorepo Layout
-
-```
-google-agentic-ai/
-├─ MyApp/                    # React Native mobile app (voice-first, multilingual)
-├─ backend/                  # FastAPI core services & REST APIs (port 8000)
-└─ gcp_agents_off_backend/   # GCP Agent Runner (Vertex AI + tools) (port 8001)
+```bash
+API_BASE=http://localhost:8000
+TEST_PHONE=+919800000001
+TEST_PASSWORD=Farmer@123
+E2E_ADMIN_PHONE=<your-admin-phone>
+E2E_ADMIN_PASSWORD=<your-admin-password>
+MAX_CHAT_LATENCY_SECONDS=45
 ```
 
+### Security Test Coverage
 
-## 🧠 What makes it “Agentic”
+The pentest suite verifies:
+- ✅ Refresh token replay is rejected after first use
+- ✅ Non-admin callers are denied on admin-sensitive routes (403)
+- ✅ CORS wildcard is blocked in non-development mode
+- ✅ Tokens signed with default/weak secrets are rejected
+- ✅ OTP lockout engages after repeated failed attempts
 
-- Role-based agents orchestrated via a multi-tool runner:
-  - Voice Agent: Live STT → context-aware tools → TTS, streaming back to app.
-  - Document Agent: Conversational data intake → pro PDFs → instant WhatsApp delivery.
-  - Crop Doctor: Triage symptoms → RAG knowledge + rules → recommendations.
-  - Marketplace Agent: Search, list, negotiate, and track orders.
-  - Safety Sentinel: Suicide-risk detection → immediate escalation and helpline flows.
-- Tools: Weather, market, soil, vector search, WhatsApp senders, document generation, and more.
-- Provider-agnostic LLM design (Vertex AI today; can swap to OpenAI-compatible models with one adapter).
+---
 
+## ⚙️ Environment Variables Reference
 
-## � Mobile App (MyApp/) — React Native, Expo, Voice‑First
+| Variable | Required | Description |
+|---|---|---|
+| `APP_ENV` | ✅ | `development` / `staging` / `production` |
+| `ALLOWED_ORIGINS` | ✅ | Comma-separated CORS origins |
+| `MONGODB_URI` | ✅ | MongoDB connection string |
+| `MONGODB_DB_NAME` | ✅ | Database name (default: `farmer`) |
+| `REDIS_URL` | ✅ | Redis URL for cache + sessions |
+| `CELERY_BROKER_URL` | ✅ | Redis URL for Celery broker |
+| `CELERY_RESULT_BACKEND` | ✅ | Redis URL for Celery results |
+| `QDRANT_HOST` | ✅ | Qdrant host |
+| `QDRANT_PORT` | ✅ | Qdrant port (default: `6333`) |
+| `JWT_SECRET` | ✅ | Min 32 chars; 64+ recommended. Rejected if weak in prod. |
+| `JWT_ALGORITHM` | ✅ | `HS256` |
+| `JWT_EXPIRE_MINUTES` | ✅ | Access token TTL (default: `60`) |
+| `JWT_REFRESH_EXPIRE_DAYS` | ✅ | Refresh token TTL (default: `7`) |
+| `SARVAM_API_KEY` | ✅ | Sarvam AI — STT/TTS for Indian languages |
+| `GEMINI_API_KEY` | ✅ | Google Gemini — agent LLM |
+| `GEMINI_API_KEYS` | ⬜ | Comma-separated pool (load balancing) |
+| `GROQ_API_KEY` | ✅ | Groq — agent LLM fallback |
+| `GROQ_API_KEYS` | ⬜ | Comma-separated pool |
+| `GROQ_MODEL` | ✅ | Default: `llama-3.3-70b-versatile` |
+| `OPENWEATHERMAP_API_KEY` | ✅ | Weather endpoint |
+| `DATA_GOV_API_KEY` | ⬜ | data.gov.in — enables live market feed |
+| `VOICE_STT_TIMEOUT_SECONDS` | ⬜ | Default: `12` |
+| `VOICE_AGENT_TIMEOUT_SECONDS` | ⬜ | Default: `20` |
+| `VOICE_AGENT_MAX_RETRIES` | ⬜ | Default: `3` |
+| `VOICE_MAX_TTS_CHARS` | ⬜ | Max chars for TTS output. Default: `220` |
+| `KEY_BASE_COOLDOWN_SECONDS` | ⬜ | Key pool base cooldown. Default: `20` |
+| `KEY_ROUTER_MAX_RETRIES` | ⬜ | Key pool max retries. Default: `3` |
 
-Highlights
-- Live voice chat (multi-language), dictation, and TTS playback.
-- 30+ screens: CropCycle, CropDoctor, Marketplace, Cattle, Weather, UPI, etc.
-- Multilingual (8+ languages), onboarding tours, accessibility, and network fallback.
-- Smart network manager with multiple backend fallbacks and offline cache.
+---
 
-Key files
-- `App.jsx`, `index.jsx`, `i18n.js`
-- `screens/` (VoiceChatInputScreen, LiveVoiceScreen, Featured, CropCycle, CropDoctor, Marketplace, UPI, …)
-- `services/` (VoiceCommandAPI, CropCycleService, CropMarketplaceService, NetworkTestService, …)
-- `VOICECHAT_ONBOARDING.md`, `FEATURED_ONBOARDING.md`, `MARKETPLACE_FEATURES.md`, `GOOGLE_MAPS_SETUP.md`
+## 🏗️ Development Guide
 
+### Local Development (Without Docker)
 
-## 🔧 Core Backend (backend/, port 8000) — FastAPI super‑set
+If you prefer running services locally without Docker:
 
-Feature map
-- Speech-to-Text and Voice Command router.
-- RAG chat (Gemini/Vertex), vector search, and offline hybrid routes.
-- Document Builder + professional PDFs (ReportLab) with bilingual support.
-- Marketplace, Rental, Crop Cycle, Weather, Soil Moisture, Waste Recycling.
-- Free WhatsApp integration (UltraMsg/WAMR) + Twilio-ready flows.
-- Suicide Prevention router with call orchestration.
+```bash
+cd kisankiawaz-backend
 
-Entrypoint
-- `backend/main.py`: registers 14+ routers; CORS; `/` health with feature stats.
+# Create virtual environment
+python3.12 -m venv venv
+source venv/bin/activate
 
-Routers (selection)
-- `routers/voice_command.py` (voice intents), `routers/speech_to_text.py`
-- `routers/chat_rag.py`, `routers/chat_rag_whatsapp.py`, `routers/hybrid_offline.py`
-- `routers/document_builder.py`, `routers/document_generator.py`
-- `routers/crop_marketplace.py`, `routers/rental.py`, `routers/crop_cycle.py`
-- `routers/suicide_prevention.py`, `routers/weather.py`, `routers/soil_moisture.py`
+# Install shared + base requirements
+pip install -r requirements-base.txt
 
-Docs to read
-- `COMPREHENSIVE_API_DOCUMENTATION.md` (189 routes across 14 modules)
-- `PDF_GENERATION_COMPLETE.md` (templates, APIs, tests, performance)
-- `FREE_WHATSAPP_SETUP.md` (providers, env, usage)
-- `OFFLINE_IMPLEMENTATION_GUIDE.md` (hybrid online/offline with intent routing)
-- `VOICE_COMMAND_TESTING_GUIDE.md` (end-to-end audio → action pipeline)
+# Install a specific service's requirements
+pip install -r services/auth/requirements.txt
 
-
-## 🤖 GCP Agents Backend (gcp_agents_off_backend/, port 8001)
-
-Highlights
-- Uses Google ADK Runner with a `root_agent` (multi-tool) — streams events, tracks tool calls.
-- Endpoints: `/agent`, `/agent_with_audio`, `/audio_agent` (TTS integrated), `/health`.
-- Built-in Speech-to-Text and Text-to-Speech services with language detection.
-- Session store via `DatabaseSessionService` (SQLite by default; plug Postgres via `DATABASE_URL`).
-
-Flow (agent_with_audio)
-1) Accept prompt + metadata → create/reuse session → run agent streaming.
-2) Capture tool invocations and tool responses.
-3) If no tool returns audio, auto-generate TTS for final LLM message.
-4) Return: invoked_tool, tool_result, text, audio (base64), language.
-
-Key files
-- `gcp_agents_off_backend/main.py`
-- `services/speech_to_text.py`, `services/text_to_speech.py`
-- `AUDIO_INTEGRATION_README.md`, `test_audio_integration.py`, `test_agent_endpoint.py`
-
-
-## 🗂️ Capabilities — End to End (nothing skipped)
-
-Multimodal, Live Voice
-- Vertex AI STT and TTS; multi-language; mobile playback via `expo-av`.
-- Real-time voice chat UX, with transcription and auto-language detection.
-
-Real-time Calling Agents
-- Bland AI/Twilio–ready telephone agents; backend APIs to trigger calls.
-- Use-cases: safety check-ins, appointment reminders, guided assistance.
-
-Suicide Prevention (Doctor Assistant Safety Agent)
-- Risk-detection triggers → emergency call via Bland AI.
-- Helplines endpoint, direct call fallback, frontend UX with status indicators.
-- Strong error-handling, sensitive-data protection, safe defaults.
-
-WhatsApp Agents (End-to-End)
-- Free providers (UltraMsg/WAMR) + mock + Twilio-ready service.
-- Send text, documents (generated PDFs), media; simple APIs and tests.
-
-Document Generation (Pro PDFs)
-- ReportLab engine; bilingual; 8+ templates (loan, subsidy, insurance, KCC, etc.).
-- Simple PDF server (port 8002) and full Document Builder API.
-- Generated docs stored under `generated_documents/` with timestamped names.
-
-Offline‑First RAG
-- Hybrid router with online→offline→cache strategy.
-- Intent detection, relevance scoring, multi-source retrieval.
-- Works for market prices, weather patterns, crop recommendations, schemes.
-
-Domain Modules at Scale
-- Crop Marketplace: listings, orders, negotiation, analytics.
-- Enhanced Rental: items, bookings, availability, reviews, categories.
-- Crop Cycle: master data, tasks, analytics, AI recommendations.
-
-
-## 🧰 Tech Stack
-
-- Frontend: React Native (Expo), `expo-av`, `@react-native-voice/voice`, i18n, React Navigation.
-- APIs: FastAPI, Pydantic, CORS, Uvicorn, ReportLab.
-- AI/Agents: Google ADK Runner, Vertex AI (Gemini), vector search (Chroma/Firestore search).
-- Messaging: WhatsApp (UltraMsg/WAMR) + Twilio-ready.
-- Data: SQLite/Postgres (via `DATABASE_URL`), Firebase support.
-- Tooling: Postman collections, test scripts, `.env`-driven config.
-
-
-## 🧭 Architecture (high-level)
-
-```
-		 React Native (MyApp)
-			 │  voice, UI
-			 ▼
-	 Core API (FastAPI, :8000)
-   ┌────────────┼──────────────────────────┐
-   │ Voice STT  │ RAG Chat / Hybrid Offline│ Document Builder / PDF │ WhatsApp │ Safety │ Domain (Weather/Market/Soil/Crop)
-   └──────┬─────┴──────────────┬───────────┴─────────┬───────────────┴─────────┬────────┘
-		│                     │                       │                       │
-		▼                     ▼                       ▼                       ▼
-	 GCP Agents Backend (:8001) — ADK Runner, tools, sessions, TTS
-		│
-		▼
-	Vertex AI (STT/TTS/LLM), Firebase, OpenWeather, WhatsApp Providers
-```
-
-
-## 🧪 Try it locally (Windows PowerShell)
-
-Prereqs
-- Node.js ≥ 18, Python ≥ 3.8, Expo CLI, GCP creds.
-- Ensure Google Cloud Speech and TTS APIs are enabled.
-
-1) Mobile app
-```powershell
-cd .\MyApp
-npm install
-expo start --clear
-```
-
-2) Core backend (:8000)
-```powershell
-cd ..\backend
-python -m venv myenv
-./myenv/Scripts/Activate.ps1
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-3) GCP agents backend (:8001)
-```powershell
-cd ..\gcp_agents_off_backend
-pip install -r requirements.txt
+# Run a specific service
+cd services/auth
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-4) Optional PDF server (:8002)
-```powershell
-cd ..\backend
-python simple_pdf_server.py
+You'll need MongoDB, Redis, and Qdrant running locally or via Docker:
+
+```bash
+# Start only infra services
+docker-compose up mongodb redis qdrant -d
 ```
 
+### Adding a New Service
 
-## 🔑 Configuration (env)
+1. Create `services/<name>/` following the standard structure
+2. Add `Dockerfile` extending `kisan-base:latest`
+3. Register route prefix in `nginx/nginx.conf`
+4. Add service URL to `.env.example`
+5. Add to `docker-compose.yml`
+6. Add shared schemas to `shared/schemas/<name>.py` and export from `shared/schemas/__init__.py`
 
-Backend (.env in `backend/`)
-```
-# Google
-GOOGLE_API_KEY=...
-GOOGLE_APPLICATION_CREDENTIALS=./creds_gcp.json
+### Shared Schema Contracts
 
-# Bland/Twilio (if using calling flows)
-BLAND_API_KEY=...
-BLAND_PATHWAY_ID=...
-BLAND_PHONE_NUMBER=...
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=...
+All request/response models live in `shared/schemas/`. **Always** define schemas there, never in individual service code. Import from the shared package:
 
-# Free WhatsApp
-FREE_WHATSAPP_API_KEY=...
-FREE_WHATSAPP_PHONE_NUMBER=+91XXXXXXXXXX
+```python
+from shared.schemas.market import MandiPriceQuery, MandiPriceResponse
+from shared.schemas.farmer import FarmerProfileCreate
 ```
 
-GCP Agents (.env in `gcp_agents_off_backend/`)
+Schema validation rules:
+- Pydantic strict mode enabled
+- `extra = "forbid"` on most request models
+- Field-level constraints (min/max length, numeric bounds, enum literals)
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! KisanKiAwaaz is building for rural India — if you care about agricultural technology, digital equity, or AI for social impact, this is your project.
+
+### How to Contribute
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/your-feature-name`
+3. **Follow** the shared schema convention — all contracts in `shared/schemas/`
+4. **Write tests** — add to `tests/test_all_endpoints.py` or `test_e2e_new_features.py`
+5. **Commit** with clear messages: `feat(market): add fertilizer price trend endpoint`
+6. **Push** and open a **Pull Request** against `main`
+
+### Commit Convention
+
 ```
-GOOGLE_API_KEY=...
-DATABASE_URL=sqlite:///./sql_app.db  # or Postgres URL
-OPEN_WEATHER_API_KEY=...
-OPEN_WEATHER_API_URL=https://api.openweathermap.org/data/2.5
+feat(service): short description
+fix(auth): resolve OTP cooldown race condition
+docs(readme): update setup flow
+refactor(shared): move validation to schema layer
+test(voice): add STT timeout test
 ```
 
+### Areas We Need Help
 
-## 🧩 Key APIs (selection)
+- 🌐 **Translations** — scheme documents and UI strings in more Indian languages
+- 📱 **React Native** — farmer app improvements and offline support
+- 🧪 **Testing** — more E2E coverage, load testing
+- 📊 **Data** — better reference datasets for smaller states
+- 🔒 **Security** — pen testing, CVE scanning integration
+- 📖 **Documentation** — API guides, deployment guides for GCP/AWS
 
-Core backend (:8000)
-- Voice: `POST /voice-command/`, `POST /transcribe/`
-- RAG: `POST /chat-rag`, `GET /hybrid/status`
-- Documents: `POST /api/v1/document-builder/document/generate-pdf/{session_id}`
-- WhatsApp: `POST /whatsapp/send` (and free provider variants)
-- Safety: `POST /suicide-prevention/emergency-call`, `GET /suicide-prevention/helplines`
-- Domain: `/marketplace/*`, `/rental/*`, `/crop-cycle/*`, `/weather/*`, `/soil-moisture/*`
+---
 
-GCP agents (:8001)
-- `POST /agent` — tool calling + text
-- `POST /agent_with_audio` — tool calling + text + auto TTS
-- `POST /audio_agent` — upload audio → STT → agent → TTS response
+## 🌐 Supported Languages
 
-PDF server (:8002)
-- `POST /generate-pdf`, `GET /download/{id}`, `GET /templates`
+The voice pipeline and agent system support:
 
+| Language | Code | STT | TTS |
+|---|---|---|---|
+| Hindi | `hi` | ✅ | ✅ |
+| Marathi | `mr` | ✅ | ✅ |
+| Punjabi | `pa` | ✅ | ✅ |
+| Telugu | `te` | ✅ | ✅ |
+| Tamil | `ta` | ✅ | ✅ |
+| Kannada | `kn` | ✅ | ✅ |
+| Gujarati | `gu` | ✅ | ✅ |
+| Bengali | `bn` | ✅ | ✅ |
+| English | `en` | ✅ | ✅ |
 
-## � Demo scripts
+Language preference is stored per farmer in their profile and used by the agent for all responses.
 
-- Backend tests: `backend/test_*.py` (RAG, WhatsApp, PDF, TTS, voice)
-- GCP agent tests: `gcp_agents_off_backend/test_*.py`
-- Postman collection: `backend/FarmerApp.postman_collection.json`
+---
 
+## 🗺️ Roadmap
 
-## ⚙️ Scalability & Reliability
+- [ ] Offline-first mode for farmer app (low-connectivity areas)
+- [ ] WhatsApp Business API integration for scheme notifications
+- [ ] ONDC (Open Network for Digital Commerce) integration
+- [ ] Satellite imagery integration for crop health monitoring
+- [ ] FPO (Farmer Producer Organisation) management module
+- [ ] Direct mandi buyer-seller connection (AgriTrade module)
+- [ ] Kisan Credit Card (KCC) application flow integration
+- [ ] Regional language voice training feedback loop
 
-- Stateless services behind a reverse proxy; horizontal scale with multiple Uvicorn workers.
-- Provider-agnostic LLM abstraction; swap models without app changes.
-- Hybrid online/offline mode with cache-first fallbacks and intent-based routing.
-- Vector search (Chroma/Firestore); indexing jobs decoupled from request path.
-- Observability-ready: health endpoints, structured logs, status metadata in responses.
-- Safety: rate-limits (add at proxy), sanitized errors, secure env handling, PII minimization.
-
-
-## �️ Safety & Compliance
-
-- Suicide prevention flows with explicit escalation and secure handling.
-- No secrets in code; `.env`-driven config; credentials scoped by service.
-- Input validation via Pydantic; CORS-enabled controlled access.
-
-
-## 🏁 Resume Highlights (Agentic AI, Backend, RN)
-
-- Architected and shipped a production-grade agentic platform in 7 days.
-- Real-time voice agents: STT→tools→TTS loop with streaming UX on mobile.
-- Safety-grade flows for suicide prevention with emergency escalation.
-- Offline-first RAG with intent detection and relevance scoring.
-- WhatsApp automations for messaging and document delivery.
-- Professional PDFs from conversational inputs (loan, insurance, KCC, ...).
-- Scalable FastAPI microservices; provider-agnostic LLM tools; robust tests and docs.
-
-
-## 🙌 Contributing
-
-PRs welcome. Please accompany changes with tests and docs updates.
-
+---
 
 ## 📄 License
 
-MIT
-````
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
-## 📚 Feature Inventory (deep, implemented) 
+---
 
-1) Live Voice Chat (Multilingual)
-- What: Real-time STT→tools→TTS loop with mobile playback.
-- Where: `MyApp/screens/LiveVoiceScreen.jsx`, `backend/routers/voice_command.py`, `gcp_agents_off_backend/services/speech_to_text.py`, `.../services/text_to_speech.py`.
-- Endpoints: `POST /voice-command/` (8000), `POST /audio_agent` and `/agent_with_audio` (8001).
+## 🙏 Acknowledgements
 
-2) Automatic Language Detection (Speech/Text)
-- What: Detects language and picks correct voice for TTS.
-- Where: `gcp_agents_off_backend/services/text_to_speech.py` (detect_language), frontend `expo-speech`.
+- [Sarvam AI](https://sarvam.ai) — for Indian language STT/TTS models
+- [data.gov.in](https://data.gov.in) — for agricultural open datasets
+- [Qdrant](https://qdrant.tech) — for the vector search engine
+- [FastAPI](https://fastapi.tiangolo.com) — for the microservice framework
+- Every farmer in India whose problem this platform is trying to solve
 
-3) Agent Runner with Tool Streaming
-- What: Google ADK Runner streams tool calls and final responses.
-- Where: `gcp_agents_off_backend/main.py` (`Runner`, `root_agent`, `/agent`, `/agent_with_audio`).
+---
 
-4) RAG Chat with Context
-- What: Chat agents use embeddings/vector search, intent detection.
-- Where: `backend/routers/chat_rag.py`, `backend/services/vector_database.py`, `backend/utils/firestore_vector_search.py`.
+<div align="center">
 
-5) Hybrid Online/Offline Mode
-- What: Online→offline→cache fallback with status metadata.
-- Where: `backend/routers/hybrid_offline.py`, `OFFLINE_IMPLEMENTATION_GUIDE.md`, `frontend_api_manager.js`.
+**Built with ❤️ for Indian Farmers**
 
-6) Professional PDF Generation
-- What: ReportLab-based PDFs, bilingual, 8+ templates.
-- Where: `backend/services/document_generator.py`, `backend/simple_pdf_server.py`, `PDF_GENERATION_COMPLETE.md`.
-- Endpoints: `POST /generate-pdf` (8002), `GET /download/{id}`.
+*If this project helps even one farmer get a better price for their crop, it's worth it.*
 
-7) Document Builder Agent
-- What: Conversational intake → structured PDF output.
-- Where: `backend/routers/document_builder.py`, `backend/routers/document_generator.py`.
+[![GitHub stars](https://img.shields.io/github/stars/vvinayakkk/kisankiawaz?style=social)](https://github.com/vvinayakkk/kisankiawaz)
+[![GitHub forks](https://img.shields.io/github/forks/vvinayakkk/kisankiawaz?style=social)](https://github.com/vvinayakkk/kisankiawaz/fork)
 
-8) WhatsApp Automation (Free Providers)
-- What: Send messages and documents via UltraMsg/WAMR.
-- Where: `backend/services/whatsapp_free.py`, `FREE_WHATSAPP_SETUP.md`.
-
-9) Twilio-Ready Messaging/Calling
-- What: Pluggable Twilio config for SMS/voice.
-- Where: `.env` keys in `backend/`, service stubs in WhatsApp/Twilio flows.
-
-10) Suicide Prevention Safety Agent
-- What: Risk triggers → helplines + Bland AI call.
-- Where: `backend/routers/suicide_prevention.py`, `SUICIDE_PREVENTION_INTEGRATION.md`.
-- Endpoints: `POST /suicide-prevention/emergency-call`, `GET /suicide-prevention/helplines`.
-
-11) Voice Command Intent Router
-- What: Converts audio to actions (weather, soil, cattle, chat…).
-- Where: `backend/routers/voice_command.py`, `VOICE_COMMAND_TESTING_GUIDE.md`.
-
-12) Crop Marketplace
-- What: Listings, search, orders, analytics.
-- Where: `backend/routers/crop_marketplace.py`, `COMPREHENSIVE_API_DOCUMENTATION.md`.
-- Prefix: `/marketplace/*`.
-
-13) Enhanced Rental System
-- What: Equipment listing, bookings, reviews, analytics.
-- Where: `backend/routers/rental.py`, `COMPREHENSIVE_API_DOCUMENTATION.md`.
-- Prefix: `/rental/*`.
-
-14) Crop Cycle Management
-- What: Master data, cycles, tasks, recommendations, analytics.
-- Where: `backend/routers/crop_cycle.py`.
-- Prefix: `/crop-cycle/*`.
-
-15) Weather Intelligence
-- What: Weather insights + agent tooling.
-- Where: `backend/routers/weather.py`, `gcp_agents_off_backend/config/.env` OpenWeather usage.
-
-16) Soil Moisture & Environmental Data
-- What: Soil data endpoints + intent mapping.
-- Where: `backend/routers/soil_moisture.py`.
-
-17) Waste Recycling Module
-- What: Knowledge and guidance for recycling.
-- Where: `backend/routers/waste_recycling.py`.
-
-18) Marketplace + Payments (UPI UX)
-- What: UPI screens and flows in app.
-- Where: `MyApp/UPI/*`, `MyApp/screens/*Payment*`.
-
-19) Multilingual App (8+ languages)
-- What: i18n, language selector, onboarding content in multiple languages.
-- Where: `MyApp/languages_json/`, `MyApp/i18n.js`, `LanguageSelector.jsx`.
-
-20) Voice UX: Mic Overlay, Playback, Mute
-- What: Smooth voice interactions and controls.
-- Where: `MyApp/components/MicOverlay.jsx`, `MyApp/screens/LiveVoiceScreen.jsx`.
-
-21) Network Fallback & Diagnostics
-- What: Multiple backend URLs, offline cache, connectivity tests.
-- Where: `MyApp/utils/NetworkConfig.js`, `MyApp/services/NetworkTestService.js`.
-
-22) Firebase Integration (Ready)
-- What: Firebase admin client wiring and session support.
-- Where: `backend/services/firebase.py`, GCP creds pattern.
-
-23) Agent Session Store
-- What: Durable sessions with DB; SQLite/Postgres.
-- Where: `gcp_agents_off_backend/main.py` (DatabaseSessionService), `sql_app.db`.
-
-24) Vector Search Options
-- What: Chroma DB and Firestore vector search.
-- Where: `backend/chroma_db/`, `backend/utils/firestore_vector_search.py`.
-
-25) Testing Assets & Scripts
-- What: Dozens of test scripts for WhatsApp, PDF, voice, agents.
-- Where: `backend/test_*.py`, `gcp_agents_off_backend/test_*.py`, Postman collection.
-
-26) Swagger/OpenAPI Docs
-- What: FastAPI auto docs for both backends.
-- Where: `http://localhost:8000/docs`, `http://localhost:8001/docs`.
-
-27) CORS and Security Hygiene
-- What: CORS set to allow app development; env-based secrets.
-- Where: `backend/main.py`, `gcp_agents_off_backend/main.py`, `.env` patterns.
-
-28) Bilingual PDFs and Indian Fonts
-- What: Hindi/English supported in generated documents.
-- Where: `PDF_GENERATION_COMPLETE.md`, `backend/services/document_generator.py`.
-
-29) Marketplace Analytics & Trends
-- What: Trending crops, orders insights.
-- Where: `COMPREHENSIVE_API_DOCUMENTATION.md` (analytics endpoints).
-
-30) Guided Onboarding & Tours
-- What: Step-by-step tours across major screens.
-- Where: `MyApp/VOICECHAT_ONBOARDING.md`, `FEATURED_ONBOARDING.md`, `CROPDOCTOR_ONBOARDING.md`.
-
-31) Camera, Maps, and Location
-- What: Camera for docs/crops; Maps for visualization; GPS for local services.
-- Where: `expo-camera`, `react-native-maps`, `expo-location` wired in `MyApp/`.
-
-32) Goal-Oriented “Role” Agents
-- What: Role-based agent design (Voice, Doc, Doctor, Marketplace, Safety).
-- Where: `gcp_agents_off_backend` runner; `backend/routers/*` by domain.
-
-33) Provider-Agnostic LLM Abstraction
-- What: Vertex today; swap to OpenAI-compatible with one adapter.
-- Where: Tooling via Google ADK; clean agent runner interface.
-
-34) Production Runbooks + Troubleshooting
-- What: Port conflicts, venv rebuild, node cache clear.
-- Where: this README, backend docs, MyApp README.
-
-35) Windows-First Dev Commands
-- What: PowerShell commands throughout for easy local dev.
-- Where: “Try it locally” sections and scripts.
+</div>
