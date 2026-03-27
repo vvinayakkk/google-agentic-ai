@@ -1,15 +1,5 @@
-x-common-env: &common-env
-  MONGODB_URI: ${MONGODB_URI}
-  MONGODB_DB_NAME: ${MONGODB_DB_NAME}
-  REDIS_URL: redis://redis:6379/0
-  CELERY_BROKER_URL: redis://redis:6379/1
-  CELERY_RESULT_BACKEND: redis://redis:6379/2
-  QDRANT_HOST: qdrant
-  QDRANT_PORT: "6333"
-  DATA_GOV_API_KEY: ${DATA_GOV_API_KEY}
-
 services:
-  # ── Infrastructure ──────────────────────────
+  # -- Infrastructure -------------------------------------------------
   redis:
     image: redis:7-alpine
     ports:
@@ -36,10 +26,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Nginx API Gateway ───────────────────────
+  # -- Nginx API Gateway ----------------------------------------------
   gateway:
     build:
-      context: ./nginx
+      context: ./kisankiawaz-backend/nginx
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -70,70 +60,62 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Auth Service ────────────────────────────
+  # -- Auth Service ---------------------------------------------------
   auth-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/auth/Dockerfile
     ports:
       - "127.0.0.1:8001:8001"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
-      - ./scripts:/app/scripts:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
+      - ./kisankiawaz-backend/scripts:/app/scripts:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Farmer Service ──────────────────────────
+  # -- Farmer Service -------------------------------------------------
   farmer-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/farmer/Dockerfile
     ports:
       - "127.0.0.1:8002:8002"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Crop Service ────────────────────────────
+  # -- Crop Service ---------------------------------------------------
   crop-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/crop/Dockerfile
     ports:
       - "127.0.0.1:8003:8003"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Market Service ──────────────────────────
+  # -- Market Service -------------------------------------------------
   market-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/market/Dockerfile
     ports:
       - "127.0.0.1:8004:8004"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
       - market_documents:/app/scheme_documents
       - market_generated:/app/generated_documents
     depends_on:
@@ -143,35 +125,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Equipment Service ───────────────────────
+  # -- Equipment Service ----------------------------------------------
   equipment-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/equipment/Dockerfile
     ports:
       - "127.0.0.1:8005:8005"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Agent Service (ADK Multi-Agent) ─────────
+  # -- Agent Service (ADK Multi-Agent) -------------------------------
   agent-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/agent/Dockerfile
     ports:
       - "127.0.0.1:8006:8006"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -179,18 +157,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Voice Service ───────────────────────────
+  # -- Voice Service --------------------------------------------------
   voice-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/voice/Dockerfile
     ports:
       - "127.0.0.1:8007:8007"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -198,35 +174,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Notification Service ────────────────────
+  # -- Notification Service ------------------------------------------
   notification-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/notification/Dockerfile
     ports:
       - "127.0.0.1:8008:8008"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Schemes Service (NEW) ───────────────────
+  # -- Schemes Service ------------------------------------------------
   schemes-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/schemes/Dockerfile
     ports:
       - "127.0.0.1:8009:8009"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -234,18 +206,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Geo Service (NEW) ──────────────────────
+  # -- Geo Service ----------------------------------------------------
   geo-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/geo/Dockerfile
     ports:
       - "127.0.0.1:8010:8010"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -253,50 +223,44 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Admin Service (NEW) ────────────────────
+  # -- Admin Service --------------------------------------------------
   admin-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/admin/Dockerfile
     ports:
       - "127.0.0.1:8011:8011"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Analytics Service (NEW) ─────────────────
+  # -- Analytics Service ---------------------------------------------
   analytics-service:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: services/analytics/Dockerfile
     ports:
       - "127.0.0.1:8012:8012"
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Celery Worker ───────────────────────────
+  # -- Celery Worker --------------------------------------------------
   celery-worker:
     build:
-      context: .
+      context: ./kisankiawaz-backend
       dockerfile: workers/Dockerfile
-    env_file: .env
-    environment:
-      <<: *common-env
+    env_file: ./kisankiawaz-backend/.env
     volumes:
-      - ./creds:/app/creds:ro
+      - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:
       redis:
         condition: service_healthy

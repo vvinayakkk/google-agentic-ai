@@ -25,6 +25,7 @@ export const apiClient = async (path, options = {}, config = {}) => {
   if (res.status === 401) {
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_profile");
+    window.dispatchEvent(new Event("auth:unauthorized"));
     throw new Error("Unauthorized");
   }
 
