@@ -16,8 +16,11 @@ class ApiClient {
   ApiClient._(this.dio);
 
   factory ApiClient({required LocalStorage storage, String? baseUrl}) {
-    final resolvedBaseUrl = baseUrl ?? const String.fromEnvironment('API_BASE_URL').trim();
-    final effectiveBaseUrl = resolvedBaseUrl.isNotEmpty ? resolvedBaseUrl : _defaultBaseUrl();
+    final resolvedBaseUrl =
+        baseUrl ?? const String.fromEnvironment('API_BASE_URL').trim();
+    final effectiveBaseUrl = resolvedBaseUrl.isNotEmpty
+        ? resolvedBaseUrl
+        : _defaultBaseUrl();
 
     final dio = Dio(
       BaseOptions(
@@ -47,38 +50,31 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      dio.get<T>(path, queryParameters: queryParameters, options: options);
+  }) => dio.get<T>(path, queryParameters: queryParameters, options: options);
 
   Future<Response<T>> post<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
-  }) =>
-      dio.post<T>(path,
-          data: data, queryParameters: queryParameters, options: options);
+  }) => dio.post<T>(
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+  );
 
-  Future<Response<T>> put<T>(
-    String path, {
-    Object? data,
-    Options? options,
-  }) =>
+  Future<Response<T>> put<T>(String path, {Object? data, Options? options}) =>
       dio.put<T>(path, data: data, options: options);
 
-  Future<Response<T>> patch<T>(
-    String path, {
-    Object? data,
-    Options? options,
-  }) =>
+  Future<Response<T>> patch<T>(String path, {Object? data, Options? options}) =>
       dio.patch<T>(path, data: data, options: options);
 
   Future<Response<T>> delete<T>(
     String path, {
     Object? data,
     Options? options,
-  }) =>
-      dio.delete<T>(path, data: data, options: options);
+  }) => dio.delete<T>(path, data: data, options: options);
 
   /// Upload multipart form data (audio files, images).
   Future<Response<T>> upload<T>(
@@ -86,15 +82,14 @@ class ApiClient {
     required FormData formData,
     Options? options,
     void Function(int, int)? onSendProgress,
-  }) =>
-      dio.post<T>(
-        path,
-        data: formData,
-        options: (options ?? Options()).copyWith(
-          contentType: 'multipart/form-data',
-        ),
-        onSendProgress: onSendProgress,
-      );
+  }) => dio.post<T>(
+    path,
+    data: formData,
+    options: (options ?? Options()).copyWith(
+      contentType: 'multipart/form-data',
+    ),
+    onSendProgress: onSendProgress,
+  );
 }
 
 // ── Riverpod providers ──────────────────────────────────────
@@ -122,14 +117,17 @@ String _defaultBaseUrl() {
   // Android network mode:
   // - usb (default): for physical phone with `adb reverse tcp:8000 tcp:8000`
   // - emulator: for Android emulator using host alias 10.0.2.2
-  const androidNetworkMode = String.fromEnvironment('ANDROID_NETWORK_MODE', defaultValue: 'usb');
+  const androidNetworkMode = String.fromEnvironment(
+    'ANDROID_NETWORK_MODE',
+    defaultValue: 'usb',
+  );
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       if (androidNetworkMode.toLowerCase() == 'emulator') {
-        return 'http://10.0.2.2:8000';
+        return 'http://192.168.1.4:8000';
       }
-      return 'http://127.0.0.1:8000';
+      return 'http://192.168.1.4:8000';
     case TargetPlatform.iOS:
       // iOS simulator uses localhost; physical devices should set Backend URL.
       return 'http://localhost:8000';

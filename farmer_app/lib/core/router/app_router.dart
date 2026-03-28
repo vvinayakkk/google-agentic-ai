@@ -24,8 +24,9 @@ import '../../features/crop/screens/crop_cycle_sub/crop_insurance_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/market_strategy_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/power_supply_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/soil_health_screen.dart';
-import '../../features/market/screens/marketplace_screen.dart';
-import '../../features/market/screens/market_prices_screen.dart';
+import '../../features/market/screens/marketplace_home_screen.dart';
+import '../../features/market/screens/my_listings_screen.dart';
+import '../../features/market/screens/add_crop_listing_screen.dart';
 import '../../features/equipment/screens/rental_screen.dart';
 import '../../features/equipment/screens/listing_details_screen.dart';
 import '../../features/equipment/screens/my_bookings_screen.dart';
@@ -71,6 +72,8 @@ abstract final class RoutePaths {
   static const soilHealth = '/crop-cycle/soil-health';
   static const marketplace = '/marketplace';
   static const marketPrices = '/market-prices';
+  static const myListings = '/my-listings';
+  static const addListing = '/add-listing';
   static const rental = '/rental';
   static const listingDetails = '/listing-details';
   static const myBookings = '/my-bookings';
@@ -118,7 +121,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final isLoggedIn = authAsync.value?.isLoggedIn ?? false;
       // Splash and all auth screens are always reachable; guard everything else.
-      final isAuthRoute = state.matchedLocation == RoutePaths.splash ||
+      final isAuthRoute =
+          state.matchedLocation == RoutePaths.splash ||
           state.matchedLocation == RoutePaths.languageSelect ||
           state.matchedLocation == RoutePaths.login ||
           state.matchedLocation == RoutePaths.fetchingLocation;
@@ -139,20 +143,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.languageSelect,
         builder: (_, _) => const LanguageSelectScreen(),
       ),
-      GoRoute(
-        path: RoutePaths.login,
-        builder: (_, _) => const LoginScreen(),
-      ),
+      GoRoute(path: RoutePaths.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: RoutePaths.fetchingLocation,
         builder: (_, _) => const FetchingLocationScreen(),
       ),
 
       // ── Home ─────────────────────────────────────────
-      GoRoute(
-        path: RoutePaths.home,
-        builder: (_, _) => const ChoiceScreen(),
-      ),
+      GoRoute(path: RoutePaths.home, builder: (_, _) => const ChoiceScreen()),
       GoRoute(
         path: RoutePaths.featured,
         builder: (_, _) => const FeaturedScreen(),
@@ -234,18 +232,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Market ───────────────────────────────────────
       GoRoute(
         path: RoutePaths.marketplace,
-        builder: (_, _) => const MarketplaceScreen(),
+        builder: (_, _) => const MarketplaceHomeScreen(),
       ),
       GoRoute(
         path: RoutePaths.marketPrices,
-        builder: (_, _) => const MarketPricesScreen(),
+        builder: (_, _) => const MarketplaceHomeScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.myListings,
+        builder: (_, _) => const MyListingsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.addListing,
+        builder: (_, _) => const AddCropListingScreen(),
       ),
 
       // ── Equipment ────────────────────────────────────
-      GoRoute(
-        path: RoutePaths.rental,
-        builder: (_, _) => const RentalScreen(),
-      ),
+      GoRoute(path: RoutePaths.rental, builder: (_, _) => const RentalScreen()),
       GoRoute(
         path: RoutePaths.listingDetails,
         builder: (_, state) => ListingDetailsScreen(
@@ -272,10 +275,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Cattle / Calendar ────────────────────────────
-      GoRoute(
-        path: RoutePaths.cattle,
-        builder: (_, _) => const CattleScreen(),
-      ),
+      GoRoute(path: RoutePaths.cattle, builder: (_, _) => const CattleScreen()),
       GoRoute(
         path: RoutePaths.calendar,
         builder: (_, _) => const CalendarScreen(),
@@ -286,10 +286,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.notifications,
         builder: (_, _) => const NotificationsScreen(),
       ),
-      GoRoute(
-        path: RoutePaths.upi,
-        builder: (_, _) => const UpiScreen(),
-      ),
+      GoRoute(path: RoutePaths.upi, builder: (_, _) => const UpiScreen()),
       GoRoute(
         path: RoutePaths.documents,
         builder: (_, _) => const DocumentAgentScreen(),
