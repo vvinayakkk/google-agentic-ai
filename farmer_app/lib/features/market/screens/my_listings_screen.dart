@@ -21,11 +21,19 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _listings = const [];
+  String _locationFilter = '';
+  final TextEditingController _locationCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchListings();
+  }
+
+  @override
+  void dispose() {
+    _locationCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchListings() async {
@@ -72,6 +80,17 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
     if (s == 'PAUSED') return MarketColors.textSecondary;
     if (s.contains('PREMIUM')) return MarketColors.amber;
     return MarketColors.primaryGreen;
+  }
+
+  List<Map<String, dynamic>> get _filteredListings {
+    if (_locationFilter.isEmpty) return _listings;
+    final q = _locationFilter.toLowerCase();
+    return _listings
+        .where(
+          (item) =>
+              (item['location']?.toString().toLowerCase() ?? '').contains(q),
+        )
+        .toList();
   }
 
   @override
@@ -154,9 +173,60 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
-                          const FilterPill(
-                            icon: Icons.location_on_outlined,
-                            label: 'Nagpur',
+                          Expanded(
+                            child: TextField(
+                              controller: _locationCtrl,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white,
+                                prefixIcon: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                                hintText: 'Filter by location (optional)',
+                                hintStyle: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  color: const Color(0xFF9CA3AF),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE0E0E0),
+                                  ),
+                                ),
+                              ),
+                              onSubmitted: (_) {
+                                setState(
+                                  () => _locationFilter = _locationCtrl.text
+                                      .trim(),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(
+                                () =>
+                                    _locationFilter = _locationCtrl.text.trim(),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: MarketColors.primaryGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Apply'),
                           ),
                           const Spacer(),
                           Container(
@@ -253,33 +323,59 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
                           ] else
                             RefreshIndicator(
                               onRefresh: _fetchListings,
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                itemCount: _listings.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (_, i) {
-                                  final item = _listings[i];
-                                  return ListingCard(
-                                    imagePath:
-                                        'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop',
-                                    status: _status(item),
-                                    statusColor: _statusColor(item),
-                                    title:
-                                        item['name']?.toString() ?? 'Equipment',
-                                    variety:
-                                        item['type']?.toString() ?? 'Listing',
-                                    price: _price(item),
-                                    quantity: _quantity(item),
-                                    views: ((item['views'] ?? 0) as num)
-                                        .toInt(),
-                                    interested:
-                                        ((item['interested'] ?? 0) as num)
-                                            .toInt(),
-                                  );
-                                },
-                              ),
+                              child: _filteredListings.isEmpty
+                                  ? ListView(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      children: [
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No listings match that location',
+                                          style: MarketTextStyles.bodySm,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _locationFilter = '';
+                                              _locationCtrl.clear();
+                                            });
+                                          },
+                                          child: const Text('Clear filter'),
+                                        ),
+                                      ],
+                                    )
+                                  : ListView.separated(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      itemCount: _filteredListings.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(height: 12),
+                                      itemBuilder: (_, i) {
+                                        final item = _filteredListings[i];
+                                        return ListingCard(
+                                          imagePath:
+                                              'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop',
+                                          status: _status(item),
+                                          statusColor: _statusColor(item),
+                                          title:
+                                              item['name']?.toString() ??
+                                              'Equipment',
+                                          variety:
+                                              item['type']?.toString() ??
+                                              'Listing',
+                                          price: _price(item),
+                                          quantity: _quantity(item),
+                                          views: ((item['views'] ?? 0) as num)
+                                              .toInt(),
+                                          interested:
+                                              ((item['interested'] ?? 0) as num)
+                                                  .toInt(),
+                                        );
+                                      },
+                                    ),
                             ),
                         ],
                       ),

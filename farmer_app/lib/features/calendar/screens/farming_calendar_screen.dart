@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+class FarmingCalendarScreen extends StatefulWidget {
+  const FarmingCalendarScreen({super.key});
 
   @override
-  State<CalendarScreen> createState() => _CalendarScreenState();
+  State<FarmingCalendarScreen> createState() => _FarmingCalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _FarmingCalendarScreenState extends State<FarmingCalendarScreen> {
   DateTime _focusedDay = DateTime(2023, 10, 1);
   DateTime _selectedDay = DateTime(2023, 10, 3);
   bool _heroVisible = false;
   final List<bool> _taskVisible = [false, false, false];
 
-  // Map of day → list of priority types for dot markers
   final Map<DateTime, List<String>> _events = {
     DateTime(2023, 10, 3): ['high', 'normal'],
     DateTime(2023, 10, 8): ['normal'],
@@ -37,15 +36,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     const delays = [100, 200, 300];
     for (var i = 0; i < delays.length; i++) {
       Future.delayed(Duration(milliseconds: delays[i]), () {
-        if (mounted) setState(() => _taskVisible[i] = true);
+        if (mounted) {
+          setState(() => _taskVisible[i] = true);
+        }
       });
     }
   }
 
   DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  List<String> _getEventsForDay(DateTime day) =>
-      _events[_stripTime(day)] ?? const [];
+  List<String> _getEventsForDay(DateTime day) {
+    return _events[_stripTime(day)] ?? const [];
+  }
 
   void _changeMonth(int delta) {
     setState(() {
@@ -60,7 +62,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const _Header(),
+            _Header(),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -77,7 +79,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 300),
                         opacity: _heroVisible ? 1 : 0,
-                        child: const _HeroCard(),
+                        child: _HeroCard(),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -199,7 +201,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _monthLabel(DateTime date) {
-    const months = [
+    final months = [
       'January',
       'February',
       'March',
@@ -224,8 +226,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -266,8 +266,6 @@ class _Header extends StatelessWidget {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard();
-
   @override
   Widget build(BuildContext context) {
     return Container(

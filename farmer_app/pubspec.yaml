@@ -34,6 +34,7 @@ dependencies:
   cached_network_image: any
   shimmer: any
   flutter_animate: any
+  table_calendar: ^3.0.9
 
   # Maps & Location
   geolocator: any
@@ -51,7 +52,7 @@ dependencies:
   # Utilities
   intl: any
   uuid: any
-  url_launcher: any
+  url_launcher: ^6.3.2
   share_plus: any
   path_provider: any
   permission_handler: any

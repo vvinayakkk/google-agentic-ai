@@ -19,10 +19,15 @@ class MarketplaceHomeScreen extends ConsumerStatefulWidget {
 class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
   int _activeTab = 0;
   bool _loading = true;
+  bool _loadingMore = false;
   String? _error;
   List<Map<String, dynamic>> _insights = const [];
   Map<String, dynamic>? _heroItem;
   bool _showAll = false;
+  String _stateFilter = '';
+  int _page = 1;
+  bool _hasMore = true;
+  final TextEditingController _stateCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -30,26 +35,50 @@ class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
     _fetchInsights();
   }
 
-  Future<void> _fetchInsights() async {
+  @override
+  void dispose() {
+    _stateCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchInsights({bool reset = false}) async {
+    if (reset) {
+      _page = 1;
+      _hasMore = true;
+      _insights = [];
+    }
+    if (_loadingMore || (!_hasMore && !reset)) return;
     setState(() {
-      _loading = true;
-      _error = null;
+      if (reset) {
+        _loading = true;
+        _error = null;
+      } else {
+        _loadingMore = true;
+      }
     });
     try {
       final res = await ref
           .read(marketServiceProvider)
-          .listPrices(perPage: _showAll ? 50 : 6);
+          .listPrices(
+            state: _stateFilter.isNotEmpty ? _stateFilter : null,
+            page: _page,
+            perPage: _showAll ? 10 : 6,
+          );
       final items = (res['items'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
       setState(() {
-        _insights = items;
-        _heroItem = items.isNotEmpty ? items.first : null;
+        _insights = reset ? items : [..._insights, ...items];
+        _heroItem = _insights.isNotEmpty ? _insights.first : null;
+        _hasMore = items.length == (_showAll ? 10 : 6);
+        if (_hasMore) _page += 1;
         _loading = false;
+        _loadingMore = false;
       });
     } catch (e) {
       setState(() {
         _error = e.toString();
         _loading = false;
+        _loadingMore = false;
       });
     }
   }
@@ -219,15 +248,57 @@ class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
-                        children: const [
-                          FilterPill(
-                            icon: Icons.location_on_outlined,
-                            label: 'Punjab, Ludhiana',
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _stateCtrl,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white,
+                                prefixIcon: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                                hintText: 'Filter by state (optional)',
+                                hintStyle: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  color: const Color(0xFF9CA3AF),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE0E0E0),
+                                  ),
+                                ),
+                              ),
+                              onSubmitted: (_) {
+                                _stateFilter = _stateCtrl.text.trim();
+                                _fetchInsights(reset: true);
+                              },
+                            ),
                           ),
-                          SizedBox(width: 8),
-                          FilterPill(
-                            icon: Icons.category_outlined,
-                            label: 'All Categories',
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              _stateFilter = _stateCtrl.text.trim();
+                              _fetchInsights(reset: true);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: MarketColors.primaryGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Apply'),
                           ),
                         ],
                       ),
@@ -256,7 +327,7 @@ class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: _fetchInsights,
+                            onPressed: () => _fetchInsights(reset: true),
                             child: const Text('Refresh ↻'),
                           ),
                         ],
@@ -267,14 +338,16 @@ class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
                     const SizedBox(height: 16),
                     Center(
                       child: TextButton(
-                        onPressed: () {
-                          setState(() => _showAll = !_showAll);
-                          _fetchInsights();
-                        },
+                        onPressed: _hasMore && !_loadingMore
+                            ? () {
+                                setState(() => _showAll = true);
+                                _fetchInsights();
+                              }
+                            : null,
                         child: Text(
-                          _showAll
-                              ? 'VIEW FEWER INSIGHTS  ▴'
-                              : 'VIEW MORE INSIGHTS  ▾',
+                          _hasMore
+                              ? 'VIEW MORE INSIGHTS  ▾'
+                              : 'ALL INSIGHTS LOADED',
                           style: GoogleFonts.nunito(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -284,6 +357,11 @@ class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
                         ),
                       ),
                     ),
+                    if (_loadingMore)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
                     const SizedBox(height: 16),
                   ],
                 ),
