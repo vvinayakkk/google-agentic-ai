@@ -84,7 +84,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final agent = ref.read(agentServiceProvider);
       final data = await agent.getSession(_sessionId!);
-      final msgs = (data['messages'] as List<dynamic>?)
+      final msgs =
+          (data['messages'] as List<dynamic>?)
               ?.map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
               .toList() ??
           [];
@@ -212,7 +213,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
       if (mounted) {
-        context.showSnack('voice_assistant.permission_denied'.tr(), isError: true);
+        context.showSnack(
+          'voice_assistant.permission_denied'.tr(),
+          isError: true,
+        );
       }
       return;
     }
@@ -260,10 +264,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final voice = ref.read(voiceServiceProvider);
-      final data = await voice.stt(
-        path,
-        language: languageCode,
-      );
+      final data = await voice.stt(path, language: languageCode);
 
       if (!mounted) return;
 
@@ -294,11 +295,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _ChipInfo('Marketplace', Icons.storefront_outlined, AppColors.info),
     _ChipInfo('Calendar', Icons.calendar_month_outlined, AppColors.accent),
     _ChipInfo('Cattle', Icons.pets_outlined, AppColors.warning),
+    _ChipInfo('Weather', Icons.cloud_outlined, AppColors.primary),
     _ChipInfo('Soil Moisture', Icons.water_drop_outlined, AppColors.primary),
     _ChipInfo('Education & Finance', Icons.school_outlined, AppColors.success),
-    _ChipInfo('Document Builder', Icons.description_outlined, Color(0xFF2563EB)),
+    _ChipInfo(
+      'Document Builder',
+      Icons.description_outlined,
+      Color(0xFF2563EB),
+    ),
     _ChipInfo('Crop Doctor', Icons.local_florist_outlined, Color(0xFFDC2626)),
-    _ChipInfo('Equipment Rental', Icons.agriculture_outlined, Color(0xFF7C3AED)),
+    _ChipInfo(
+      'Equipment Rental',
+      Icons.agriculture_outlined,
+      Color(0xFF7C3AED),
+    ),
     _ChipInfo('Mental Health', Icons.favorite_outline, Color(0xFFDB2777)),
   ];
 
@@ -310,6 +320,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         context.push(RoutePaths.calendar);
       case 'Cattle':
         context.push(RoutePaths.cattle);
+      case 'Weather':
+        context.push(RoutePaths.weather);
       case 'Soil Moisture':
         context.push(RoutePaths.soilMoisture);
       case 'Education & Finance':
@@ -344,7 +356,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text('chat.title'.tr()),
+        title: const Text('Weather & Soil'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_comment_outlined),
@@ -370,95 +382,107 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: Column(
           children: [
-            SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight),
+            SizedBox(
+              height: MediaQuery.of(context).padding.top + kToolbarHeight,
+            ),
             Expanded(
-            child: hasMessages
-                ? ListView.builder(
-                    controller: _scrollController,
-                    reverse: true,
-                    padding: AppSpacing.allLg,
-                    itemCount: _messages.length,
-                    itemBuilder: (_, i) => _ChatBubble(
-                      message: _messages[i],
-                      isPlaying: _playingMessageId ==
-                          (_messages[i].messageId ??
-                              _messages[i].content.hashCode.toString()),
-                      onTts: _messages[i].isAssistant &&
-                              !_messages[i].isLoading
-                          ? () => _playTts(_messages[i])
-                          : null,
-                    ),
-                  )
-                : Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // ── Heading ──
-                          Text(
-                            'What can I help with?',
-                            style:
-                                context.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: headingColor,
+              child: hasMessages
+                  ? ListView.builder(
+                      controller: _scrollController,
+                      reverse: true,
+                      padding: AppSpacing.allLg,
+                      itemCount: _messages.length,
+                      itemBuilder: (_, i) => _ChatBubble(
+                        message: _messages[i],
+                        isPlaying:
+                            _playingMessageId ==
+                            (_messages[i].messageId ??
+                                _messages[i].content.hashCode.toString()),
+                        onTts:
+                            _messages[i].isAssistant && !_messages[i].isLoading
+                            ? () => _playTts(_messages[i])
+                            : null,
+                      ),
+                    )
+                  : Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // ── Heading ──
+                            Text(
+                              'What can I help with?',
+                              style: context.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: headingColor,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          // ── Chips ──
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _chipData.map((chip) {
-                              return InkWell(
-                                borderRadius: BorderRadius.circular(18),
-                                onTap: () => _onChipTap(chip.label),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                        color: chipBorder, width: 1.1),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: chipBorder, width: 1.1),
-                                        ),
-                                        child: Center(
-                                          child: Icon(chip.icon,
-                                              size: 14, color: chip.color),
-                                        ),
+                            const SizedBox(height: AppSpacing.lg),
+                            // ── Chips ──
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _chipData.map((chip) {
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(18),
+                                  onTap: () => _onChipTap(chip.label),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 7,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: chipBorder,
+                                        width: 1.1,
                                       ),
-                                      const SizedBox(width: 7),
-                                      Text(
-                                        chip.label,
-                                        style: context
-                                            .textTheme.bodySmall
-                                            ?.copyWith(color: chipBorder),
-                                      ),
-                                    ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: chipBorder,
+                                              width: 1.1,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Icon(
+                                              chip.icon,
+                                              size: 14,
+                                              color: chip.color,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 7),
+                                        Text(
+                                          chip.label,
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(color: chipBorder),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-          ),
+            ),
 
-          // ── Input bar ─────────────────────────────────
+            // ── Input bar ─────────────────────────────────
             _ChatInputBar(
               controller: _controller,
               isLoading: _isLoading,
@@ -539,10 +563,9 @@ class _ChatBubble extends StatelessWidget {
             else
               MarkdownBody(
                 data: message.content,
-                styleSheet:
-                    MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-                  p: context.textTheme.bodyMedium,
-                ),
+                styleSheet: MarkdownStyleSheet.fromTheme(
+                  context.theme,
+                ).copyWith(p: context.textTheme.bodyMedium),
               ),
             // TTS + Copy row for assistant messages
             if (!isUser) ...[
@@ -568,8 +591,7 @@ class _ChatBubble extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   InkWell(
                     onTap: () {
-                      Clipboard.setData(
-                          ClipboardData(text: message.content));
+                      Clipboard.setData(ClipboardData(text: message.content));
                       context.showSnack('chat.copied'.tr());
                     },
                     borderRadius: AppRadius.smAll,
@@ -649,13 +671,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
                     final delay = i * 0.33;
-                    final t =
-                        ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);
-                    final opacity =
-                        0.3 + 0.7 * (1 - (2 * t - 1).abs());
+                    final t = ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);
+                    final opacity = 0.3 + 0.7 * (1 - (2 * t - 1).abs());
                     return Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Opacity(
                         opacity: opacity,
                         child: Container(
@@ -729,7 +748,10 @@ class _ChatInputBar extends StatelessWidget {
               GestureDetector(
                 onTap: onAdd,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   child: Icon(
                     Icons.add,
                     size: 20,
@@ -755,7 +777,9 @@ class _ChatInputBar extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              isMicProcessing ? 'Processing...' : 'Listening...',
+                              isMicProcessing
+                                  ? 'Processing...'
+                                  : 'Listening...',
                               style: context.textTheme.bodyMedium?.copyWith(
                                 color: context.appColors.textSecondary,
                                 fontWeight: FontWeight.w600,
@@ -779,8 +803,9 @@ class _ChatInputBar extends StatelessWidget {
                         style: context.textTheme.bodyMedium,
                         decoration: InputDecoration(
                           hintText: 'chat.input_hint'.tr(),
-                          hintStyle: context.textTheme.bodyMedium
-                              ?.copyWith(color: context.appColors.textSecondary),
+                          hintStyle: context.textTheme.bodyMedium?.copyWith(
+                            color: context.appColors.textSecondary,
+                          ),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -795,7 +820,10 @@ class _ChatInputBar extends StatelessWidget {
               GestureDetector(
                 onTap: onMic,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   child: Icon(
                     isMicRecording ? Icons.close : Icons.mic_none_outlined,
                     size: 20,
@@ -807,7 +835,10 @@ class _ChatInputBar extends StatelessWidget {
                 GestureDetector(
                   onTap: onLiveVoice,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     child: Icon(
                       Icons.graphic_eq,
                       size: 20,
@@ -829,8 +860,11 @@ class _ChatInputBar extends StatelessWidget {
                             ? AppColors.primary.withValues(alpha: 0.4)
                             : AppColors.primary,
                       ),
-                      child: const Icon(Icons.arrow_upward,
-                          color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.arrow_upward,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
                 )
@@ -936,11 +970,11 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(action.icon,
-                                  size: 22,
-                                  color: isDark
-                                      ? Colors.white70
-                                      : Colors.black54),
+                              Icon(
+                                action.icon,
+                                size: 22,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 action.label,
@@ -961,8 +995,10 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
               const SizedBox(height: 14),
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor, width: 1.1),
