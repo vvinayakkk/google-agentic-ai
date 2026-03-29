@@ -25,9 +25,9 @@ class ApiClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: effectiveBaseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -115,19 +115,27 @@ String _defaultBaseUrl() {
   if (kIsWeb) return 'http://localhost:8000';
 
   // Android network mode:
-  // - usb (default): for physical phone with `adb reverse tcp:8000 tcp:8000`
+  // - usb (default): for physical phones via adb reverse tunnel
+  // - lan: for physical phones on same Wi-Fi as backend host
   // - emulator: for Android emulator using host alias 10.0.2.2
   const androidNetworkMode = String.fromEnvironment(
     'ANDROID_NETWORK_MODE',
     defaultValue: 'usb',
   );
+  const androidLanHost = String.fromEnvironment(
+    'ANDROID_LAN_HOST',
+    defaultValue: '192.168.0.101',
+  );
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       if (androidNetworkMode.toLowerCase() == 'emulator') {
-        return 'http://192.168.1.4:8000';
+        return 'http://10.0.2.2:8000';
       }
-      return 'http://192.168.1.4:8000';
+      if (androidNetworkMode.toLowerCase() == 'lan') {
+        return 'http://$androidLanHost:8000';
+      }
+      return 'http://127.0.0.1:8000';
     case TargetPlatform.iOS:
       // iOS simulator uses localhost; physical devices should set Backend URL.
       return 'http://localhost:8000';

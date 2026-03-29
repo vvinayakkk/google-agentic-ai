@@ -2,14 +2,9 @@
 > admin-dashboard@0.0.0 dev
 > vite --host 0.0.0.0 --port 5173
 
-[33mYou are using Node.js 20.9.0. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.[39m
-file:///C:/Users/Asim/OneDrive/Desktop/projects/farmer/google-agentic-ai/admin-dashboard/node_modules/rolldown/dist/shared/rolldown-build-CPrIX9V6.mjs:9
-import { formatWithOptions, styleText } from "node:util";
-                            ^^^^^^^^^
-SyntaxError: The requested module 'node:util' does not provide an export named 'styleText'
-    at ModuleJob._instantiate (node:internal/modules/esm/module_job:131:21)
-    at async ModuleJob.run (node:internal/modules/esm/module_job:213:5)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:316:24)
-    at async CAC.<anonymous> (file:///C:/Users/Asim/OneDrive/Desktop/projects/farmer/google-agentic-ai/admin-dashboard/node_modules/vite/dist/node/cli.js:707:27)
 
-Node.js v20.9.0
+  [32m[1mVITE[22m v8.0.3[39m  [2mready in [0m[1m946[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.0.101:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.17.80.1:[1m5173[22m/[39m

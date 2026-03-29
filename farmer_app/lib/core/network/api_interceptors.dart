@@ -50,7 +50,10 @@ class LoggingInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     // ignore: avoid_print
-    print('✖ ${err.response?.statusCode} ${err.requestOptions.uri}');
+    print(
+      '✖ ${err.response?.statusCode} ${err.requestOptions.uri} '
+      'type=${err.type} message=${err.message}',
+    );
     handler.next(err);
   }
 }

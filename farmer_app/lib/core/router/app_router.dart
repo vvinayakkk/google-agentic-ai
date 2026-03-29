@@ -24,8 +24,7 @@ import '../../features/crop/screens/crop_cycle_sub/crop_insurance_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/market_strategy_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/power_supply_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/soil_health_screen.dart';
-import '../../features/market/screens/marketplace_home_screen.dart';
-import '../../features/market/screens/my_listings_screen.dart';
+import '../../features/market/screens/market_prices_screen.dart';
 import '../../features/market/screens/add_crop_listing_screen.dart';
 import '../../features/equipment/screens/rental_screen.dart';
 import '../../features/equipment/screens/listing_details_screen.dart';
@@ -40,8 +39,6 @@ import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/upi/screens/upi_screen.dart';
 import '../../features/documents/screens/document_agent_screen.dart';
 import '../../features/documents/screens/document_builder_screen.dart';
-import '../../features/market/screens/scheme_detail_screen.dart';
-import '../../features/market/screens/live_mandi_prices_screen.dart';
 import '../../features/equipment/screens/equipment_rental_rates_screen.dart';
 import '../../features/waste/screens/best_out_of_waste_screen.dart';
 import '../../features/mental_health/screens/suicide_prevention_screen.dart';
@@ -72,7 +69,6 @@ abstract final class RoutePaths {
   static const soilHealth = '/crop-cycle/soil-health';
   static const marketplace = '/marketplace';
   static const marketPrices = '/market-prices';
-  static const myListings = '/my-listings';
   static const addListing = '/add-listing';
   static const rental = '/rental';
   static const listingDetails = '/listing-details';
@@ -87,8 +83,6 @@ abstract final class RoutePaths {
   static const upi = '/upi';
   static const documents = '/documents';
   static const documentBuilder = '/document-builder';
-  static const schemeDetail = '/scheme-detail';
-  static const liveMandiPrices = '/live-mandi-prices';
   static const equipmentRentalRates = '/equipment-rental-rates';
   static const waste = '/waste';
   static const mentalHealth = '/mental-health';
@@ -232,15 +226,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Market ───────────────────────────────────────
       GoRoute(
         path: RoutePaths.marketplace,
-        builder: (_, _) => const MarketplaceHomeScreen(),
+        builder: (_, _) => const MarketPricesScreen(),
       ),
       GoRoute(
         path: RoutePaths.marketPrices,
-        builder: (_, _) => const MarketplaceHomeScreen(),
-      ),
-      GoRoute(
-        path: RoutePaths.myListings,
-        builder: (_, _) => const MyListingsScreen(),
+        builder: (_, _) => const MarketPricesScreen(),
       ),
       GoRoute(
         path: RoutePaths.addListing,
@@ -294,17 +284,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.documentBuilder,
         builder: (_, _) => const DocumentBuilderScreen(),
-      ),
-      GoRoute(
-        path: RoutePaths.schemeDetail,
-        builder: (_, state) => SchemeDetailScreen(
-          schemeId: state.uri.queryParameters['id'] ?? '',
-          schemeName: state.uri.queryParameters['name'] ?? 'Scheme',
-        ),
-      ),
-      GoRoute(
-        path: RoutePaths.liveMandiPrices,
-        builder: (_, _) => const LiveMandiPricesScreen(),
       ),
       GoRoute(
         path: RoutePaths.equipmentRentalRates,

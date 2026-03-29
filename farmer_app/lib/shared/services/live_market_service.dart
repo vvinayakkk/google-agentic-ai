@@ -71,6 +71,28 @@ class LiveMarketService {
     }
     return [];
   }
+
+  /// GET /api/v1/market/live-market/mandis → mandi directory with live fallback.
+  Future<List<Map<String, dynamic>>> getLiveMandis({
+    String? state,
+    int limit = 200,
+  }) async {
+    final res = await _client.get(
+      ApiEndpoints.liveMarketMandis,
+      queryParameters: {
+        if (state != null && state.trim().isNotEmpty) 'state': state,
+        'limit': limit,
+      },
+    );
+    final data = res.data;
+    if (data is Map && data['mandis'] is List) {
+      return (data['mandis'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
 }
 
 final liveMarketServiceProvider = Provider<LiveMarketService>((ref) {

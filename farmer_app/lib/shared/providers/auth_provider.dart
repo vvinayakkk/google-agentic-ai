@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../services/auth_service.dart';
 
@@ -37,14 +38,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final loggedIn = await storage.isLoggedIn;
     if (!loggedIn) return const AuthState();
 
-    final uid = await storage.userId ?? '';
-    final phone = await storage.phone ?? '';
-    final role = await storage.role ?? 'farmer';
+    // Validate persisted tokens at startup so stale sessions don't bypass login.
+    try {
+      final me = await ref.read(authServiceProvider).getMe();
+      final uid = (me['uid'] as String?) ?? await storage.userId ?? '';
+      final phone = (me['phone'] as String?) ?? await storage.phone ?? '';
+      final role = (me['role'] as String?) ?? await storage.role ?? 'farmer';
 
-    return AuthState(
-      isLoggedIn: true,
-      user: {'uid': uid, 'phone': phone, 'role': role},
-    );
+      await storage.saveUser(userId: uid, phone: phone, role: role);
+      return AuthState(isLoggedIn: true, user: me);
+    } catch (_) {
+      await storage.clearAll();
+      return const AuthState();
+    }
   }
 
   /// Login with phone + password → returns tokens directly.
@@ -76,9 +82,27 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
       return true;
     } catch (e) {
-      state = AsyncData(AuthState(error: e.toString()));
+      state = AsyncData(AuthState(error: _authErrorMessage(e)));
       return false;
     }
+  }
+
+  String _authErrorMessage(Object error) {
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionError) {
+        final baseUrl = error.requestOptions.baseUrl.toLowerCase();
+        if (baseUrl.contains('127.0.0.1') || baseUrl.contains('localhost')) {
+          return 'Cannot reach backend from device. Run the Android dev script to re-establish tunnel and retry.';
+        }
+        return 'Cannot reach backend server. Check backend/network and try again.';
+      }
+
+      final status = error.response?.statusCode;
+      if (status != null) {
+        return 'Login failed with status $status.';
+      }
+    }
+    return error.toString();
   }
 
   /// Register a new account.

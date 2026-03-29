@@ -11,9 +11,16 @@ void main() async {
 
   // Pre-load backend URL so real devices don't need a rebuild when WiFi changes
   final prefs = await SharedPreferences.getInstance();
-  final savedUrl = prefs.getString('backend_url') ?? '';
+  final savedUrl = (prefs.getString('backend_url') ?? '').trim();
+
   if (savedUrl.isNotEmpty) {
-    ApiClient.overrideUrl = savedUrl;
+    final lowered = savedUrl.toLowerCase();
+    if (lowered.contains('127.0.0.1') || lowered.contains('localhost')) {
+      await prefs.remove('backend_url');
+      ApiClient.overrideUrl = null;
+    } else {
+      ApiClient.overrideUrl = savedUrl;
+    }
   }
 
   runApp(
