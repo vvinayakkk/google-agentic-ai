@@ -37,7 +37,6 @@ import '../../features/calendar/screens/calendar_screen.dart';
 import '../../features/voice/screens/speech_to_text_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/upi/screens/upi_screen.dart';
-import '../../features/documents/screens/document_agent_screen.dart';
 import '../../features/documents/screens/document_builder_screen.dart';
 import '../../features/equipment/screens/equipment_rental_rates_screen.dart';
 import '../../features/waste/screens/best_out_of_waste_screen.dart';
@@ -279,7 +278,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: RoutePaths.upi, builder: (_, _) => const UpiScreen()),
       GoRoute(
         path: RoutePaths.documents,
-        builder: (_, _) => const DocumentAgentScreen(),
+        builder: (_, _) => const DocumentBuilderScreen(),
       ),
       GoRoute(
         path: RoutePaths.documentBuilder,
