@@ -5,20 +5,20 @@ const StatCard = ({ label, value, delta = 0, trend = [] }) => {
 
   return (
     <div className="panel card-pad no-shadow">
-      <div className="flex items-start justify-between">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div className="uppercase-xs">{label}</div>
-          <div className="stat-value mt-2">{value ?? 0}</div>
+          <div className="uppercase-xs" style={{ color: 'var(--muted)' }}>{label}</div>
+          <div className="stat-value mt-2" style={{ fontFamily: 'Geist, Inter, system-ui' }}>{value ?? 0}</div>
         </div>
 
-        <div style={{ width: 96, height: 48 }}>
-          <SparkLine data={trend} color={positive ? "var(--accent)" : "var(--danger)"} height={48} strokeWidth={1.5} />
+        <div style={{ width: 110, height: 40 }}>
+          <SparkLine data={trend} color={positive ? 'var(--accent)' : 'var(--danger)'} height={40} strokeWidth={1.5} />
         </div>
       </div>
 
-      <div className="mt-3">
-        <span className={`badge`} style={{ background: positive ? "var(--accent-dim)" : "rgba(239,68,68,0.12)", color: positive ? "var(--accent)" : "#ef4444" }}>
-          {positive ? "+" : ""}{delta}%
+      <div style={{ marginTop: 10 }}>
+        <span className={positive ? 'badge-green' : 'badge-red'}>
+          {positive ? '+' : ''}{Number(delta || 0)}%
         </span>
       </div>
     </div>

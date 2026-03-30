@@ -109,7 +109,7 @@ const Farmers = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 style={{ fontSize: 15, fontWeight: 600 }}>Farmers</h2>
-          <div className="badge">{totalCount}</div>
+          <div className="badge-muted">{totalCount}</div>
         </div>
         <div>
           <button type="button" className="btn-primary">+ Add Farmer</button>

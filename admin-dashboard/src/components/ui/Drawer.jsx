@@ -11,7 +11,7 @@ const Drawer = ({ open, title, children, onClose, width = 480 }) => {
       >
         <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
-          <button type="button" className="btn-ghost" onClick={onClose}>✕</button>
+          <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </div>
         <div style={{ padding: 12 }}>{children}</div>
       </aside>

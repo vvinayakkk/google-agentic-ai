@@ -1,13 +1,13 @@
 import { AlertTriangle, DatabaseZap, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-const SkeletonRows = ({ columns = 5, rows = 5 }) => (
+const SkeletonRows = ({ columns = 5, rows = 6 }) => (
   <tbody>
     {Array.from({ length: rows }).map((_, idx) => (
-      <tr key={`s-${idx}`} className="border-b border-white/5">
+      <tr key={`s-${idx}`}>
         {Array.from({ length: columns }).map((__, col) => (
-          <td key={`s-${idx}-${col}`} className="px-3 py-2">
-            <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+          <td key={`s-${idx}-${col}`} style={{ padding: "0 12px" }}>
+            <div className="skeleton-row" />
           </td>
         ))}
       </tr>
@@ -79,25 +79,26 @@ const DataTable = ({
   return (
     <div className="overflow-hidden panel">
       {showFilters ? (
-        <div className="flex items-center justify-between border-b" style={{ borderColor: 'var(--border)' }}>
-          <div className="p-3" style={{ minWidth: 240 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ padding: 12, minWidth: 240 }}>
             <select className="field" value={field} onChange={(e) => setField(e.target.value)}>
-              <option value="__all">All columns</option>
+              <option value="__all">All fields</option>
               {fieldOptions.map((key) => (
                 <option key={key} value={key}>{key}</option>
               ))}
             </select>
           </div>
-          <div className="p-3" style={{ width: 360 }}>
-            <input className="field" placeholder="Search all fields" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <div style={{ padding: 12, width: 360 }}>
+            <input className="field" placeholder="Search name, phone, village, district..." value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
         </div>
       ) : null}
-      <table className="w-full table-fixed border-collapse text-left" style={{ color: 'var(--text)' }}>
+
+      <table className="w-full table-fixed modern-table text-left" style={{ color: 'var(--text)' }}>
         <thead className="table-header">
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className="px-3 py-2 text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+              <th key={col.key} className="px-3 py-2 text-[11px] font-medium" style={{ color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {col.label}
               </th>
             ))}
@@ -108,13 +109,15 @@ const DataTable = ({
         ) : error ? (
           <tbody>
             <tr>
-              <td colSpan={columns.length} className="px-4 py-10">
-                <div className="mx-auto max-w-md rounded-xl border border-rose-300/30 bg-rose-300/10 p-4 text-center">
-                  <AlertTriangle className="mx-auto mb-2 h-6 w-6 text-rose-200" />
-                  <p className="text-sm text-rose-100">{error}</p>
-                  <button type="button" className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1 text-[11px]" onClick={onRetry}>
-                    <RefreshCw className="h-3 w-3" /> Retry
-                  </button>
+              <td colSpan={columns.length} style={{ padding: 16 }}>
+                <div style={{ borderLeft: '4px solid var(--danger)', padding: 12, background: 'rgba(239,68,68,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle style={{ color: 'var(--danger)', fontSize: 18 }} />
+                    <div style={{ color: 'var(--danger)', fontWeight: 600 }}>Failed: {String(error)}</div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn-ghost" onClick={onRetry}><RefreshCw size={14} /> Retry</button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -122,9 +125,12 @@ const DataTable = ({
         ) : normalizedRows.length === 0 ? (
           <tbody>
             <tr>
-              <td colSpan={columns.length} className="px-4 py-10 text-center muted">
-                <div>{emptyTitle}</div>
-                <div className="muted" style={{ marginTop: 6 }}>{emptySubtitle}</div>
+              <td colSpan={columns.length} style={{ padding: 24 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <DatabaseZap size={48} style={{ color: 'var(--faint)' }} />
+                  <div style={{ marginTop: 8, color: 'var(--muted)', fontSize: 14 }}>{emptyTitle}</div>
+                  <div style={{ marginTop: 6, color: 'var(--faint)', fontSize: 12 }}>{emptySubtitle}</div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -133,16 +139,20 @@ const DataTable = ({
             {normalizedRows.map((row, idx) => (
               <tr
                 key={row.id || idx}
-                className={`table-row ${idx % 2 === 0 ? "" : ""} ${onRowClick ? "row-hover cursor-pointer" : ""}`}
+                className={`${onRowClick ? "row-hover" : ""}`}
                 onClick={() => onRowClick?.(row)}
+                style={{
+                  height: 48,
+                  cursor: onRowClick ? 'pointer' : 'default',
+                }}
               >
                 {columns.map((col) => (
                   <td
                     key={`${row.id || idx}-${col.key}`}
-                    className="truncate px-3 py-2 align-top"
+                    style={{ padding: '10px 12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300 }}
                     title={renderCellText(row?.[col.key])}
                   >
-                    {col.render ? col.render(row) : row[col.key] ?? "0"}
+                    {col.render ? col.render(row) : (row[col.key] === null || row[col.key] === undefined ? '—' : row[col.key])}
                   </td>
                 ))}
               </tr>

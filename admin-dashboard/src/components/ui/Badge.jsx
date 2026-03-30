@@ -1,14 +1,7 @@
 const Badge = ({ children, tone = "muted", className = "" }) => {
-  const styles = {
-    green: { background: 'var(--accent-dim)', color: 'var(--accent)' },
-    red: { background: 'rgba(239,68,68,0.12)', color: 'var(--danger)' },
-    orange: { background: 'rgba(251,146,60,0.12)', color: '#F59E0B' },
-    muted: { background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)', padding: '2px 6px', borderRadius: '4px' },
-  };
-
-  const style = styles[tone] || styles.muted;
+  const cls = tone === "green" ? "badge-green" : tone === "red" ? "badge-red" : tone === "orange" ? "badge-orange" : tone === "blue" ? "badge-blue" : "badge-muted";
   return (
-    <span className={`badge ${className}`} style={style}>
+    <span className={`${cls} ${className}`.trim()}>
       {children}
     </span>
   );

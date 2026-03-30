@@ -1,12 +1,12 @@
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useState, useEffect } from "react";
 import Sidebar from "./components/layout/Sidebar";
-import ExportModal from "./components/ui/ExportModal";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
 import { useAuth } from "./context/AuthContext";
 import { useUI } from "./context/UIContext";
 import { useToast } from "./components/ui/Toast";
 import { PAGE_KEYS, NAV_ITEMS } from "./utils/constants";
 import Login from "./pages/Login";
+import TopBar from "./components/layout/TopBar";
 
 const Overview = lazy(() => import("./pages/Overview"));
 const Farmers = lazy(() => import("./pages/Farmers"));
@@ -35,12 +35,12 @@ const pageMap = {
 };
 
 const Dashboard = () => {
-  const { activePage, setLiveActivity } = useUI();
+  const { activePage, setLiveActivity, setActivePage } = useUI();
   const { push } = useToast();
   const [services, setServices] = useState([]);
   const [lastSync, setLastSync] = useState(new Date().toISOString());
   const [exportRows, setExportRows] = useState([]);
-  const ActivePage = pageMap[activePage] || Overview;
+  const ActivePage = pageMap[activePage] || Analytics;
 
   const onRefresh = () => {
     setLastSync(new Date().toISOString());
@@ -65,27 +65,14 @@ const Dashboard = () => {
   }, [setLiveActivity]);
 
   const pageName = NAV_ITEMS.find((i) => i.key === activePage)?.label || "Overview";
+  useEffect(() => {
+    setActivePage(PAGE_KEYS.ANALYTICS);
+  }, [setActivePage]);
 
   return (
     <div className="relative min-h-screen text-white">
       <Sidebar />
-
-      <div className="app-topbar">
-        <div className="flex items-center gap-3">
-          <div className="uppercase-xs">KisanKiAwaaz</div>
-          <div className="text-white/70">/</div>
-          <div className="font-medium" style={{ fontSize: 15 }}>{pageName}</div>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button type="button" className="btn-ghost">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 17H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <button type="button" className="btn-ghost">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 17H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-        </div>
-      </div>
+      <TopBar onRefresh={onRefresh} />
 
       <main className="app-main">
         <ErrorBoundary>
@@ -95,7 +82,7 @@ const Dashboard = () => {
         </ErrorBoundary>
       </main>
 
-      <ExportModal rows={exportRows} />
+      {/* Export modal removed per new layout spec */}
     </div>
   );
 };
