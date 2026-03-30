@@ -176,27 +176,29 @@ const DatabaseExplorer = () => {
 
   return (
     <div className="grid grid-cols-12 gap-3">
-      <aside className="col-span-2 panel max-h-[680px] overflow-y-auto p-3 text-xs">
-        {groups.map(([group, names]) => (
-          <div key={group} className="mb-3">
-            <p className="mb-1 text-[10px] uppercase tracking-wide text-white/45">{group}</p>
-            <div className="space-y-1">
-              {names.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => {
-                    setCollection(name);
-                    setPage(1);
-                  }}
-                  className={`block w-full rounded-md border px-2 py-1 text-left ${collection === name ? "border-white/30 bg-white/10 text-white/90" : "border-white/10 text-white/65 hover:bg-white/5"}`}
-                >
-                  {name}
-                </button>
-              ))}
+      <aside className="col-span-2" style={{ width: 180 }}>
+        <div className="panel card-pad" style={{ height: '680px', overflowY: 'auto' }}>
+          {groups.map(([group, names]) => (
+            <div key={group} className="mb-3">
+              <div className="uppercase-xs">{group}</div>
+              <div className="mt-2 space-y-1">
+                {names.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setCollection(name);
+                      setPage(1);
+                    }}
+                    className={`w-full text-left rounded-sm px-2 py-2 ${collection === name ? 'text-[var(--text)] border-l-2 border-l-[var(--accent)]' : 'muted'}`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </aside>
 
       <div className="col-span-8 space-y-3">
@@ -290,33 +292,7 @@ const DatabaseExplorer = () => {
         </div>
       </div>
 
-      <div className="pointer-events-none fixed bottom-10 left-1/2 z-50 hidden w-[420px] -translate-x-1/2 lg:block">
-        <div className="pointer-events-auto rounded-2xl border border-white/15 bg-[#181818]/96 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="mb-2 flex items-center gap-2 text-xs text-white/80">
-            <Bot size={14} className="text-blue-200" />
-            <span>Database Assistant</span>
-          </div>
-          <div className="max-h-24 space-y-1 overflow-y-auto text-[11px]">
-            {chatLog.slice(-3).map((m, idx) => (
-              <div key={`${m.role}-${idx}`} className={`rounded-lg border px-2 py-1 ${m.role === "assistant" ? "border-white/15 bg-white/[0.04] text-white/85" : "border-white/10 bg-white/[0.02] text-white/70"}`}>
-                {m.text}
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-2">
-            <input
-              className="field"
-              placeholder="Ask for filter suggestions..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onChatSend()}
-            />
-            <button type="button" className="pill-btn border-white/30 bg-white/10" onClick={onChatSend}>
-              <SendHorizontal size={12} /> Send
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Assistant widget removed per new design */}
     </div>
   );
 };

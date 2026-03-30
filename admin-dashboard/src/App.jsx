@@ -1,15 +1,11 @@
 import { Suspense, lazy, useMemo, useState } from "react";
-import Header from "./components/layout/Header";
-import RightSidebar from "./components/layout/RightSidebar";
-import StatusBar from "./components/layout/StatusBar";
-import InfiniteCanvas from "./components/canvas/InfiniteCanvas";
+import Sidebar from "./components/layout/Sidebar";
 import ExportModal from "./components/ui/ExportModal";
-import CommandPalette from "./components/ui/CommandPalette";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
 import { useAuth } from "./context/AuthContext";
 import { useUI } from "./context/UIContext";
 import { useToast } from "./components/ui/Toast";
-import { PAGE_KEYS } from "./utils/constants";
+import { PAGE_KEYS, NAV_ITEMS } from "./utils/constants";
 import Login from "./pages/Login";
 
 const Overview = lazy(() => import("./pages/Overview"));
@@ -39,7 +35,7 @@ const pageMap = {
 };
 
 const Dashboard = () => {
-  const { activePage, setCanvasPan, setCanvasScale, setLiveActivity } = useUI();
+  const { activePage, setLiveActivity } = useUI();
   const { push } = useToast();
   const [services, setServices] = useState([]);
   const [lastSync, setLastSync] = useState(new Date().toISOString());
@@ -68,31 +64,38 @@ const Dashboard = () => {
     };
   }, [setLiveActivity]);
 
-  return (
-    <div className="relative min-h-screen bg-[#1C1C1C] text-white">
-      <InfiniteCanvas />
-      <Header onRefresh={onRefresh} unread={3} />
-      <RightSidebar />
+  const pageName = NAV_ITEMS.find((i) => i.key === activePage)?.label || "Overview";
 
-      <main className="relative z-20 px-3 pb-16 pt-12 sm:px-4 lg:pr-24 xl:pr-28">
+  return (
+    <div className="relative min-h-screen text-white">
+      <Sidebar />
+
+      <div className="app-topbar">
+        <div className="flex items-center gap-3">
+          <div className="uppercase-xs">KisanKiAwaaz</div>
+          <div className="text-white/70">/</div>
+          <div className="font-medium" style={{ fontSize: 15 }}>{pageName}</div>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button type="button" className="btn-ghost">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 17H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button type="button" className="btn-ghost">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 17H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <main className="app-main">
         <ErrorBoundary>
-          <Suspense fallback={<div className="panel p-4 text-xs text-white/60">Loading page...</div>}>
-            <ActivePage {...pageProps} />
+          <Suspense fallback={<div className="panel card-pad muted">Loading page...</div>}>
+            <ActivePage {...pageProps} onRefresh={onRefresh} />
           </Suspense>
         </ErrorBoundary>
       </main>
 
-      <StatusBar
-        services={services}
-        lastSync={lastSync}
-        onReset={() => {
-          setCanvasPan({ x: 0, y: 0 });
-          setCanvasScale(1);
-        }}
-      />
-
       <ExportModal rows={exportRows} />
-      <CommandPalette />
     </div>
   );
 };

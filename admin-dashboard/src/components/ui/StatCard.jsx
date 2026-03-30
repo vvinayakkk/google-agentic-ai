@@ -4,17 +4,22 @@ const StatCard = ({ label, value, delta = 0, trend = [] }) => {
   const positive = Number(delta || 0) >= 0;
 
   return (
-    <div className="panel p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-[11px] text-white/55">{label}</p>
-        <span className={`text-[10px] ${positive ? "text-emerald-300" : "text-rose-300"}`}>
-          {positive ? "+" : ""}
-          {delta}%
-        </span>
+    <div className="panel card-pad no-shadow">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="uppercase-xs">{label}</div>
+          <div className="stat-value mt-2">{value ?? 0}</div>
+        </div>
+
+        <div style={{ width: 96, height: 48 }}>
+          <SparkLine data={trend} color={positive ? "var(--accent)" : "var(--danger)"} height={48} strokeWidth={1.5} />
+        </div>
       </div>
-      <div className="font-display text-3xl leading-none text-white/95">{value}</div>
-      <div className="mt-2">
-        <SparkLine data={trend} color={positive ? "#4ADE80" : "#F87171"} />
+
+      <div className="mt-3">
+        <span className={`badge`} style={{ background: positive ? "var(--accent-dim)" : "rgba(239,68,68,0.12)", color: positive ? "var(--accent)" : "#ef4444" }}>
+          {positive ? "+" : ""}{delta}%
+        </span>
       </div>
     </div>
   );

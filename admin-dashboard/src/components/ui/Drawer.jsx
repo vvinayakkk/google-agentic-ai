@@ -6,16 +6,14 @@ const Drawer = ({ open, title, children, onClose, width = 480 }) => {
         onClick={onClose}
       />
       <aside
-        className="fixed right-0 top-10 z-[110] h-[calc(100vh-64px)] overflow-y-auto border-l border-white/10 bg-[#1E1E1E] p-4 transition-transform duration-300 ease-out"
-        style={{ width, transform: open ? "translateX(0)" : "translateX(100%)" }}
+        className="fixed right-0 top-12 z-[110] h-[calc(100vh-64px)] overflow-y-auto"
+        style={{ width, borderLeft: '1px solid var(--border)', background: 'var(--surface)', transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 240ms ease' }}
       >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-lg text-white/95">{title}</h3>
-          <button type="button" className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80 hover:bg-white/10" onClick={onClose}>
-            Close
-          </button>
+        <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
+          <button type="button" className="btn-ghost" onClick={onClose}>✕</button>
         </div>
-        {children}
+        <div style={{ padding: 12 }}>{children}</div>
       </aside>
     </>
   );

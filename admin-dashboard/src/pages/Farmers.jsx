@@ -37,6 +37,8 @@ const Farmers = () => {
     load();
   }, [load]);
 
+  const totalCount = rows?.length || 0;
+
   const loadDetail = useCallback(async (farmer) => {
     setSelected(farmer);
     try {
@@ -103,12 +105,21 @@ const Farmers = () => {
   );
 
   return (
-    <div className="space-y-3">
-      <div className="panel flex items-center gap-2 p-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} className="field" placeholder="Search by name, phone, village, district" />
-        <input value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} className="field w-40" placeholder="State" />
-        <button type="button" className="pill-btn" onClick={() => setPage(1)}>Apply</button>
-        <button type="button" className="pill-btn border-white/30 bg-white/10">+ Add Farmer</button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 style={{ fontSize: 15, fontWeight: 600 }}>Farmers</h2>
+          <div className="badge">{totalCount}</div>
+        </div>
+        <div>
+          <button type="button" className="btn-primary">+ Add Farmer</button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} className="field" placeholder="Search by name, phone, village" />
+        <input value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} className="field" style={{ width: 160 }} placeholder="State" />
+        <button type="button" className="btn-ghost" onClick={() => setPage(1)}>Apply</button>
       </div>
 
       <DataTable
@@ -122,61 +133,55 @@ const Farmers = () => {
         emptySubtitle="Try broadening your search or changing filters."
       />
 
-      <div className="flex items-center justify-end gap-2 text-xs text-white/60">
-        <button type="button" className="action-btn" onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</button>
-        <span>Page {page}</span>
-        <button type="button" className="action-btn" onClick={() => setPage((p) => p + 1)}>Next</button>
+      <div className="flex items-center justify-end gap-4 muted" style={{ fontSize: 13 }}>
+        <button type="button" className="btn-ghost" onClick={() => setPage((p) => Math.max(1, p - 1))}>← Prev</button>
+        <div>Page {page}</div>
+        <button type="button" className="btn-ghost" onClick={() => setPage((p) => p + 1)}>Next →</button>
       </div>
 
       <Drawer open={Boolean(selected)} onClose={() => setSelected(null)} title={selected?.name || "Farmer Detail"}>
         {detail ? (
-          <div className="space-y-4 text-xs text-white/75">
+          <div className="space-y-4" style={{ fontSize: 13 }}>
             <div>
-              <h4 className="mb-2 font-display text-lg text-white/95">Profile</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="uppercase-xs">Profile</div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
                 {Object.entries(detail.profile || {}).slice(0, 16).map(([key, value]) => (
-                  <div key={key} className="rounded-lg border border-white/10 bg-white/[0.02] p-2">
-                    <p className="text-[10px] uppercase tracking-wide text-white/45">{key}</p>
-                    <p className="mt-1 break-all text-white/85">{String(value)}</p>
+                  <div key={key} className="panel card-pad">
+                    <div className="uppercase-xs">{key}</div>
+                    <div className="muted" style={{ marginTop: 6 }}>{String(value)}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <h4 className="mb-2 font-display text-lg text-white/95">Agent Sessions</h4>
-              <div className="space-y-2">
+              <div className="uppercase-xs">Agent Sessions</div>
+              <div className="space-y-2 mt-2">
                 {(detail.conversations?.conversations || []).slice(0, 20).map((item) => (
-                  <div key={item.id} className="rounded-lg border border-white/10 p-2">
-                    <p className="text-white/80">{item.session_id || item.id}</p>
-                    <p className="text-[10px] text-white/45">{formatDateTime(item.last_message_at || item.updated_at)}</p>
+                  <div key={item.id} className="panel card-pad">
+                    <div style={{ fontSize: 13 }}>{item.session_id || item.id}</div>
+                    <div className="muted" style={{ fontSize: 11 }}>{formatDateTime(item.last_message_at || item.updated_at)}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <h4 className="mb-2 font-display text-lg text-white/95">Analytics</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="panel p-2">
-                  <p className="text-[10px] text-white/50">Total Crops</p>
-                  <p className="font-display text-2xl text-white/95">{detail.insight?.totals?.crops || detail.insight?.total_crops || 0}</p>
+              <div className="uppercase-xs">Analytics</div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="panel card-pad">
+                  <div className="muted">Total Crops</div>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>{detail.insight?.totals?.crops || detail.insight?.total_crops || 0}</div>
                 </div>
-                <div className="panel p-2">
-                  <p className="text-[10px] text-white/50">Sessions</p>
-                  <p className="font-display text-2xl text-white/95">{detail.insight?.totals?.sessions || detail.insight?.total_sessions || 0}</p>
+                <div className="panel card-pad">
+                  <div className="muted">Sessions</div>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>{detail.insight?.totals?.sessions || detail.insight?.total_sessions || 0}</div>
                 </div>
-              </div>
-              <div className="mt-2 panel p-3">
-                <BarChart
-                  data={Object.entries(detail.insight?.benchmarks || {}).slice(0, 5).map(([label, value]) => ({ label, value: Number(value) || 0 }))}
-                  horizontal
-                />
               </div>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-white/45">Loading farmer details...</p>
+          <div className="muted">Loading farmer details...</div>
         )}
       </Drawer>
     </div>

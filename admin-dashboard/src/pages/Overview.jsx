@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import StatCard from "../components/ui/StatCard";
-import NodeGraph from "../components/canvas/NodeGraph";
-import { apiTry } from "../api/client";
+import { apiTry, healthChecks } from "../api/client";
 import { formatNumber } from "../utils/format";
+import LineChart from "../components/charts/LineChart";
 
 const trends = [
   [32, 35, 31, 36, 42, 44, 48],
@@ -33,9 +33,10 @@ const buildFeed = (stats) => {
   ];
 };
 
-const Overview = ({ onStatsChange, onActivityChange }) => {
+const Overview = ({ onStatsChange, onActivityChange, onRefresh }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [serviceHealth, setServiceHealth] = useState([]);
 
   useEffect(() => {
     let timer;
@@ -50,6 +51,13 @@ const Overview = ({ onStatsChange, onActivityChange }) => {
         if (!mounted) return;
         setStats(data);
         onStatsChange?.(data);
+        // fetch service health
+        try {
+          const checks = await healthChecks();
+          setServiceHealth(checks || []);
+        } catch {
+          setServiceHealth([]);
+        }
       } catch {
         if (mounted) {
           setStats(null);
@@ -70,14 +78,14 @@ const Overview = ({ onStatsChange, onActivityChange }) => {
   const cards = useMemo(() => {
     const payload = stats || {};
     return [
-      { label: "Total Farmers", value: formatNumber(payload.total_farmers || 0), delta: 6.1, trend: trends[0] },
-      { label: "Active Farmers", value: formatNumber(payload.dau || 0), delta: 3.2, trend: trends[1] },
-      { label: "Total Crops Tracked", value: formatNumber(payload.total_crops || 0), delta: 8.6, trend: trends[2] },
-      { label: "Market Price Records", value: formatNumber(payload.total_market_records || 0), delta: 4.9, trend: trends[3] },
-      { label: "Schemes Available", value: formatNumber(payload.total_schemes || 0), delta: 1.4, trend: trends[4] },
-      { label: "Equipment Listings", value: formatNumber(payload.total_equipment || 0), delta: 2.1, trend: trends[5] },
-      { label: "Pending Rentals", value: formatNumber(payload.pending_rentals || 0), delta: -1.2, trend: trends[6] },
-      { label: "Notifications Today", value: formatNumber(payload.notifications_sent || 0), delta: 5.7, trend: trends[7] },
+      { label: "Total Farmers", value: formatNumber(payload.total_farmers ?? 0), delta: 0, trend: trends[0] },
+      { label: "Active Today", value: formatNumber(payload.dau ?? 0), delta: 0, trend: trends[1] },
+      { label: "Crops Tracked", value: formatNumber(payload.total_crops ?? 0), delta: 0, trend: trends[2] },
+      { label: "Market Records", value: formatNumber(payload.total_market_records ?? 0), delta: 0, trend: trends[3] },
+      { label: "Agent Queries Today", value: formatNumber(payload.agent_queries_today ?? 0), delta: 0, trend: trends[4] },
+      { label: "Notifications Sent", value: formatNumber(payload.notifications_sent ?? 0), delta: 0, trend: trends[5] },
+      { label: "Pending Rentals", value: formatNumber(payload.pending_rentals ?? 0), delta: 0, trend: trends[6] },
+      { label: "Schemes Available", value: formatNumber(payload.total_schemes ?? 0), delta: 0, trend: trends[7] },
     ];
   }, [stats]);
 
@@ -89,17 +97,51 @@ const Overview = ({ onStatsChange, onActivityChange }) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 style={{ fontSize: 15, fontWeight: 600 }}>Overview</h2>
+        <div>
+          <button type="button" className="btn-ghost" onClick={onRefresh}>Refresh</button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((item) => (
           <StatCard key={item.label} {...item} />
         ))}
       </div>
-      <div className="rounded-2xl border border-white/10 p-2 sm:p-3">
-        <NodeGraph activeNodes={["orchestrator", "market", "schemes", "response", "text", "tts"]} />
+
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-7 panel card-pad">
+          <div className="uppercase-xs">GROWTH TREND</div>
+          <div className="mt-2">
+            <LineChart series={[{ name: 'Farmers', color: 'var(--accent)', values: (stats?.growth_trends?.farmers || []).map(p => Number(p.value || 0)) }]} labels={(stats?.growth_trends?.farmers || []).map(p => p.date || p.label || '')} />
+          </div>
+        </div>
+
+        <div className="col-span-5 panel card-pad">
+          <div className="flex items-center justify-between">
+            <div className="uppercase-xs">LIVE ACTIVITY</div>
+            <div className="muted" style={{ fontSize: 12 }}>auto-refreshes every 30s</div>
+          </div>
+          <div className="mt-3 space-y-2">
+            {(buildFeed(stats) || []).slice(0, 8).map((item, idx) => (
+              <div key={idx} className="flex items-start gap-2">
+                <div style={{ width: 8, height: 8, background: 'var(--accent)', borderRadius: 8, marginTop: 6 }} />
+                <div>
+                  <div style={{ fontSize: 13 }}>{item.text}</div>
+                  <div className="muted" style={{ fontSize: 11 }}>{new Date(item.at).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      {loading ? (
-        <div className="text-[11px] text-white/40">Live activity is syncing...</div>
-      ) : null}
+
+      <div className="flex gap-2">
+        {(serviceHealth || []).map((s) => (
+          <div key={s.name} className="badge" style={{ background: s.ok ? 'var(--accent-dim)' : 'rgba(239,68,68,0.12)', color: s.ok ? 'var(--accent)' : 'var(--danger)' }}>{s.name}</div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -77,33 +77,27 @@ const DataTable = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#1E1E1E]">
+    <div className="overflow-hidden panel">
       {showFilters ? (
-        <div className="grid grid-cols-1 gap-2 border-b border-white/10 p-3 text-xs md:grid-cols-3">
-          <label className="space-y-1">
-            <span className="text-white/45">Search all fields</span>
-            <input className="field" placeholder="Type to filter rows" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </label>
-          <label className="space-y-1">
-            <span className="text-white/45">Filter field</span>
+        <div className="flex items-center justify-between border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="p-3" style={{ minWidth: 240 }}>
             <select className="field" value={field} onChange={(e) => setField(e.target.value)}>
               <option value="__all">All columns</option>
               {fieldOptions.map((key) => (
                 <option key={key} value={key}>{key}</option>
               ))}
             </select>
-          </label>
-          <label className="space-y-1">
-            <span className="text-white/45">Field contains</span>
-            <input className="field" placeholder="Value" value={fieldQuery} onChange={(e) => setFieldQuery(e.target.value)} />
-          </label>
+          </div>
+          <div className="p-3" style={{ width: 360 }}>
+            <input className="field" placeholder="Search all fields" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
         </div>
       ) : null}
-      <table className="w-full table-fixed border-collapse text-left text-xs text-white/80">
-        <thead className="sticky top-0 z-10 bg-white/5">
+      <table className="w-full table-fixed border-collapse text-left" style={{ color: 'var(--text)' }}>
+        <thead className="table-header">
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className="border-b border-white/10 px-3 py-2 text-[11px] font-medium text-white/60">
+              <th key={col.key} className="px-3 py-2 text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
                 {col.label}
               </th>
             ))}
@@ -128,12 +122,9 @@ const DataTable = ({
         ) : normalizedRows.length === 0 ? (
           <tbody>
             <tr>
-              <td colSpan={columns.length} className="px-4 py-10">
-                <div className="text-center">
-                  <DatabaseZap className="mx-auto mb-3 h-8 w-8 text-white/35" />
-                  <p className="text-sm text-white/70">{emptyTitle}</p>
-                  <p className="text-xs text-white/40">{emptySubtitle}</p>
-                </div>
+              <td colSpan={columns.length} className="px-4 py-10 text-center muted">
+                <div>{emptyTitle}</div>
+                <div className="muted" style={{ marginTop: 6 }}>{emptySubtitle}</div>
               </td>
             </tr>
           </tbody>
@@ -142,7 +133,7 @@ const DataTable = ({
             {normalizedRows.map((row, idx) => (
               <tr
                 key={row.id || idx}
-                className={`border-b border-white/5 ${idx % 2 === 0 ? "bg-white/[0.02]" : "bg-transparent"} ${onRowClick ? "cursor-pointer hover:bg-white/5" : ""}`}
+                className={`table-row ${idx % 2 === 0 ? "" : ""} ${onRowClick ? "row-hover cursor-pointer" : ""}`}
                 onClick={() => onRowClick?.(row)}
               >
                 {columns.map((col) => (
@@ -151,7 +142,7 @@ const DataTable = ({
                     className="truncate px-3 py-2 align-top"
                     title={renderCellText(row?.[col.key])}
                   >
-                    {col.render ? col.render(row) : row[col.key] ?? "-"}
+                    {col.render ? col.render(row) : row[col.key] ?? "0"}
                   </td>
                 ))}
               </tr>

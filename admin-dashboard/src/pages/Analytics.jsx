@@ -88,133 +88,93 @@ const Analytics = () => {
 
   return (
     <div className="space-y-3">
-      <div className="panel flex items-center gap-2 p-3">
-        {[7, 14, 30, 90].map((d) => (
-          <button key={d} type="button" className={`pill-btn ${windowDays === d ? "border-white/30 bg-white/10" : ""}`} onClick={() => setWindowDays(d)}>
-            {d} days
-          </button>
-        ))}
-        <button type="button" className="pill-btn border-white/30 bg-white/10" onClick={generateSnapshot}>
-          <WandSparkles size={13} /> Generate Snapshot
-        </button>
-        <p className="ml-auto text-[11px] text-white/45">Last generated: {overview?.generated_at || "-"}</p>
+      <div className="flex items-center justify-between">
+        <h2 style={{ fontSize: 15, fontWeight: 600 }}>Analytics</h2>
+        <div className="flex items-center gap-2">
+          {[7, 30, 90].map((d) => (
+            <button key={d} type="button" className={`btn-ghost ${windowDays === d ? 'btn-primary' : ''}`} onClick={() => setWindowDays(d)}>{d} days</button>
+          ))}
+          <button type="button" className="btn-ghost" onClick={generateSnapshot}><WandSparkles size={14} /> Generate Snapshot</button>
+        </div>
       </div>
 
-      {loading ? <div className="panel p-4 text-sm text-white/60">Loading analytics overview...</div> : null}
-      {error ? <div className="panel border border-rose-300/25 bg-rose-300/10 p-4 text-sm text-rose-100">{error}</div> : null}
+      {loading ? <div className="panel card-pad muted">Loading analytics overview...</div> : null}
+      {error ? <div className="panel card-pad" style={{ borderColor: 'var(--danger)', background: 'rgba(239,68,68,0.06)' }}>{error}</div> : null}
 
-      <div className="grid grid-cols-5 gap-3">
-        {scoreCards.length ? scoreCards.map((card) => (
-          <div key={card.title} className="panel p-3">
-            <p className="text-[10px] uppercase tracking-wide text-white/45">{card.title}</p>
-            <p className="font-display text-4xl text-white/95">{card.value}</p>
-            <p className={`text-[11px] ${Number(card.delta || 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{card.delta || 0}%</p>
-            <p className="mt-1 text-[10px] text-white/40">{card.context || ""}</p>
+      <div className="grid grid-cols-4 gap-3">
+        {scoreCards.map((card) => (
+          <div key={card.title} className="panel card-pad">
+            <div className="uppercase-xs">{card.title}</div>
+            <div className="stat-value mt-2">{card.value}</div>
+            <div className="muted" style={{ marginTop: 6 }}>{card.context}</div>
           </div>
-        )) : (
-          <div className="panel col-span-5 p-4 text-sm text-white/45">No scorecards found.</div>
-        )}
+        ))}
       </div>
-
-      <LineChart
-        series={[
-          { name: "Farmers", color: "#E5E7EB", values: (growth.farmers || []).map((p) => Number(p.value || 0)) },
-          { name: "Conversations", color: "#60A5FA", values: (growth.conversations || []).map((p) => Number(p.value || 0)) },
-          { name: "Bookings", color: "#4ADE80", values: (growth.bookings || []).map((p) => Number(p.value || 0)) },
-        ]}
-        labels={labels}
-      />
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="panel p-3">
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="font-display text-lg text-white/95">Top States</h3>
-            <select className="field max-w-[150px]" value={stateFocus} onChange={(e) => setStateFocus(e.target.value)}>
+        <div className="panel card-pad">
+          <div className="uppercase-xs">Farmer Growth</div>
+          <div className="mt-3">
+            <LineChart series={[{ name: 'Farmers', color: 'var(--accent)', values: (growth.farmers || []).map(p => Number(p.value || 0)) }]} labels={labels} />
+          </div>
+        </div>
+
+        <div className="panel card-pad">
+          <div className="flex items-center justify-between"><div className="uppercase-xs">Top States</div>
+            <select className="field" value={stateFocus} onChange={(e) => setStateFocus(e.target.value)} style={{ width: 140 }}>
               <option value="all">All states</option>
               {topStates.map((s) => (
                 <option key={s.state} value={s.state}>{s.state}</option>
               ))}
             </select>
           </div>
-          <BarChart data={stateBars} />
+          <div className="mt-3"><BarChart data={stateBars} /></div>
         </div>
-        <div className="panel p-3">
-          <h3 className="mb-2 font-display text-lg text-white/95">Opportunity Signals</h3>
-          <BarChart data={opportunityBars} color="#A78BFA" />
-        </div>
-        <div className="panel p-3">
-          <h3 className="mb-2 font-display text-lg text-white/95">Engagement Mix</h3>
-          <DonutChart data={engagementDonut} />
+
+        <div className="panel card-pad">
+          <div className="uppercase-xs">Engagement</div>
+          <div className="mt-3"><DonutChart data={engagementDonut} /></div>
         </div>
       </div>
 
-      <div className="panel p-3">
-        <h3 className="mb-2 font-display text-lg text-white/95">Market Intelligence</h3>
-        {commodityBars.length ? <BarChart data={commodityBars} horizontal color="#FB923C" /> : <p className="text-xs text-white/55">No commodity intensity yet for the selected window. Try generating a fresh snapshot.</p>}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="panel p-3">
-          <h3 className="mb-2 font-display text-lg text-white/95">Operational Health</h3>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-white/10 p-2">
-              <p className="text-white/45">System Score</p>
-              <p className="text-white/90">{Number(operational.system_health_score || 0).toFixed(2)}</p>
-            </div>
-            <div className="rounded-lg border border-white/10 p-2">
-              <p className="text-white/45">Profile Completeness</p>
-              <p className="text-white/90">{Number(operational.profile_completeness_pct || 0).toFixed(2)}%</p>
-            </div>
-            <div className="rounded-lg border border-white/10 p-2">
-              <p className="text-white/45">Unread Notifications</p>
-              <p className="text-white/90">{Number(operational.unread_notifications || 0)}</p>
-            </div>
-            <div className="rounded-lg border border-white/10 p-2">
-              <p className="text-white/45">Freshness Lag (days)</p>
-              <p className="text-white/90">{Number(operational.avg_data_freshness_lag_days || 0).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="panel p-3">
-          <h3 className="mb-2 font-display text-lg text-white/95">Opportunities</h3>
-          <ul className="space-y-2 text-xs text-white/75">
-            <li>Farmers without crops: {opportunities.farmers_without_crops || 0}</li>
-            <li>Inactive farmers: {opportunities.inactive_farmers || 0}</li>
-            <li>District coverage gaps: {opportunities.district_coverage_gaps || 0}</li>
-            <li>Activation rate: {Number(engagement.activation_rate_pct || 0).toFixed(2)}%</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="panel p-3">
-        <h3 className="mb-2 font-display text-lg text-white/95">Recommendations</h3>
-        <div className="space-y-2">
-          {(recommendations || []).map((rec, idx) => (
-            <div key={`${idx}-${rec}`} className="rounded-lg border border-white/15 bg-white/[0.04] p-2 text-xs text-white/80">
-              {rec}
+      <div className="panel card-pad">
+        <div className="uppercase-xs">Opportunities</div>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          {opportunityBars.map((b) => (
+            <div key={b.label}>
+              <div className="muted">{b.label}</div>
+              <div style={{ height: 8, background: 'var(--surface-2)', borderRadius: 4, marginTop: 6 }}>
+                <div style={{ width: `${Math.min(100, (b.value || 0))}%`, height: '100%', background: 'var(--accent)' }} />
+              </div>
+              <div className="muted" style={{ marginTop: 6 }}>{b.value}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="panel p-3">
-        <h3 className="mb-2 font-display text-lg text-white/95">Farmer Insight Summary</h3>
-        <div className="mb-2 flex gap-2">
+      <div className="panel card-pad">
+        <div className="uppercase-xs">AI RECOMMENDATIONS</div>
+        <ol className="mt-2" style={{ paddingLeft: 18 }}>
+          {(recommendations || []).map((r, idx) => <li key={idx} className="muted" style={{ marginTop: 6 }}>{r}</li>)}
+        </ol>
+      </div>
+
+      <div className="panel card-pad">
+        <div className="uppercase-xs">Farmer Lookup</div>
+        <div className="mt-2 flex gap-2">
           <input className="field" value={farmerId} onChange={(e) => setFarmerId(e.target.value)} placeholder="Farmer ID" />
-          <button type="button" className="pill-btn" onClick={loadFarmerSummary}>Load</button>
+          <button type="button" className="btn-primary" onClick={loadFarmerSummary}>Lookup</button>
         </div>
         {farmerSummary ? (
-          <div className="grid grid-cols-3 gap-2 text-xs text-white/80">
-            <div className="panel p-2">Crops: {farmerSummary?.totals?.crops || 0}</div>
-            <div className="panel p-2">Bookings: {farmerSummary?.totals?.bookings || 0}</div>
-            <div className="panel p-2">Conversations: {farmerSummary?.totals?.conversations || 0}</div>
-            <div className="panel p-2">Messages: {farmerSummary?.totals?.messages || 0}</div>
-            <div className="panel p-2">Unread Notifications: {farmerSummary?.totals?.unread_notifications || 0}</div>
-            <div className="panel p-2">Engagement Band: {farmerSummary?.benchmarks?.engagement_band || "-"}</div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {Object.entries(farmerSummary?.totals || {}).map(([k, v]) => (
+              <div key={k} className="panel card-pad">
+                <div className="muted">{k}</div>
+                <div style={{ fontWeight: 700 }}>{v}</div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <p className="text-xs text-white/45">Search by farmer ID to load summary and benchmarks.</p>
-        )}
+        ) : <div className="muted mt-3">Search by farmer ID to load summary.</div>}
       </div>
     </div>
   );

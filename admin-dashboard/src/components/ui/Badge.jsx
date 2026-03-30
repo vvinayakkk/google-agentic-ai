@@ -1,16 +1,14 @@
-const toneMap = {
-  green: "border-emerald-400/35 bg-emerald-400/15 text-emerald-200",
-  red: "border-rose-400/35 bg-rose-400/15 text-rose-200",
-  blue: "border-blue-400/35 bg-blue-400/15 text-blue-200",
-  orange: "border-orange-400/35 bg-orange-400/15 text-orange-200",
-  purple: "border-violet-400/35 bg-violet-400/15 text-violet-200",
-  gold: "border-white/30 bg-white/10 text-white",
-  muted: "border-white/20 bg-white/10 text-white/70",
-};
-
 const Badge = ({ children, tone = "muted", className = "" }) => {
+  const styles = {
+    green: { background: 'var(--accent-dim)', color: 'var(--accent)' },
+    red: { background: 'rgba(239,68,68,0.12)', color: 'var(--danger)' },
+    orange: { background: 'rgba(251,146,60,0.12)', color: '#F59E0B' },
+    muted: { background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)', padding: '2px 6px', borderRadius: '4px' },
+  };
+
+  const style = styles[tone] || styles.muted;
   return (
-    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium ${toneMap[tone] || toneMap.muted} ${className}`}>
+    <span className={`badge ${className}`} style={style}>
       {children}
     </span>
   );

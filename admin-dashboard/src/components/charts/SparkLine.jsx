@@ -1,6 +1,5 @@
-const SparkLine = ({ data = [], color = "var(--accent-blue)" }) => {
+const SparkLine = ({ data = [], color = "var(--accent)", height = 48, strokeWidth = 1.5 }) => {
   const width = 160;
-  const height = 42;
   const safeData = data.length ? data : [0, 0, 0, 0, 0, 0, 0];
   const min = Math.min(...safeData);
   const max = Math.max(...safeData);
@@ -15,8 +14,8 @@ const SparkLine = ({ data = [], color = "var(--accent-blue)" }) => {
     .join(" ");
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-10 w-full overflow-visible">
-      <polyline fill="none" stroke={color} strokeWidth="1.8" points={points} />
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full overflow-visible" style={{ height }}>
+      <polyline fill="none" stroke={color} strokeWidth={strokeWidth} points={points} />
     </svg>
   );
 };
