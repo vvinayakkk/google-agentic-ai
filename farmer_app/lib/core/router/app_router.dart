@@ -158,7 +158,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.chat,
         builder: (_, state) {
           final rawSession = state.uri.queryParameters['session'];
-          final cleanedSession = (rawSession == null || rawSession.trim().isEmpty)
+          final cleanedSession =
+              (rawSession == null || rawSession.trim().isEmpty)
               ? null
               : rawSession.trim();
           return ChatScreen(
@@ -228,11 +229,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Market ───────────────────────────────────────
       GoRoute(
         path: RoutePaths.marketplace,
-        builder: (_, _) => const MarketPricesScreen(),
+        builder: (_, state) => MarketPricesScreen(
+          initialSection: state.uri.queryParameters['section'],
+          initialSchemeQuery: state.uri.queryParameters['scheme'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.marketPrices,
-        builder: (_, _) => const MarketPricesScreen(),
+        builder: (_, state) => MarketPricesScreen(
+          initialSection: state.uri.queryParameters['section'],
+          initialSchemeQuery: state.uri.queryParameters['scheme'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.addListing,
@@ -240,7 +247,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Equipment ────────────────────────────────────
-      GoRoute(path: RoutePaths.rental, builder: (_, _) => const EquipmentHubScreen()),
+      GoRoute(
+        path: RoutePaths.rental,
+        builder: (_, _) => const EquipmentHubScreen(),
+      ),
       GoRoute(
         path: RoutePaths.equipmentHub,
         builder: (_, _) => const EquipmentHubScreen(),
@@ -254,9 +264,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.rentalTicket,
-        builder: (_, state) => RentalTicketScreen(
-          rentalId: state.uri.queryParameters['id'] ?? '',
-        ),
+        builder: (_, state) =>
+            RentalTicketScreen(rentalId: state.uri.queryParameters['id'] ?? ''),
       ),
       GoRoute(
         path: RoutePaths.rentalRateDetail,

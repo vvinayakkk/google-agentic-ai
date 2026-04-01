@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -11,11 +12,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_cache.dart';
 import '../../../shared/services/app_prefetch_service.dart';
-import '../../../shared/widgets/app_button.dart';
 
 class FetchingLocationScreen extends ConsumerStatefulWidget {
   const FetchingLocationScreen({super.key});
@@ -25,565 +22,338 @@ class FetchingLocationScreen extends ConsumerStatefulWidget {
       _FetchingLocationScreenState();
 }
 
-class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen> {
+class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
+    with TickerProviderStateMixin {
   static const _indiaCenter = LatLng(20.5937, 78.9629);
   static const _mumbai = LatLng(19.0760, 72.8777);
 
-  final MapController _mapController = MapController();
+  late final AnimatedMapController _animatedMapController;
+
+  List<LatLng> _selectedPoints = [];
+  List<LatLng> _animatedPolygon = [];
+
+  bool _isSelectingPoints = false;
+  bool _showSelectionCard = false;
+  bool _isAnalyzing = false;
+
+  int _currentStep = 0;
+  double? _farmAreaAcres;
+  LatLng _userLocation = _mumbai;
+
   final List<String> _analysisSteps = const [
     'Analyzing farm land',
     'Analyzing soil conditions',
     'Fetching mandi prices',
     'Fetching weather updates',
-    'Preparing personalized insights',
+    'Preparing insights',
   ];
-
-  bool _isSelectingPoints = false;
-  bool _showSelectionCard = false;
-  bool _isAnalyzing = false;
-  int _currentStep = 0;
-  List<LatLng> _selectedPoints = [];
-  double? _farmAreaAcres;
-  LatLng _userLocation = _mumbai;
-  Future<void>? _prefetchFuture;
-  Timer? _cameraTimer;
 
   @override
   void initState() {
     super.initState();
-    _initializeLocationFlow();
+
+    _animatedMapController = AnimatedMapController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+      curve: Curves.easeInOutCubic,
+    );
+
+    _initialize();
   }
 
-  @override
-  void dispose() {
-    _cameraTimer?.cancel();
-    super.dispose();
-  }
+  Future<void> _initialize() async {
+    final loc = await _resolveUserLocation();
+    _userLocation = loc;
 
-  Future<void> _initializeLocationFlow() async {
-    final location = await _resolveUserLocation();
-    _userLocation = location;
-    final name = await _resolvePlaceName(location);
-
-    if (!mounted) return;
-    setState(() {
-      _showSelectionCard = true;
-    });
+    final name = await _resolvePlaceName(loc);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('last_location_name', name);
-    await prefs.setDouble('last_location_lat', location.latitude);
-    await prefs.setDouble('last_location_lon', location.longitude);
+    await prefs.setDouble('last_location_lat', loc.latitude);
+    await prefs.setDouble('last_location_lon', loc.longitude);
+
+    setState(() => _showSelectionCard = true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _animateZoomToUser(location);
+      _animateZoomToUser(loc);
     });
   }
 
-  void _animateZoomToUser(LatLng target) {
-    Future<void>.delayed(const Duration(milliseconds: 350), () {
-      if (!mounted) return;
+  Future<void> _animateZoomToUser(LatLng target) async {
+    await Future.delayed(const Duration(milliseconds: 300));
 
-      _cameraTimer?.cancel();
-      const int totalFrames = 14;
-      var frame = 0;
+    await _animatedMapController.animateTo(
+      dest: _indiaCenter,
+      zoom: 5.5,
+      duration: const Duration(milliseconds: 500),
+    );
 
-      _cameraTimer = Timer.periodic(const Duration(milliseconds: 130), (timer) {
-        if (!mounted) {
-          timer.cancel();
-          return;
-        }
-
-        final rawT = frame / totalFrames;
-        final t = Curves.easeInOutCubic.transform(rawT.clamp(0, 1));
-        final zoomT = Curves.easeOutCubic.transform(rawT.clamp(0, 1));
-        final center = LatLng(
-          _indiaCenter.latitude + ((target.latitude - _indiaCenter.latitude) * t),
-          _indiaCenter.longitude + ((target.longitude - _indiaCenter.longitude) * t),
-        );
-        final zoom = 4.2 + ((13.8 - 4.2) * zoomT);
-
-        try {
-          _mapController.move(center, zoom);
-        } catch (_) {
-          // Ignore transient map lifecycle races.
-        }
-
-        frame += 1;
-        if (frame > totalFrames) {
-          timer.cancel();
-          _cameraTimer = null;
-          try {
-            _mapController.move(target, 13.8);
-          } catch (_) {}
-        }
-      });
-    });
+    await _animatedMapController.animateTo(
+      dest: target,
+      zoom: 16.5,
+      duration: const Duration(milliseconds: 1600),
+    );
   }
 
   Future<LatLng> _resolveUserLocation() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      final perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.always ||
+          perm == LocationPermission.whileInUse) {
+        final pos = await Geolocator.getCurrentPosition();
+        return LatLng(pos.latitude, pos.longitude);
       }
-
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 8),
-          ),
-        );
-        return LatLng(position.latitude, position.longitude);
-      }
-    } catch (_) {
-      // Fall back to Mumbai if location is unavailable.
-    }
-
+    } catch (_) {}
     return _mumbai;
   }
 
   Future<String> _resolvePlaceName(LatLng point) async {
     try {
-      final placemarks = await placemarkFromCoordinates(
+      final p = (await placemarkFromCoordinates(
         point.latitude,
         point.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        final p = placemarks.first;
-        final parts = <String>[
-          if ((p.subLocality ?? '').trim().isNotEmpty) p.subLocality!.trim(),
-          if ((p.locality ?? '').trim().isNotEmpty) p.locality!.trim(),
-          if ((p.administrativeArea ?? '').trim().isNotEmpty)
-            p.administrativeArea!.trim(),
-        ];
-        if (parts.isNotEmpty) return parts.join(', ');
-      }
+      ))
+          .first;
+      return "${p.locality}, ${p.administrativeArea}";
     } catch (_) {
-      // Ignore reverse-geocoding failures and use fallback.
+      return "Location detected";
     }
-
-    return 'Location detected';
   }
 
   void _startSelection() {
-    Haptics.medium();
     setState(() {
       _showSelectionCard = false;
       _isSelectingPoints = true;
-      _selectedPoints = [];
-      _farmAreaAcres = null;
-      _isAnalyzing = false;
-      _currentStep = 0;
-      _prefetchFuture = null;
     });
   }
 
-  void _onMapTap(TapPosition _, LatLng point) {
+  Future<void> _onMapTap(TapPosition _, LatLng point) async {
     if (!_isSelectingPoints || _selectedPoints.length >= 4) return;
-    Haptics.selection();
 
-    setState(() {
-      _selectedPoints = [..._selectedPoints, point];
-    });
+    setState(() => _selectedPoints.add(point));
 
     if (_selectedPoints.length == 4) {
       _isSelectingPoints = false;
       _farmAreaAcres = _calculateAreaInAcres(_selectedPoints);
-      Haptics.heavy();
-      unawaited(Future<void>.delayed(const Duration(milliseconds: 900), _startAnalysis));
+
+      await _animatePolygon();
+      await _fitToFarm();
+
+      await _startAnalysis();
     }
   }
 
-  double _calculateAreaInAcres(List<LatLng> points) {
-    if (points.length < 3) return 0;
+  Future<void> _animatePolygon() async {
+    _animatedPolygon = [];
 
-    final lat0 = points.first.latitude;
-    final lon0 = points.first.longitude;
+    for (var p in _selectedPoints) {
+      await Future.delayed(const Duration(milliseconds: 150));
+      setState(() => _animatedPolygon.add(p));
+    }
+
+    setState(() => _animatedPolygon.add(_selectedPoints.first));
+  }
+
+  Future<void> _fitToFarm() async {
+    await _animatedMapController.animatedFitCamera(
+      cameraFit: CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints(_selectedPoints),
+        padding: const EdgeInsets.all(70),
+        maxZoom: 18.5,
+      ),
+    );
+
+    await _animatedMapController.animateTo(
+      zoom: 19.2,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  Future<void> _startAnalysis() async {
+    setState(() {
+      _isAnalyzing = true;
+      _currentStep = 0;
+    });
+
+    await ref.read(appPrefetchServiceProvider).warmupAll(
+      lat: _userLocation.latitude,
+      lon: _userLocation.longitude,
+      onStepChanged: (i) async {
+        setState(() => _currentStep = i);
+      },
+    );
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    context.go(RoutePaths.home);
+  }
+
+  double _calculateAreaInAcres(List<LatLng> pts) {
+    final lat0 = pts.first.latitude;
+    final lon0 = pts.first.longitude;
     final lat0Rad = lat0 * math.pi / 180;
 
-    final projected = points.map((p) {
+    final proj = pts.map((p) {
       final x = (p.longitude - lon0) * 111320 * math.cos(lat0Rad);
       final y = (p.latitude - lat0) * 110540;
       return Offset(x, y);
     }).toList();
 
     double area = 0;
-    for (int i = 0; i < projected.length; i++) {
-      final j = (i + 1) % projected.length;
-      area += projected[i].dx * projected[j].dy;
-      area -= projected[j].dx * projected[i].dy;
+    for (int i = 0; i < proj.length; i++) {
+      final j = (i + 1) % proj.length;
+      area += proj[i].dx * proj[j].dy;
+      area -= proj[j].dx * proj[i].dy;
     }
 
-    final squareMeters = area.abs() / 2;
-    final acres = squareMeters / 4046.8564224;
-    return double.parse(acres.toStringAsFixed(3));
-  }
-
-  Future<void> _startAnalysis() async {
-    if (!mounted) return;
-    setState(() {
-      _isAnalyzing = true;
-      _currentStep = 0;
-    });
-
-    _prefetchFuture ??= ref.read(appPrefetchServiceProvider).warmupAll(
-          lat: _userLocation.latitude,
-          lon: _userLocation.longitude,
-          onStepChanged: (stepIndex) async {
-            if (!mounted) return;
-            Haptics.selection();
-            setState(() {
-              _currentStep = stepIndex.clamp(0, _analysisSteps.length - 1);
-            });
-          },
-        );
-
-    try {
-      await _prefetchFuture;
-    } catch (_) {
-      // Prefetch is best-effort; continue onboarding flow.
-    }
-
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    Haptics.medium();
-    context.go(RoutePaths.home);
-  }
-
-  Color _stepColor(int index) {
-    if (index < _currentStep) return AppColors.primary;
-    if (index == _currentStep) return AppColors.primaryDark;
-    return AppColors.lightTextSecondary.withValues(alpha: 0.7);
-  }
-
-  Widget _analysisOverlayCard() {
-    final progress = (_currentStep + 1) / _analysisSteps.length;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.96), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.2),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                height: 42,
-                width: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.6,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primaryDark,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Preparing your farm dashboard',
-                  style: TextStyle(
-                    color: AppColors.lightText,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Loading key data now so every screen opens instantly.',
-            style: TextStyle(
-              color: AppColors.lightTextSecondary,
-              fontSize: 13,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 8,
-              value: progress,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.16),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.primaryDark,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          ..._analysisSteps.asMap().entries.map((entry) {
-            final done = entry.key <= _currentStep;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-                    color: _stepColor(entry.key),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      entry.value,
-                      style: TextStyle(
-                        color: done
-                            ? AppColors.lightText
-                            : AppColors.lightTextSecondary,
-                        fontWeight: done ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
+    return (area.abs() / 2) / 4046.856;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
     final hasBoundary = _selectedPoints.length == 4;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDark
-                ? [AppColors.darkBackground, AppColors.darkSurface]
-                : [AppColors.lightBackground, AppColors.lightSurface],
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _indiaCenter,
-                      initialZoom: 4.2,
-                      minZoom: 3.5,
-                      maxZoom: 17.0,
-                      onTap: _onMapTap,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                        userAgentPackageName: 'com.example.farmer_app',
-                        maxZoom: 19,
-                        keepBuffer: 6,
+      body: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 600),
+            transform: Matrix4.identity()
+              ..scale(hasBoundary ? 1.05 : 1.0)
+              ..translate(0.0, hasBoundary ? -20.0 : 0.0),
+            child: FlutterMap(
+              mapController: _animatedMapController.mapController,
+              options: MapOptions(
+                initialCenter: _indiaCenter,
+                initialZoom: 4.2,
+                maxZoom: 20.5,
+                onTap: _onMapTap,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                  maxZoom: 20.5,
+                  keepBuffer: 14,
+                ),
+
+                MarkerLayer(
+                  markers: _selectedPoints.asMap().entries.map((e) {
+                    return Marker(
+                      point: e.value,
+                      width: 40,
+                      height: 40,
+                      child: PulsingMarker(label: '${e.key + 1}'),
+                    );
+                  }).toList(),
+                ),
+
+                if (hasBoundary)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: _animatedPolygon,
+                        color: Colors.green.withOpacity(0.15),
+                        borderColor: Colors.green,
+                        borderStrokeWidth: 3,
                       ),
-                      if (_selectedPoints.isNotEmpty)
-                        MarkerLayer(
-                          markers: _selectedPoints
-                              .asMap()
-                              .entries
-                              .map(
-                                (entry) => Marker(
-                                  point: entry.value,
-                                  width: 34,
-                                  height: 34,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '${entry.key + 1}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      if (hasBoundary)
-                        PolygonLayer(
-                          polygons: [
-                            Polygon(
-                              points: _selectedPoints,
-                              color: AppColors.primary.withValues(alpha: 0.25),
-                              borderColor: AppColors.primary,
-                              borderStrokeWidth: 3,
-                            ),
-                          ],
-                        ),
                     ],
                   ),
+              ],
+            ),
+          ),
+
+          if (_farmAreaAcres != null)
+            Positioned(
+              top: 50,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                color: Colors.black,
+                child: Text(
+                  "${_farmAreaAcres!.toStringAsFixed(2)} acres",
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
+            ),
 
-              if (_isSelectingPoints)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.touch_app_rounded,
-                            color: AppColors.primaryDark, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Tap ${4 - _selectedPoints.length} more point(s) to complete boundary',
-                            style: const TextStyle(
-                              color: AppColors.lightText,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${_selectedPoints.length}/4',
-                          style: const TextStyle(
-                            color: AppColors.primaryDark,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          if (_isAnalyzing)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 10),
+                  Text(_analysisSteps[_currentStep]),
+                ],
+              ),
+            ),
 
-              if (_farmAreaAcres != null)
-                Positioned(
-                  top: _isSelectingPoints ? 72 : 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
-                    ),
-                    child: Text(
-                      'Area: $_farmAreaAcres acres',
-                      style: const TextStyle(
-                        color: AppColors.lightText,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-
-              if (_showSelectionCard)
-                Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppColors.lightBackground, AppColors.lightSurface],
-                      ),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryDark.withValues(alpha: 0.12),
-                          blurRadius: 22,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.crop_square_rounded,
-                            size: 38, color: AppColors.primaryDark),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Select Your Farm Land',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.lightText,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Tap 4 points on the map around your farm boundary.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.lightTextSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        AppButton(
-                          label: 'Start Selection',
-                          onPressed: _startSelection,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              if (_isAnalyzing)
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.36),
-                    alignment: Alignment.center,
-                    child: _analysisOverlayCard(),
-                  ),
-                ),
-            ],
-          ),
-        ),
+          if (_showSelectionCard)
+            Center(
+              child: ElevatedButton(
+                onPressed: _startSelection,
+                child: const Text("Start Selection"),
+              ),
+            ),
+        ],
       ),
+    );
+  }
+}
+
+class PulsingMarker extends StatefulWidget {
+  final String label;
+  const PulsingMarker({super.key, required this.label});
+
+  @override
+  State<PulsingMarker> createState() => _PulsingMarkerState();
+}
+
+class _PulsingMarkerState extends State<PulsingMarker>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) {
+        final scale = 1 + (_c.value * 0.6);
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 40 * scale,
+              height: 40 * scale,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.green.withOpacity(0.2 * (1 - _c.value)),
+              ),
+            ),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(widget.label,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

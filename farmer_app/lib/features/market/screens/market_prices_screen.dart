@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,7 +10,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/providers/auth_provider.dart';
-import '../../../shared/services/agent_service.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/live_market_service.dart';
@@ -17,14 +17,20 @@ import '../../../shared/services/market_service.dart';
 import '../../../shared/services/personalization_service.dart';
 
 class MarketPricesScreen extends ConsumerStatefulWidget {
-  const MarketPricesScreen({super.key});
+  const MarketPricesScreen({
+    super.key,
+    this.initialSection,
+    this.initialSchemeQuery,
+  });
+
+  final String? initialSection;
+  final String? initialSchemeQuery;
 
   @override
-  ConsumerState<MarketPricesScreen> createState() =>
-      _MarketPricesScreenState();
+  ConsumerState<MarketPricesScreen> createState() => _MarketPricesScreenState();
 }
 
-enum _MarketSection { prices, mandis, listings }
+enum _MarketSection { prices, mandis, listings, schemes }
 
 class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   final TextEditingController _searchController = TextEditingController();
@@ -60,12 +66,38 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   List<Map<String, dynamic>> _prices = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _mandis = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _listings = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _schemes = <Map<String, dynamic>>[];
 
   @override
   void initState() {
     super.initState();
+    final hasInitialScheme = (widget.initialSchemeQuery ?? '')
+        .trim()
+        .isNotEmpty;
+    if (hasInitialScheme) {
+      _searchController.text = widget.initialSchemeQuery!.trim();
+    }
+    _activeSection = _parseSection(
+      widget.initialSection,
+      fallback: hasInitialScheme
+          ? _MarketSection.schemes
+          : _MarketSection.prices,
+    );
     _loadMarketplaceData();
     _loadCachedAiOverview();
+  }
+
+  _MarketSection _parseSection(
+    String? raw, {
+    required _MarketSection fallback,
+  }) {
+    final normalized = (raw ?? '').trim().toLowerCase();
+    return switch (normalized) {
+      'mandis' => _MarketSection.mandis,
+      'listings' => _MarketSection.listings,
+      'schemes' => _MarketSection.schemes,
+      _ => fallback,
+    };
   }
 
   @override
@@ -91,10 +123,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         final liveSvc = ref.read(liveMarketServiceProvider);
 
         final res = await marketSvc.listPrices(
-              crop: _selectedCrop,
-              state: _stateFilter.isEmpty ? null : _stateFilter,
-              perPage: 100,
-            );
+          crop: _selectedCrop,
+          state: _stateFilter.isEmpty ? null : _stateFilter,
+          perPage: 100,
+        );
         var items = _extractItems(
           res,
           keys: const <String>['items', 'prices', 'data'],
@@ -118,14 +150,21 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
     final mandis = await _safeLoad(
       action: () async {
-        final res = await ref.read(marketServiceProvider).listMandis(
+        final res = await ref
+            .read(marketServiceProvider)
+            .listMandis(
               state: _stateFilter.isEmpty ? null : _stateFilter,
               perPage: 100,
             );
-        final items = _extractItems(res, keys: const <String>['items', 'mandis', 'data']);
+        final items = _extractItems(
+          res,
+          keys: const <String>['items', 'mandis', 'data'],
+        );
         if (items.isNotEmpty) return _dedupeMandis(items);
 
-        final liveItems = await ref.read(liveMarketServiceProvider).getLiveMandis(
+        final liveItems = await ref
+            .read(liveMarketServiceProvider)
+            .getLiveMandis(
               state: _stateFilter.isEmpty ? null : _stateFilter,
               limit: 200,
             );
@@ -142,6 +181,24 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       action: () async {
         final items = await ref.read(equipmentServiceProvider).listEquipment();
         return _dedupeListings(items);
+      },
+      onError: (e) => loadError ??= _prettyError(e),
+    );
+
+    final schemes = await _safeLoad(
+      action: () async {
+        final res = await ref
+            .read(marketServiceProvider)
+            .listSchemes(
+              state: _stateFilter.isEmpty ? null : _stateFilter,
+              isActive: true,
+              perPage: 100,
+            );
+        final items = _extractItems(
+          res,
+          keys: const <String>['items', 'schemes', 'data'],
+        );
+        return _dedupeSchemes(items);
       },
       onError: (e) => loadError ??= _prettyError(e),
     );
@@ -172,7 +229,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         mspInsight = null;
       }
       try {
-        final spreadData = await liveSvc.getAllIndiaPrices(selected, limit: 250);
+        final spreadData = await liveSvc.getAllIndiaPrices(
+          selected,
+          limit: 250,
+        );
         allIndiaInsight = _extractAllIndiaInsight(spreadData, selected);
       } catch (_) {
         allIndiaInsight = null;
@@ -187,19 +247,26 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       allIndiaInsight = null;
     }
 
-    final profile = await ref.read(personalizationServiceProvider).getProfileContext();
+    final profile = await ref
+        .read(personalizationServiceProvider)
+        .getProfileContext();
 
     if (!mounted) return;
     setState(() {
       _prices = prices;
       _mandis = resolvedMandis;
       _listings = listings;
+      _schemes = schemes;
       _stateSuggestions = stateSuggestions;
       _commoditySuggestions = commoditySuggestions;
       _mspInsight = mspInsight;
       _allIndiaInsight = allIndiaInsight;
       _profile = profile;
-      _error = (_prices.isEmpty && _mandis.isEmpty && _listings.isEmpty)
+      _error =
+          (_prices.isEmpty &&
+              _mandis.isEmpty &&
+              _listings.isEmpty &&
+              _schemes.isEmpty)
           ? loadError
           : null;
       _loading = false;
@@ -207,7 +274,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   }
 
   Future<void> _loadCachedAiOverview() async {
-    final cached = await ref.read(aiOverviewServiceProvider).getCached('marketplace_overview_v1');
+    final cached = await ref
+        .read(aiOverviewServiceProvider)
+        .getCached('marketplace_overview_v1');
     if (!mounted || cached == null) return;
     setState(() {
       _aiSummary = cached.summary;
@@ -227,6 +296,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   Future<void> _generateAiOverview({bool forceRefresh = true}) async {
     if (_aiLoading) return;
+    final languageCode = Localizations.localeOf(context).languageCode;
     setState(() => _aiLoading = true);
     try {
       final personalization = ref.read(personalizationServiceProvider);
@@ -234,14 +304,20 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           ? await personalization.getProfileContext()
           : _profile;
 
-      List<String> snippetsFrom(List<Map<String, dynamic>> items, String Function(Map<String, dynamic>) build) {
-        final nearby = personalization.sortNearby(profile: profile, items: items).take(4);
+      List<String> snippetsFrom(
+        List<Map<String, dynamic>> items,
+        String Function(Map<String, dynamic>) build,
+      ) {
+        final nearby = personalization
+            .sortNearby(profile: profile, items: items)
+            .take(4);
         return nearby.map(build).toList(growable: false);
       }
 
       final snippets = <String>[
         ...snippetsFrom(_prices, (item) {
-          final crop = (item['crop_name'] ?? item['commodity'] ?? '').toString();
+          final crop = (item['crop_name'] ?? item['commodity'] ?? '')
+              .toString();
           final mandi = (item['mandi_name'] ?? item['market'] ?? '').toString();
           final district = (item['district'] ?? '').toString();
           final modal = (item['modal_price'] ?? '').toString();
@@ -256,17 +332,27 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         ...snippetsFrom(_listings, (item) {
           final name = (item['name'] ?? '').toString();
           final location = (item['location'] ?? '').toString();
-          final rate = (item['rate_per_day'] ?? item['rate_per_hour'] ?? '').toString();
+          final rate = (item['rate_per_day'] ?? item['rate_per_hour'] ?? '')
+              .toString();
           return 'Equipment listing: $name at $location rate $rate';
+        }),
+        ...snippetsFrom(_schemes, (item) {
+          final name = (item['name'] ?? item['short_name'] ?? 'Scheme')
+              .toString();
+          final category = (item['category'] ?? '').toString();
+          final state = (item['state'] ?? '').toString();
+          return 'Scheme: $name category $category state $state';
         }),
         if (_mspInsight != null) _mspInsight!,
         if (_allIndiaInsight != null) _allIndiaInsight!,
       ];
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'marketplace_overview_v1',
             pageName: 'Marketplace',
-            languageCode: Localizations.localeOf(context).languageCode,
+            languageCode: languageCode,
             nearbyData: snippets,
             forceRefresh: forceRefresh,
           );
@@ -283,80 +369,6 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       if (!mounted) return;
       setState(() => _aiLoading = false);
       context.showSnack(_prettyError(e), isError: true);
-    }
-  }
-
-  Future<void> _refreshAiOverview({
-    required List<Map<String, dynamic>> prices,
-    required List<Map<String, dynamic>> mandis,
-    required List<Map<String, dynamic>> listings,
-    String? mspInsight,
-    String? allIndiaInsight,
-  }) async {
-    final commodity = _selectedCrop?.trim().isNotEmpty == true
-        ? _selectedCrop!.trim()
-        : ((prices.isNotEmpty
-            ? (prices.first['commodity'] ?? prices.first['crop'])
-            : null)
-                ?.toString()
-                .trim());
-
-    final fallbackSummary =
-        'Tracked ${prices.length} price points across ${mandis.length} mandis'
-        '${commodity != null && commodity.isNotEmpty ? ' for $commodity' : ''}.';
-    final fallbackDetails =
-        '${mspInsight ?? 'MSP trend is being monitored in real-time.'} '
-        '${allIndiaInsight ?? 'Compare nearby mandi spreads and dispatch where modal realization is stronger after transport costs.'} '
-        'Active listings: ${listings.length}.';
-
-    if (mounted) {
-      setState(() {
-        _aiLoading = true;
-        _aiSummary = fallbackSummary;
-        _aiDetails = fallbackDetails;
-      });
-    }
-
-    try {
-      final response = await ref.read(agentServiceProvider).chat(
-            message:
-                'Create a concise farmer-friendly market brief using this snapshot. '
-                'State: ${_stateFilter.isEmpty ? 'all states' : _stateFilter}. '
-                'Commodity focus: ${commodity ?? 'mixed crops'}. '
-                'Prices tracked: ${prices.length}. Mandis tracked: ${mandis.length}. '
-                'Equipment listings: ${listings.length}. '
-                'MSP insight: ${mspInsight ?? 'not available'}. '
-                'All-India spread insight: ${allIndiaInsight ?? 'not available'}. '
-                'Return 2 lines only: first line short summary (max 20 words), second line practical action advice (max 55 words).',
-            language: Localizations.localeOf(context).languageCode,
-          );
-
-      final text = (response['response'] ?? '').toString().trim();
-      if (text.isEmpty || !mounted) {
-        if (mounted) {
-          setState(() => _aiLoading = false);
-        }
-        return;
-      }
-
-      final lines = text
-          .split('\n')
-          .map((line) => line.trim())
-          .where((line) => line.isNotEmpty)
-          .toList(growable: false);
-
-      final summary = lines.isNotEmpty ? lines.first : fallbackSummary;
-      final details = lines.length > 1 ? lines.sublist(1).join(' ') : fallbackDetails;
-
-      if (!mounted) return;
-      setState(() {
-        _aiSummary = summary;
-        _aiDetails = details;
-        _aiLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _aiLoading = false);
     }
   }
 
@@ -442,7 +454,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   String? _extractMspInsight(Map<String, dynamic> data, String crop) {
     final msp =
-        _firstNumeric(data['msp']) ?? _firstNumeric(data['price']) ?? _firstNumeric(data);
+        _firstNumeric(data['msp']) ??
+        _firstNumeric(data['price']) ??
+        _firstNumeric(data);
     if (msp == null) return null;
     return 'MSP for $crop: ${msp.inr} per quintal.';
   }
@@ -482,28 +496,48 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     return '$crop avg modal price across ${modalValues.length} markets: ${avg.inr}.';
   }
 
-  int? _extractEligibleCount(Map<String, dynamic> data) {
-    final direct = data['eligible_count'];
-    if (direct is int) return direct;
-    if (direct is String) return int.tryParse(direct);
+  Future<void> _openSchemeUrl(Map<String, dynamic> scheme) async {
+    final raw = (scheme['application_url'] ?? scheme['url'] ?? '')
+        .toString()
+        .trim();
+    if (raw.isEmpty) {
+      if (mounted) {
+        context.showSnack('Official application link is not available.');
+      }
+      return;
+    }
 
-    final list = data['eligible_schemes'];
-    if (list is List) return list.length;
-    return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) {
+      if (mounted) {
+        context.showSnack('Scheme link is invalid.', isError: true);
+      }
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      context.showSnack('Could not open scheme link.', isError: true);
+    }
   }
 
   Future<void> _showSchemeDetails(Map<String, dynamic> scheme) async {
     final id =
-        (scheme['id'] ?? scheme['scheme_id'] ?? scheme['slug'])?.toString() ?? '';
+        (scheme['id'] ?? scheme['scheme_id'] ?? scheme['slug'])?.toString() ??
+        '';
     if (id.isEmpty) return;
 
     try {
       final data = await ref.read(marketServiceProvider).getSchemeById(id);
       if (!mounted) return;
-      final title = (data['title'] ?? data['name'] ?? scheme['title'] ?? 'Scheme')
-          .toString();
+      final title =
+          (data['title'] ?? data['name'] ?? scheme['title'] ?? 'Scheme')
+              .toString();
       final description =
-          (data['description'] ?? data['summary'] ?? data['details'] ?? 'No details available.')
+          (data['description'] ??
+                  data['summary'] ??
+                  data['details'] ??
+                  'No details available.')
               .toString();
       showModalBottomSheet<void>(
         context: context,
@@ -552,8 +586,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     final map = <String, Map<String, dynamic>>{};
     for (final item in items) {
       final crop = (item['crop_name'] ?? '').toString().trim().toLowerCase();
-      final mandi =
-          (item['mandi_name'] ?? item['market'] ?? '').toString().trim().toLowerCase();
+      final mandi = (item['mandi_name'] ?? item['market'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
       final district = (item['district'] ?? '').toString().trim().toLowerCase();
       final state = (item['state'] ?? '').toString().trim().toLowerCase();
       final date = (item['date'] ?? '').toString().trim();
@@ -586,14 +622,20 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     return map.values.toList();
   }
 
-  List<Map<String, dynamic>> _deriveMandisFromPrices(List<Map<String, dynamic>> prices) {
+  List<Map<String, dynamic>> _deriveMandisFromPrices(
+    List<Map<String, dynamic>> prices,
+  ) {
     return prices
-        .map((item) => <String, dynamic>{
-              'name': (item['mandi_name'] ?? item['market'] ?? '').toString().trim(),
-              'district': (item['district'] ?? '').toString().trim(),
-              'state': (item['state'] ?? '').toString().trim(),
-              'source': (item['source'] ?? 'derived').toString().trim(),
-            })
+        .map(
+          (item) => <String, dynamic>{
+            'name': (item['mandi_name'] ?? item['market'] ?? '')
+                .toString()
+                .trim(),
+            'district': (item['district'] ?? '').toString().trim(),
+            'state': (item['state'] ?? '').toString().trim(),
+            'source': (item['source'] ?? 'derived').toString().trim(),
+          },
+        )
         .where((item) => (item['name'] as String).isNotEmpty)
         .toList();
   }
@@ -608,6 +650,27 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       map[key] = item;
     }
     return map.values.toList();
+  }
+
+  List<Map<String, dynamic>> _dedupeSchemes(List<Map<String, dynamic>> items) {
+    final map = <String, Map<String, dynamic>>{};
+    for (final item in items) {
+      final id = (item['id'] ?? item['scheme_id'] ?? '').toString().trim();
+      final name = (item['name'] ?? item['short_name'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      final key = id.isNotEmpty ? id : name;
+      if (key.isEmpty) continue;
+      map[key] = item;
+    }
+    final out = map.values.toList();
+    out.sort((a, b) {
+      final an = (a['name'] ?? a['short_name'] ?? '').toString().toLowerCase();
+      final bn = (b['name'] ?? b['short_name'] ?? '').toString().toLowerCase();
+      return an.compareTo(bn);
+    });
+    return out;
   }
 
   double? _toDouble(dynamic value) {
@@ -650,7 +713,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     return _prices.where((item) {
       final crop = item['crop_name']?.toString().toLowerCase() ?? '';
       final mandi =
-          (item['mandi_name'] ?? item['market'])?.toString().toLowerCase() ?? '';
+          (item['mandi_name'] ?? item['market'])?.toString().toLowerCase() ??
+          '';
       final district = item['district']?.toString().toLowerCase() ?? '';
       final state = item['state']?.toString().toLowerCase() ?? '';
       return crop.contains(query) ||
@@ -665,13 +729,16 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     if (query.isEmpty) return _mandis;
 
     return _mandis.where((item) {
-      final name = (item['name'] ?? item['mandi_name'] ?? item['market'])
+      final name =
+          (item['name'] ?? item['mandi_name'] ?? item['market'])
               ?.toString()
               .toLowerCase() ??
           '';
       final district = item['district']?.toString().toLowerCase() ?? '';
       final state = item['state']?.toString().toLowerCase() ?? '';
-      return name.contains(query) || district.contains(query) || state.contains(query);
+      return name.contains(query) ||
+          district.contains(query) ||
+          state.contains(query);
     }).toList();
   }
 
@@ -683,7 +750,27 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       final name = item['name']?.toString().toLowerCase() ?? '';
       final location = item['location']?.toString().toLowerCase() ?? '';
       final category = item['category']?.toString().toLowerCase() ?? '';
-      return name.contains(query) || location.contains(query) || category.contains(query);
+      return name.contains(query) ||
+          location.contains(query) ||
+          category.contains(query);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredSchemes {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return _schemes;
+
+    return _schemes.where((item) {
+      final name = (item['name'] ?? item['short_name'] ?? '')
+          .toString()
+          .toLowerCase();
+      final description = (item['description'] ?? '').toString().toLowerCase();
+      final category = (item['category'] ?? '').toString().toLowerCase();
+      final state = (item['state'] ?? '').toString().toLowerCase();
+      return name.contains(query) ||
+          description.contains(query) ||
+          category.contains(query) ||
+          state.contains(query);
     }).toList();
   }
 
@@ -691,16 +778,19 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     final cardColor = isDark
-      ? AppColors.darkCard.withValues(alpha: 0.72)
-      : Colors.white.withValues(alpha: 0.74);
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
     final textColor = isDark ? AppColors.darkText : AppColors.lightText;
-    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final subColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final iconBg = isDark
-      ? AppColors.darkCard.withValues(alpha: 0.92)
-      : Colors.white.withValues(alpha: 0.88);
-    final cropOptions = (_commoditySuggestions.isEmpty ? _cropChips : _commoditySuggestions)
-        .take(12)
-        .toList(growable: false);
+        ? AppColors.darkCard.withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.88);
+    final cropOptions =
+        (_commoditySuggestions.isEmpty ? _cropChips : _commoditySuggestions)
+            .take(12)
+            .toList(growable: false);
     final stateHints = _stateSuggestions
         .where((state) {
           final input = _stateController.text.trim().toLowerCase();
@@ -711,7 +801,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         .toList(growable: false);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -720,8 +812,16 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? <Color>[AppColors.darkBackground, AppColors.darkSurface, AppColors.darkBackground]
-                : <Color>[AppColors.lightBackground, AppColors.lightSurface, AppColors.lightBackground],
+                ? <Color>[
+                    AppColors.darkBackground,
+                    AppColors.darkSurface,
+                    AppColors.darkBackground,
+                  ]
+                : <Color>[
+                    AppColors.lightBackground,
+                    AppColors.lightSurface,
+                    AppColors.lightBackground,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -733,7 +833,12 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
                   child: Row(
                     children: <Widget>[
                       _topAction(
@@ -750,7 +855,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                             Text(
                               'Market Intelligence',
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
                                     color: textColor,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -758,9 +864,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                             Text(
                               'Live prices, mandi network, and listing control',
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: subColor,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(color: subColor),
                             ),
                           ],
                         ),
@@ -776,7 +882,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
                   child: _glassCard(
                     cardColor: cardColor,
                     child: Column(
@@ -784,7 +892,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                       children: <Widget>[
                         Text(
                           'Marketplace Overview',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 color: textColor,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -792,7 +901,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           'Aligned with your state, selected crop, and nearby records.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subColor),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: subColor),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Wrap(
@@ -801,8 +912,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                           children: <Widget>[
                             _headerBadge('Prices ${_prices.length}'),
                             _headerBadge('Mandis ${_mandis.length}'),
+                            _headerBadge('Schemes ${_schemes.length}'),
                             _headerBadge('Listings ${_listings.length}'),
-                            if (_stateFilter.trim().isNotEmpty) _headerBadge('State $_stateFilter'),
+                            if (_stateFilter.trim().isNotEmpty)
+                              _headerBadge('State $_stateFilter'),
                           ],
                         ),
                       ],
@@ -810,9 +923,14 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _aiOverviewCard(cardColor: cardColor, textColor: textColor, subColor: subColor),
+                _aiOverviewCard(
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  subColor: subColor,
+                ),
                 if ((_mspInsight != null && _mspInsight!.isNotEmpty) ||
-                    (_allIndiaInsight != null && _allIndiaInsight!.isNotEmpty)) ...<Widget>[
+                    (_allIndiaInsight != null &&
+                        _allIndiaInsight!.isNotEmpty)) ...<Widget>[
                   const SizedBox(height: AppSpacing.sm),
                   _marketInsightsCard(
                     cardColor: cardColor,
@@ -822,7 +940,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                 ],
                 const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
                   child: _glassCard(
                     cardColor: cardColor,
                     child: Column(
@@ -838,14 +958,21 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                 : Colors.white.withValues(alpha: 0.92),
                             hintText: 'Search prices, mandis, and listings',
                             hintStyle: TextStyle(color: subColor),
-                            prefixIcon: const Icon(Icons.search, color: AppColors.primaryDark),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppColors.primaryDark,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
                             ),
                           ),
                         ),
@@ -855,7 +982,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: cropOptions.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: AppSpacing.sm),
                             itemBuilder: (_, index) {
                               final crop = cropOptions[index];
                               final selected = crop == _selectedCrop;
@@ -864,10 +992,16 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                 selected: selected,
                                 onSelected: (_) => _toggleCrop(crop),
                                 backgroundColor: isDark
-                                    ? AppColors.darkSurface.withValues(alpha: 0.7)
+                                    ? AppColors.darkSurface.withValues(
+                                        alpha: 0.7,
+                                      )
                                     : Colors.white.withValues(alpha: 0.84),
-                                selectedColor: AppColors.primary.withValues(alpha: 0.24),
-                                side: BorderSide(color: Colors.white.withValues(alpha: 0.72)),
+                                selectedColor: AppColors.primary.withValues(
+                                  alpha: 0.24,
+                                ),
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.72),
+                                ),
                                 checkmarkColor: AppColors.primaryDark,
                               );
                             },
@@ -883,7 +1017,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: isDark
-                                      ? AppColors.darkSurface.withValues(alpha: 0.8)
+                                      ? AppColors.darkSurface.withValues(
+                                          alpha: 0.8,
+                                        )
                                       : Colors.white.withValues(alpha: 0.92),
                                   hintText: 'State filter (optional)',
                                   hintStyle: TextStyle(color: subColor),
@@ -892,12 +1028,24 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                     color: AppColors.primaryDark,
                                   ),
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.75,
+                                      ),
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.75,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -911,7 +1059,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.full),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.full,
+                                    ),
                                   ),
                                   elevation: 0,
                                 ),
@@ -932,13 +1082,17 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                   SizedBox(
                     height: 38,
                     child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
                       scrollDirection: Axis.horizontal,
                       itemCount: stateHints.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: AppSpacing.sm),
                       itemBuilder: (_, index) {
                         final state = stateHints[index];
-                        final active = _stateFilter.toLowerCase() == state.toLowerCase();
+                        final active =
+                            _stateFilter.toLowerCase() == state.toLowerCase();
                         return ChoiceChip(
                           label: Text(state),
                           selected: active,
@@ -947,8 +1101,12 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                             _applyStateFilter();
                           },
                           backgroundColor: cardColor,
-                          selectedColor: AppColors.primary.withValues(alpha: 0.24),
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                          selectedColor: AppColors.primary.withValues(
+                            alpha: 0.24,
+                          ),
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
                         );
                       },
                     ),
@@ -956,12 +1114,19 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                 ],
                 const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: _sectionTabs(cardColor: cardColor, textColor: textColor),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: _sectionTabs(
+                    cardColor: cardColor,
+                    textColor: textColor,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
                   child: _buildContent(
                     cardColor: cardColor,
                     textColor: textColor,
@@ -997,7 +1162,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   Widget _headerBadge(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadius.full),
@@ -1006,9 +1174,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w700,
-            ),
+          color: AppColors.primaryDark,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -1023,7 +1191,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.6),
+          width: 1,
+        ),
         color: cardColor,
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -1052,9 +1223,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               Text(
                 'AI Overview',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -1062,11 +1233,12 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           Text(
             _aiExpanded ? _aiDetails : _aiSummary,
             maxLines: _aiExpanded ? null : 3,
-            overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: textColor,
-                  height: 1.35,
-                ),
+            overflow: _aiExpanded
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.35),
           ),
           if (_aiLoading) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
@@ -1075,7 +1247,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             _aiUpdatedLabel(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: subColor),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: subColor),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -1084,7 +1258,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                 child: SizedBox(
                   height: 40,
                   child: ElevatedButton.icon(
-                    onPressed: _aiLoading ? null : () => _generateAiOverview(forceRefresh: true),
+                    onPressed: _aiLoading
+                        ? null
+                        : () => _generateAiOverview(forceRefresh: true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -1093,7 +1269,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                       ),
                       elevation: 0,
                     ),
-                    icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
+                    icon: Icon(
+                      _aiGenerated ? Icons.refresh : Icons.auto_awesome,
+                    ),
                     label: Text(
                       _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -1109,7 +1287,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                     setState(() => _aiExpanded = !_aiExpanded);
                   },
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.72)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
@@ -1136,25 +1316,24 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Icon(Icons.insights, color: AppColors.primaryDark, size: 18),
+              const Icon(
+                Icons.insights,
+                color: AppColors.primaryDark,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Live Market Intelligence',
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
               ),
             ],
           ),
           if (_mspInsight != null && _mspInsight!.isNotEmpty) ...<Widget>[
             const SizedBox(height: 10),
-            Text(
-              _mspInsight!,
-              style: TextStyle(color: subColor, height: 1.35),
-            ),
+            Text(_mspInsight!, style: TextStyle(color: subColor, height: 1.35)),
           ],
-          if (_allIndiaInsight != null && _allIndiaInsight!.isNotEmpty) ...<Widget>[
+          if (_allIndiaInsight != null &&
+              _allIndiaInsight!.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
             Text(
               _allIndiaInsight!,
@@ -1171,13 +1350,37 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
       ),
       child: Row(
         children: <Widget>[
-          _tabButton(_MarketSection.prices, 'Prices', Icons.trending_up, textColor),
-          _tabButton(_MarketSection.mandis, 'Mandis', Icons.storefront, textColor),
-          _tabButton(_MarketSection.listings, 'My Listings', Icons.sell_outlined, textColor),
+          _tabButton(
+            _MarketSection.prices,
+            'Prices',
+            Icons.trending_up,
+            textColor,
+          ),
+          _tabButton(
+            _MarketSection.mandis,
+            'Mandis',
+            Icons.storefront,
+            textColor,
+          ),
+          _tabButton(
+            _MarketSection.schemes,
+            'Schemes',
+            Icons.account_balance_outlined,
+            textColor,
+          ),
+          _tabButton(
+            _MarketSection.listings,
+            'Listings',
+            Icons.sell_outlined,
+            textColor,
+          ),
         ],
       ),
     );
@@ -1259,10 +1462,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(color: subColor),
-            ),
+            Text(_error!, style: TextStyle(color: subColor)),
             const SizedBox(height: 12),
             SizedBox(
               height: 42,
@@ -1290,6 +1490,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       _MarketSection.prices => _filteredPrices,
       _MarketSection.mandis => _filteredMandis,
       _MarketSection.listings => _filteredListings,
+      _MarketSection.schemes => _filteredSchemes,
     };
 
     if (items.isEmpty) {
@@ -1305,11 +1506,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
             cardColor: cardColor,
             child: Column(
               children: <Widget>[
-                Icon(
-                  Icons.inbox_outlined,
-                  color: subColor,
-                  size: 36,
-                ),
+                Icon(Icons.inbox_outlined, color: subColor, size: 36),
                 const SizedBox(height: 10),
                 Text(
                   'No data available for current filters',
@@ -1333,28 +1530,32 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     }
 
     for (final item in items) {
-      children.add(
-        switch (_activeSection) {
-          _MarketSection.prices => _priceCard(
-              item: item,
-              cardColor: cardColor,
-              textColor: textColor,
-              subColor: subColor,
-            ),
-          _MarketSection.mandis => _mandiCard(
-              item: item,
-              cardColor: cardColor,
-              textColor: textColor,
-              subColor: subColor,
-            ),
-          _MarketSection.listings => _listingCard(
-              item: item,
-              cardColor: cardColor,
-              textColor: textColor,
-              subColor: subColor,
-            ),
-        },
-      );
+      children.add(switch (_activeSection) {
+        _MarketSection.prices => _priceCard(
+          item: item,
+          cardColor: cardColor,
+          textColor: textColor,
+          subColor: subColor,
+        ),
+        _MarketSection.mandis => _mandiCard(
+          item: item,
+          cardColor: cardColor,
+          textColor: textColor,
+          subColor: subColor,
+        ),
+        _MarketSection.schemes => _schemeCard(
+          item: item,
+          cardColor: cardColor,
+          textColor: textColor,
+          subColor: subColor,
+        ),
+        _MarketSection.listings => _listingCard(
+          item: item,
+          cardColor: cardColor,
+          textColor: textColor,
+          subColor: subColor,
+        ),
+      });
       children.add(const SizedBox(height: 12));
     }
 
@@ -1399,9 +1600,11 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     final source = item['source']?.toString() ?? '';
     final date = _tryDate(item['date']);
 
-    final locationParts = <String>[mandi, district, state]
-        .where((part) => part.trim().isNotEmpty)
-        .toList();
+    final locationParts = <String>[
+      mandi,
+      district,
+      state,
+    ].where((part) => part.trim().isNotEmpty).toList();
 
     return _glassCard(
       cardColor: cardColor,
@@ -1429,7 +1632,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            locationParts.isEmpty ? 'Location unavailable' : locationParts.join(', '),
+            locationParts.isEmpty
+                ? 'Location unavailable'
+                : locationParts.join(', '),
             style: TextStyle(color: subColor, fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -1493,10 +1698,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            label,
-            style: TextStyle(color: subColor, fontSize: 11),
-          ),
+          Text(label, style: TextStyle(color: subColor, fontSize: 11)),
           const SizedBox(height: 2),
           Text(
             value,
@@ -1516,14 +1718,17 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    final name = (item['name'] ?? item['mandi_name'] ?? item['market'])?.toString() ?? 'Mandi';
+    final name =
+        (item['name'] ?? item['mandi_name'] ?? item['market'])?.toString() ??
+        'Mandi';
     final district = item['district']?.toString() ?? '';
     final state = item['state']?.toString() ?? '';
     final address = item['address']?.toString() ?? '';
 
-    final locationParts = <String>[district, state]
-        .where((part) => part.trim().isNotEmpty)
-        .toList();
+    final locationParts = <String>[
+      district,
+      state,
+    ].where((part) => part.trim().isNotEmpty).toList();
 
     return _glassCard(
       cardColor: cardColor,
@@ -1555,11 +1760,93 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           ),
           if (address.trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
-              address,
-              style: TextStyle(color: subColor, fontSize: 12),
-            ),
+            Text(address, style: TextStyle(color: subColor, fontSize: 12)),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _schemeCard({
+    required Map<String, dynamic> item,
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    final name =
+        (item['name'] ?? item['short_name'] ?? item['title'] ?? 'Scheme')
+            .toString();
+    final category = (item['category'] ?? 'support').toString();
+    final state = (item['state'] ?? 'All').toString();
+    final eligibilityRaw = item['eligibility'];
+    final eligibility = eligibilityRaw is List && eligibilityRaw.isNotEmpty
+        ? eligibilityRaw.first.toString()
+        : eligibilityRaw?.toString() ?? 'See official eligibility criteria.';
+
+    return _glassCard(
+      cardColor: cardColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  category.replaceAll('_', ' ').capitalize,
+                  style: const TextStyle(
+                    color: AppColors.primaryDark,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'State: $state',
+            style: TextStyle(color: subColor, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            eligibility,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: subColor, height: 1.3),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _showSchemeDetails(item),
+                  child: const Text('Details'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _openSchemeUrl(item),
+                  child: const Text('Apply'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1582,8 +1869,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     final rateText = rateDay != null
         ? '${rateDay.inr}/day'
         : rateHour != null
-            ? '${rateHour.inr}/hr'
-            : 'Rate not set';
+        ? '${rateHour.inr}/hr'
+        : 'Rate not set';
 
     return _glassCard(
       cardColor: cardColor,
@@ -1606,10 +1893,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            location,
-            style: TextStyle(color: subColor, fontSize: 12),
-          ),
+          Text(location, style: TextStyle(color: subColor, fontSize: 12)),
           const SizedBox(height: 8),
           Text(
             rateText,
@@ -1649,7 +1933,10 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: AppColors.primaryDark.withValues(alpha: 0.08),

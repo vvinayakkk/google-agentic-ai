@@ -94,6 +94,9 @@ _GROUNDED_CONTEXT_TIMEOUT_SECONDS = max(
 _GROQ_REPLY_TIMEOUT_SECONDS = max(
     3.0, float(os.getenv("AGENT_GROQ_REPLY_TIMEOUT_SECONDS", "16"))
 )
+_ENABLE_RUNNER_TRANSLATION = str(
+    os.getenv("AGENT_ENABLE_RUNNER_TRANSLATION", "0")
+).strip().lower() in {"1", "true", "yes"}
 
 
 class ChatService:
@@ -1006,12 +1009,13 @@ class ChatService:
         if not contains_non_english_markers:
             return self._normalize_english_openers(response_text)
 
-        try:
-            translated_runner = await self._translate_with_runner_to_english(response_text)
-            if translated_runner and not self._contains_devanagari(translated_runner):
-                return self._normalize_english_openers(translated_runner)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"In-runner English translation failed: {exc}")
+        if _ENABLE_RUNNER_TRANSLATION:
+            try:
+                translated_runner = await self._translate_with_runner_to_english(response_text)
+                if translated_runner and not self._contains_devanagari(translated_runner):
+                    return self._normalize_english_openers(translated_runner)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"In-runner English translation failed: {exc}")
 
         try:
             translated = generate_groq_reply(

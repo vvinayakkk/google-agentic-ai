@@ -25,6 +25,7 @@ class SchemeService:
     @staticmethod
     async def list_schemes(db, filters: dict, page: int, per_page: int) -> dict:
         """Return paginated government schemes, optionally filtered."""
+        query_text = (filters.get("q") or "").strip().lower()
         query = db.collection(MongoCollections.GOVERNMENT_SCHEMES)
 
         if filters.get("state"):
@@ -64,6 +65,19 @@ class SchemeService:
             if filters.get("is_active") is not None:
                 is_active = bool(filters["is_active"])
                 items = [s for s in items if bool(s.get("is_active", True)) == is_active]
+
+        if query_text:
+            def _matches_search(item: dict) -> bool:
+                haystack = " ".join([
+                    str(item.get("name", "")),
+                    str(item.get("short_name", "")),
+                    str(item.get("description", "")),
+                    str(item.get("category", "")),
+                    str(item.get("state", "")),
+                ]).lower()
+                return query_text in haystack
+
+            items = [item for item in items if _matches_search(item)]
 
         # Sort and paginate in Python (avoids composite index requirement)
         items.sort(key=lambda x: x.get("name", ""))

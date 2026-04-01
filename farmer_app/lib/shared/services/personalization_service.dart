@@ -19,6 +19,12 @@ class PersonalizationService {
       await AppCache.put('profile_context_v1', profile, ttlSeconds: 1800);
       return profile;
     } catch (_) {
+      // Cache empty context briefly so repeated 404 profile probes do not spam logs.
+      await AppCache.put(
+        'profile_context_v1',
+        <String, dynamic>{},
+        ttlSeconds: 1800,
+      );
       return <String, dynamic>{};
     }
   }
@@ -27,9 +33,11 @@ class PersonalizationService {
     final village = (profile['village'] ?? '').toString().trim();
     final district = (profile['district'] ?? '').toString().trim();
     final state = (profile['state'] ?? '').toString().trim();
-    final parts = <String>[village, district, state]
-        .where((p) => p.isNotEmpty)
-        .toList(growable: false);
+    final parts = <String>[
+      village,
+      district,
+      state,
+    ].where((p) => p.isNotEmpty).toList(growable: false);
     if (parts.isEmpty) return 'Near Mumbai';
     return parts.join(', ');
   }
@@ -38,13 +46,21 @@ class PersonalizationService {
     required Map<String, dynamic> profile,
     required Map<String, dynamic> item,
   }) {
-    final profileDistrict = (profile['district'] ?? '').toString().toLowerCase();
+    final profileDistrict = (profile['district'] ?? '')
+        .toString()
+        .toLowerCase();
     final profileState = (profile['state'] ?? '').toString().toLowerCase();
     final profileVillage = (profile['village'] ?? '').toString().toLowerCase();
 
-    final district = (item['district'] ?? item['district_name'] ?? '').toString().toLowerCase();
-    final state = (item['state'] ?? item['state_name'] ?? '').toString().toLowerCase();
-    final village = (item['village'] ?? item['locality'] ?? '').toString().toLowerCase();
+    final district = (item['district'] ?? item['district_name'] ?? '')
+        .toString()
+        .toLowerCase();
+    final state = (item['state'] ?? item['state_name'] ?? '')
+        .toString()
+        .toLowerCase();
+    final village = (item['village'] ?? item['locality'] ?? '')
+        .toString()
+        .toLowerCase();
 
     var score = 0.0;
     if (profileState.isNotEmpty && state == profileState) score += 4.0;
@@ -79,8 +95,11 @@ class PersonalizationService {
     int maxChars = 900,
   }) {
     final name = (profile['name'] ?? 'Farmer').toString();
-    final soil = (profile['soil_type'] ?? profile['soilType'] ?? 'unknown').toString();
-    final irrigation = (profile['irrigation_type'] ?? profile['irrigationType'] ?? 'unknown').toString();
+    final soil = (profile['soil_type'] ?? profile['soilType'] ?? 'unknown')
+        .toString();
+    final irrigation =
+        (profile['irrigation_type'] ?? profile['irrigationType'] ?? 'unknown')
+            .toString();
     final crops = (profile['crops'] is List)
         ? (profile['crops'] as List).map((e) => e.toString()).join(', ')
         : '';

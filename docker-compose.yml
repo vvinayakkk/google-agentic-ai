@@ -150,6 +150,10 @@ services:
     ports:
       - "127.0.0.1:8006:8006"
     env_file: ./kisankiawaz-backend/.env
+    environment:
+      AGENT_PRIMARY_PROVIDER: groq
+      AGENT_ENABLE_FALLBACK: "0"
+      AGENT_ENABLE_RUNNER_TRANSLATION: "0"
     volumes:
       - ./kisankiawaz-backend/creds:/app/creds:ro
     depends_on:

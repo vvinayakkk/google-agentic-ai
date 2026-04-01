@@ -25,6 +25,7 @@ class EligibilityRequest(BaseModel):
 async def list_schemes(
     state: Optional[str] = Query(default=None),
     category: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None),
     is_active: Optional[bool] = Query(default=None),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
@@ -32,7 +33,7 @@ async def list_schemes(
 ):
     """List government schemes with optional filters."""
     db = get_async_db()
-    filters = {"state": state, "category": category, "is_active": is_active}
+    filters = {"state": state, "category": category, "q": q, "is_active": is_active}
     return await SchemeService.list_schemes(db=db, filters=filters, page=page, per_page=per_page)
 
 

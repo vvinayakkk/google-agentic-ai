@@ -53,7 +53,9 @@ class MarketService {
       ApiEndpoints.marketPrices,
       queryParameters: params,
     );
-    final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+    final data = Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
     await AppCache.put(key, data, ttlSeconds: _ttlShort);
     return data;
   }
@@ -91,7 +93,9 @@ class MarketService {
       ApiEndpoints.marketMandis,
       queryParameters: params,
     );
-    final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+    final data = Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
     await AppCache.put(key, data, ttlSeconds: _ttlShort);
     return data;
   }
@@ -108,6 +112,7 @@ class MarketService {
   Future<Map<String, dynamic>> listSchemes({
     String? state,
     String? category,
+    String? searchQuery,
     bool? isActive,
     int? page,
     int? perPage,
@@ -117,6 +122,8 @@ class MarketService {
     final params = {
       if (state != null) 'state': state,
       if (category != null) 'category': category,
+      if (searchQuery != null && searchQuery.trim().isNotEmpty)
+        'q': searchQuery.trim(),
       if (isActive != null) 'is_active': isActive,
       if (page != null) 'page': page,
       if (perPage != null) 'per_page': perPage,
@@ -131,7 +138,9 @@ class MarketService {
       ApiEndpoints.marketSchemes,
       queryParameters: params,
     );
-    final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+    final data = Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
     await AppCache.put(key, data, ttlSeconds: _ttlMedium);
     return data;
   }
