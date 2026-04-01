@@ -90,7 +90,7 @@ const CommandPalette = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
-            placeholder="Search farmers, schemes, crops, notifications..."
+            placeholder="Search farmers, schemes, crops..."
             className="w-full bg-transparent text-sm text-white/90 outline-none"
           />
         </div>

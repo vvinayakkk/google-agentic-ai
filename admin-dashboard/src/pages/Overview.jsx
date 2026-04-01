@@ -83,7 +83,7 @@ const Overview = ({ onStatsChange, onActivityChange, onRefresh }) => {
       { label: "Crops Tracked", value: formatNumber(payload.total_crops ?? 0), delta: 0, trend: trends[2] },
       { label: "Market Records", value: formatNumber(payload.total_market_records ?? 0), delta: 0, trend: trends[3] },
       { label: "Agent Queries Today", value: formatNumber(payload.agent_queries_today ?? 0), delta: 0, trend: trends[4] },
-      { label: "Notifications Sent", value: formatNumber(payload.notifications_sent ?? 0), delta: 0, trend: trends[5] },
+      // Notifications metrics removed from overview
       { label: "Pending Rentals", value: formatNumber(payload.pending_rentals ?? 0), delta: 0, trend: trends[6] },
       { label: "Schemes Available", value: formatNumber(payload.total_schemes ?? 0), delta: 0, trend: trends[7] },
     ];

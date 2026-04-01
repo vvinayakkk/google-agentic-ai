@@ -37,7 +37,7 @@ const DEFAULT_QUERY_INPUT = '{\n  "filter": {},\n  "limit": 50\n}';
 const extractRows = (data) => {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") return [];
-  for (const k of ["items","rows","data","conversations","locations","districts","states","admins","notifications","messages","schemes","prices","mandis","sessions"]) {
+  for (const k of ["items","rows","data","conversations","locations","districts","states","admins","messages","schemes","prices","mandis","sessions"]) {
     if (Array.isArray(data[k])) return data[k];
   }
   return [data];

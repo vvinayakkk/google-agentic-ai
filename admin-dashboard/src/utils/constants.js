@@ -8,7 +8,6 @@ export const PAGE_KEYS = {
   EQUIPMENT: "equipment",
   ANALYTICS: "analytics",
   AGENT: "agent",
-  NOTIFICATIONS: "notifications",
   DATABASE: "database",
   SYSTEM: "system",
   GEO: "geo",
@@ -23,7 +22,6 @@ export const NAV_ITEMS = [
   { key: PAGE_KEYS.EQUIPMENT, label: "Equipment & Livestock", icon: "Truck" },
   { key: PAGE_KEYS.ANALYTICS, label: "Analytics", icon: "TrendingUp" },
   { key: PAGE_KEYS.AGENT, label: "Agent System", icon: "Bot" },
-  { key: PAGE_KEYS.NOTIFICATIONS, label: "Notifications", icon: "Bell" },
   { key: PAGE_KEYS.SYSTEM, label: "System Config", icon: "Settings" },
   { key: PAGE_KEYS.GEO, label: "Geo Explorer", icon: "Map" },
 ];
@@ -41,8 +39,8 @@ export const INDIAN_STATES = [
 export const DB_COLLECTIONS = {
   operational: [
     "users", "farmer_profiles", "crops", "crop_cycles", "livestock", "market_prices",
-    "mandis", "equipment", "equipment_bookings", "equipment_rental_rates", "notifications",
-    "notification_preferences", "agent_conversations", "voice_sessions", "chat_messages",
+    "mandis", "equipment", "equipment_bookings", "equipment_rental_rates",
+    "agent_conversations", "voice_sessions", "chat_messages",
     "chat_sessions", "documents", "document_builder_sessions", "calendar_events", "feedback",
     "farmer_feedback", "health_records", "crop_expenses"
   ],
@@ -62,7 +60,6 @@ export const MARKET_TABS = [
 ];
 
 export const EQUIPMENT_TABS = ["Equipment", "Livestock", "Rental Requests", "Rental Rates", "Providers"];
-export const NOTIFICATION_TABS = ["All Notifications", "Broadcast", "Preferences"];
 export const SYSTEM_TABS = ["App Config", "Feature Flags", "Ingestion", "Admin Users", "Audit Log"];
 
 export const SERVICE_HEALTH_DEFAULT = [

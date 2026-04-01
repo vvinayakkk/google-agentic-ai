@@ -15,7 +15,7 @@ const Schemes = lazy(() => import("./pages/Schemes"));
 const Equipment = lazy(() => import("./pages/Equipment"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const AgentSystem = lazy(() => import("./pages/AgentSystem"));
-const Notifications = lazy(() => import("./pages/Notifications"));
+// Notifications page removed per admin UI cleanup
 const DatabaseExplorer = lazy(() => import("./pages/DatabaseExplorer"));
 const SystemConfig = lazy(() => import("./pages/SystemConfig"));
 const GeoExplorer = lazy(() => import("./pages/GeoExplorer"));
@@ -28,7 +28,7 @@ const pageMap = {
   [PAGE_KEYS.EQUIPMENT]: Equipment,
   [PAGE_KEYS.ANALYTICS]: Analytics,
   [PAGE_KEYS.AGENT]: AgentSystem,
-  [PAGE_KEYS.NOTIFICATIONS]: Notifications,
+  // Notifications removed
   [PAGE_KEYS.DATABASE]: DatabaseExplorer,
   [PAGE_KEYS.SYSTEM]: SystemConfig,
   [PAGE_KEYS.GEO]: GeoExplorer,
