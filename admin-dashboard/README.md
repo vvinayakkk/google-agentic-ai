@@ -77,3 +77,4 @@ JWT is stored in local storage under `admin_token`.
 - Dashboard is desktop-first with minimum width `1280px`.
 - Infinite dot-grid canvas supports pan and ctrl/cmd+scroll zoom.
 - Most pages call multiple fallback paths to stay compatible with current backend route differences.
+- Detailed frontend documentation lives in [FRONTEND_SYSTEM_DETAILED_REFERENCE.md](FRONTEND_SYSTEM_DETAILED_REFERENCE.md).
