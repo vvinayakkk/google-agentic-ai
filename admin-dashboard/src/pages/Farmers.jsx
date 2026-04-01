@@ -23,7 +23,7 @@ const Farmers = () => {
     try {
       const data = await apiTry([
         withQuery("/api/v1/admin/farmers", { page, per_page: 20, search, state: stateFilter }),
-        withQuery("/api/v1/farmers/admin", { page, per_page: 20 }),
+        withQuery("/api/v1/farmers/admin/", { page, per_page: 20 }),
       ]);
       setRows(data.items || []);
     } catch (err) {
