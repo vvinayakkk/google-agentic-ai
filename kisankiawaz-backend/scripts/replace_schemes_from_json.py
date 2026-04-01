@@ -24,8 +24,52 @@ from shared.core.constants import MongoCollections
 from shared.db.mongodb import get_db
 
 
+_MOJIBAKE_MARKERS = (
+    "\u00C3",
+    "\u00C2",
+    "\u00E0\u00A4",
+    "\u00E0\u00A5",
+    "\u00E0\u00A6",
+    "\u00E0\u00A7",
+    "\u00E0\u00A8",
+    "\u00E0\u00A9",
+    "\u00E0\u00AA",
+    "\u00E0\u00AB",
+)
+
+
+def _indic_char_score(text: str) -> int:
+    score = 0
+    for ch in text:
+        code = ord(ch)
+        if 0x0900 <= code <= 0x0D7F:
+            score += 1
+    return score
+
+
+def maybe_fix_mojibake(value: str) -> str:
+    text = str(value or "")
+    if not text:
+        return ""
+    if not any(marker in text for marker in _MOJIBAKE_MARKERS):
+        return text
+
+    try:
+        repaired = text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+    if _indic_char_score(repaired) >= _indic_char_score(text):
+        return repaired
+    return text
+
+
+def clean_text(value) -> str:
+    return maybe_fix_mojibake(str(value or "").strip())
+
+
 def slugify(value: str) -> str:
-    text = re.sub(r"[^a-zA-Z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", clean_text(value).lower()).strip("-")
     return text or "unknown"
 
 
@@ -37,18 +81,18 @@ def as_list(value) -> list[str]:
         for it in value:
             if isinstance(it, dict):
                 step = str(it.get("step") or "").strip()
-                action = str(it.get("action") or "").strip()
-                details = str(it.get("details") or "").strip()
-                url = str(it.get("url") or "").strip()
+                action = clean_text(it.get("action"))
+                details = clean_text(it.get("details"))
+                url = clean_text(it.get("url"))
                 line = " ".join(x for x in [f"Step {step}:" if step else "", action, details, f"({url})" if url else ""] if x).strip()
                 if line:
                     out.append(line)
             else:
-                s = str(it).strip()
+                s = clean_text(it)
                 if s:
                     out.append(s)
         return out
-    s = str(value).strip()
+    s = clean_text(value)
     if not s:
         return []
     parts = re.split(r"\n|;|\||,", s)
@@ -61,13 +105,13 @@ def parse_contact_info(contact_info: dict) -> tuple[list[str], list[str], str]:
     nums = []
     emails = []
     for key in ["helpline", "toll_free", "phone"]:
-        val = str(contact_info.get(key) or "").strip()
+        val = clean_text(contact_info.get(key))
         if val:
             nums.append(val)
-    em = str(contact_info.get("email") or "").strip()
+    em = clean_text(contact_info.get("email"))
     if em:
         emails.append(em)
-    addr = str(contact_info.get("address") or "").strip()
+    addr = clean_text(contact_info.get("address"))
     return nums, emails, addr
 
 
@@ -82,24 +126,24 @@ def normalize_record(row: dict, now_iso: str) -> tuple[str, dict]:
     official_links_raw = row.get("official_links")
     if isinstance(official_links_raw, list):
         for candidate in official_links_raw:
-            v = str(candidate or "").strip()
+            v = clean_text(candidate)
             if v and v not in official_links:
                 official_links.append(v)
-    elif isinstance(official_links_raw, str) and official_links_raw.strip():
+    elif isinstance(official_links_raw, str) and clean_text(official_links_raw):
         for candidate in as_list(official_links_raw):
             if candidate and candidate not in official_links:
                 official_links.append(candidate)
 
     for candidate in [row.get("official_portal"), row.get("application_link")]:
-        v = str(candidate or "").strip()
+        v = clean_text(candidate)
         if v and v not in official_links:
             official_links.append(v)
 
     states = []
     state = row.get("state")
-    level = str(row.get("level") or "").strip().lower()
-    if state and str(state).strip():
-        states = [str(state).strip()]
+    level = clean_text(row.get("level")).lower()
+    if state and clean_text(state):
+        states = [clean_text(state)]
     elif level == "central":
         states = ["All"]
 
@@ -113,13 +157,13 @@ def normalize_record(row: dict, now_iso: str) -> tuple[str, dict]:
     normalized = {
         "source": "scheme_json_user_upload",
         "scheme_id": scheme_id,
-        "title": str(row.get("scheme_name") or row.get("title") or "").strip(),
-        "scheme_name_local": str(row.get("scheme_name_local") or "").strip(),
-        "acronym": str(row.get("acronym") or "").strip(),
-        "summary": str(row.get("description") or row.get("summary") or row.get("objective") or "").strip(),
-        "objective": str(row.get("objective") or "").strip(),
-        "ministry": str(row.get("ministry") or "").strip(),
-        "department": str(row.get("department") or "").strip(),
+        "title": clean_text(row.get("scheme_name") or row.get("title") or ""),
+        "scheme_name_local": clean_text(row.get("scheme_name_local") or ""),
+        "acronym": clean_text(row.get("acronym") or ""),
+        "summary": clean_text(row.get("description") or row.get("summary") or row.get("objective") or ""),
+        "objective": clean_text(row.get("objective") or ""),
+        "ministry": clean_text(row.get("ministry") or ""),
+        "department": clean_text(row.get("department") or ""),
         "categories": as_list(row.get("category")) or as_list(row.get("categories")),
         "beneficiary_state": states,
         "tags": as_list(row.get("tags")),
@@ -135,12 +179,12 @@ def normalize_record(row: dict, now_iso: str) -> tuple[str, dict]:
         "required_documents": as_list(row.get("documents_required")),
         "benefits": as_list(row.get("benefits")),
         "where_to_apply": where_to_apply,
-        "coverage": str(row.get("coverage") or "").strip(),
-        "target_beneficiaries": str(row.get("target_beneficiaries") or "").strip(),
-        "financial_assistance_amount": str(row.get("financial_assistance_amount") or "").strip(),
-        "status": str(row.get("status") or "").strip(),
-        "scheme_type": str(row.get("scheme_type") or "").strip(),
-        "level": str(row.get("level") or "").strip(),
+        "coverage": clean_text(row.get("coverage") or ""),
+        "target_beneficiaries": clean_text(row.get("target_beneficiaries") or ""),
+        "financial_assistance_amount": clean_text(row.get("financial_assistance_amount") or ""),
+        "status": clean_text(row.get("status") or ""),
+        "scheme_type": clean_text(row.get("scheme_type") or ""),
+        "level": clean_text(row.get("level") or ""),
         "launched_year": row.get("launched_year"),
         "_ingested_at": now_iso,
     }

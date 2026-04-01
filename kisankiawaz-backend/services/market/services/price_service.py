@@ -35,6 +35,8 @@ class PriceService:
             query = query.where(filter=FieldFilter("crop_name", "==", filters["crop"]))
         if filters.get("state"):
             query = query.where(filter=FieldFilter("state", "==", filters["state"]))
+        if filters.get("district"):
+            query = query.where(filter=FieldFilter("district", "==", filters["district"]))
         if filters.get("mandi"):
             query = query.where(filter=FieldFilter("mandi_name", "==", filters["mandi"]))
 

@@ -19,6 +19,7 @@ class AgentService {
     required String message,
     String? language,
     String? sessionId,
+    String? agentType,
   }) async {
     final res = await _client.post(
       ApiEndpoints.agentChat,
@@ -26,6 +27,43 @@ class AgentService {
         'message': message,
         if (language != null) 'language': language,
         if (sessionId != null) 'session_id': sessionId,
+        if (agentType != null) 'agent_type': agentType,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// POST /api/v1/agent/chat/prepare -> fast partial response + request_id.
+  Future<Map<String, dynamic>> prepareChat({
+    required String message,
+    String? language,
+    String? sessionId,
+    String? agentType,
+    bool allowFallback = true,
+  }) async {
+    final res = await _client.post(
+      ApiEndpoints.agentChatPrepare,
+      data: {
+        'message': message,
+        if (language != null) 'language': language,
+        if (sessionId != null) 'session_id': sessionId,
+        if (agentType != null) 'agent_type': agentType,
+        'allow_fallback': allowFallback,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// POST /api/v1/agent/chat/finalize -> poll completion using request_id.
+  Future<Map<String, dynamic>> finalizeChat({
+    required String requestId,
+    double timeoutSeconds = 0,
+  }) async {
+    final res = await _client.post(
+      ApiEndpoints.agentChatFinalize,
+      data: {
+        'request_id': requestId,
+        'timeout_seconds': timeoutSeconds,
       },
     );
     return res.data as Map<String, dynamic>;
@@ -41,13 +79,25 @@ class AgentService {
 
   /// GET /api/v1/agent/sessions/{id} → session history.
   Future<Map<String, dynamic>> getSession(String id) async {
-    final res = await _client.get(ApiEndpoints.agentSessionById(id));
+    final sessionId = id.trim();
+    if (sessionId.isEmpty) {
+      return <String, dynamic>{'messages': <dynamic>[]};
+    }
+    final res = await _client.get(ApiEndpoints.agentSessionById(sessionId));
     return res.data as Map<String, dynamic>;
   }
 
   /// DELETE /api/v1/agent/sessions/{id}.
   Future<void> deleteSession(String id) async {
-    await _client.delete(ApiEndpoints.agentSessionById(id));
+    final sessionId = id.trim();
+    if (sessionId.isEmpty) return;
+    await _client.delete(ApiEndpoints.agentSessionById(sessionId));
+  }
+
+  /// DELETE /api/v1/agent/sessions.
+  Future<Map<String, dynamic>> deleteAllSessions() async {
+    final res = await _client.delete(ApiEndpoints.agentSessions);
+    return (res.data as Map<String, dynamic>?) ?? <String, dynamic>{};
   }
 
   // ── RAG search ────────────────────────────────────────────

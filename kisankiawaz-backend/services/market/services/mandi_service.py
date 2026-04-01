@@ -43,6 +43,29 @@ class MandiService:
             item["id"] = doc.id
             items.append(item)
 
+        if not items:
+            ref_query = db.collection(MongoCollections.REF_MANDI_DIRECTORY)
+            if filters.get("state"):
+                ref_query = ref_query.where(filter=FieldFilter("state", "==", filters["state"]))
+            if filters.get("district"):
+                ref_query = ref_query.where(filter=FieldFilter("district", "==", filters["district"]))
+
+            ref_docs = [d async for d in ref_query.stream()]
+            for doc in ref_docs:
+                raw = doc.to_dict() or {}
+                items.append(
+                    {
+                        "id": doc.id,
+                        "name": raw.get("name") or raw.get("mandi_name") or "",
+                        "state": raw.get("state") or "",
+                        "district": raw.get("district") or "",
+                        "latitude": raw.get("latitude") or raw.get("lat"),
+                        "longitude": raw.get("longitude") or raw.get("lon"),
+                        "address": raw.get("address") or "",
+                        "source": raw.get("source") or "ref_mandi_directory",
+                    }
+                )
+
         # Sort and paginate in Python (avoids composite index requirement)
         items.sort(key=lambda x: x.get("name", ""))
         items = items[offset:offset + per_page]

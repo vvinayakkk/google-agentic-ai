@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/app_cache.dart';
 
 /// Styled text field used across all forms.
 class AppTextField extends StatelessWidget {
@@ -15,6 +16,7 @@ class AppTextField extends StatelessWidget {
   final bool enabled;
   final ValueChanged<String>? onChanged;
   final int? maxLength;
+  final VoidCallback? onTap;
 
   const AppTextField({
     super.key,
@@ -30,6 +32,7 @@ class AppTextField extends StatelessWidget {
     this.enabled = true,
     this.onChanged,
     this.maxLength,
+    this.onTap,
   });
 
   @override
@@ -52,6 +55,10 @@ class AppTextField extends StatelessWidget {
           obscureText: obscureText,
           maxLines: maxLines,
           enabled: enabled,
+          onTap: () {
+            Haptics.selection();
+            onTap?.call();
+          },
           onChanged: onChanged,
           maxLength: maxLength,
           decoration: InputDecoration(

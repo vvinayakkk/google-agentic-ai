@@ -2,6 +2,8 @@ FROM kisan-base:latest
 WORKDIR /app
 COPY services/agent/requirements.txt /app/requirements-svc.txt
 RUN pip install --no-cache-dir -r requirements-svc.txt
+ENV FASTEMBED_CACHE_PATH=/app/.cache/fastembed
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='sentence-transformers/paraphrase-multilingual-mpnet-base-v2'); print('FastEmbed model preloaded')"
 COPY shared/ /app/shared/
 COPY services/agent/ /app/
 HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:8006/health || exit 1

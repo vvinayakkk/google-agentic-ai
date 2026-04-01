@@ -198,6 +198,72 @@ class InsightService:
         return recs
 
     @staticmethod
+    async def build_equipment_insights(db, days: int = 30) -> dict[str, Any]:
+        now = datetime.now(timezone.utc)
+        since = now - timedelta(days=days)
+
+        equipment_docs = await InsightService._fetch_docs(db, MongoCollections.EQUIPMENT)
+        booking_docs = await InsightService._fetch_docs(db, MongoCollections.EQUIPMENT_BOOKINGS)
+        provider_docs = await InsightService._fetch_docs(db, MongoCollections.REF_EQUIPMENT_PROVIDERS)
+
+        total_listings = len(equipment_docs)
+        available_count = sum(1 for row in equipment_docs if str(row.get("status") or "").lower() == "available")
+        utilization_rate = round(((total_listings - available_count) / total_listings) * 100.0, 2) if total_listings else 0.0
+
+        bookings_in_window = 0
+        status_counts: dict[str, int] = {}
+        for row in booking_docs:
+            created_at = InsightService._extract_date(row.get("created_at")) or InsightService._extract_date(row.get("updated_at"))
+            if created_at and created_at >= since:
+                bookings_in_window += 1
+                status = str(row.get("status") or "unknown").lower()
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+        approved_count = status_counts.get("approved", 0)
+        completed_count = status_counts.get("completed", 0)
+        approval_rate = round(((approved_count + completed_count) / bookings_in_window) * 100.0, 2) if bookings_in_window else 0.0
+        completion_rate = round((completed_count / max(1, approved_count + completed_count)) * 100.0, 2)
+
+        active_providers = [row for row in provider_docs if row.get("is_active") is not False]
+        states = {
+            str(row.get("state") or "").strip().lower()
+            for row in active_providers
+            if str(row.get("state") or "").strip()
+        }
+        categories = {
+            str(row.get("category") or "").strip().lower()
+            for row in active_providers
+            if str(row.get("category") or "").strip()
+        }
+
+        type_counter: Counter[str] = Counter()
+        for row in equipment_docs:
+            type_key = str(row.get("type") or row.get("name") or "unknown").strip().lower()
+            if type_key:
+                type_counter[type_key] += 1
+
+        top_types = [
+            {"equipment_type": key, "count": count}
+            for key, count in type_counter.most_common(10)
+        ]
+
+        return {
+            "window_days": days,
+            "generated_at": InsightService._now_iso(),
+            "total_listings": total_listings,
+            "available_count": available_count,
+            "utilization_rate": utilization_rate,
+            "bookings_in_window": bookings_in_window,
+            "bookings_by_status": status_counts,
+            "approval_rate": approval_rate,
+            "completion_rate": completion_rate,
+            "active_provider_count": len(active_providers),
+            "states_covered": len(states),
+            "categories_covered": len(categories),
+            "top_equipment_types": top_types,
+        }
+
+    @staticmethod
     async def build_admin_overview(db, days: int = 30) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         since_current = now - timedelta(days=days)
@@ -376,10 +442,22 @@ class InsightService:
         crops = [
             row async for row in db.collection(MongoCollections.CROPS).where("farmer_id", "==", farmer_id).stream()
         ]
-        bookings = [
+        renter_bookings = [
             row
             async for row in db.collection(MongoCollections.EQUIPMENT_BOOKINGS)
             .where("renter_id", "==", farmer_id)
+            .stream()
+        ]
+        owner_bookings = [
+            row
+            async for row in db.collection(MongoCollections.EQUIPMENT_BOOKINGS)
+            .where("owner_id", "==", farmer_id)
+            .stream()
+        ]
+        equipment_docs = [
+            row
+            async for row in db.collection(MongoCollections.EQUIPMENT)
+            .where("farmer_id", "==", farmer_id)
             .stream()
         ]
         notifications = [
@@ -388,6 +466,14 @@ class InsightService:
             .where("user_id", "==", farmer_id)
             .stream()
         ]
+
+        seen_booking_ids: set[str] = set()
+        bookings = []
+        for row in renter_bookings + owner_bookings:
+            if row.id in seen_booking_ids:
+                continue
+            seen_booking_ids.add(row.id)
+            bookings.append(row)
 
         messages_total = 0
         active_recent = 0
@@ -426,6 +512,21 @@ class InsightService:
             )
             if stamp and (last_activity is None or stamp > last_activity):
                 last_activity = stamp
+
+        listings_count = len(equipment_docs)
+        available_listings = 0
+        for row in equipment_docs:
+            data = row.to_dict()
+            if str(data.get("status") or "").lower() == "available":
+                available_listings += 1
+
+        rentals_made = len(renter_bookings)
+        rentals_received = len(owner_bookings)
+        active_rentals = 0
+        for row in bookings:
+            status = str((row.to_dict() or {}).get("status") or "").lower()
+            if status in ("pending", "approved"):
+                active_rentals += 1
 
         activity_score = round(
             min(100.0, (active_recent * 8.0) + (crop_count * 5.0) + (completed_bookings * 4.0)), 2
@@ -467,6 +568,13 @@ class InsightService:
                     else "at_risk"
                 ),
                 "crop_diversity": "diverse" if crop_count >= 3 else "moderate" if crop_count >= 1 else "low",
+            },
+            "equipment": {
+                "listings_count": listings_count,
+                "available_count": available_listings,
+                "rentals_made": rentals_made,
+                "rentals_received": rentals_received,
+                "active_rentals": active_rentals,
             },
             "recommendations": recommendations,
         }

@@ -98,6 +98,16 @@ async def get_market_insights(
     }
 
 
+@router.get("/insights/equipment", status_code=HttpStatus.OK)
+async def get_equipment_insights(
+    days: int = Query(30, ge=7, le=180),
+    _admin: dict = Depends(get_current_admin),
+):
+    """Equipment marketplace and farmer-listing insights for admin dashboards."""
+    db = get_async_db()
+    return await InsightService.build_equipment_insights(db=db, days=days)
+
+
 @router.get("/insights/recommendations", status_code=HttpStatus.OK)
 async def get_recommendations(
     days: int = Query(30, ge=7, le=180),

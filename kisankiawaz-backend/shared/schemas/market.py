@@ -67,8 +67,9 @@ class ReservoirResponse(BaseModel):
     """Reservoir data by state."""
 
     state: str
-    projects_deficiency_pct: Optional[str] = None
-    current_storage_pct_of_normal: Optional[str] = None
+    project_name: Optional[str] = None
+    projects_deficiency_pct: Optional[float] = None
+    current_storage_pct_of_normal: Optional[float] = None
 
 
 class MandiDirectoryResponse(BaseModel):

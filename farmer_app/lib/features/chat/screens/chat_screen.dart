@@ -25,8 +25,14 @@ import '../../../shared/services/agent_service.dart';
 class ChatScreen extends ConsumerStatefulWidget {
   final String agentType;
   final String? sessionId;
+  final String? initialMessage;
 
-  const ChatScreen({super.key, required this.agentType, this.sessionId});
+  const ChatScreen({
+    super.key,
+    required this.agentType,
+    this.sessionId,
+    this.initialMessage,
+  });
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -40,21 +46,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final AudioRecorder _micRecorder = AudioRecorder();
 
   String? _sessionId;
+  String? _resumableSessionId;
   bool _isLoading = false;
   String? _playingMessageId;
   bool _hasText = false;
   bool _isMicRecording = false;
   bool _isMicProcessing = false;
   int _micWavePhase = 0;
+  int _loadingHintIndex = 0;
+  String _loadingHint = 'Searching...';
   Timer? _micWaveTimer;
+  Timer? _loadingHintTimer;
+  ChatMessage? _replyTarget;
+
+  static const List<String> _loadingHints = <String>[
+    'Searching nearby data...',
+    'Retrieving personalized context...',
+    'Checking extra sources...',
+    'Preparing concise answer...',
+    'Validating recommendations...',
+    'Finalizing response...',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _sessionId = widget.sessionId;
+    final incomingSession = widget.sessionId?.trim();
+    _sessionId = (incomingSession == null || incomingSession.isEmpty)
+        ? null
+        : incomingSession;
     _controller.addListener(_onTextChanged);
+    _loadResumableSessionFromDb();
+
     if (_sessionId != null) {
       _loadSession();
+    }
+
+    final initial = widget.initialMessage?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _newChat();
+        _controller.text = initial;
+        _send();
+      });
     }
   }
 
@@ -72,13 +107,229 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollController.dispose();
     _audioPlayer.dispose();
     _micWaveTimer?.cancel();
+    _loadingHintTimer?.cancel();
     _micRecorder.dispose();
     super.dispose();
   }
 
+  String get _chatTitle {
+    switch (widget.agentType.toLowerCase()) {
+      case 'weather':
+        return 'Weather AI';
+      case 'market':
+        return 'Market AI';
+      case 'cattle':
+        return 'Cattle AI';
+      case 'crop':
+        return 'Crop AI';
+      case 'mental_health':
+        return 'Mental Health AI';
+      default:
+        return 'Kisan AI Chat';
+    }
+  }
+
+  Future<void> _loadResumableSessionFromDb() async {
+    try {
+      final agent = ref.read(agentServiceProvider);
+      final data = await agent.listSessions();
+      final all = (data['sessions'] as List<dynamic>? ?? <dynamic>[])
+          .map((s) => ChatSession.fromJson(s as Map<String, dynamic>))
+          .where((s) => s.sessionId.isNotEmpty)
+          .toList();
+
+      all.sort((a, b) {
+        final lhs = a.lastActivity ?? a.createdAt ?? DateTime(2000);
+        final rhs = b.lastActivity ?? b.createdAt ?? DateTime(2000);
+        return rhs.compareTo(lhs);
+      });
+
+      final normalizedAgent = widget.agentType.toLowerCase();
+      final match = all.where((s) {
+        final sid = s.sessionId.trim();
+        if (sid.isEmpty || sid == _sessionId) return false;
+        final type = (s.agentType ?? '').toLowerCase().trim();
+        return type == normalizedAgent;
+      });
+
+      final resumable = match.isNotEmpty
+          ? match.first.sessionId
+          : (all.where((s) => s.sessionId.trim().isNotEmpty && s.sessionId != _sessionId).isNotEmpty
+              ? all.firstWhere((s) => s.sessionId.trim().isNotEmpty && s.sessionId != _sessionId).sessionId
+              : null);
+
+      if (!mounted) return;
+      setState(() => _resumableSessionId = resumable);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _resumableSessionId = null);
+    }
+  }
+
+  void _startLoadingHints() {
+    _loadingHintTimer?.cancel();
+    _loadingHintIndex = 0;
+    _loadingHint = _loadingHints.first;
+    _loadingHintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || !_isLoading) return;
+      setState(() {
+        _loadingHintIndex = (_loadingHintIndex + 1) % _loadingHints.length;
+        _loadingHint = _loadingHints[_loadingHintIndex];
+      });
+    });
+  }
+
+  void _stopLoadingHints() {
+    _loadingHintTimer?.cancel();
+    _loadingHintTimer = null;
+    _loadingHintIndex = 0;
+    _loadingHint = _loadingHints.first;
+  }
+
+  void _scrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  Future<void> _resumeLastSession() async {
+    final sid = _resumableSessionId;
+    if (sid == null || sid.isEmpty) return;
+    setState(() {
+      _sessionId = sid;
+      _messages.clear();
+      _resumableSessionId = null;
+    });
+    await _loadSession();
+  }
+
+  String _replySnippet(ChatMessage? msg) {
+    if (msg == null) return '';
+    final compact = msg.content.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.length <= 160) return compact;
+    return '${compact.substring(0, 157)}...';
+  }
+
+  String _buildPromptWithReplyContext(String message, String replySnippet) {
+    final cleanMessage = message.trim();
+    final cleanReply = replySnippet.trim();
+    if (cleanReply.isEmpty) return cleanMessage;
+    return [
+      'Referenced context from earlier chat:',
+      cleanReply,
+      '',
+      'Current question:',
+      cleanMessage,
+    ].join('\n');
+  }
+
+  Future<bool> _pollFinalizeAndRender(
+    AgentService agent,
+    String requestId,
+  ) async {
+    const maxAttempts = 8;
+    for (var i = 0; i < maxAttempts; i++) {
+      final payload = await agent.finalizeChat(
+        requestId: requestId,
+        timeoutSeconds: 4,
+      );
+      final status = (payload['status'] ?? '').toString().toLowerCase();
+
+      if (status == 'completed') {
+        final finalResult = (payload['result'] as Map<String, dynamic>?) ??
+            <String, dynamic>{};
+        final finalText = (payload['final_response'] ??
+                finalResult['response'] ??
+                finalResult['content'] ??
+                '')
+            .toString()
+            .trim();
+        final mergedText =
+            (payload['merged_response'] ?? '').toString().trim();
+
+        setState(() {
+          if (_messages.isNotEmpty && _messages.first.isLoading) {
+            _messages.removeAt(0);
+          }
+
+          if (finalText.isNotEmpty) {
+            _messages.insert(
+              0,
+              ChatMessage(
+                role: 'assistant',
+                content: finalText,
+                timestamp: DateTime.now(),
+                stage: 'final',
+              ),
+            );
+          }
+
+          if (mergedText.isNotEmpty && mergedText != finalText) {
+            _messages.insert(
+              0,
+              ChatMessage(
+                role: 'assistant',
+                content: mergedText,
+                timestamp: DateTime.now(),
+                stage: 'combined',
+              ),
+            );
+          }
+        });
+        return true;
+      }
+
+      if (status == 'failed') {
+        final err = (payload['error'] ?? 'Failed to finalize live response.')
+            .toString();
+        setState(() {
+          if (_messages.isNotEmpty && _messages.first.isLoading) {
+            _messages.removeAt(0);
+          }
+          _messages.insert(
+            0,
+            ChatMessage(
+              role: 'assistant',
+              content: err,
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _sendLegacyChat(
+    AgentService agent,
+    String outboundPrompt,
+  ) async {
+    final data = await agent.chat(
+      message: outboundPrompt,
+      language: context.locale.languageCode,
+      sessionId: _sessionId,
+      agentType: widget.agentType,
+    );
+    final response = ChatMessage.fromJson(data);
+    _sessionId ??= data['session_id'] as String?;
+
+    setState(() {
+      if (_messages.isNotEmpty && _messages.first.isLoading) {
+        _messages.removeAt(0);
+      }
+      _messages.insert(0, response);
+    });
+  }
+
   // ── Load existing session ──────────────────────────────
   Future<void> _loadSession() async {
-    if (_sessionId == null) return;
+    if (_sessionId == null || _sessionId!.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
     try {
@@ -97,10 +348,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ..addAll(msgs.reversed);
           _isLoading = false;
         });
+        _loadResumableSessionFromDb();
+        _scrollToLatest();
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _sessionId = null;
+        });
+        _loadResumableSessionFromDb();
         context.showSnack('chat.error'.tr(), isError: true);
       }
     }
@@ -111,33 +368,127 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
+    final replySnippet = _replySnippet(_replyTarget);
+    final outboundPrompt = _buildPromptWithReplyContext(text, replySnippet);
     _controller.clear();
 
     setState(() {
-      _messages.insert(0, ChatMessage.user(text));
-      _messages.insert(0, ChatMessage.loading());
+      _messages.insert(0, ChatMessage.user(text, replyToSnippet: replySnippet));
+      _messages.insert(0, ChatMessage.loading(stage: 'partial'));
+      _replyTarget = null;
       _isLoading = true;
     });
+    _loadingHint = 'Fetching quick snapshot...';
+    _startLoadingHints();
+    _scrollToLatest();
 
     try {
       final agent = ref.read(agentServiceProvider);
-      final data = await agent.chat(
-        message: text,
-        language: context.locale.languageCode,
-        sessionId: _sessionId,
-      );
+      if (text.toLowerCase().startsWith('/search ')) {
+        final query = text.substring(8).trim();
+        final data = await agent.search(query: query);
+        final results = (data['results'] as List?) ?? const [];
+        final lines = <String>[
+          'Search results for "$query":',
+          if (results.isEmpty) 'No relevant matches found.',
+        ];
 
-      final response = ChatMessage.fromJson(data);
+        for (final item in results.take(5)) {
+          if (item is Map<String, dynamic>) {
+            final title =
+                (item['title'] ?? item['source'] ?? item['id'] ?? 'Result')
+                    .toString();
+            final snippet =
+                (item['snippet'] ?? item['text'] ?? item['content'] ?? '')
+                    .toString()
+                    .trim();
+            lines.add('- $title${snippet.isNotEmpty ? ': $snippet' : ''}');
+          } else {
+            lines.add('- ${item.toString()}');
+          }
+        }
+
+        setState(() {
+          if (_messages.isNotEmpty && _messages.first.isLoading) {
+            _messages.removeAt(0);
+          }
+          _messages.insert(
+            0,
+            ChatMessage(
+              role: 'assistant',
+              content: lines.join('\n'),
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+      } else {
+        final prepare = await agent.prepareChat(
+          message: outboundPrompt,
+          language: context.locale.languageCode,
+          sessionId: _sessionId,
+          agentType: widget.agentType,
+          allowFallback: true,
+        );
+        _sessionId ??= (prepare['session_id'] as String?);
+
+        final partialText =
+            (prepare['partial_response'] ?? prepare['response'] ?? '')
+                .toString()
+                .trim();
+        if (_messages.isNotEmpty && _messages.first.isLoading) {
+          setState(() {
+            _messages.removeAt(0);
+          });
+        }
+        if (partialText.isNotEmpty) {
+          setState(() {
+            _messages.insert(
+              0,
+              ChatMessage(
+                role: 'assistant',
+                content: partialText,
+                timestamp: DateTime.now(),
+                stage: 'partial',
+                isPartial: true,
+              ),
+            );
+          });
+        }
+
+        final requestId = (prepare['request_id'] ?? '').toString().trim();
+        var completed = false;
+        if (requestId.isNotEmpty) {
+          setState(() {
+            _messages.insert(0, ChatMessage.loading(stage: 'live'));
+          });
+          _loadingHint = 'Fetching live updates...';
+          completed = await _pollFinalizeAndRender(agent, requestId);
+        }
+
+        if (!completed) {
+          await _sendLegacyChat(agent, outboundPrompt);
+          if (_messages.isNotEmpty && _messages.first.isLoading) {
+            setState(() {
+              _messages.removeAt(0);
+            });
+          }
+        }
+      }
 
       setState(() {
-        _messages.removeAt(0);
-        _messages.insert(0, response);
-        _sessionId ??= data['session_id'] as String?;
+        if (_messages.isNotEmpty && _messages.first.isLoading) {
+          _messages.removeAt(0);
+        }
         _isLoading = false;
       });
+      _stopLoadingHints();
+      _loadResumableSessionFromDb();
+      _scrollToLatest();
     } catch (e) {
       setState(() {
-        _messages.removeAt(0);
+        if (_messages.isNotEmpty && _messages.first.isLoading) {
+          _messages.removeAt(0);
+        }
         _messages.insert(
           0,
           ChatMessage(
@@ -148,6 +499,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
         _isLoading = false;
       });
+      _stopLoadingHints();
+      _loadResumableSessionFromDb();
+      _scrollToLatest();
     }
   }
 
@@ -197,7 +551,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     setState(() {
       _messages.clear();
       _sessionId = null;
+      _controller.clear();
+      _isLoading = false;
     });
+    _stopLoadingHints();
+    _loadResumableSessionFromDb();
   }
 
   Future<void> _toggleInlineMic() async {
@@ -297,6 +655,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _ChipInfo('Cattle', Icons.pets_outlined, AppColors.warning),
     _ChipInfo('Weather', Icons.cloud_outlined, AppColors.primary),
     _ChipInfo('Soil Moisture', Icons.water_drop_outlined, AppColors.primary),
+    _ChipInfo('Best Out of Waste', Icons.recycling_outlined, AppColors.success),
     _ChipInfo('Education & Finance', Icons.school_outlined, AppColors.success),
     _ChipInfo(
       'Document Builder',
@@ -316,24 +675,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     switch (text) {
       case 'Marketplace':
         context.push(RoutePaths.marketplace);
+        return;
       case 'Calendar':
         context.push(RoutePaths.calendar);
+        return;
       case 'Cattle':
         context.push(RoutePaths.cattle);
+        return;
       case 'Weather':
         context.push(RoutePaths.weather);
+        return;
       case 'Soil Moisture':
         context.push(RoutePaths.soilMoisture);
+        return;
+      case 'Best Out of Waste':
+        context.push(RoutePaths.waste);
+        return;
       case 'Education & Finance':
         context.push(RoutePaths.upi);
+        return;
       case 'Document Builder':
         context.push(RoutePaths.documents);
+        return;
       case 'Crop Doctor':
         context.push(RoutePaths.cropDoctor);
+        return;
       case 'Equipment Rental':
         context.push(RoutePaths.rental);
+        return;
       case 'Mental Health':
         context.push(RoutePaths.mentalHealth);
+        return;
     }
   }
 
@@ -356,7 +728,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Weather & Soil'),
+        title: Text(_chatTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_comment_outlined),
@@ -392,17 +764,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       reverse: true,
                       padding: AppSpacing.allLg,
                       itemCount: _messages.length,
-                      itemBuilder: (_, i) => _ChatBubble(
-                        message: _messages[i],
+                      itemBuilder: (_, i) {
+                      final msg = _messages[i];
+                      final keySeed = msg.messageId ??
+                        '${msg.timestamp.microsecondsSinceEpoch}-${msg.role}-${msg.content.hashCode}';
+                      return _ChatBubble(
+                        key: ValueKey(keySeed),
+                        message: msg,
+                        loadingText: _loadingHint,
                         isPlaying:
-                            _playingMessageId ==
-                            (_messages[i].messageId ??
-                                _messages[i].content.hashCode.toString()),
-                        onTts:
-                            _messages[i].isAssistant && !_messages[i].isLoading
-                            ? () => _playTts(_messages[i])
-                            : null,
-                      ),
+                          _playingMessageId ==
+                          (msg.messageId ?? msg.content.hashCode.toString()),
+                        onTts: msg.isAssistant && !msg.isLoading
+                          ? () => _playTts(msg)
+                          : null,
+                        onReply: msg.isLoading
+                          ? null
+                          : () {
+                            setState(() => _replyTarget = msg);
+                                  context.showSnack('Reply target selected');
+                          },
+                      );
+                      },
                     )
                   : Center(
                       child: SingleChildScrollView(
@@ -413,6 +796,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (_resumableSessionId != null &&
+                                _resumableSessionId!.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.08)
+                                      : Colors.white.withValues(alpha: 0.56),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.18)
+                                        : Colors.white.withValues(alpha: 0.8),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isDark ? Colors.black : AppColors.primaryDark)
+                                          .withValues(alpha: isDark ? 0.22 : 0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.history,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Resume your previous chat session',
+                                        style: context.textTheme.bodyMedium,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _resumeLastSession,
+                                      child: const Text('Resume'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             // ── Heading ──
                             Text(
                               'What can I help with?',
@@ -487,6 +918,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               controller: _controller,
               isLoading: _isLoading,
               hasText: _hasText,
+              replySnippet: _replySnippet(_replyTarget),
+              onClearReply: _replyTarget == null
+                  ? null
+                  : () {
+                      setState(() => _replyTarget = null);
+                    },
               onSend: _send,
               onAdd: () => _showAddOptionsSheet(context),
               onMic: _toggleInlineMic,
@@ -515,101 +952,234 @@ class _ChipInfo {
 
 class _ChatBubble extends StatelessWidget {
   final ChatMessage message;
+  final String loadingText;
   final bool isPlaying;
   final VoidCallback? onTts;
+  final VoidCallback? onReply;
 
   const _ChatBubble({
+    super.key,
     required this.message,
+    this.loadingText = 'Searching...',
     this.isPlaying = false,
     this.onTts,
+    this.onReply,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (message.isLoading) return const _TypingIndicator();
+    if (message.isLoading) return _TypingIndicator(text: loadingText);
 
     final isUser = message.isUser;
+    final isDark = context.isDark;
+    final userBg = isDark
+        ? const Color(0xFF233146).withValues(alpha: 0.86)
+        : const Color(0xFFDDE7F7).withValues(alpha: 0.94);
+    final assistantBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.white.withValues(alpha: 0.42);
+    final replyText = (message.replyToSnippet ?? '').trim();
+    final shouldAnimateTyping =
+        !isUser && DateTime.now().difference(message.timestamp).inSeconds <= 15;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
-        ),
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : context.appColors.card,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(AppRadius.md),
-            topRight: const Radius.circular(AppRadius.md),
-            bottomLeft: Radius.circular(isUser ? AppRadius.md : 0),
-            bottomRight: Radius.circular(isUser ? 0 : AppRadius.md),
+      child: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          if (onReply == null) return;
+          final vx = details.primaryVelocity ?? 0;
+          if (vx.abs() > 260) onReply!.call();
+        },
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.82,
           ),
-          border: isUser
-              ? null
-              : Border.all(color: context.appColors.border, width: 0.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isUser)
-              Text(
-                message.content,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: isUser ? userBg : assistantBg,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.md),
+              topRight: const Radius.circular(AppRadius.md),
+              bottomLeft: Radius.circular(isUser ? AppRadius.md : 0),
+              bottomRight: Radius.circular(isUser ? 0 : AppRadius.md),
+            ),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.88),
+              width: 0.9,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (replyText.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.58),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.16)
+                          : Colors.white.withValues(alpha: 0.86),
+                    ),
+                  ),
+                  child: Text(
+                    replyText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.appColors.textSecondary,
+                    ),
+                  ),
                 ),
-              )
-            else
-              MarkdownBody(
-                data: message.content,
-                styleSheet: MarkdownStyleSheet.fromTheme(
-                  context.theme,
-                ).copyWith(p: context.textTheme.bodyMedium),
-              ),
-            // TTS + Copy row for assistant messages
-            if (!isUser) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (onTts != null)
+              ],
+              if (isUser)
+                Text(
+                  message.content,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? Colors.white : const Color(0xFF1C2430),
+                    fontWeight: FontWeight.w500,
+                  ),
+                )
+              else
+                _TypewriterMarkdown(
+                  text: message.content,
+                  animate: shouldAnimateTyping,
+                ),
+              if (!isUser) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onTts != null)
+                      InkWell(
+                        onTap: onTts,
+                        borderRadius: AppRadius.smAll,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            isPlaying
+                                ? Icons.stop_circle_outlined
+                                : Icons.volume_up_outlined,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.sm),
                     InkWell(
-                      onTap: onTts,
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: message.content));
+                        context.showSnack('chat.copied'.tr());
+                      },
                       borderRadius: AppRadius.smAll,
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: Icon(
-                          isPlaying
-                              ? Icons.stop_circle_outlined
-                              : Icons.volume_up_outlined,
-                          size: 18,
-                          color: AppColors.primary,
+                          Icons.copy_outlined,
+                          size: 16,
+                          color: context.appColors.textSecondary,
                         ),
                       ),
                     ),
-                  const SizedBox(width: AppSpacing.sm),
-                  InkWell(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: message.content));
-                      context.showSnack('chat.copied'.tr());
-                    },
-                    borderRadius: AppRadius.smAll,
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.copy_outlined,
-                        size: 16,
-                        color: context.appColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _TypewriterMarkdown extends StatefulWidget {
+  final String text;
+  final bool animate;
+
+  const _TypewriterMarkdown({required this.text, required this.animate});
+
+  @override
+  State<_TypewriterMarkdown> createState() => _TypewriterMarkdownState();
+}
+
+class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
+  Timer? _timer;
+  int _visibleChars = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _restartAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TypewriterMarkdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || oldWidget.animate != widget.animate) {
+      _restartAnimation();
+    }
+  }
+
+  void _restartAnimation() {
+    _timer?.cancel();
+
+    final text = widget.text;
+    if (text.isEmpty) {
+      setState(() => _visibleChars = 0);
+      return;
+    }
+
+    if (!widget.animate) {
+      setState(() => _visibleChars = text.length);
+      return;
+    }
+
+    int step = (text.length / 90).ceil();
+    if (step < 1) step = 1;
+    if (step > 8) step = 8;
+
+    setState(() => _visibleChars = 1);
+    _timer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final next = _visibleChars + step;
+      if (next >= text.length) {
+        setState(() => _visibleChars = text.length);
+        timer.cancel();
+      } else {
+        setState(() => _visibleChars = next);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fullText = widget.text;
+    final shown = (widget.animate && _visibleChars < fullText.length)
+        ? fullText.substring(0, _visibleChars)
+        : fullText;
+
+    return MarkdownBody(
+      data: shown,
+      styleSheet: MarkdownStyleSheet.fromTheme(
+        context.theme,
+      ).copyWith(p: context.textTheme.bodyMedium),
     );
   }
 }
@@ -617,7 +1187,9 @@ class _ChatBubble extends StatelessWidget {
 // ── Typing indicator ─────────────────────────────────────
 
 class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
+  final String text;
+
+  const _TypingIndicator({required this.text});
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
@@ -658,7 +1230,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'chat.typing'.tr(),
+              widget.text,
               style: context.textTheme.bodySmall?.copyWith(
                 color: context.appColors.textSecondary,
               ),
@@ -704,6 +1276,8 @@ class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isLoading;
   final bool hasText;
+  final String replySnippet;
+  final VoidCallback? onClearReply;
   final bool isMicRecording;
   final bool isMicProcessing;
   final int micWavePhase;
@@ -716,6 +1290,8 @@ class _ChatInputBar extends StatelessWidget {
     required this.controller,
     required this.isLoading,
     required this.hasText,
+    required this.replySnippet,
+    this.onClearReply,
     required this.isMicRecording,
     required this.isMicProcessing,
     required this.micWavePhase,
@@ -728,6 +1304,7 @@ class _ChatInputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMicBusy = isMicRecording || isMicProcessing;
+    final hasReply = replySnippet.trim().isNotEmpty;
 
     return Container(
       color: Colors.transparent,
@@ -740,136 +1317,195 @@ class _ChatInputBar extends StatelessWidget {
                 ? Colors.white.withValues(alpha: 0.08)
                 : Colors.white.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: context.isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.9),
+            ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: onAdd,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
+              if (hasReply)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+                  decoration: BoxDecoration(
+                    color: context.isDark
+                        ? Colors.white.withValues(alpha: 0.09)
+                        : Colors.white.withValues(alpha: 0.62),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: context.isDark
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : Colors.white.withValues(alpha: 0.9),
+                    ),
                   ),
-                  child: Icon(
-                    Icons.add,
-                    size: 20,
-                    color: context.isDark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: isMicBusy
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isMicProcessing
-                                  ? Icons.hourglass_top_rounded
-                                  : Icons.graphic_eq,
-                              size: 18,
-                              color: context.appColors.textSecondary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isMicProcessing
-                                  ? 'Processing...'
-                                  : 'Listening...',
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: context.appColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (isMicRecording) ...[
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _InlineMicWave(phase: micWavePhase),
-                              ),
-                            ],
-                          ],
-                        ),
-                      )
-                    : TextField(
-                        controller: controller,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => onSend(),
-                        maxLines: 5,
-                        minLines: 1,
-                        style: context.textTheme.bodyMedium,
-                        decoration: InputDecoration(
-                          hintText: 'chat.input_hint'.tr(),
-                          hintStyle: context.textTheme.bodyMedium?.copyWith(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.reply,
+                        size: 15,
+                        color: context.appColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          replySnippet,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.textTheme.bodySmall?.copyWith(
                             color: context.appColors.textSecondary,
                           ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 12,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: onClearReply,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: context.appColors.textSecondary,
                           ),
                         ),
                       ),
-              ),
-              GestureDetector(
-                onTap: onMic,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                  child: Icon(
-                    isMicRecording ? Icons.close : Icons.mic_none_outlined,
-                    size: 20,
-                    color: context.isDark ? Colors.white70 : Colors.black54,
+                    ],
                   ),
                 ),
-              ),
-              if (!isMicBusy)
-                GestureDetector(
-                  onTap: onLiveVoice,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    child: Icon(
-                      Icons.graphic_eq,
-                      size: 20,
-                      color: context.isDark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                ),
-              if (hasText && !isMicBusy)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6, bottom: 3),
-                  child: GestureDetector(
-                    onTap: isLoading ? null : onSend,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isLoading
-                            ? AppColors.primary.withValues(alpha: 0.4)
-                            : AppColors.primary,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: onAdd,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
                       ),
-                      child: const Icon(
-                        Icons.arrow_upward,
-                        color: Colors.white,
-                        size: 18,
+                      child: Icon(
+                        Icons.add,
+                        size: 20,
+                        color: context.isDark ? Colors.white70 : Colors.black54,
                       ),
                     ),
                   ),
-                )
-              else
-                const SizedBox(width: 4),
+                  Expanded(
+                    child: isMicBusy
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isMicProcessing
+                                      ? Icons.hourglass_top_rounded
+                                      : Icons.graphic_eq,
+                                  size: 18,
+                                  color: context.appColors.textSecondary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  isMicProcessing
+                                      ? 'Processing...'
+                                      : 'Listening...',
+                                  style: context.textTheme.bodyMedium?.copyWith(
+                                    color: context.appColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (isMicRecording) ...[
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _InlineMicWave(phase: micWavePhase),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          )
+                        : TextField(
+                            controller: controller,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => onSend(),
+                            maxLines: 5,
+                            minLines: 1,
+                            style: context.textTheme.bodyMedium,
+                            decoration: InputDecoration(
+                              hintText: 'chat.input_hint'.tr(),
+                              hintStyle: context.textTheme.bodyMedium?.copyWith(
+                                color: context.appColors.textSecondary,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                  ),
+                  GestureDetector(
+                    onTap: onMic,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      child: Icon(
+                        isMicRecording ? Icons.close : Icons.mic_none_outlined,
+                        size: 20,
+                        color: context.isDark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ),
+                  if (!isMicBusy)
+                    GestureDetector(
+                      onTap: onLiveVoice,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        child: Icon(
+                          Icons.graphic_eq,
+                          size: 20,
+                          color: context.isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  if (hasText && !isMicBusy)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6, bottom: 3),
+                      child: GestureDetector(
+                        onTap: isLoading ? null : onSend,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isLoading
+                                ? AppColors.primary.withValues(alpha: 0.4)
+                                : AppColors.primary,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 4),
+                ],
+              ),
             ],
           ),
         ),
@@ -909,15 +1545,28 @@ class _InlineMicWave extends StatelessWidget {
 class _AttachmentAction {
   final String label;
   final IconData icon;
-  const _AttachmentAction(this.label, this.icon);
+  final String route;
+  const _AttachmentAction(this.label, this.icon, this.route);
 }
 
 Future<void> _showAddOptionsSheet(BuildContext context) async {
   final isDark = context.isDark;
   final actions = const <_AttachmentAction>[
-    _AttachmentAction('Camera', Icons.photo_camera_outlined),
-    _AttachmentAction('Photos', Icons.photo_library_outlined),
-    _AttachmentAction('Files', Icons.insert_drive_file_outlined),
+    _AttachmentAction(
+      'Camera',
+      Icons.photo_camera_outlined,
+      RoutePaths.cropDoctor,
+    ),
+    _AttachmentAction(
+      'Photos',
+      Icons.photo_library_outlined,
+      RoutePaths.cropDoctor,
+    ),
+    _AttachmentAction(
+      'Files',
+      Icons.insert_drive_file_outlined,
+      RoutePaths.documents,
+    ),
   ];
 
   await showModalBottomSheet<void>(
@@ -959,7 +1608,10 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
                         borderRadius: BorderRadius.circular(14),
                         onTap: () {
                           Navigator.of(sheetContext).pop();
-                          context.showSnack('${action.label} coming soon');
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!context.mounted) return;
+                            context.push(action.route);
+                          });
                         },
                         child: Container(
                           height: 88,

@@ -2,10 +2,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
@@ -115,7 +117,12 @@ class _SpeechToTextScreenState extends ConsumerState<SpeechToTextScreen> {
 
   void _useInChat() {
     if (_transcript.isEmpty) return;
-    Navigator.of(context).pop(_transcript);
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(_transcript);
+      return;
+    }
+    final encoded = Uri.encodeQueryComponent(_transcript);
+    context.push('${RoutePaths.chat}?agent=general&q=$encoded');
   }
 
   void _clear() {

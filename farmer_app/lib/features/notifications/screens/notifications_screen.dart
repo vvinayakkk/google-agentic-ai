@@ -133,6 +133,48 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
+  Future<void> _openNotification(int index) async {
+    final n = _notifications![index];
+    await _markRead(index);
+
+    try {
+      final detail =
+          await ref.read(notificationServiceProvider).getById(n.notificationId);
+      if (!mounted) return;
+
+      final title = (detail['title'] ?? n.title).toString();
+      final body =
+          (detail['body'] ?? detail['message'] ?? n.body).toString().trim();
+
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: context.appColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: context.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(body, style: context.textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      // keep list interaction resilient even when detail fetch fails
+    }
+  }
+
   IconData _iconForType(String? type) {
     switch (type) {
       case 'weather':
@@ -269,7 +311,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                     onDismissed: (_) =>
                                         _deleteNotification(index),
                                     child: AppCard(
-                                      onTap: () => _markRead(index),
+                                      onTap: () => _openNotification(index),
                                       child: Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,

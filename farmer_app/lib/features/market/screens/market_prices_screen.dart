@@ -5,12 +5,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/services/agent_service.dart';
+import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/live_market_service.dart';
 import '../../../shared/services/market_service.dart';
+import '../../../shared/services/personalization_service.dart';
 
 class MarketPricesScreen extends ConsumerStatefulWidget {
   const MarketPricesScreen({super.key});
@@ -37,9 +41,21 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   bool _loading = true;
   String? _error;
   bool _aiExpanded = false;
+  bool _aiLoading = false;
+  bool _aiGenerated = false;
   _MarketSection _activeSection = _MarketSection.prices;
   String _stateFilter = '';
   String? _selectedCrop;
+  String _aiSummary = 'Generate AI overview for personalized market insights.';
+  String _aiDetails =
+      'Uses your farmer profile, location, and nearby market records. Cached for 24 hours.';
+  DateTime? _aiUpdatedAt;
+  Map<String, dynamic> _profile = <String, dynamic>{};
+
+  List<String> _stateSuggestions = <String>[];
+  List<String> _commoditySuggestions = <String>[];
+  String? _mspInsight;
+  String? _allIndiaInsight;
 
   List<Map<String, dynamic>> _prices = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _mandis = <Map<String, dynamic>>[];
@@ -49,6 +65,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   void initState() {
     super.initState();
     _loadMarketplaceData();
+    _loadCachedAiOverview();
   }
 
   @override
@@ -70,12 +87,30 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
     final prices = await _safeLoad(
       action: () async {
-        final res = await ref.read(marketServiceProvider).listPrices(
+        final marketSvc = ref.read(marketServiceProvider);
+        final liveSvc = ref.read(liveMarketServiceProvider);
+
+        final res = await marketSvc.listPrices(
               crop: _selectedCrop,
               state: _stateFilter.isEmpty ? null : _stateFilter,
               perPage: 100,
             );
-        final items = _extractItems(res, keys: const <String>['items', 'prices', 'data']);
+        var items = _extractItems(
+          res,
+          keys: const <String>['items', 'prices', 'data'],
+        );
+
+        if (items.isEmpty) {
+          final liveRes = await liveSvc.getLivePrices(
+            state: _stateFilter.isEmpty ? null : _stateFilter,
+            commodity: _selectedCrop,
+            limit: 120,
+          );
+          items = _extractItems(
+            liveRes,
+            keys: const <String>['items', 'prices', 'records', 'data'],
+          );
+        }
         return _dedupePrices(items);
       },
       onError: (e) => loadError ??= _prettyError(e),
@@ -85,7 +120,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       action: () async {
         final res = await ref.read(marketServiceProvider).listMandis(
               state: _stateFilter.isEmpty ? null : _stateFilter,
-              perPage: 150,
+              perPage: 100,
             );
         final items = _extractItems(res, keys: const <String>['items', 'mandis', 'data']);
         if (items.isNotEmpty) return _dedupeMandis(items);
@@ -111,16 +146,218 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       onError: (e) => loadError ??= _prettyError(e),
     );
 
+    List<String> stateSuggestions = _stateSuggestions;
+    List<String> commoditySuggestions = _commoditySuggestions;
+    String? mspInsight = _mspInsight;
+    String? allIndiaInsight = _allIndiaInsight;
+
+    final liveSvc = ref.read(liveMarketServiceProvider);
+    try {
+      stateSuggestions = await liveSvc.getStates();
+    } catch (_) {
+      // non-blocking metadata
+    }
+    try {
+      commoditySuggestions = await liveSvc.getCommodities();
+    } catch (_) {
+      // non-blocking metadata
+    }
+
+    if (_selectedCrop != null && _selectedCrop!.trim().isNotEmpty) {
+      final selected = _selectedCrop!.trim();
+      try {
+        final mspData = await liveSvc.getMsp(selected);
+        mspInsight = _extractMspInsight(mspData, selected);
+      } catch (_) {
+        mspInsight = null;
+      }
+      try {
+        final spreadData = await liveSvc.getAllIndiaPrices(selected, limit: 250);
+        allIndiaInsight = _extractAllIndiaInsight(spreadData, selected);
+      } catch (_) {
+        allIndiaInsight = null;
+      }
+    } else {
+      try {
+        final allMsp = await liveSvc.getAllMsp();
+        mspInsight = _extractAllMspInsight(allMsp);
+      } catch (_) {
+        mspInsight = null;
+      }
+      allIndiaInsight = null;
+    }
+
+    final profile = await ref.read(personalizationServiceProvider).getProfileContext();
+
     if (!mounted) return;
     setState(() {
       _prices = prices;
       _mandis = resolvedMandis;
       _listings = listings;
+      _stateSuggestions = stateSuggestions;
+      _commoditySuggestions = commoditySuggestions;
+      _mspInsight = mspInsight;
+      _allIndiaInsight = allIndiaInsight;
+      _profile = profile;
       _error = (_prices.isEmpty && _mandis.isEmpty && _listings.isEmpty)
           ? loadError
           : null;
       _loading = false;
     });
+  }
+
+  Future<void> _loadCachedAiOverview() async {
+    final cached = await ref.read(aiOverviewServiceProvider).getCached('marketplace_overview_v1');
+    if (!mounted || cached == null) return;
+    setState(() {
+      _aiSummary = cached.summary;
+      _aiDetails = cached.details;
+      _aiUpdatedAt = cached.updatedAt;
+      _aiGenerated = true;
+    });
+  }
+
+  String _aiUpdatedLabel() {
+    final dt = _aiUpdatedAt;
+    if (dt == null) return 'Not generated yet';
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return 'Updated at $hh:$mm';
+  }
+
+  Future<void> _generateAiOverview({bool forceRefresh = true}) async {
+    if (_aiLoading) return;
+    setState(() => _aiLoading = true);
+    try {
+      final personalization = ref.read(personalizationServiceProvider);
+      final profile = _profile.isEmpty
+          ? await personalization.getProfileContext()
+          : _profile;
+
+      List<String> snippetsFrom(List<Map<String, dynamic>> items, String Function(Map<String, dynamic>) build) {
+        final nearby = personalization.sortNearby(profile: profile, items: items).take(4);
+        return nearby.map(build).toList(growable: false);
+      }
+
+      final snippets = <String>[
+        ...snippetsFrom(_prices, (item) {
+          final crop = (item['crop_name'] ?? item['commodity'] ?? '').toString();
+          final mandi = (item['mandi_name'] ?? item['market'] ?? '').toString();
+          final district = (item['district'] ?? '').toString();
+          final modal = (item['modal_price'] ?? '').toString();
+          return '$crop at $mandi, $district modal price $modal';
+        }),
+        ...snippetsFrom(_mandis, (item) {
+          final name = (item['name'] ?? item['mandi_name'] ?? '').toString();
+          final district = (item['district'] ?? '').toString();
+          final state = (item['state'] ?? '').toString();
+          return 'Mandi: $name in $district, $state';
+        }),
+        ...snippetsFrom(_listings, (item) {
+          final name = (item['name'] ?? '').toString();
+          final location = (item['location'] ?? '').toString();
+          final rate = (item['rate_per_day'] ?? item['rate_per_hour'] ?? '').toString();
+          return 'Equipment listing: $name at $location rate $rate';
+        }),
+        if (_mspInsight != null) _mspInsight!,
+        if (_allIndiaInsight != null) _allIndiaInsight!,
+      ];
+
+      final result = await ref.read(aiOverviewServiceProvider).generate(
+            key: 'marketplace_overview_v1',
+            pageName: 'Marketplace',
+            languageCode: Localizations.localeOf(context).languageCode,
+            nearbyData: snippets,
+            forceRefresh: forceRefresh,
+          );
+
+      if (!mounted) return;
+      setState(() {
+        _aiSummary = result.summary;
+        _aiDetails = result.details;
+        _aiUpdatedAt = result.updatedAt;
+        _aiGenerated = true;
+        _aiLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _aiLoading = false);
+      context.showSnack(_prettyError(e), isError: true);
+    }
+  }
+
+  Future<void> _refreshAiOverview({
+    required List<Map<String, dynamic>> prices,
+    required List<Map<String, dynamic>> mandis,
+    required List<Map<String, dynamic>> listings,
+    String? mspInsight,
+    String? allIndiaInsight,
+  }) async {
+    final commodity = _selectedCrop?.trim().isNotEmpty == true
+        ? _selectedCrop!.trim()
+        : ((prices.isNotEmpty
+            ? (prices.first['commodity'] ?? prices.first['crop'])
+            : null)
+                ?.toString()
+                .trim());
+
+    final fallbackSummary =
+        'Tracked ${prices.length} price points across ${mandis.length} mandis'
+        '${commodity != null && commodity.isNotEmpty ? ' for $commodity' : ''}.';
+    final fallbackDetails =
+        '${mspInsight ?? 'MSP trend is being monitored in real-time.'} '
+        '${allIndiaInsight ?? 'Compare nearby mandi spreads and dispatch where modal realization is stronger after transport costs.'} '
+        'Active listings: ${listings.length}.';
+
+    if (mounted) {
+      setState(() {
+        _aiLoading = true;
+        _aiSummary = fallbackSummary;
+        _aiDetails = fallbackDetails;
+      });
+    }
+
+    try {
+      final response = await ref.read(agentServiceProvider).chat(
+            message:
+                'Create a concise farmer-friendly market brief using this snapshot. '
+                'State: ${_stateFilter.isEmpty ? 'all states' : _stateFilter}. '
+                'Commodity focus: ${commodity ?? 'mixed crops'}. '
+                'Prices tracked: ${prices.length}. Mandis tracked: ${mandis.length}. '
+                'Equipment listings: ${listings.length}. '
+                'MSP insight: ${mspInsight ?? 'not available'}. '
+                'All-India spread insight: ${allIndiaInsight ?? 'not available'}. '
+                'Return 2 lines only: first line short summary (max 20 words), second line practical action advice (max 55 words).',
+            language: Localizations.localeOf(context).languageCode,
+          );
+
+      final text = (response['response'] ?? '').toString().trim();
+      if (text.isEmpty || !mounted) {
+        if (mounted) {
+          setState(() => _aiLoading = false);
+        }
+        return;
+      }
+
+      final lines = text
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList(growable: false);
+
+      final summary = lines.isNotEmpty ? lines.first : fallbackSummary;
+      final details = lines.length > 1 ? lines.sublist(1).join(' ') : fallbackDetails;
+
+      if (!mounted) return;
+      setState(() {
+        _aiSummary = summary;
+        _aiDetails = details;
+        _aiLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _aiLoading = false);
+    }
   }
 
   Future<List<Map<String, dynamic>>> _safeLoad({
@@ -182,6 +419,122 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
+  }
+
+  double? _firstNumeric(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    if (value is Map) {
+      for (final item in value.values) {
+        final parsed = _firstNumeric(item);
+        if (parsed != null) return parsed;
+      }
+    }
+    if (value is List) {
+      for (final item in value) {
+        final parsed = _firstNumeric(item);
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
+  }
+
+  String? _extractMspInsight(Map<String, dynamic> data, String crop) {
+    final msp =
+        _firstNumeric(data['msp']) ?? _firstNumeric(data['price']) ?? _firstNumeric(data);
+    if (msp == null) return null;
+    return 'MSP for $crop: ${msp.inr} per quintal.';
+  }
+
+  String? _extractAllMspInsight(Map<String, dynamic> data) {
+    final list = _extractItems(
+      data,
+      keys: const <String>['items', 'msp', 'prices', 'data'],
+    );
+    if (list.isNotEmpty) {
+      return 'MSP directory synced for ${list.length} crops.';
+    }
+    final mspMap = data['msp'];
+    if (mspMap is Map) {
+      return 'MSP directory synced for ${mspMap.length} crops.';
+    }
+    return null;
+  }
+
+  String? _extractAllIndiaInsight(Map<String, dynamic> data, String crop) {
+    final items = _extractItems(
+      data,
+      keys: const <String>['items', 'prices', 'records', 'data'],
+    );
+    if (items.isEmpty) return null;
+
+    final modalValues = items
+        .map((item) => _toDouble(item['modal_price']))
+        .whereType<double>()
+        .toList();
+    if (modalValues.isEmpty) {
+      return '$crop has ${items.length} live market records today.';
+    }
+
+    final sum = modalValues.fold<double>(0, (a, b) => a + b);
+    final avg = sum / modalValues.length;
+    return '$crop avg modal price across ${modalValues.length} markets: ${avg.inr}.';
+  }
+
+  int? _extractEligibleCount(Map<String, dynamic> data) {
+    final direct = data['eligible_count'];
+    if (direct is int) return direct;
+    if (direct is String) return int.tryParse(direct);
+
+    final list = data['eligible_schemes'];
+    if (list is List) return list.length;
+    return null;
+  }
+
+  Future<void> _showSchemeDetails(Map<String, dynamic> scheme) async {
+    final id =
+        (scheme['id'] ?? scheme['scheme_id'] ?? scheme['slug'])?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    try {
+      final data = await ref.read(marketServiceProvider).getSchemeById(id);
+      if (!mounted) return;
+      final title = (data['title'] ?? data['name'] ?? scheme['title'] ?? 'Scheme')
+          .toString();
+      final description =
+          (data['description'] ?? data['summary'] ?? data['details'] ?? 'No details available.')
+              .toString();
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(description, style: context.textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) context.showSnack(_prettyError(e), isError: true);
+    }
   }
 
   List<Map<String, dynamic>> _extractItems(
@@ -337,10 +690,25 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
-    final iconBg = Colors.white.withValues(alpha: 0.56);
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.72)
+      : Colors.white.withValues(alpha: 0.74);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final iconBg = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.92)
+      : Colors.white.withValues(alpha: 0.88);
+    final cropOptions = (_commoditySuggestions.isEmpty ? _cropChips : _commoditySuggestions)
+        .take(12)
+        .toList(growable: false);
+    final stateHints = _stateSuggestions
+        .where((state) {
+          final input = _stateController.text.trim().toLowerCase();
+          if (input.isEmpty) return true;
+          return state.toLowerCase().contains(input);
+        })
+        .take(6)
+        .toList(growable: false);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
@@ -349,171 +717,259 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: isDark
-                ? <Color>[AppColors.darkBackground, AppColors.darkSurface]
-                : <Color>[AppColors.lightBackground, AppColors.lightSurface],
+                ? <Color>[AppColors.darkBackground, AppColors.darkSurface, AppColors.darkBackground]
+                : <Color>[AppColors.lightBackground, AppColors.lightSurface, AppColors.lightBackground],
           ),
         ),
         child: SafeArea(
           bottom: false,
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                child: SizedBox(
-                  height: 48,
-                  child: Stack(
-                    alignment: Alignment.center,
+          child: RefreshIndicator(
+            onRefresh: () => _loadMarketplaceData(showLoader: false),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                  child: Row(
                     children: <Widget>[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _topAction(
-                          icon: Icons.arrow_back_rounded,
-                          color: AppColors.primaryDark,
-                          background: iconBg,
-                          onTap: () => Navigator.of(context).maybePop(),
-                        ),
+                      _topAction(
+                        icon: Icons.arrow_back_rounded,
+                        color: AppColors.primaryDark,
+                        background: iconBg,
+                        onTap: () => Navigator.of(context).maybePop(),
                       ),
-                      Text(
-                        'Marketplace',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w700,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            Text(
+                              'Market Intelligence',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                             ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: _topAction(
-                          icon: Icons.refresh_rounded,
-                          color: AppColors.primaryDark,
-                          background: iconBg,
-                          onTap: _loadMarketplaceData,
+                            Text(
+                              'Live prices, mandi network, and listing control',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: subColor,
+                                  ),
+                            ),
+                          ],
                         ),
+                      ),
+                      _topAction(
+                        icon: Icons.refresh_rounded,
+                        color: AppColors.primaryDark,
+                        background: iconBg,
+                        onTap: () => _loadMarketplaceData(showLoader: false),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              _aiOverviewCard(cardColor: cardColor, textColor: textColor, subColor: subColor),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: cardColor,
-                    hintText: 'Search prices, mandis, and your listings',
-                    hintStyle: TextStyle(color: subColor),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: AppColors.primaryDark,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide:
-                          BorderSide(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide:
-                          BorderSide(color: Colors.white.withValues(alpha: 0.8)),
+                const SizedBox(height: AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: _glassCard(
+                    cardColor: cardColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Marketplace Overview',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Aligned with your state, selected crop, and nearby records.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subColor),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.xs,
+                          children: <Widget>[
+                            _headerBadge('Prices ${_prices.length}'),
+                            _headerBadge('Mandis ${_mandis.length}'),
+                            _headerBadge('Listings ${_listings.length}'),
+                            if (_stateFilter.trim().isNotEmpty) _headerBadge('State $_stateFilter'),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 48,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _cropChips.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, index) {
-                    final crop = _cropChips[index];
-                    final selected = crop == _selectedCrop;
-                    return FilterChip(
-                      label: Text(crop),
-                      selected: selected,
-                      onSelected: (_) => _toggleCrop(crop),
-                      backgroundColor: cardColor,
-                      selectedColor: AppColors.primary.withValues(alpha: 0.22),
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.8)),
-                      checkmarkColor: AppColors.primaryDark,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        controller: _stateController,
-                        onSubmitted: (_) => _applyStateFilter(),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: cardColor,
-                          hintText: 'State filter (optional)',
-                          hintStyle: TextStyle(color: subColor),
-                          prefixIcon: const Icon(
-                            Icons.location_on_outlined,
-                            color: AppColors.primaryDark,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.8)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.8)),
+                const SizedBox(height: AppSpacing.md),
+                _aiOverviewCard(cardColor: cardColor, textColor: textColor, subColor: subColor),
+                if ((_mspInsight != null && _mspInsight!.isNotEmpty) ||
+                    (_allIndiaInsight != null && _allIndiaInsight!.isNotEmpty)) ...<Widget>[
+                  const SizedBox(height: AppSpacing.sm),
+                  _marketInsightsCard(
+                    cardColor: cardColor,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: _glassCard(
+                    cardColor: cardColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurface.withValues(alpha: 0.8)
+                                : Colors.white.withValues(alpha: 0.92),
+                            hintText: 'Search prices, mandis, and listings',
+                            hintStyle: TextStyle(color: subColor),
+                            prefixIcon: const Icon(Icons.search, color: AppColors.primaryDark),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(
+                          height: 44,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: cropOptions.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+                            itemBuilder: (_, index) {
+                              final crop = cropOptions[index];
+                              final selected = crop == _selectedCrop;
+                              return FilterChip(
+                                label: Text(crop),
+                                selected: selected,
+                                onSelected: (_) => _toggleCrop(crop),
+                                backgroundColor: isDark
+                                    ? AppColors.darkSurface.withValues(alpha: 0.7)
+                                    : Colors.white.withValues(alpha: 0.84),
+                                selectedColor: AppColors.primary.withValues(alpha: 0.24),
+                                side: BorderSide(color: Colors.white.withValues(alpha: 0.72)),
+                                checkmarkColor: AppColors.primaryDark,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextField(
+                                controller: _stateController,
+                                onSubmitted: (_) => _applyStateFilter(),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? AppColors.darkSurface.withValues(alpha: 0.8)
+                                      : Colors.white.withValues(alpha: 0.92),
+                                  hintText: 'State filter (optional)',
+                                  hintStyle: TextStyle(color: subColor),
+                                  prefixIcon: const Icon(
+                                    Icons.location_on_outlined,
+                                    color: AppColors.primaryDark,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            SizedBox(
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: _applyStateFilter,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.full),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Apply',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _applyStateFilter,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.85),
-                          foregroundColor: AppColors.lightText,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Apply',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _sectionTabs(cardColor: cardColor, textColor: textColor),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: _buildContent(cardColor: cardColor, textColor: textColor, subColor: subColor),
-              ),
-            ],
+                if (stateHints.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    height: 38,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: stateHints.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+                      itemBuilder: (_, index) {
+                        final state = stateHints[index];
+                        final active = _stateFilter.toLowerCase() == state.toLowerCase();
+                        return ChoiceChip(
+                          label: Text(state),
+                          selected: active,
+                          onSelected: (_) {
+                            _stateController.text = state;
+                            _applyStateFilter();
+                          },
+                          backgroundColor: cardColor,
+                          selectedColor: AppColors.primary.withValues(alpha: 0.24),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.75)),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: _sectionTabs(cardColor: cardColor, textColor: textColor),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: _buildContent(
+                    cardColor: cardColor,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -539,135 +995,172 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     );
   }
 
+  Widget _headerBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.26)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+
   Widget _aiOverviewCard({
     required Color cardColor,
     required Color textColor,
     required Color subColor,
   }) {
-    const summary =
-        'As of March 2026, mandi arrivals are stable while modal prices remain firm for key cereals. '
-        'Farmers in irrigated belts may hold produce for 5-7 days if local storage is available.';
-    const full =
-        'As of March 2026, mandi arrivals are stable while modal prices remain firm for key cereals. '
-        'Farmers in irrigated belts may hold produce for 5-7 days if local storage is available. '
-        'Cotton demand is healthy in ginning clusters, and soybean shows mixed signals due to uneven arrivals. '
-        'For farmers planning a sale this week: compare nearby mandi spread, check transport cost before dispatch, '
-        'and prioritize modal-price markets with lower wait time for auction unloading.';
-
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-  borderRadius: BorderRadius.circular(20),
-
-  // 🔹 subtle gradient border feel
-  border: Border.all(
-    color: Colors.white.withValues(alpha: 0.5),
-    width: 1,
-  ),
-
-  // 🔹 glass background
-  color: cardColor,
-
-  // 🔥 MAIN MAGIC — soft green glow
-  boxShadow: <BoxShadow>[
-    // existing soft shadow
-    BoxShadow(
-      color: AppColors.primaryDark.withValues(alpha: 0.08),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
-    ),
-
-    // 🔥 NEW glow layer
-    BoxShadow(
-      color: AppColors.primary.withValues(alpha: 0.18),
-      blurRadius: 24,
-      spreadRadius: 1,
-    ),
-
-    // 🔥 optional edge glow (top highlight)
-    BoxShadow(
-      color: Colors.white.withValues(alpha: 0.25),
-      blurRadius: 6,
-      spreadRadius: -2,
-      offset: const Offset(0, -2),
-    ),
-  ],
-),
-      child: Stack(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1),
+        color: cardColor,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.14),
+            blurRadius: 22,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.auto_awesome,
-                    color: AppColors.primaryDark.withValues(alpha: 0.8),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI Overview',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
+              Icon(
+                Icons.auto_awesome,
+                color: AppColors.primaryDark.withValues(alpha: 0.82),
+                size: 18,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(width: AppSpacing.sm),
               Text(
-                _aiExpanded ? full : summary,
-                maxLines: _aiExpanded ? null : 3,
-                overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                'AI Overview',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: textColor,
-                      height: 1.35,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
-              const SizedBox(height: 12),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _aiExpanded ? _aiDetails : _aiSummary,
+            maxLines: _aiExpanded ? null : 3,
+            overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  height: 1.35,
+                ),
+          ),
+          if (_aiLoading) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            const LinearProgressIndicator(minHeight: 2),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _aiUpdatedLabel(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: subColor),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: ElevatedButton.icon(
+                    onPressed: _aiLoading ? null : () => _generateAiOverview(forceRefresh: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
+                    label: Text(
+                      _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               SizedBox(
                 height: 40,
-                child: ElevatedButton(
+                child: OutlinedButton(
                   onPressed: () {
-                    setState(() {
-                      _aiExpanded = !_aiExpanded;
-                    });
+                    setState(() => _aiExpanded = !_aiExpanded);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.7),
-                    foregroundColor: textColor,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.72)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.85)),
-                    elevation: 0,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        _aiExpanded ? 'Show less' : 'Show more',
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        _aiExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.chevron_right_rounded,
-                        size: 18,
-                        color: textColor,
-                      ),
-                    ],
-                  ),
+                  child: Text(_aiExpanded ? 'Less' : 'More'),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _marketInsightsCard({
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    return _glassCard(
+      cardColor: cardColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.insights, color: AppColors.primaryDark, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Live Market Intelligence',
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          if (_mspInsight != null && _mspInsight!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              _mspInsight!,
+              style: TextStyle(color: subColor, height: 1.35),
+            ),
+          ],
+          if (_allIndiaInsight != null && _allIndiaInsight!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              _allIndiaInsight!,
+              style: TextStyle(color: subColor, height: 1.35),
+            ),
+          ],
         ],
       ),
     );
@@ -743,56 +1236,53 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color subColor,
   }) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
     if (_error != null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-        children: <Widget>[
-          _glassCard(
-            cardColor: cardColor,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Could not load marketplace data',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  style: TextStyle(color: subColor),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 42,
-                  child: ElevatedButton(
-                    onPressed: _loadMarketplaceData,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.85),
-                      foregroundColor: AppColors.lightText,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                    ),
-                    child: const Text(
-                      'Retry',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
+      return _glassCard(
+        cardColor: cardColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Could not load marketplace data',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(color: subColor),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 42,
+              child: ElevatedButton(
+                onPressed: _loadMarketplaceData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.85),
+                  foregroundColor: AppColors.lightText,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -802,76 +1292,75 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       _MarketSection.listings => _filteredListings,
     };
 
-    return RefreshIndicator(
-      onRefresh: () => _loadMarketplaceData(showLoader: false),
-      child: items.isEmpty
-          ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+    if (items.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (_activeSection == _MarketSection.listings)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _addListingButton(),
+            ),
+          _glassCard(
+            cardColor: cardColor,
+            child: Column(
               children: <Widget>[
-                if (_activeSection == _MarketSection.listings)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _addListingButton(),
+                Icon(
+                  Icons.inbox_outlined,
+                  color: subColor,
+                  size: 36,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'No data available for current filters',
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
                   ),
-                _glassCard(
-                  cardColor: cardColor,
-                  child: Column(
-                    children: <Widget>[
-                      Icon(
-                        Icons.inbox_outlined,
-                        color: subColor,
-                        size: 36,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'No data available for current filters',
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
-            )
-          : ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-              itemCount: items.length + (_activeSection == _MarketSection.listings ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, index) {
-                if (_activeSection == _MarketSection.listings && index == 0) {
-                  return _addListingButton();
-                }
-
-                final item = _activeSection == _MarketSection.listings
-                    ? items[index - 1]
-                    : items[index];
-                return switch (_activeSection) {
-                  _MarketSection.prices => _priceCard(
-                      item: item,
-                      cardColor: cardColor,
-                      textColor: textColor,
-                      subColor: subColor,
-                    ),
-                  _MarketSection.mandis => _mandiCard(
-                      item: item,
-                      cardColor: cardColor,
-                      textColor: textColor,
-                      subColor: subColor,
-                    ),
-                  _MarketSection.listings => _listingCard(
-                      item: item,
-                      cardColor: cardColor,
-                      textColor: textColor,
-                      subColor: subColor,
-                    ),
-                };
-              },
             ),
+          ),
+        ],
+      );
+    }
+
+    final children = <Widget>[];
+    if (_activeSection == _MarketSection.listings) {
+      children.add(_addListingButton());
+      children.add(const SizedBox(height: 12));
+    }
+
+    for (final item in items) {
+      children.add(
+        switch (_activeSection) {
+          _MarketSection.prices => _priceCard(
+              item: item,
+              cardColor: cardColor,
+              textColor: textColor,
+              subColor: subColor,
+            ),
+          _MarketSection.mandis => _mandiCard(
+              item: item,
+              cardColor: cardColor,
+              textColor: textColor,
+              subColor: subColor,
+            ),
+          _MarketSection.listings => _listingCard(
+              item: item,
+              cardColor: cardColor,
+              textColor: textColor,
+              subColor: subColor,
+            ),
+        },
+      );
+      children.add(const SizedBox(height: 12));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
     );
   }
 
@@ -1159,7 +1648,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -1170,7 +1659,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: child,
       ),
     );

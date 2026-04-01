@@ -8,9 +8,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
-import '../../../shared/services/agent_service.dart';
+import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/livestock_service.dart';
-import '../../../shared/widgets/app_button.dart';
+import '../../../shared/services/personalization_service.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../../weather/widgets/glass_widgets.dart';
@@ -27,13 +27,20 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _livestock = [];
+  Map<String, dynamic> _profile = <String, dynamic>{};
 
-  String? _aiResponse;
   bool _aiLoading = false;
+  bool _aiGenerated = false;
+  bool _aiExpanded = false;
+  String _aiSummary = 'Generate AI overview to get herd actions tailored to your location.';
+  String _aiDetails =
+      'Uses your livestock mix, health status, and nearby profile context. Cached for 24 hours.';
+  DateTime? _aiUpdatedAt;
 
   @override
   void initState() {
     super.initState();
+    _loadCachedAiOverview();
     _fetchLivestock();
   }
 
@@ -44,12 +51,13 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     });
     try {
       final items = await ref.read(livestockServiceProvider).listLivestock();
+      final profile = await ref.read(personalizationServiceProvider).getProfileContext();
       if (!mounted) return;
       setState(() {
         _livestock = items;
+        _profile = profile;
         _loading = false;
       });
-      _fetchAiRecommendations();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -59,29 +67,70 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     }
   }
 
-  Future<void> _fetchAiRecommendations() async {
+  Future<void> _loadCachedAiOverview() async {
+    final cached = await ref
+        .read(aiOverviewServiceProvider)
+        .getCached('cattle_overview_v1');
+    if (!mounted || cached == null) return;
+    setState(() {
+      _aiSummary = cached.summary;
+      _aiDetails = cached.details;
+      _aiUpdatedAt = cached.updatedAt;
+      _aiGenerated = true;
+    });
+  }
+
+  Future<void> _generateAiOverview({bool forceRefresh = true}) async {
+    if (_aiLoading) return;
     setState(() => _aiLoading = true);
+
     try {
-      final breeds = _livestock
-          .map((l) => l['breed']?.toString() ?? l['animal_type']?.toString())
-          .where((b) => b != null)
-          .toSet()
-          .join(', ');
-      final res = await ref
-          .read(agentServiceProvider)
-          .chat(
-            message:
-                'Give cattle and livestock management recommendations. I have ${_livestock.length} animals of types: $breeds.',
+      final personalization = ref.read(personalizationServiceProvider);
+      final profile = _profile.isEmpty
+          ? await personalization.getProfileContext()
+          : _profile;
+
+      final nearby = personalization
+          .sortNearby(profile: profile, items: _livestock)
+          .take(8)
+          .map((item) {
+        final type = (item['animal_type'] ?? item['name'] ?? 'animal').toString();
+        final breed = (item['breed'] ?? 'mixed').toString();
+        final health = (item['health_status'] ?? 'unknown').toString();
+        final count = (item['count'] ?? 1).toString();
+        return '$count x $type ($breed), health: $health';
+      }).toList(growable: false);
+
+      final result = await ref.read(aiOverviewServiceProvider).generate(
+            key: 'cattle_overview_v1',
+            pageName: 'Cattle Care',
+            languageCode: context.locale.languageCode,
+            nearbyData: nearby,
+            forceRefresh: forceRefresh,
           );
+
       if (!mounted) return;
       setState(() {
-        _aiResponse = res['response']?.toString() ?? '';
+        _profile = profile;
+        _aiSummary = result.summary;
+        _aiDetails = result.details;
+        _aiUpdatedAt = result.updatedAt;
+        _aiGenerated = true;
         _aiLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _aiLoading = false);
+      context.showSnack('Failed to generate AI overview: $e', isError: true);
     }
+  }
+
+  String _aiUpdatedLabel() {
+    final dt = _aiUpdatedAt;
+    if (dt == null) return 'Not generated yet';
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return 'Updated at $hh:$mm';
   }
 
   Future<void> _deleteLivestock(String id) async {
@@ -127,114 +176,247 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => Padding(
-          padding: EdgeInsets.only(
-            left: AppSpacing.xl,
-            right: AppSpacing.xl,
-            top: AppSpacing.xl,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'cattle.add_cattle'.tr(),
-                  style: context.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                // basic form
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: TextField(
-                    controller: typeC,
-                    decoration: InputDecoration(
-                      labelText: 'cattle.animal_type'.tr(),
-                      prefixIcon: const Icon(Icons.pets),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: TextField(
-                    controller: breedC,
-                    decoration: InputDecoration(
-                      labelText: 'cattle.breed'.tr(),
-                      prefixIcon: const Icon(Icons.category),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: TextField(
-                    controller: countC,
-                    decoration: InputDecoration(
-                      labelText: 'cattle.count'.tr(),
-                      prefixIcon: const Icon(Icons.tag),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: TextField(
-                    controller: ageC,
-                    decoration: InputDecoration(
-                      labelText: 'cattle.age'.tr(),
-                      prefixIcon: const Icon(Icons.cake),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                AppButton(
-                  label: 'cattle.save'.tr(),
-                  icon: Icons.add,
-                  onPressed: () async {
-                    if (typeC.text.isEmpty) {
-                      ctx.showSnack('cattle.error'.tr(), isError: true);
-                      return;
-                    }
-                    try {
-                      await ref
-                          .read(livestockServiceProvider)
-                          .createLivestock(
-                            animalType: typeC.text.trim(),
-                            breed: breedC.text.trim().isNotEmpty
-                                ? breedC.text.trim()
-                                : null,
-                            count: int.tryParse(countC.text) ?? 1,
-                            ageMonths: int.tryParse(ageC.text),
-                            healthStatus: healthStatus,
-                          );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
-                        context.showSnack('common.success'.tr());
-                        _fetchLivestock();
-                      }
-                    } catch (e) {
-                      if (ctx.mounted)
-                        ctx.showSnack(e.toString(), isError: true);
-                    }
-                  },
-                ),
-              ],
+        builder: (ctx, setLocal) {
+          final fieldBg = Colors.white.withValues(alpha: 0.72);
+          final borderColor = Colors.white.withValues(alpha: 0.88);
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: AppSpacing.xl,
+              right: AppSpacing.xl,
+              top: AppSpacing.xl,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl,
             ),
-          ),
-        ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.1),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.lightTextSecondary.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'cattle.add_cattle'.tr(),
+                        style: context.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create a livestock profile synced to backend records.',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.appColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextField(
+                        controller: typeC,
+                        decoration: InputDecoration(
+                          labelText: 'cattle.animal_type'.tr(),
+                          filled: true,
+                          fillColor: fieldBg,
+                          prefixIcon: const Icon(Icons.pets),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: breedC,
+                        decoration: InputDecoration(
+                          labelText: 'cattle.breed'.tr(),
+                          filled: true,
+                          fillColor: fieldBg,
+                          prefixIcon: const Icon(Icons.category),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: countC,
+                              decoration: InputDecoration(
+                                labelText: 'cattle.count'.tr(),
+                                filled: true,
+                                fillColor: fieldBg,
+                                prefixIcon: const Icon(Icons.tag),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: TextField(
+                              controller: ageC,
+                              decoration: InputDecoration(
+                                labelText: 'cattle.age'.tr(),
+                                filled: true,
+                                fillColor: fieldBg,
+                                prefixIcon: const Icon(Icons.cake),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Health Status',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Healthy'),
+                            selected: healthStatus == 'healthy',
+                            onSelected: (_) => setLocal(() => healthStatus = 'healthy'),
+                            selectedColor: AppColors.success.withValues(alpha: 0.2),
+                            side: BorderSide(color: borderColor),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Under Treatment'),
+                            selected: healthStatus == 'under_treatment',
+                            onSelected: (_) => setLocal(() => healthStatus = 'under_treatment'),
+                            selectedColor: AppColors.warning.withValues(alpha: 0.2),
+                            side: BorderSide(color: borderColor),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Sick'),
+                            selected: healthStatus == 'sick',
+                            onSelected: (_) => setLocal(() => healthStatus = 'sick'),
+                            selectedColor: AppColors.danger.withValues(alpha: 0.2),
+                            side: BorderSide(color: borderColor),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: Text(
+                            'cattle.save'.tr(),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryDark,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                          ),
+                          onPressed: () async {
+                            if (typeC.text.isEmpty) {
+                              ctx.showSnack('cattle.error'.tr(), isError: true);
+                              return;
+                            }
+                            try {
+                              await ref
+                                  .read(livestockServiceProvider)
+                                  .createLivestock(
+                                    animalType: typeC.text.trim(),
+                                    breed: breedC.text.trim().isNotEmpty
+                                        ? breedC.text.trim()
+                                        : null,
+                                    count: int.tryParse(countC.text) ?? 1,
+                                    ageMonths: int.tryParse(ageC.text),
+                                    healthStatus: healthStatus,
+                                  );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (mounted) {
+                                context.showSnack('common.success'.tr());
+                                _fetchLivestock();
+                              }
+                            } catch (e) {
+                              if (ctx.mounted) {
+                                ctx.showSnack(e.toString(), isError: true);
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   void _openQuickAction(String topic) {
-    context.push('${RoutePaths.chat}?agent=crop');
+    final prompt = switch (topic) {
+      'vet' => 'Give me a 7-day preventive veterinary checklist for my livestock.',
+      'feed' =>
+        'Create a practical feed plan for my herd for the next 7 days with low-cost options.',
+      _ => 'Give me cattle management advice for this week.',
+    };
+    final encoded = Uri.encodeQueryComponent(prompt);
+    context.push('${RoutePaths.chat}?agent=general&q=$encoded');
   }
 
   Widget _summaryChip(
@@ -509,7 +691,19 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                                   style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.success,
                                   ),
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    final name =
+                                        (dueAnimal!['name'] ??
+                                                dueAnimal['animal_type'] ??
+                                                'my animal')
+                                            .toString();
+                                    final query = Uri.encodeQueryComponent(
+                                      'Help me schedule a vet visit for $name and list immediate pre-visit checks.',
+                                    );
+                                    context.push(
+                                      '${RoutePaths.chat}?agent=general&q=$query',
+                                    );
+                                  },
                                   child: Row(
                                     children: const [
                                       Text('Schedule Vet'),
@@ -523,6 +717,135 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                           ),
                           const SizedBox(height: AppSpacing.lg),
                         ],
+
+                        // AI overview with manual generation.
+                        GlassCard(
+                          featured: true,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'AI Herd Advisory',
+                                    style: context.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                _aiExpanded ? _aiDetails : _aiSummary,
+                                style: context.textTheme.bodyMedium?.copyWith(
+                                  height: 1.45,
+                                ),
+                                maxLines: _aiExpanded ? null : 4,
+                                overflow: _aiExpanded
+                                    ? TextOverflow.visible
+                                    : TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              if (_aiLoading)
+                                Row(
+                                  children: [
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Generating recommendations...',
+                                      style: context.textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                _aiUpdatedLabel(),
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.appColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: _aiLoading
+                                          ? null
+                                          : () => _generateAiOverview(forceRefresh: true),
+                                      icon: Icon(
+                                        _aiGenerated ? Icons.refresh : Icons.auto_awesome,
+                                      ),
+                                      label: Text(
+                                        _aiGenerated
+                                            ? 'Generate Fresh'
+                                            : 'Generate AI Overview',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white.withValues(alpha: 0.85),
+                                        foregroundColor: AppColors.lightText,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(40),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      setState(() => _aiExpanded = !_aiExpanded);
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(40),
+                                      ),
+                                    ),
+                                    child: Text(_aiExpanded ? 'Less' : 'More'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // quick actions
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _QuickActionCard(
+                                title: 'Ask Vet AI',
+                                icon: Icons.support_agent,
+                                color: AppColors.primary,
+                                onTap: () => _openQuickAction('vet'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: _QuickActionCard(
+                                title: 'Feed Planner',
+                                icon: Icons.restaurant,
+                                color: AppColors.success,
+                                onTap: () => _openQuickAction('feed'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
 
                         // header
                         Padding(

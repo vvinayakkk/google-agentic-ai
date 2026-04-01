@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,9 +9,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
-import '../../../shared/services/agent_service.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_button.dart';
 
 class SuicidePreventionScreen extends ConsumerStatefulWidget {
   const SuicidePreventionScreen({super.key});
@@ -23,13 +19,8 @@ class SuicidePreventionScreen extends ConsumerStatefulWidget {
 }
 
 class _SuicidePreventionScreenState
-    extends ConsumerState<SuicidePreventionScreen>
-    with SingleTickerProviderStateMixin {
+  extends ConsumerState<SuicidePreventionScreen> {
   int? _selectedMood;
-  bool _isLoadingTips;
-  String? _aiTips;
-  late AnimationController _breathController;
-  late Animation<double> _breathAnimation;
 
   static const _moods = [
     {'emoji': '😊', 'key': 'great', 'color': 0xFF10B981},
@@ -90,34 +81,6 @@ class _SuicidePreventionScreenState
     },
   ];
 
-  static const _affirmations = [
-    'You are doing important work feeding the nation. 🌾',
-    'Tough seasons pass — your strength remains.',
-    'Asking for help is a sign of courage, not weakness.',
-    'Your family and community care about you deeply.',
-    'Every sunrise brings a new chance for growth. 🌅',
-  ];
-
-  _SuicidePreventionScreenState() : _isLoadingTips = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _breathController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-    _breathAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _breathController, curve: Curves.linear),
-    );
-  }
-
-  @override
-  void dispose() {
-    _breathController.dispose();
-    super.dispose();
-  }
-
   // ── Helpers ────────────────────────────────────────────────────────────
 
   Future<void> _callNumber(String number) async {
@@ -132,26 +95,6 @@ class _SuicidePreventionScreenState
 
   void _navigateToAiCounselor() {
     context.push('${RoutePaths.chat}?agent=mental_health');
-  }
-
-  Future<void> _fetchAiTips() async {
-    setState(() => _isLoadingTips = true);
-    try {
-      final service = ref.read(agentServiceProvider);
-      final result = await service.chat(
-        message: 'Give me 5 simple self-care and mental wellness tips '
-            'specifically for Indian farmers dealing with stress. '
-            'Use markdown bullet points.',
-        language: 'en',
-      );
-      setState(() => _aiTips = result['response'] as String?);
-    } catch (_) {
-      if (mounted) {
-        context.showSnack('Unable to fetch tips right now', isError: true);
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingTips = false);
-    }
   }
 
   void _onMoodSelected(int index) {
@@ -185,16 +128,16 @@ class _SuicidePreventionScreenState
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final iconBg = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.88);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        title: Text('mental_health.title'.tr()),
-        centerTitle: true,
-      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -205,53 +148,102 @@ class _SuicidePreventionScreenState
                 : [AppColors.lightBackground, AppColors.lightSurface],
           ),
         ),
-        child: SingleChildScrollView(
-          padding: AppSpacing.allLg,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeroBanner(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildMoodSelector(),
-              if (_showUrgentBanner) ...[
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            padding: AppSpacing.allLg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    _topAction(
+                      icon: Icons.arrow_back_rounded,
+                      color: AppColors.primaryDark,
+                      background: iconBg,
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'mental_health.title'.tr(),
+                            textAlign: TextAlign.center,
+                            style: context.textTheme.titleLarge?.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Support and emergency resources',
+                            textAlign: TextAlign.center,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: subColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _topAction(
+                      icon: Icons.info_outline_rounded,
+                      color: AppColors.primaryDark,
+                      background: iconBg,
+                      onTap: () => context.showSnack(
+                        'Tap any call icon to connect instantly.',
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AppSpacing.lg),
-                _buildUrgentBanner(),
+                _buildHeroBanner(),
+                const SizedBox(height: AppSpacing.xl),
+                _buildMoodSelector(),
+                if (_showUrgentBanner) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildUrgentBanner(),
+                ],
+                const SizedBox(height: AppSpacing.xl),
+                _buildSectionTitle(
+                  'mental_health.resources'.tr(),
+                  Icons.library_books_rounded,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildAdditionalResources(),
+                const SizedBox(height: AppSpacing.xl),
+                _buildSectionTitle(
+                  'mental_health.emergency_helplines'.tr(),
+                  Icons.phone_rounded,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildHelplinesCarousel(),
+                const SizedBox(height: AppSpacing.xl),
+                _buildAiCompanionCard(),
+                const SizedBox(height: AppSpacing.xxxl),
               ],
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle(
-                'mental_health.emergency_helplines'.tr(),
-                Icons.phone_rounded,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              ..._helplines.map(_buildHelplineCard),
-              const SizedBox(height: AppSpacing.xl),
-              _buildAiCompanionCard(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle(
-                'mental_health.self_care_tips'.tr(),
-                Icons.spa_rounded,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _buildBreathingExercise(),
-              const SizedBox(height: AppSpacing.md),
-              _buildAffirmations(),
-              const SizedBox(height: AppSpacing.md),
-              _buildGroundingExercise(),
-              const SizedBox(height: AppSpacing.md),
-              _buildSleepTips(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildAiTipsSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle(
-                'mental_health.resources'.tr(),
-                Icons.library_books_rounded,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _buildAdditionalResources(),
-              const SizedBox(height: AppSpacing.xxxl),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _topAction({
+    required IconData icon,
+    required Color color,
+    required Color background,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -259,18 +251,7 @@ class _SuicidePreventionScreenState
   // ── Section 1: Hero Banner ─────────────────────────────────────────────
 
   Widget _buildHeroBanner() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withValues(alpha: 0.75),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadius.lgAll,
-      ),
+    return _buildChoiceEffectCard(
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.xxl,
         horizontal: AppSpacing.xl,
@@ -279,23 +260,24 @@ class _SuicidePreventionScreenState
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: context.appColors.card.withValues(alpha: 0.7),
+              border: Border.all(
+                color: context.appColors.border,
+              ),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: const Icon(
+            child: Icon(
               Icons.favorite_rounded,
               size: 48,
-              color: Colors.white,
+              color: context.appColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const Text(
+          Text(
             'You Are Not Alone',
-            style: TextStyle(
-              fontSize: 26,
+            style: context.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
@@ -304,9 +286,8 @@ class _SuicidePreventionScreenState
             'mental_health.subtitle'.tr().isNotEmpty
                 ? 'mental_health.subtitle'.tr()
                 : 'It\'s okay to ask for help. We\'re here for you.',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.white.withValues(alpha: 0.9),
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.appColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -318,7 +299,7 @@ class _SuicidePreventionScreenState
   // ── Section 2: Mood Selector ───────────────────────────────────────────
 
   Widget _buildMoodSelector() {
-    return AppCard(
+    return _buildChoiceEffectCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -466,70 +447,87 @@ class _SuicidePreventionScreenState
 
   // ── Section 3: Emergency Helplines ─────────────────────────────────────
 
+  Widget _buildHelplinesCarousel() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _helplines.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: AppSpacing.sm,
+        mainAxisSpacing: AppSpacing.sm,
+        mainAxisExtent: 156,
+      ),
+      itemBuilder: (context, index) => _buildHelplineCard(_helplines[index]),
+    );
+  }
+
   Widget _buildHelplineCard(Map<String, dynamic> h) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        child: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: AppRadius.mdAll,
-              ),
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Icon(
-                h['icon'] as IconData,
-                color: AppColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    h['name'] as String,
-                    style: context.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    h['number'] as String,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    h['desc'] as String,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.appColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () => _callNumber(h['number'] as String),
-              icon: const Icon(Icons.call, size: 16),
-              label: Text('mental_health.call_now'.tr()),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                shape: RoundedRectangleBorder(
+    return _buildChoiceEffectCard(
+      padding: AppSpacing.allMd,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.12),
                   borderRadius: AppRadius.mdAll,
                 ),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Icon(
+                  h['icon'] as IconData,
+                  color: AppColors.info,
+                  size: 20,
+                ),
               ),
+              const Spacer(),
+              OutlinedButton(
+                onPressed: () => _callNumber(h['number'] as String),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.info,
+                  side: BorderSide(
+                    color: AppColors.info.withValues(alpha: 0.5),
+                  ),
+                  minimumSize: const Size(40, 40),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.mdAll,
+                  ),
+                ),
+                child: const Icon(Icons.call, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            h['name'] as String,
+            style: context.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            h['number'] as String,
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            h['desc'] as String,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.appColors.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -537,19 +535,7 @@ class _SuicidePreventionScreenState
   // ── Section 4: AI Wellness Companion ───────────────────────────────────
 
   Widget _buildAiCompanionCard() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.info.withValues(alpha: 0.08),
-            AppColors.primary.withValues(alpha: 0.06),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.25)),
-      ),
+    return _buildChoiceEffectCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
@@ -586,15 +572,28 @@ class _SuicidePreventionScreenState
           Text(
             'mental_health.available_24x7'.tr(),
             style: context.textTheme.bodySmall?.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
+              color: context.appColors.textSecondary,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: 'mental_health.chat'.tr(),
-            onPressed: _navigateToAiCounselor,
-            icon: Icons.chat_bubble_rounded,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _navigateToAiCounselor,
+              icon: const Icon(Icons.chat_bubble_rounded),
+              label: Text('mental_health.chat'.tr()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.info,
+                side: BorderSide(color: AppColors.info.withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdAll,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
@@ -620,301 +619,7 @@ class _SuicidePreventionScreenState
     );
   }
 
-  // ── Section 5: Self-Care Toolkit ───────────────────────────────────────
-
-  Widget _buildBreathingExercise() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.air_rounded,
-                  color: AppColors.primary, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'mental_health.breathing_exercise'.tr(),
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AnimatedBuilder(
-            animation: _breathAnimation,
-            builder: (context, _) {
-              final value = _breathAnimation.value;
-              String phase;
-              Color phaseColor;
-              double progress;
-
-              if (value < 1 / 3) {
-                phase = 'Breathe In…';
-                phaseColor = AppColors.primary;
-                progress = value * 3;
-              } else if (value < 2 / 3) {
-                phase = 'Hold…';
-                phaseColor = AppColors.info;
-                progress = (value - 1 / 3) * 3;
-              } else {
-                phase = 'Breathe Out…';
-                phaseColor = AppColors.accent;
-                progress = (value - 2 / 3) * 3;
-              }
-
-              return Column(
-                children: [
-                  Container(
-                    height: 80,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: phaseColor.withValues(alpha: 0.08),
-                      borderRadius: AppRadius.mdAll,
-                    ),
-                    child: Text(
-                      phase,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: phaseColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  ClipRRect(
-                    borderRadius: AppRadius.smAll,
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor: phaseColor.withValues(alpha: 0.12),
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(phaseColor),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Breathe In (4s) → Hold (4s) → Breathe Out (4s)',
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAffirmations() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome_rounded,
-                  color: AppColors.warning, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Daily Affirmations',
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ..._affirmations.map(
-            (a) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Container(
-                width: double.infinity,
-                padding: AppSpacing.allMd,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.05),
-                  borderRadius: AppRadius.smAll,
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                  ),
-                ),
-                child: Text(
-                  a,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGroundingExercise() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.self_improvement_rounded,
-                  color: AppColors.info, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Grounding Exercise (5-4-3-2-1)',
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _groundingRow('5', 'things you can SEE 👀', AppColors.primary),
-          _groundingRow('4', 'things you can TOUCH ✋', AppColors.info),
-          _groundingRow('3', 'things you can HEAR 👂', AppColors.warning),
-          _groundingRow('2', 'things you can SMELL 👃', AppColors.accent),
-          _groundingRow('1', 'thing you can TASTE 👅', AppColors.danger),
-        ],
-      ),
-    );
-  }
-
-  Widget _groundingRow(String number, String text, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              number,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: color,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              text,
-              style: context.textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSleepTips() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.bedtime_rounded,
-                  color: AppColors.accent, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Sleep Tips',
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _sleepTipRow(Icons.phone_android_rounded,
-              'Put your phone away 30 min before bed'),
-          _sleepTipRow(Icons.free_breakfast_rounded,
-              'Avoid tea/coffee after 4 PM'),
-          _sleepTipRow(Icons.schedule_rounded,
-              'Try to sleep and wake at the same time daily'),
-          _sleepTipRow(Icons.dark_mode_rounded,
-              'Keep your room dark and cool'),
-        ],
-      ),
-    );
-  }
-
-  Widget _sleepTipRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          Icon(icon,
-              size: 18, color: context.appColors.textSecondary),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(text, style: context.textTheme.bodyMedium),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section 6: AI Self-Care Tips ───────────────────────────────────────
-
-  Widget _buildAiTipsSection() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.psychology_rounded,
-                  color: AppColors.primary, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'AI-Powered Self-Care Tips',
-                  style: context.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (_aiTips == null && !_isLoadingTips)
-            AppButton(
-              label: 'Get Personalized Tips',
-              onPressed: _fetchAiTips,
-              icon: Icons.auto_awesome_rounded,
-            ),
-          if (_isLoadingTips)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-          if (_aiTips != null)
-            MarkdownBody(
-              data: _aiTips!,
-              styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-                p: context.textTheme.bodyMedium,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section 7: Additional Resources ────────────────────────────────────
+  // ── Section 5: Additional Resources ────────────────────────────────────
 
   Widget _buildAdditionalResources() {
     return Column(
@@ -935,17 +640,17 @@ class _SuicidePreventionScreenState
           '1800-180-1551',
         ),
         const SizedBox(height: AppSpacing.sm),
-        AppCard(
+        _buildChoiceEffectCard(
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
+                  color: AppColors.info.withValues(alpha: 0.12),
                   borderRadius: AppRadius.mdAll,
                 ),
                 child: const Icon(Icons.groups_rounded,
-                    color: AppColors.success, size: 24),
+                    color: AppColors.info, size: 24),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -979,16 +684,17 @@ class _SuicidePreventionScreenState
 
   Widget _resourceCard(
       IconData icon, String title, String desc, String number) {
-    return AppCard(
+    return _buildChoiceEffectCard(
+      padding: AppSpacing.allMd,
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.1),
+              color: AppColors.info.withValues(alpha: 0.12),
               borderRadius: AppRadius.mdAll,
             ),
-            child: Icon(icon, color: AppColors.warning, size: 24),
+            child: Icon(icon, color: AppColors.info, size: 24),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -1013,7 +719,7 @@ class _SuicidePreventionScreenState
           ),
           IconButton(
             onPressed: () => _callNumber(number),
-            icon: const Icon(Icons.call_rounded, color: AppColors.primary),
+            icon: const Icon(Icons.call_rounded, color: AppColors.info),
             tooltip: 'Call $number',
           ),
         ],
@@ -1026,7 +732,7 @@ class _SuicidePreventionScreenState
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.primary, size: 22),
+        Icon(icon, color: AppColors.info, size: 22),
         const SizedBox(width: AppSpacing.sm),
         Text(
           title,
@@ -1035,6 +741,39 @@ class _SuicidePreventionScreenState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildChoiceEffectCard({
+    required Widget child,
+    EdgeInsetsGeometry? padding,
+  }) {
+    final isDark = context.isDark;
+    final cardColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.white.withValues(alpha: 0.56);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.18)
+        : Colors.white.withValues(alpha: 0.8);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? Colors.black : AppColors.primaryDark)
+                .withValues(alpha: isDark ? 0.22 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: padding ?? AppSpacing.allLg,
+        child: child,
+      ),
     );
   }
 }

@@ -38,6 +38,8 @@ NGINX CONFIG SUMMARY:
     - /api/v1/admin
     - /api/v1/analytics
     - /
+  - market weather note:
+    - no gateway location changes required; new weather intelligence routes (`/api/v1/market/weather/full` and `/api/v1/market/weather/soil-composition`) are served through existing `/api/v1/market` upstream mapping.
   - proxy_pass targets:
     - http://$auth_upstream
     - http://$farmer_upstream

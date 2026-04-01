@@ -12,6 +12,7 @@ from services.livestock_service import LivestockService
 router = APIRouter(prefix="/livestock", tags=["Livestock"])
 
 
+@router.get("", status_code=HttpStatus.OK, include_in_schema=False)
 @router.get("/", status_code=HttpStatus.OK)
 async def list_livestock(
     user: dict = Depends(get_current_farmer),

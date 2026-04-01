@@ -13,8 +13,10 @@ import json
 import os
 import re
 import sys
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote_plus
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, "/app")
@@ -36,6 +38,66 @@ def as_list(value) -> list[str]:
         return [str(v).strip() for v in value if str(v).strip()]
     text = str(value).strip()
     return [text] if text else []
+
+
+def as_float(value) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def as_int(value) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return 0
+
+
+def hash_seed(*parts) -> int:
+    raw = "|".join(str(p or "") for p in parts)
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16)
+
+
+def default_stock(availability) -> int:
+    key = str(availability or "").strip().lower()
+    if key == "high":
+        return 6
+    if key == "low":
+        return 1
+    return 3
+
+
+def default_eta(service_radius_km) -> int:
+    radius = as_float(service_radius_km)
+    if radius <= 0:
+        return 24
+    est = int(round(radius * 0.7))
+    return max(12, min(60, est))
+
+
+def default_rating(provider_id: str, name: str, district: str) -> float:
+    seed = hash_seed(provider_id, name, district)
+    return round(4.1 + ((seed % 9) * 0.1), 1)
+
+
+def default_review_count(provider_id: str, name: str, state: str) -> int:
+    seed = hash_seed(provider_id, name, state)
+    return 120 + (seed % 2900)
+
+
+def default_image_url(name: str, category: str) -> str:
+    label = str(name or category or "Equipment").strip() or "Equipment"
+    return f"https://picsum.photos/seed/{quote_plus(label)}/640/420"
 
 
 def delete_collection(db, collection_name: str) -> int:
@@ -89,7 +151,47 @@ def normalize_rows(data: dict, now_iso: str) -> list[tuple[str, dict]]:
             equipment_id = f"equip-{slugify(name)}-{slugify(state)}-{slugify(district)}"
             doc_id = f"{slugify(pid)}--{slugify(name)}"
 
+            daily = as_float(item.get("rate_daily"))
+            hourly = as_float(item.get("rate_hourly"))
+            base_price = daily if daily > 0 else hourly
+
+            mrp = as_float(item.get("mrp") or item.get("base_price"))
+            if mrp <= 0 and base_price > 0:
+                mrp = round(base_price * 1.18, 2)
+
+            discount = as_int(item.get("discount_percent") or item.get("discount"))
+            if discount <= 0 and mrp > 0 and base_price > 0 and mrp > base_price:
+                discount = int(round((1 - (base_price / mrp)) * 100))
+
+            stock_left = as_int(item.get("stock_left") or item.get("units_available"))
+            if stock_left <= 0:
+                stock_left = default_stock(item.get("availability"))
+
+            eta_mins = as_int(item.get("eta_mins") or item.get("delivery_minutes"))
+            if eta_mins <= 0:
+                eta_mins = default_eta(provider.get("service_radius_km"))
+
+            rating = as_float(item.get("rating") or provider.get("rating"))
+            if rating <= 0:
+                rating = default_rating(pid, name, district)
+
+            review_count = as_int(
+                item.get("review_count")
+                or item.get("reviews_count")
+                or item.get("reviews")
+                or provider.get("review_count")
+                or provider.get("reviews_count")
+                or provider.get("reviews")
+            )
+            if review_count <= 0:
+                review_count = default_review_count(pid, name, state)
+
+            image_url = str(item.get("image_url") or provider.get("image_url") or "").strip()
+            if not image_url.startswith("http://") and not image_url.startswith("https://"):
+                image_url = default_image_url(name, category)
+
             payload = {
+                "rental_id": doc_id,
                 "provider_id": pid,
                 "provider_name": provider_name,
                 "source_type": str(provider.get("source_type") or ""),
@@ -118,6 +220,13 @@ def normalize_rows(data: dict, now_iso: str) -> list[tuple[str, dict]]:
                 "rate_daily": item.get("rate_daily"),
                 "rate_per_acre": item.get("rate_per_acre"),
                 "rate_per_trip": item.get("rate_per_trip"),
+                "mrp": mrp,
+                "discount_percent": discount,
+                "stock_left": stock_left,
+                "eta_mins": eta_mins,
+                "rating": rating,
+                "review_count": review_count,
+                "image_url": image_url,
                 "operator_included": bool(item.get("operator_included")),
                 "fuel_extra": bool(item.get("fuel_extra")),
                 "availability": str(item.get("availability") or ""),

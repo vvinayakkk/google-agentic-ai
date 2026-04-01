@@ -22,6 +22,66 @@ from shared.services.qdrant_service import QdrantService
 from qdrant_client.models import PointStruct
 
 
+_SENSITIVE_KEY_FRAGMENTS = (
+    "password",
+    "password_hash",
+    "token",
+    "secret",
+    "otp",
+    "pin",
+)
+
+
+def upsert_in_batches(collection_name: str, points: list[PointStruct], batch_size: int = 128) -> None:
+    """Upsert points in bounded batches to avoid Qdrant payload-size limits."""
+    if not points:
+        return
+    step = max(1, int(batch_size))
+    for i in range(0, len(points), step):
+        QdrantService.upsert(collection_name, points[i:i + step])
+
+
+def _is_sensitive_key(key: str) -> bool:
+    lowered = str(key).lower()
+    return any(fragment in lowered for fragment in _SENSITIVE_KEY_FRAGMENTS)
+
+
+def sanitize_payload(payload: dict) -> dict:
+    """Drop sensitive keys from Qdrant payloads as a defensive guardrail."""
+    cleaned = {}
+    for key, value in payload.items():
+        if _is_sensitive_key(key):
+            continue
+        cleaned[key] = value
+    return cleaned
+
+
+def safe_float(value, default=0.0):
+    try:
+        if value is None:
+            return default
+        text = str(value).strip()
+        if not text:
+            return default
+        return float(text.replace(",", ""))
+    except (ValueError, TypeError):
+        return default
+
+
+def parse_date_to_ordinal(value: str) -> int:
+    if value is None:
+        return 0
+    text = str(value).strip()
+    if not text:
+        return 0
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(text, fmt).date().toordinal()
+        except ValueError:
+            continue
+    return 0
+
+
 def build_schemes_semantic(db) -> int:
     """Build schemes_semantic from ref_farmer_schemes."""
     print("  Building schemes_semantic ...")
@@ -48,7 +108,7 @@ def build_schemes_semantic(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={
+            payload=sanitize_payload({
                 "scheme_id": data.get("scheme_id", ""),
                 "title": data.get("title", ""),
                 "ministry": data.get("ministry", ""),
@@ -56,11 +116,11 @@ def build_schemes_semantic(db) -> int:
                 "categories": categories,
                 "source": data.get("source", ""),
                 "text": text[:500],
-            },
+            }),
         ))
 
     if points:
-        QdrantService.upsert(Qdrant.SCHEMES_SEMANTIC, points)
+        upsert_in_batches(Qdrant.SCHEMES_SEMANTIC, points, batch_size=128)
     print(f"    → {len(points)} vectors")
     return len(points)
 
@@ -101,17 +161,17 @@ def build_schemes_faq(db) -> int:
             points.append(PointStruct(
                 id=uuid.uuid4().hex,
                 vector=vector,
-                payload={
+                payload=sanitize_payload({
                     "scheme_id": data.get("scheme_id", ""),
                     "scheme_title": data.get("title", ""),
                     "question": question[:200],
                     "answer": answer[:500],
                     "text": text[:500],
-                },
+                }),
             ))
 
     if points:
-        QdrantService.upsert(Qdrant.SCHEMES_FAQ, points)
+        upsert_in_batches(Qdrant.SCHEMES_FAQ, points, batch_size=128)
     print(f"    → {len(points)} vectors")
     return len(points)
 
@@ -137,18 +197,22 @@ def build_mandi_price_intelligence(db) -> int:
             continue
 
         # Calculate basic stats
-        modal_prices = [r.get("modal_price", 0) for r in records if r.get("modal_price")]
+        modal_prices = [safe_float(r.get("modal_price"), 0.0) for r in records if r.get("modal_price") not in (None, "")]
         if not modal_prices:
             continue
 
         avg_price = sum(modal_prices) / len(modal_prices)
-        recent_prices = sorted(records, key=lambda r: r.get("arrival_date", ""), reverse=True)[:7]
-        recent_avg = sum(r.get("modal_price", 0) for r in recent_prices) / max(len(recent_prices), 1)
+        recent_prices = sorted(
+            records,
+            key=lambda r: parse_date_to_ordinal(r.get("arrival_date_iso") or r.get("arrival_date", "")),
+            reverse=True,
+        )[:7]
+        recent_avg = sum(safe_float(r.get("modal_price"), 0.0) for r in recent_prices) / max(len(recent_prices), 1)
 
         # Simple trend
         if len(recent_prices) >= 2:
-            first_half = sum(r.get("modal_price", 0) for r in recent_prices[len(recent_prices)//2:]) / max(len(recent_prices)//2, 1)
-            second_half = sum(r.get("modal_price", 0) for r in recent_prices[:len(recent_prices)//2]) / max(len(recent_prices)//2, 1)
+            first_half = sum(safe_float(r.get("modal_price"), 0.0) for r in recent_prices[len(recent_prices)//2:]) / max(len(recent_prices)//2, 1)
+            second_half = sum(safe_float(r.get("modal_price"), 0.0) for r in recent_prices[:len(recent_prices)//2]) / max(len(recent_prices)//2, 1)
             if second_half > first_half * 1.05:
                 trend = "UP"
             elif second_half < first_half * 0.95:
@@ -165,7 +229,7 @@ def build_mandi_price_intelligence(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={
+            payload=sanitize_payload({
                 "commodity": commodity,
                 "state": state,
                 "district": district,
@@ -173,13 +237,13 @@ def build_mandi_price_intelligence(db) -> int:
                 "modal_price": int(recent_avg),
                 "avg_price": int(avg_price),
                 "trend": trend,
-                "last_date": recent_prices[0].get("arrival_date", "") if recent_prices else "",
+                "last_date": (recent_prices[0].get("arrival_date_iso") or recent_prices[0].get("arrival_date", "")) if recent_prices else "",
                 "text": text[:500],
-            },
+            }),
         ))
 
     if points:
-        QdrantService.upsert(Qdrant.MANDI_PRICE_INTELLIGENCE, points)
+        upsert_in_batches(Qdrant.MANDI_PRICE_INTELLIGENCE, points, batch_size=96)
     print(f"    → {len(points)} vectors")
     return len(points)
 
@@ -206,7 +270,7 @@ def build_geo_location_index(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={
+            payload=sanitize_payload({
                 "pincode": pincode,
                 "village_code": data.get("village_code", ""),
                 "village_name": village,
@@ -214,7 +278,7 @@ def build_geo_location_index(db) -> int:
                 "state_name": state,
                 "source": "pin_master",
                 "text": text[:200],
-            },
+            }),
         ))
 
     # From mandi directory
@@ -230,7 +294,7 @@ def build_geo_location_index(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={
+            payload=sanitize_payload({
                 "mandi_name": name,
                 "district_name": district,
                 "state_name": state,
@@ -238,13 +302,11 @@ def build_geo_location_index(db) -> int:
                 "longitude": data.get("longitude"),
                 "source": "mandi_directory",
                 "text": text[:200],
-            },
+            }),
         ))
 
     if points:
-        batch_size = 256
-        for i in range(0, len(points), batch_size):
-            QdrantService.upsert(Qdrant.GEO_LOCATION_INDEX, points[i:i + batch_size])
+        upsert_in_batches(Qdrant.GEO_LOCATION_INDEX, points, batch_size=128)
     print(f"    → {len(points)} vectors")
     return len(points)
 
@@ -271,7 +333,7 @@ def build_equipment_semantic(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={
+            payload=sanitize_payload({
                 "equipment_id": data.get("rental_id", doc.id),
                 "source": "provider",
                 "state": state,
@@ -280,11 +342,11 @@ def build_equipment_semantic(db) -> int:
                 "name": name,
                 "is_active": data.get("is_active", True),
                 "text": text[:300],
-            },
+            }),
         ))
 
     if points:
-        QdrantService.upsert(Qdrant.EQUIPMENT_SEMANTIC, points)
+        upsert_in_batches(Qdrant.EQUIPMENT_SEMANTIC, points, batch_size=128)
     print(f"    → {len(points)} vectors")
     return len(points)
 
@@ -309,7 +371,7 @@ def build_crop_advisory_kb(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={"topic": "crop_variety", "crop": crop, "season": season, "language": "en", "source": "ref_crop_varieties", "text": text[:300]},
+            payload=sanitize_payload({"topic": "crop_variety", "crop": crop, "season": season, "language": "en", "source": "ref_crop_varieties", "text": text[:300]}),
         ))
 
     # Build from FASAL data
@@ -324,7 +386,7 @@ def build_crop_advisory_kb(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={"topic": "fasal", "crop": crop, "language": "en", "source": "ref_fasal_data", "text": text[:300]},
+            payload=sanitize_payload({"topic": "fasal", "crop": crop, "language": "en", "source": "ref_fasal_data", "text": text[:300]}),
         ))
 
     # Build from soil health (general advice per state)
@@ -341,11 +403,11 @@ def build_crop_advisory_kb(db) -> int:
         points.append(PointStruct(
             id=uuid.uuid4().hex,
             vector=vector,
-            payload={"topic": "soil_health", "state": state, "language": "en", "source": "ref_soil_health", "text": text[:300]},
+            payload=sanitize_payload({"topic": "soil_health", "state": state, "language": "en", "source": "ref_soil_health", "text": text[:300]}),
         ))
 
     if points:
-        QdrantService.upsert(Qdrant.CROP_ADVISORY_KB, points)
+        upsert_in_batches(Qdrant.CROP_ADVISORY_KB, points, batch_size=128)
     print(f"    → {len(points)} vectors")
     return len(points)
 

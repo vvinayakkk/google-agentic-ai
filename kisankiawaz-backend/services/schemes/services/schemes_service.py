@@ -16,16 +16,13 @@ class SchemesService:
 
         if ministry:
             query = query.where("ministry", "==", ministry)
+        if state:
+            query = query.where("beneficiary_state", "array_contains", state)
 
         docs = []
         async for doc in query.stream():
             data = doc.to_dict()
             data["id"] = doc.id
-            # Filter by state if needed (array contains)
-            if state:
-                beneficiary_states = data.get("beneficiary_state", [])
-                if isinstance(beneficiary_states, list) and state not in beneficiary_states and beneficiary_states:
-                    continue
             docs.append(data)
 
         total = len(docs)
@@ -65,16 +62,17 @@ class SchemesService:
         try:
             from shared.db.mongodb import get_async_db
             db = get_async_db()
-            docs = [d async for d in db.collection(MongoCollections.REF_FARMER_SCHEMES).limit(1500).stream()]
+            lexical_query = db.collection(MongoCollections.REF_FARMER_SCHEMES)
+            if state:
+                lexical_query = lexical_query.where("beneficiary_state", "array_contains", state)
+            if ministry:
+                lexical_query = lexical_query.where("ministry", "==", ministry)
+            docs = [d async for d in lexical_query.limit(600).stream()]
 
             scored = []
             for doc in docs:
                 item = doc.to_dict() or {}
                 states = item.get("beneficiary_state", []) if isinstance(item.get("beneficiary_state", []), list) else []
-                if state and states and state not in states:
-                    continue
-                if ministry and str(item.get("ministry", "")) != ministry:
-                    continue
 
                 title = str(item.get("title", "") or "")
                 summary = str(item.get("summary", "") or "")

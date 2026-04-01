@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/app_cache.dart';
 
 /// Animated, themed card matching React Native's AnimatedCard.
 class AppCard extends StatelessWidget {
@@ -39,7 +40,10 @@ class AppCard extends StatelessWidget {
     if (onTap == null) return card;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        Haptics.light();
+        onTap!.call();
+      },
       child: card,
     );
   }

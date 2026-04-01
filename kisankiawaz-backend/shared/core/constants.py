@@ -28,6 +28,7 @@ class MongoCollections:
     MANDIS: str = "mandis"
     WASTE_RECYCLING: str = "waste_recycling"
     AGENT_SESSIONS: str = "agent_sessions"
+    AGENT_SESSION_MESSAGES: str = "agent_session_messages"
     DOCUMENT_BUILDER_SESSIONS: str = "document_builder_sessions"
     EQUIPMENT_RENTAL_RATES: str = "equipment_rental_rates"
     PUBLIC_DATA_SYNC_STATE: str = "public_data_sync_state"
@@ -54,6 +55,7 @@ class MongoCollections:
     REF_FASAL_DATA: str = "ref_fasal_data"
     REF_PIN_MASTER: str = "ref_pin_master"
     REF_DATA_INGESTION_META: str = "ref_data_ingestion_meta"
+    REF_EQUIPMENT_RATE_HISTORY: str = "ref_equipment_rate_history"
 
     # ── Admin data ──
     ADMIN_USERS: str = "admin_users"

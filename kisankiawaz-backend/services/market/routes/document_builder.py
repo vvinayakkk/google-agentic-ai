@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from shared.auth.deps import get_current_user
 from shared.db.mongodb import get_async_db
-from shared.errors import AppError, HttpStatus
+from shared.errors import AppError, ErrorCode, HttpStatus
 
 from services.document_builder_service import DocumentBuilderService
 from services.government_schemes_data import get_all_schemes, get_scheme_by_name, get_schemes_by_category
@@ -90,9 +90,9 @@ async def get_scheme_detail(
     scheme = get_scheme_by_name(scheme_name)
     if not scheme:
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message=f"Scheme '{scheme_name}' not found",
-            error_code="SCHEME_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.SCHEME_NOT_FOUND,
+            f"Scheme '{scheme_name}' not found",
         )
     return {"scheme": scheme}
 
@@ -114,9 +114,9 @@ async def start_session(
     scheme = get_scheme_by_name(body.scheme_name)
     if not scheme:
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message=f"Scheme '{body.scheme_name}' not found",
-            error_code="SCHEME_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.SCHEME_NOT_FOUND,
+            f"Scheme '{body.scheme_name}' not found",
         )
 
     result = await service.start_session(
@@ -160,16 +160,16 @@ async def extract_from_base64(
         file_bytes = base64.b64decode(body.file_content, validate=True)
     except Exception as exc:
         raise AppError(
-            status=HttpStatus.BAD_REQUEST,
-            message="Invalid base64 document payload",
-            error_code="INVALID_FILE_CONTENT",
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.INVALID_FORMAT,
+            "Invalid base64 document payload",
         ) from exc
 
     if not file_bytes:
         raise AppError(
-            status=HttpStatus.BAD_REQUEST,
-            message="Empty file content",
-            error_code="EMPTY_FILE_CONTENT",
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.MISSING_FIELD,
+            "Empty file content",
         )
 
     result = await service.extract_from_document(
@@ -191,9 +191,9 @@ async def get_session(
     result = await service.get_session(db=db, session_id=session_id)
     if not result:
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message="Session not found",
-            error_code="SESSION_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.RESOURCE_NOT_FOUND,
+            "Session not found",
         )
     return result
 
@@ -220,9 +220,9 @@ async def download_document(
     result = await service.get_document_file(db=db, session_id=session_id)
     if not result:
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message="Document not ready. Complete all required fields first.",
-            error_code="DOCUMENT_NOT_READY",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.RESOURCE_NOT_FOUND,
+            "Document not ready. Complete all required fields first.",
         )
     return result
 
@@ -279,9 +279,9 @@ async def download_scheme_documents(
     scheme = get_scheme_by_name(scheme_name)
     if not scheme:
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message=f"Scheme '{scheme_name}' not found",
-            error_code="SCHEME_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.SCHEME_NOT_FOUND,
+            f"Scheme '{scheme_name}' not found",
         )
     result = await downloader.download_scheme_documents(scheme)
     return result
@@ -325,9 +325,9 @@ async def serve_scheme_document(
     file_path = downloader.get_document_path(scheme_name, doc_name)
     if not file_path or not os.path.exists(file_path):
         raise AppError(
-            status=HttpStatus.NOT_FOUND,
-            message=f"Document not found. Try downloading first via POST /download-scheme-docs/{scheme_name}",
-            error_code="DOCUMENT_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            ErrorCode.RESOURCE_NOT_FOUND,
+            f"Document not found. Try downloading first via POST /download-scheme-docs/{scheme_name}",
         )
     return FileResponse(
         path=file_path,
@@ -359,7 +359,7 @@ async def extract_from_text_endpoint(
         return result
     except ImportError:
         raise AppError(
-            status=HttpStatus.SERVICE_UNAVAILABLE,
-            message="langextract not installed on server",
-            error_code="LANGEXTRACT_UNAVAILABLE",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            ErrorCode.SERVICE_UNAVAILABLE,
+            "langextract not installed on server",
         )

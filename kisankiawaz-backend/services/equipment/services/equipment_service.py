@@ -39,6 +39,44 @@ class EquipmentService:
             items.append(item)
         return {"items": items, "count": len(items)}
 
+    @staticmethod
+    async def list_all_available(
+        db,
+        preferred_state: str = "",
+        preferred_district: str = "",
+    ) -> dict:
+        """Return all available equipment across all farmers for browsing."""
+        query = db.collection(MongoCollections.EQUIPMENT).where(
+            filter=FieldFilter("status", "==", "available")
+        )
+        docs = [d async for d in query.stream()]
+        items = []
+        for doc in docs:
+            item = doc.to_dict()
+            item["id"] = doc.id
+            items.append(item)
+
+        state_norm = str(preferred_state or "").strip().lower()
+        district_norm = str(preferred_district or "").strip().lower()
+
+        def _score(item: dict) -> int:
+            if not state_norm and not district_norm:
+                return 0
+            item_state = str(item.get("state") or "").strip().lower()
+            item_district = str(item.get("district") or item.get("location") or "").strip().lower()
+
+            score = 0
+            if state_norm and item_state == state_norm:
+                score += 2
+            if district_norm and district_norm in item_district:
+                score += 3
+            return score
+
+        items.sort(key=lambda x: str(x.get("name") or "").lower())
+        items.sort(key=lambda x: str(x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+        items.sort(key=_score, reverse=True)
+        return {"items": items, "count": len(items)}
+
     # ── Add equipment ────────────────────────────────────────────
 
     @staticmethod

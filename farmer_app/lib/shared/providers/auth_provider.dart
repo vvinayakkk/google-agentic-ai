@@ -188,6 +188,28 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Reset password using OTP.
+  Future<bool> resetPassword({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final service = ref.read(authServiceProvider);
+      await service.resetPassword(
+        phone: phone,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      return true;
+    } catch (e) {
+      state = AsyncData(
+        state.value?.copyWith(error: e.toString()) ?? AuthState(error: e.toString()),
+      );
+      return false;
+    }
+  }
+
   /// Logout.
   Future<void> logout() async {
     final storage = ref.read(localStorageProvider);

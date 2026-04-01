@@ -16,10 +16,11 @@ creds/
 scripts/reports/
 # Docker
 docker-compose.override.yml
-
+.fastembed_cache/
 # Database
 *.db
 *.sqlite3
+
 
 # Logs
 *.log

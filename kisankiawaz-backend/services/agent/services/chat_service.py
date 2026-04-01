@@ -1,11 +1,14 @@
 ﻿import uuid
 import re
 import json
+import asyncio
+import os
 from datetime import datetime, timezone
+from typing import Any
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-from shared.db.mongodb import get_async_db
+from shared.db.mongodb import FieldFilter, get_async_db
 from shared.core.constants import MongoCollections
 from agents.coordinator import build_coordinator
 from services.groq_fallback_service import generate_groq_reply
@@ -47,6 +50,51 @@ EQUIPMENT_INTENT_MARKERS = {
     "rotavator", "weeder", "seed drill", "trolley", "thresher",
 }
 
+MARKET_INTENT_MARKERS = {
+    "mandi", "market", "price", "rate", "bhav", "daam", "sell", "selling", "buyer",
+}
+
+WEATHER_INTENT_MARKERS = {
+    "weather", "rain", "forecast", "temperature", "humidity", "wind", "spray", "soil",
+}
+
+CROP_INTENT_MARKERS = {
+    "crop", "sowing", "harvest", "disease", "pest", "fertilizer", "irrigation", "seed",
+}
+
+LIVESTOCK_INTENT_MARKERS = {
+    "livestock", "cattle", "cow", "buffalo", "goat", "poultry", "dairy", "mastitis",
+}
+
+CROP_TERMS = [
+    "wheat",
+    "rice",
+    "maize",
+    "cotton",
+    "soybean",
+    "sugarcane",
+    "mustard",
+    "chickpea",
+    "tomato",
+    "onion",
+    "potato",
+    "groundnut",
+    "bajra",
+    "jowar",
+    "tur",
+    "moong",
+]
+
+_AGENT_TOOL_TIMEOUT_SECONDS = max(
+    2.0, float(os.getenv("AGENT_TOOL_TIMEOUT_SECONDS", "12"))
+)
+_GROUNDED_CONTEXT_TIMEOUT_SECONDS = max(
+    3.0, float(os.getenv("AGENT_GROUNDED_CONTEXT_TIMEOUT_SECONDS", "14"))
+)
+_GROQ_REPLY_TIMEOUT_SECONDS = max(
+    3.0, float(os.getenv("AGENT_GROQ_REPLY_TIMEOUT_SECONDS", "16"))
+)
+
 
 class ChatService:
     def __init__(self):
@@ -57,6 +105,14 @@ class ChatService:
             app_name="kisankiawaz",
             session_service=self.session_service,
         )
+        self._agentic_mode_enabled = str(os.getenv("AGENTIC_MODE_ENABLED", "1")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        self._prefer_direct_scheme_equipment = str(
+            os.getenv("AGENT_PREFER_DIRECT_RESPONSES", "0")
+        ).strip().lower() in {"1", "true", "yes"}
 
     @staticmethod
     def _compact_text(text: str, max_chars: int) -> str:
@@ -74,6 +130,417 @@ class ChatService:
         if lang in {"hinglish", "hi-en", "hi_en", "mix"}:
             return "hinglish"
         return lang or "auto"
+
+    @staticmethod
+    def _intent_has_any(user_message: str, markers: set[str]) -> bool:
+        txt = (user_message or "").lower()
+        tokens = {t for t in re.split(r"[^a-zA-Z0-9\-]+", txt) if t}
+        return any(m in txt for m in markers) or bool(tokens.intersection(markers))
+
+    @staticmethod
+    def _extract_primary_crop(user_message: str, farmer_facts: list[str]) -> str:
+        txt = (user_message or "").lower()
+        for crop in CROP_TERMS:
+            if crop in txt:
+                return crop.title()
+
+        for fact in farmer_facts:
+            if isinstance(fact, str) and fact.startswith("crops_of_interest="):
+                values = [v.strip() for v in fact.split("=", 1)[1].split(",") if v.strip()]
+                if values:
+                    return values[0].title()
+        return ""
+
+    @staticmethod
+    def _extract_primary_animal(user_message: str) -> str:
+        txt = (user_message or "").lower()
+        for animal in ["cow", "buffalo", "goat", "poultry", "sheep"]:
+            if animal in txt:
+                return animal
+        return "livestock"
+
+    @staticmethod
+    def _compact_json(value: Any, max_chars: int = 1800) -> str:
+        try:
+            raw = json.dumps(value, ensure_ascii=True)
+        except Exception:
+            raw = str(value)
+        clean = " ".join(raw.split())
+        if len(clean) <= max_chars:
+            return clean
+        return clean[: max_chars - 3] + "..."
+
+    async def _run_tool_async(self, tool_name: str, fn, *args, **kwargs) -> tuple[str, dict]:
+        try:
+            data = await asyncio.wait_for(
+                asyncio.to_thread(fn, *args, **kwargs),
+                timeout=_AGENT_TOOL_TIMEOUT_SECONDS,
+            )
+            return tool_name, {"ok": True, "data": data}
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Agentic tool {tool_name} timed out after {_AGENT_TOOL_TIMEOUT_SECONDS}s"
+            )
+            return tool_name, {
+                "ok": False,
+                "error": f"timeout_after_{_AGENT_TOOL_TIMEOUT_SECONDS}s",
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Agentic tool {tool_name} failed: {exc}")
+            return tool_name, {"ok": False, "error": str(exc)}
+
+    def _choose_primary_agent_hint(self, message: str, explicit_agent_type: str | None) -> str:
+        if explicit_agent_type:
+            return explicit_agent_type.strip().lower()
+        if self._is_scheme_intent(message):
+            return "scheme"
+        if self._is_equipment_intent(message):
+            return "scheme"
+        if self._intent_has_any(message, MARKET_INTENT_MARKERS):
+            return "market"
+        if self._intent_has_any(message, WEATHER_INTENT_MARKERS):
+            return "weather"
+        if self._intent_has_any(message, CROP_INTENT_MARKERS):
+            return "crop"
+        if self._intent_has_any(message, LIVESTOCK_INTENT_MARKERS):
+            return "general"
+        return "general"
+
+    async def _execute_agentic_tool_plan(
+        self,
+        user_message: str,
+        farmer_facts: list[str],
+        profile_geo: dict | None,
+        explicit_agent_type: str | None,
+    ) -> dict:
+        from tools.crop_tools import get_crop_calendar, search_crop_knowledge
+        from tools.general_tools import get_livestock_advice, search_farming_knowledge
+        from tools.market_tools import get_live_mandi_prices, get_live_mandis, get_price_trends
+        from tools.scheme_tools import (
+            check_scheme_eligibility,
+            search_equipment_rentals,
+            search_government_schemes,
+        )
+        from tools.weather_tools import (
+            get_live_soil_moisture,
+            get_live_weather,
+            get_live_weather_forecast,
+        )
+
+        state_hint, district_hint, city_hint = self._extract_geo_hints(
+            user_message=user_message,
+            farmer_facts=farmer_facts,
+            profile_geo=profile_geo or {},
+        )
+        weather_city = f"{(city_hint or district_hint or state_hint or 'Pune')},IN"
+        crop_name = self._extract_primary_crop(user_message, farmer_facts)
+        primary_agent = self._choose_primary_agent_hint(user_message, explicit_agent_type)
+
+        is_market = self._intent_has_any(user_message, MARKET_INTENT_MARKERS)
+        is_weather = self._intent_has_any(user_message, WEATHER_INTENT_MARKERS)
+        is_crop = self._intent_has_any(user_message, CROP_INTENT_MARKERS) or bool(crop_name)
+        is_scheme = self._is_scheme_intent(user_message)
+        is_equipment = self._is_equipment_intent(user_message)
+        is_livestock = self._intent_has_any(user_message, LIVESTOCK_INTENT_MARKERS)
+
+        if not any([is_market, is_weather, is_crop, is_scheme, is_equipment, is_livestock]):
+            is_market = True
+            is_weather = True
+
+        independent_jobs = []
+        independent_tools: list[str] = []
+
+        if is_market or primary_agent == "market":
+            independent_tools.extend(["market.get_live_mandi_prices", "market.get_live_mandis"])
+            independent_jobs.extend(
+                [
+                    self._run_tool_async(
+                        "market.get_live_mandi_prices",
+                        get_live_mandi_prices,
+                        crop_name=crop_name or "Wheat",
+                        state=state_hint,
+                        district=district_hint,
+                        limit=12,
+                        strict_locality=bool(state_hint),
+                    ),
+                    self._run_tool_async(
+                        "market.get_live_mandis",
+                        get_live_mandis,
+                        state=state_hint,
+                        limit=12,
+                        strict_locality=bool(state_hint),
+                    ),
+                ]
+            )
+
+        if is_weather or primary_agent == "weather":
+            independent_tools.extend(
+                [
+                    "weather.get_live_weather",
+                    "weather.get_live_weather_forecast",
+                    "weather.get_live_soil_moisture",
+                ]
+            )
+            independent_jobs.extend(
+                [
+                    self._run_tool_async("weather.get_live_weather", get_live_weather, city=weather_city),
+                    self._run_tool_async(
+                        "weather.get_live_weather_forecast",
+                        get_live_weather_forecast,
+                        city=weather_city,
+                        max_slots=6,
+                    ),
+                    self._run_tool_async(
+                        "weather.get_live_soil_moisture",
+                        get_live_soil_moisture,
+                        state=state_hint or "Maharashtra",
+                        district=district_hint,
+                        limit=12,
+                    ),
+                ]
+            )
+
+        if is_scheme or primary_agent == "scheme":
+            independent_tools.append("scheme.search_government_schemes")
+            independent_jobs.append(
+                self._run_tool_async(
+                    "scheme.search_government_schemes",
+                    search_government_schemes,
+                    query=user_message,
+                    state=state_hint,
+                )
+            )
+
+        if is_equipment or primary_agent == "scheme":
+            independent_tools.append("scheme.search_equipment_rentals")
+            independent_jobs.append(
+                self._run_tool_async(
+                    "scheme.search_equipment_rentals",
+                    search_equipment_rentals,
+                    query=user_message,
+                    state=state_hint,
+                )
+            )
+
+        if is_crop or primary_agent == "crop":
+            independent_tools.append("crop.search_crop_knowledge")
+            independent_jobs.append(
+                self._run_tool_async("crop.search_crop_knowledge", search_crop_knowledge, query=user_message)
+            )
+
+        independent_tools.append("general.search_farming_knowledge")
+        independent_jobs.append(
+            self._run_tool_async("general.search_farming_knowledge", search_farming_knowledge, query=user_message)
+        )
+
+        independent_results = await asyncio.gather(*independent_jobs)
+        tool_outputs = {name: payload for name, payload in independent_results}
+
+        sequential_tools: list[str] = []
+
+        if "scheme.search_government_schemes" in tool_outputs:
+            scheme_payload = tool_outputs["scheme.search_government_schemes"]
+            if scheme_payload.get("ok") and isinstance(scheme_payload.get("data"), dict):
+                first_result = (scheme_payload["data"].get("results") or [None])[0]
+                scheme_title = ""
+                if isinstance(first_result, dict):
+                    scheme_title = str(first_result.get("title") or first_result.get("scheme_id") or "").strip()
+                if scheme_title:
+                    sequential_tools.append("scheme.check_scheme_eligibility")
+                    name, payload = await self._run_tool_async(
+                        "scheme.check_scheme_eligibility",
+                        check_scheme_eligibility,
+                        scheme_name=scheme_title,
+                    )
+                    tool_outputs[name] = payload
+
+        if (is_market or primary_agent == "market") and crop_name:
+            sequential_tools.append("market.get_price_trends")
+            name, payload = await self._run_tool_async(
+                "market.get_price_trends",
+                get_price_trends,
+                crop_name=crop_name,
+                period="weekly",
+            )
+            tool_outputs[name] = payload
+
+        if (is_crop or primary_agent == "crop") and crop_name:
+            sequential_tools.append("crop.get_crop_calendar")
+            name, payload = await self._run_tool_async(
+                "crop.get_crop_calendar",
+                get_crop_calendar,
+                crop_name=crop_name,
+                region=district_hint or state_hint or "general",
+            )
+            tool_outputs[name] = payload
+
+        if is_livestock:
+            sequential_tools.append("general.get_livestock_advice")
+            name, payload = await self._run_tool_async(
+                "general.get_livestock_advice",
+                get_livestock_advice,
+                animal_type=self._extract_primary_animal(user_message),
+                topic="health and management",
+            )
+            tool_outputs[name] = payload
+
+        return {
+            "primary_agent": primary_agent,
+            "parallel_tools": independent_tools,
+            "sequential_tools": sequential_tools,
+            "state_hint": state_hint,
+            "district_hint": district_hint,
+            "city_hint": city_hint,
+            "crop_hint": crop_name,
+            "tool_outputs": tool_outputs,
+        }
+
+    def _render_agentic_context_block(self, plan_data: dict) -> str:
+        if not plan_data:
+            return ""
+
+        lines = [
+            "Agentic execution trace for this turn:",
+            f"- Primary specialist hint: {plan_data.get('primary_agent') or 'general'}",
+            f"- Parallel tool calls: {', '.join(plan_data.get('parallel_tools') or [])}",
+            f"- Sequential tool calls: {', '.join(plan_data.get('sequential_tools') or []) or 'none'}",
+            f"- Location hints: state={plan_data.get('state_hint') or ''}; district={plan_data.get('district_hint') or ''}; city={plan_data.get('city_hint') or ''}",
+            f"- Crop hint: {plan_data.get('crop_hint') or ''}",
+            "Tool outputs (structured, authoritative):",
+        ]
+
+        outputs = plan_data.get("tool_outputs") or {}
+        for tool_name, payload in outputs.items():
+            if payload.get("ok"):
+                rendered = self._compact_json(payload.get("data"), max_chars=1500)
+                lines.append(f"- {tool_name}: {rendered}")
+            else:
+                lines.append(f"- {tool_name}: ERROR={payload.get('error')}")
+
+        lines.append(
+            "Use tool outputs above for grounded facts; if any tool is missing/failed, continue with available verified outputs and clearly label scope."
+        )
+        return "\n".join(lines)
+
+    @staticmethod
+    def _extract_source_provenance_from_payload(tool_name: str, payload: dict) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        if not isinstance(payload, dict):
+            return entries
+
+        if not payload.get("ok"):
+            entries.append(
+                {
+                    "tool": tool_name,
+                    "source": "tool_error",
+                    "status": "error",
+                    "error": str(payload.get("error") or "unknown_error"),
+                }
+            )
+            return entries
+
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            entries.append(
+                {
+                    "tool": tool_name,
+                    "source": "unknown",
+                    "status": "ok",
+                    "freshness": {},
+                }
+            )
+            return entries
+
+        source_keys = ["source", "search_source", "provider"]
+        freshness_keys = [
+            "as_of_latest_arrival_date",
+            "data_last_ingested_at",
+            "last_updated",
+            "retrieved_at_utc",
+            "arrival_date",
+            "date",
+            "timestamp",
+        ]
+
+        sources: set[str] = set()
+        for key in source_keys:
+            raw = str(data.get(key) or "").strip()
+            if raw:
+                sources.add(raw)
+
+        for list_key in ["results", "prices", "mandis", "items"]:
+            rows = data.get(list_key)
+            if not isinstance(rows, list):
+                continue
+            for row in rows[:8]:
+                if not isinstance(row, dict):
+                    continue
+                for key in source_keys:
+                    raw = str(row.get(key) or "").strip()
+                    if raw:
+                        sources.add(raw)
+
+        freshness = {
+            k: data.get(k)
+            for k in freshness_keys
+            if data.get(k) not in (None, "", [], {})
+        }
+
+        if not sources:
+            sources.add("unknown")
+
+        for source_name in sorted(sources):
+            entries.append(
+                {
+                    "tool": tool_name,
+                    "source": source_name,
+                    "status": "ok",
+                    "freshness": freshness,
+                }
+            )
+        return entries
+
+    def _build_source_provenance(
+        self,
+        agentic_plan: dict,
+        static_sources: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+
+        tool_outputs = {}
+        if isinstance(agentic_plan, dict):
+            tool_outputs = agentic_plan.get("tool_outputs") or {}
+
+        for tool_name, payload in tool_outputs.items():
+            entries.extend(self._extract_source_provenance_from_payload(str(tool_name), payload))
+
+        for source_name in (static_sources or []):
+            src = str(source_name or "").strip()
+            if not src:
+                continue
+            entries.append(
+                {
+                    "tool": "partial_context",
+                    "source": src,
+                    "status": "ok",
+                    "freshness": {},
+                }
+            )
+
+        # Deduplicate while preserving first-seen payload details.
+        deduped: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        for item in entries:
+            key = (
+                str(item.get("tool") or ""),
+                str(item.get("source") or ""),
+                str(item.get("status") or ""),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(item)
+        return deduped
 
     def _detect_turn_language(self, user_message: str, requested_language: str | None, previous_language: str | None) -> str:
         text = " ".join((user_message or "").split())
@@ -109,9 +576,15 @@ class ChatService:
             return prev
         return "en"
 
-    def _extract_geo_hints(self, user_message: str, farmer_facts: list[str]) -> tuple[str, str, str]:
+    def _extract_geo_hints(
+        self,
+        user_message: str,
+        farmer_facts: list[str],
+        profile_geo: dict | None = None,
+    ) -> tuple[str, str, str]:
         text = " ".join((user_message or "").split())
         text_l = text.lower()
+        profile_geo = profile_geo or {}
 
         state_hint = ""
         district_hint = ""
@@ -143,27 +616,133 @@ class ChatService:
         elif city_hint:
             district_hint = city_hint
 
+        profile_state = str(profile_geo.get("state") or "").strip()
+        profile_district = str(profile_geo.get("district") or "").strip()
+        profile_village = str(profile_geo.get("village") or "").strip()
+
+        if not state_hint and profile_state:
+            state_hint = profile_state
+        if not district_hint and profile_district:
+            district_hint = profile_district
+        if not city_hint and profile_village:
+            city_hint = profile_village
+
         return state_hint, district_hint, city_hint
+
+    @staticmethod
+    def _profile_geo_facts(profile_geo: dict) -> list[str]:
+        if not isinstance(profile_geo, dict):
+            return []
+        facts: list[str] = []
+        state = str(profile_geo.get("state") or "").strip()
+        district = str(profile_geo.get("district") or "").strip()
+        village = str(profile_geo.get("village") or "").strip()
+        pin_code = str(profile_geo.get("pin_code") or "").strip()
+        if state:
+            facts.append(f"profile_state={state}")
+        if district:
+            facts.append(f"profile_district={district}")
+        if village:
+            facts.append(f"profile_village={village}")
+        if pin_code:
+            facts.append(f"profile_pin_code={pin_code}")
+        return facts
+
+    async def _load_profile_geo_context(self, db, user_id: str) -> dict:
+        def _extract_geo(profile: dict | None) -> dict:
+            profile = profile or {}
+            return {
+                "state": str(profile.get("state") or "").strip(),
+                "district": str(profile.get("district") or "").strip(),
+                "village": str(profile.get("village") or "").strip(),
+                "pin_code": str(profile.get("pin_code") or profile.get("pincode") or "").strip(),
+            }
+
+        try:
+            profiles = db.collection(MongoCollections.FARMER_PROFILES)
+
+            docs = await (
+                profiles
+                .where(filter=FieldFilter("user_id", "==", user_id))
+                .limit(1)
+                .get()
+            )
+            if docs:
+                geo = _extract_geo(docs[0].to_dict())
+                if geo.get("state") or geo.get("district"):
+                    return geo
+
+            docs = await (
+                profiles
+                .where(filter=FieldFilter("farmer_id", "==", user_id))
+                .limit(1)
+                .get()
+            )
+            if docs:
+                geo = _extract_geo(docs[0].to_dict())
+                if geo.get("state") or geo.get("district"):
+                    return geo
+
+            doc = await profiles.document(user_id).get()
+            if doc.exists:
+                geo = _extract_geo(doc.to_dict())
+                if geo.get("state") or geo.get("district"):
+                    return geo
+
+            return {}
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to load farmer profile geo context for {user_id}: {exc}")
+            return {}
 
     def _sanitize_unhelpful_response(self, response_text: str, language: str) -> str:
         txt = (response_text or "").strip()
         if not txt:
             return txt
 
+        def _polish_market_disclaimer(text_in: str) -> str:
+            text_out = text_in
+            replacements = [
+                (
+                    r"(?i)exact local match is limited in current records, so here is the closest verified data and practical action plan\.?",
+                    "Using the closest verified nearby records and a practical action plan for your farm.",
+                ),
+                (
+                    r"(?i)exact local match abhi limited hai, isliye neeche closest verified data aur practical action plan diya hai\.?",
+                    "Closest verified nearby records ke saath practical action plan neeche diya hai.",
+                ),
+                (
+                    r"(?i)fallback mode",
+                    "nearest regional match",
+                ),
+            ]
+            for pattern, replacement in replacements:
+                text_out = re.sub(pattern, replacement, text_out)
+            return text_out.strip()
+
+        txt = _polish_market_disclaimer(txt)
+
         lower_txt = txt.lower()
         negative_markers = [
             "i could not",
             "i can't",
             "i cannot",
+            "we could not",
+            "we can't",
+            "we cannot",
             "unable to",
+            "we are unable",
             "not available",
             "not found",
             "couldn't find",
             "no data",
             "i do not have",
             "i don't have",
+            "we do not have",
+            "we don't have",
             "i am unable",
             "cannot fetch",
+            "data is not available",
+            "not consistently available",
         ]
         if not any(m in lower_txt for m in negative_markers):
             return txt
@@ -174,23 +753,92 @@ class ChatService:
             if any(m in l for m in negative_markers):
                 continue
             cleaned_lines.append(line)
-        cleaned = "\n".join(cleaned_lines).strip()
+        cleaned = _polish_market_disclaimer("\n".join(cleaned_lines).strip())
 
         if str(language or "").lower().startswith("en"):
             prefix = (
-                "Exact local match is limited in current records, so here is the closest verified data and practical action plan."
+                "Using the closest verified nearby records and a practical action plan for your farm."
             )
         elif str(language or "").lower().startswith("hinglish"):
             prefix = (
-                "Exact local match abhi limited hai, isliye neeche closest verified data aur practical action plan diya hai."
+                "Closest verified nearby records ke saath practical action plan neeche diya hai."
             )
         else:
-            prefix = "सटीक लोकल मैच सीमित है, इसलिए नीचे सबसे नज़दीकी सत्यापित डेटा और व्यावहारिक कार्ययोजना दी गई है।"
+            prefix = "नीचे सबसे नज़दीकी सत्यापित रिकॉर्ड और व्यावहारिक कार्ययोजना दी गई है।"
 
         return f"{prefix}\n\n{cleaned}" if cleaned else prefix
 
-    async def _load_recent_messages(self, db, session_id: str, limit: int = MAX_CONTEXT_MSGS) -> list[dict]:
+    def _ensure_location_grounding(
+        self,
+        response_text: str,
+        user_message: str,
+        profile_geo: dict | None,
+        language: str,
+    ) -> str:
+        text = (response_text or "").strip()
+        if not text:
+            return text
+
+        profile_geo = profile_geo or {}
+        state = str(profile_geo.get("state") or "").strip()
+        district = str(profile_geo.get("district") or "").strip()
+        village = str(profile_geo.get("village") or "").strip()
+        if not (state or district or village):
+            return text
+
+        intent_sensitive = (
+            self._intent_has_any(user_message, MARKET_INTENT_MARKERS)
+            or self._intent_has_any(user_message, WEATHER_INTENT_MARKERS)
+            or self._intent_has_any(user_message, EQUIPMENT_INTENT_MARKERS)
+        )
+        if not intent_sensitive:
+            return text
+
+        text_l = text.lower()
+        local_tokens = [
+            str(village).lower(),
+            str(district).lower(),
+            str(state).lower(),
+        ]
+        if any(tok and tok in text_l for tok in local_tokens):
+            return text
+
+        loc_label = ", ".join([x for x in [village, district, state] if x])
+        if not loc_label:
+            return text
+
+        lang = str(language or "").lower()
+        if lang.startswith("hinglish"):
+            prefix = f"Location context: {loc_label} ke hisaab se neeche guidance diya gaya hai."
+        elif lang.startswith("hi"):
+            prefix = f"स्थान संदर्भ: नीचे दी गई सलाह {loc_label} के अनुसार है।"
+        else:
+            prefix = f"Location context: Guidance below is tailored to {loc_label}."
+
+        return f"{prefix}\n\n{text}"
+
+    async def _load_recent_messages(
+        self,
+        db,
+        session_id: str,
+        user_id: str,
+        limit: int = MAX_CONTEXT_MSGS,
+    ) -> list[dict]:
         docs = await (
+            db.collection(MongoCollections.AGENT_SESSION_MESSAGES)
+            .where(filter=FieldFilter("session_id", "==", session_id))
+            .where(filter=FieldFilter("user_id", "==", user_id))
+            .order_by("timestamp", direction="DESCENDING")
+            .limit(limit)
+            .get()
+        )
+        items = [d.to_dict() for d in docs]
+        if items:
+            # Return oldest -> newest for natural chronology in prompt context.
+            return list(reversed(items))
+
+        # Legacy fallback for old session-scoped subcollection writes.
+        legacy_docs = await (
             db.collection(MongoCollections.AGENT_SESSIONS)
             .document(session_id)
             .collection("messages")
@@ -198,8 +846,7 @@ class ChatService:
             .limit(limit)
             .get()
         )
-        # Return oldest -> newest for natural chronology in prompt context.
-        return [d.to_dict() for d in reversed(docs)]
+        return [d.to_dict() for d in reversed(legacy_docs)]
 
     def _extract_farmer_facts(self, user_message: str) -> list[str]:
         text = " ".join((user_message or "").split())
@@ -323,13 +970,33 @@ class ChatService:
             user_id="translator", session_id=runtime_session_id, new_message=content
         ):
             if event.is_final_response():
-                for part in event.content.parts:
-                    if part.text:
-                        translated += part.text
+                parts = getattr(getattr(event, "content", None), "parts", None) or []
+                for part in parts:
+                    part_text = getattr(part, "text", None)
+                    if part_text:
+                        translated += part_text
         return translated.strip()
 
     async def _enforce_language(self, response_text: str, language: str) -> str:
         lang = str(language or "").lower().strip()
+        if lang.startswith("hinglish"):
+            if not self._contains_devanagari(response_text):
+                return response_text
+            try:
+                transliterated = generate_groq_reply(
+                    message=(
+                        "Convert the following answer to Hinglish in Roman script only. "
+                        "Do not use Devanagari. Preserve facts, numbers, and recommendations exactly.\n\n"
+                        f"Answer:\n{response_text}"
+                    ),
+                    language="hinglish",
+                ).get("response", "")
+                if transliterated.strip() and not self._contains_devanagari(transliterated):
+                    return transliterated.strip()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"Hinglish romanization failed: {exc}")
+            return response_text
+
         if not lang.startswith("en"):
             return response_text
         contains_non_english_markers = (
@@ -416,6 +1083,42 @@ class ChatService:
         return has_scheme
 
     @staticmethod
+    def _is_equipment_intent(message: str) -> bool:
+        txt = (message or "").lower()
+        tokens = {t for t in re.split(r"[^a-zA-Z0-9\-]+", txt) if t}
+        return any(k in txt for k in EQUIPMENT_INTENT_MARKERS) or bool(tokens.intersection(EQUIPMENT_INTENT_MARKERS))
+
+    @staticmethod
+    def _guess_agent_type(user_message: str, explicit_agent_type: str | None, agent_used: str | None) -> str:
+        if explicit_agent_type:
+            return explicit_agent_type.strip().lower()
+
+        used = str(agent_used or "").lower()
+        if "weather" in used:
+            return "weather"
+        if "market" in used:
+            return "market"
+        if "scheme" in used:
+            return "scheme"
+        if "cattle" in used:
+            return "cattle"
+        if "mental" in used:
+            return "mental_health"
+
+        msg = (user_message or "").lower()
+        if any(k in msg for k in ["weather", "rain", "forecast", "temperature", "soil"]):
+            return "weather"
+        if any(k in msg for k in ["mandi", "price", "rate", "market", "bhav", "daam"]):
+            return "market"
+        if any(k in msg for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "eligibility"]):
+            return "scheme"
+        if any(k in msg for k in ["cattle", "dairy", "livestock", "goat", "poultry"]):
+            return "cattle"
+        if any(k in msg for k in ["stress", "anxiety", "depression", "mental", "helpline", "counsel"]):
+            return "mental_health"
+        return "general"
+
+    @staticmethod
     def _as_text_list(value) -> list[str]:
         if value is None:
             return []
@@ -435,10 +1138,20 @@ class ChatService:
         cleaned = [p.strip(" -") for p in parts if p.strip(" -")]
         return cleaned if cleaned else [txt]
 
-    def _render_scheme_detail_response(self, message: str, language: str, farmer_facts: list[str]) -> str:
+    def _render_scheme_detail_response(
+        self,
+        message: str,
+        language: str,
+        farmer_facts: list[str],
+        profile_geo: dict | None = None,
+    ) -> str:
         from tools.scheme_tools import search_government_schemes
 
-        state_hint, _, _ = self._extract_geo_hints(message, farmer_facts)
+        state_hint, _, _ = self._extract_geo_hints(
+            message,
+            farmer_facts,
+            profile_geo=profile_geo,
+        )
         scheme_data = search_government_schemes(query=message, state=state_hint)
         if not isinstance(scheme_data, dict) or not scheme_data.get("found"):
             return ""
@@ -510,6 +1223,244 @@ class ChatService:
 
         return header + "\n" + "\n".join(lines) + "\n\n" + footer
 
+    def _render_equipment_detail_response(
+        self,
+        message: str,
+        language: str,
+        farmer_facts: list[str],
+        profile_geo: dict | None = None,
+    ) -> str:
+        from tools.scheme_tools import search_equipment_rentals
+
+        state_hint, district_hint, _ = self._extract_geo_hints(
+            message,
+            farmer_facts,
+            profile_geo=profile_geo,
+        )
+        equip_data = search_equipment_rentals(query=message, state=state_hint)
+        if not isinstance(equip_data, dict) or not equip_data.get("found"):
+            return ""
+
+        rows = equip_data.get("results", []) if isinstance(equip_data.get("results", []), list) else []
+        if not rows:
+            return ""
+
+        lines: list[str] = []
+        for i, row in enumerate(rows[:3], start=1):
+            if isinstance(row, str):
+                lines.append(f"{i}. {self._compact_text(row, 260)}")
+                continue
+
+            equipment = str(row.get("equipment") or row.get("name") or f"Equipment {i}").strip()
+            provider = str(row.get("provider") or row.get("provider_name") or "Local provider").strip()
+            district = str(row.get("district") or district_hint or "").strip()
+            state = str(row.get("state") or state_hint or "").strip()
+            availability = str(row.get("availability") or "contact").strip()
+            contact = str(row.get("contact") or row.get("provider_phone") or "").strip()
+            alternate = str(row.get("alternate_contact") or "").strip()
+
+            rate_bits = []
+            for label, key in [("hour", "rate_hourly"), ("day", "rate_daily"), ("acre", "rate_per_acre"), ("trip", "rate_per_trip")]:
+                val = row.get(key)
+                if val is not None and str(val).strip() not in {"", "None"}:
+                    rate_bits.append(f"₹{val}/{label}")
+            rate_text = ", ".join(rate_bits) if rate_bits else "Rate: call provider"
+
+            where = ", ".join([p for p in [district, state] if p]) or "Location not specified"
+            line = f"{i}. {equipment} | Provider: {provider} | {where} | {rate_text} | Availability: {availability}"
+            if contact:
+                line += f" | Contact: {contact}"
+            if alternate:
+                line += f" | Alt: {alternate}"
+            lines.append(self._compact_text(line, 360))
+
+        source = str(equip_data.get("source") or "ref_equipment_providers")
+        if str(language or "").lower().startswith("hi"):
+            header = "उपकरण किराया विकल्प (आपके इलाके के अनुसार):"
+            footer = f"स्रोत: {source}. बुकिंग से पहले उपलब्धता और ईंधन/ऑपरेटर शर्तें फोन पर कन्फर्म करें।"
+        elif str(language or "").lower().startswith("hinglish"):
+            header = "Equipment rental options (aapke area ke hisaab se):"
+            footer = f"Source: {source}. Booking se pehle availability aur fuel/operator terms call par confirm karo."
+        else:
+            header = "Equipment rental options for your area:"
+            footer = f"Source: {source}. Confirm availability and fuel/operator terms before booking."
+
+        return header + "\n" + "\n".join(lines) + "\n\n" + footer
+
+    @staticmethod
+    def _requires_live_fetch(user_message: str) -> bool:
+        txt = (user_message or "").lower()
+        live_markers = {
+            "live",
+            "today",
+            "now",
+            "forecast",
+            "weather",
+            "rain",
+            "temperature",
+            "humidity",
+            "wind",
+            "price",
+            "mandi",
+            "bhav",
+            "daam",
+            "rate",
+        }
+        return any(marker in txt for marker in live_markers)
+
+    def _render_partial_market_snapshot(self, market_data: dict, mandi_data: dict, crop_name: str) -> str:
+        lines: list[str] = [f"Quick DB snapshot for {crop_name or 'crop'}:"]
+
+        prices = market_data.get("prices") if isinstance(market_data, dict) else None
+        if isinstance(prices, list) and prices:
+            top = prices[0]
+            lines.append(
+                self._compact_text(
+                    f"Top price: {top.get('commodity', crop_name)} at {top.get('market', 'market')} ({top.get('district', '')}, {top.get('state', '')}) "
+                    f"modal={top.get('modal_price')} min={top.get('min_price')} max={top.get('max_price')} "
+                    f"date={top.get('arrival_date_iso') or top.get('arrival_date')}",
+                    280,
+                )
+            )
+            lines.append(f"Rows matched: {len(prices)} | Source: {market_data.get('source', 'ref_mandi_prices')}")
+        elif isinstance(market_data, dict) and isinstance(market_data.get("results"), list):
+            lines.append(self._compact_text(str(market_data["results"][0]), 260))
+
+        mandis = mandi_data.get("mandis") if isinstance(mandi_data, dict) else None
+        if isinstance(mandis, list) and mandis:
+            top_names = [str(m.get("name") or "").strip() for m in mandis[:3] if str(m.get("name") or "").strip()]
+            if top_names:
+                lines.append(f"Nearby mandis: {', '.join(top_names)}")
+
+        return "\n".join(lines)
+
+    async def build_partial_response(
+        self,
+        user_id: str,
+        session_id: str,
+        message: str,
+        language: str = "hi",
+        agent_type: str | None = None,
+    ) -> dict[str, Any]:
+        """Build fast partial response from DB/vector context without running full LLM completion."""
+        db = get_async_db()
+        session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
+        session_data = session_doc.to_dict() if session_doc.exists else {}
+        turn_language = self._detect_turn_language(
+            user_message=message,
+            requested_language=language,
+            previous_language=session_data.get("language") if isinstance(session_data, dict) else None,
+        )
+
+        farmer_facts = (
+            session_data.get("farmer_facts", [])
+            if isinstance(session_data.get("farmer_facts", []), list)
+            else []
+        )
+        profile_geo = await self._load_profile_geo_context(db=db, user_id=user_id)
+        effective_farmer_facts = self._merge_fact_memory(
+            farmer_facts,
+            self._profile_geo_facts(profile_geo),
+        )
+
+        state_hint, district_hint, _ = self._extract_geo_hints(
+            user_message=message,
+            farmer_facts=effective_farmer_facts,
+            profile_geo=profile_geo,
+        )
+        crop_hint = self._extract_primary_crop(message, effective_farmer_facts) or "Wheat"
+
+        partial_blocks: list[str] = []
+        source_tags: list[str] = []
+
+        if self._is_scheme_intent(message):
+            direct = self._render_scheme_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
+            if direct.strip():
+                partial_blocks.append(direct)
+                source_tags.append("scheme_db")
+
+        if self._is_equipment_intent(message):
+            direct = self._render_equipment_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
+            if direct.strip():
+                partial_blocks.append(direct)
+                source_tags.append("equipment_db")
+
+        try:
+            if self._intent_has_any(message, MARKET_INTENT_MARKERS):
+                from tools.market_tools import get_nearby_mandis, search_market_prices
+
+                market_data = await asyncio.to_thread(
+                    search_market_prices,
+                    crop_name=crop_hint,
+                    state=state_hint,
+                )
+                mandi_data = await asyncio.to_thread(
+                    get_nearby_mandis,
+                    state=state_hint or "",
+                    district=district_hint or "",
+                )
+                partial_blocks.append(
+                    self._render_partial_market_snapshot(
+                        market_data=market_data if isinstance(market_data, dict) else {},
+                        mandi_data=mandi_data if isinstance(mandi_data, dict) else {},
+                        crop_name=crop_hint,
+                    )
+                )
+                source_tags.append("market_db")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Partial market snapshot failed: {exc}")
+
+        try:
+            if self._intent_has_any(message, WEATHER_INTENT_MARKERS):
+                from tools.weather_tools import get_seasonal_advisory
+
+                month = datetime.now(timezone.utc).month
+                season = "kharif" if month in {6, 7, 8, 9, 10} else "rabi"
+                advisory = await asyncio.to_thread(get_seasonal_advisory, season, state_hint or "general")
+                if isinstance(advisory, dict):
+                    text = self._compact_json(advisory, max_chars=420)
+                    partial_blocks.append(f"Seasonal advisory snapshot ({season}): {text}")
+                    source_tags.append("weather_advisory")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Partial weather advisory failed: {exc}")
+
+        if not partial_blocks:
+            partial_blocks.append(
+                "Quick context loaded from your profile and available reference datasets. "
+                "I am preparing a live-validated response now."
+            )
+            source_tags.append("context_fallback")
+
+        partial_text = "\n\n".join(partial_blocks)
+        partial_text = await self._enforce_language(response_text=partial_text, language=turn_language)
+
+        return {
+            "session_id": session_id,
+            "language": turn_language,
+            "partial_response": partial_text,
+            "sources": sorted(set(source_tags)),
+            "source_provenance": self._build_source_provenance(
+                agentic_plan={},
+                static_sources=sorted(set(source_tags)),
+            ),
+            "requires_live_fetch": self._requires_live_fetch(message),
+            "agentic_primary_agent": self._choose_primary_agent_hint(message, agent_type),
+            "agentic_trace": {
+                "parallel_tools": [],
+                "sequential_tools": [],
+            },
+        }
+
     async def _append_summary(
         self,
         db,
@@ -548,29 +1499,59 @@ class ChatService:
         user_id: str,
         session_id: str,
         language: str,
+        agent_type: str | None,
         user_message: str,
         assistant_message: str,
         agent_used: str,
         previous_summary: str,
         previous_facts: list[str],
     ) -> None:
-        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).set({
-            "user_id": user_id,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "language": language,
-        }, merge=True)
+        now = datetime.now(timezone.utc).isoformat()
+        session_ref = db.collection(MongoCollections.AGENT_SESSIONS).document(session_id)
+        session_doc = await session_ref.get()
+        current = session_doc.to_dict() if session_doc.exists else {}
+        current_count = int(current.get("message_count") or 0)
+        created_at = current.get("created_at") or now
+        resolved_agent_type = self._guess_agent_type(
+            user_message=user_message,
+            explicit_agent_type=agent_type or current.get("agent_type"),
+            agent_used=agent_used,
+        )
 
-        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
-            "role": "user",
-            "content": user_message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
-        await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").add({
-            "role": "assistant",
-            "content": assistant_message,
-            "agent": agent_used,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        await session_ref.set(
+            {
+                "session_id": session_id,
+                "user_id": user_id,
+                "farmer_id": user_id,
+                "created_at": created_at,
+                "updated_at": now,
+                "last_activity": now,
+                "language": language,
+                "agent_type": resolved_agent_type,
+                "message_count": current_count + 2,
+            },
+            merge=True,
+        )
+
+        await db.collection(MongoCollections.AGENT_SESSION_MESSAGES).add(
+            {
+                "session_id": session_id,
+                "user_id": user_id,
+                "role": "user",
+                "content": user_message,
+                "timestamp": now,
+            }
+        )
+        await db.collection(MongoCollections.AGENT_SESSION_MESSAGES).add(
+            {
+                "session_id": session_id,
+                "user_id": user_id,
+                "role": "assistant",
+                "content": assistant_message,
+                "agent": agent_used,
+                "timestamp": now,
+            }
+        )
 
         await self._append_summary(
             db=db,
@@ -587,6 +1568,7 @@ class ChatService:
         session_id: str,
         message: str,
         language: str = "hi",
+        agent_type: str | None = None,
     ) -> dict:
         db = get_async_db()
 
@@ -599,9 +1581,28 @@ class ChatService:
         )
         rolling_summary = str(session_data.get("summary", "") or "")
         farmer_facts = session_data.get("farmer_facts", []) if isinstance(session_data.get("farmer_facts", []), list) else []
+        profile_geo = await self._load_profile_geo_context(db=db, user_id=user_id)
+        effective_farmer_facts = self._merge_fact_memory(
+            farmer_facts,
+            self._profile_geo_facts(profile_geo),
+        )
 
-        if self._is_scheme_intent(message):
-            direct = self._render_scheme_detail_response(message=message, language=turn_language, farmer_facts=farmer_facts)
+        agentic_plan = {}
+        if self._agentic_mode_enabled:
+            agentic_plan = await self._execute_agentic_tool_plan(
+                user_message=message,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+                explicit_agent_type=agent_type,
+            )
+
+        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(message):
+            direct = self._render_scheme_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
             if direct.strip():
                 direct = await self._enforce_language(response_text=direct, language=turn_language)
                 await self._persist_turn(
@@ -609,11 +1610,12 @@ class ChatService:
                     user_id=user_id,
                     session_id=session_id,
                     language=turn_language,
+                    agent_type=agent_type,
                     user_message=message,
                     assistant_message=direct,
                     agent_used="scheme_direct",
                     previous_summary=rolling_summary,
-                    previous_facts=farmer_facts,
+                    previous_facts=effective_farmer_facts,
                 )
                 return {
                     "session_id": session_id,
@@ -622,23 +1624,89 @@ class ChatService:
                     "agent_used": "scheme_direct",
                     "provider": "database",
                     "model": "deterministic",
+                    "source_provenance": self._build_source_provenance(
+                        agentic_plan=agentic_plan,
+                        static_sources=["ref_farmer_schemes"],
+                    ),
+                    "agentic_primary_agent": agentic_plan.get("primary_agent"),
+                    "agentic_trace": {
+                        "parallel_tools": agentic_plan.get("parallel_tools", []),
+                        "sequential_tools": agentic_plan.get("sequential_tools", []),
+                    },
                 }
 
-        recent_messages = await self._load_recent_messages(db=db, session_id=session_id, limit=MAX_CONTEXT_MSGS)
+        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(message):
+            direct = self._render_equipment_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
+            if direct.strip():
+                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                await self._persist_turn(
+                    db=db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    language=turn_language,
+                    agent_type=agent_type,
+                    user_message=message,
+                    assistant_message=direct,
+                    agent_used="equipment_direct",
+                    previous_summary=rolling_summary,
+                    previous_facts=effective_farmer_facts,
+                )
+                return {
+                    "session_id": session_id,
+                    "response": direct,
+                    "language": turn_language,
+                    "agent_used": "equipment_direct",
+                    "provider": "database",
+                    "model": "deterministic",
+                    "source_provenance": self._build_source_provenance(
+                        agentic_plan=agentic_plan,
+                        static_sources=["ref_equipment_providers"],
+                    ),
+                    "agentic_primary_agent": agentic_plan.get("primary_agent"),
+                    "agentic_trace": {
+                        "parallel_tools": agentic_plan.get("parallel_tools", []),
+                        "sequential_tools": agentic_plan.get("sequential_tools", []),
+                    },
+                }
+
+        recent_messages = await self._load_recent_messages(
+            db=db,
+            session_id=session_id,
+            user_id=user_id,
+            limit=MAX_CONTEXT_MSGS,
+        )
         context_block = self._build_context_block(
             summary=rolling_summary,
             recent_messages=recent_messages,
             language=turn_language,
-            farmer_facts=farmer_facts,
+            farmer_facts=effective_farmer_facts,
         )
 
-        grounded_context = self._build_grounded_fallback_context(
-            user_message=message,
-            farmer_facts=farmer_facts,
-        )
+        try:
+            grounded_context = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._build_grounded_fallback_context,
+                    user_message=message,
+                    farmer_facts=effective_farmer_facts,
+                    profile_geo=profile_geo,
+                ),
+                timeout=_GROUNDED_CONTEXT_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Grounded fallback context timed out after {_GROUNDED_CONTEXT_TIMEOUT_SECONDS}s"
+            )
+            grounded_context = "NO_DOMAIN_TOOL_DATA=grounded_context_timeout"
+        agentic_context_block = self._render_agentic_context_block(agentic_plan)
 
         augmented_message = (
             f"{context_block}\n\n"
+            f"{agentic_context_block}\n\n"
             f"Grounded domain data (authoritative tool outputs):\n{grounded_context}\n\n"
             f"Current user message:\n{message}\n\n"
             "Respond with farmer-first practical advice using ONLY the grounded domain data above. "
@@ -651,7 +1719,20 @@ class ChatService:
             "Output must be in the REQUIRED output language above."
         )
 
-        fallback = generate_groq_reply(message=augmented_message, language=turn_language)
+        try:
+            fallback = await asyncio.wait_for(
+                asyncio.to_thread(
+                    generate_groq_reply,
+                    message=augmented_message,
+                    language=turn_language,
+                ),
+                timeout=_GROQ_REPLY_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Groq fallback generation timed out after {_GROQ_REPLY_TIMEOUT_SECONDS}s"
+            )
+            fallback = {"response": "", "provider": "groq", "model": "timeout"}
         response_text = (fallback.get("response", "") or "").strip()
         if not response_text:
             if turn_language.startswith("en"):
@@ -671,7 +1752,13 @@ class ChatService:
         response_text = self._enforce_memory_reference(
             response_text=response_text,
             user_message=message,
-            farmer_facts=farmer_facts,
+            farmer_facts=effective_farmer_facts,
+            language=turn_language,
+        )
+        response_text = self._ensure_location_grounding(
+            response_text=response_text,
+            user_message=message,
+            profile_geo=profile_geo,
             language=turn_language,
         )
 
@@ -680,11 +1767,12 @@ class ChatService:
             user_id=user_id,
             session_id=session_id,
             language=turn_language,
+            agent_type=agent_type,
             user_message=message,
             assistant_message=response_text,
             agent_used="groq_fallback",
             previous_summary=rolling_summary,
-            previous_facts=farmer_facts,
+            previous_facts=effective_farmer_facts,
         )
 
         return {
@@ -694,12 +1782,30 @@ class ChatService:
             "agent_used": "groq_fallback",
             "provider": fallback.get("provider", "groq"),
             "model": fallback.get("model", "unknown"),
+            "source_provenance": self._build_source_provenance(agentic_plan=agentic_plan),
+            "agentic_primary_agent": agentic_plan.get("primary_agent"),
+            "agentic_trace": {
+                "parallel_tools": agentic_plan.get("parallel_tools", []),
+                "sequential_tools": agentic_plan.get("sequential_tools", []),
+            },
         }
 
-    def _build_grounded_fallback_context(self, user_message: str, farmer_facts: list[str]) -> str:
+    def _build_grounded_fallback_context(
+        self,
+        user_message: str,
+        farmer_facts: list[str],
+        profile_geo: dict | None = None,
+    ) -> str:
         msg = (user_message or "").lower()
         lines: list[str] = []
-        state_hint, district_hint, city_hint = self._extract_geo_hints(user_message, farmer_facts)
+        state_hint, district_hint, city_hint = self._extract_geo_hints(
+            user_message,
+            farmer_facts,
+            profile_geo=profile_geo,
+        )
+
+        if profile_geo:
+            lines.append("PROFILE_GEO=" + self._compact_text(json.dumps(profile_geo, ensure_ascii=True), 600))
 
         crop_terms = ["wheat", "rice", "maize", "cotton", "soybean", "mustard", "chickpea", "onion", "potato", "tomato"]
         crop = ""
@@ -717,8 +1823,9 @@ class ChatService:
                     state=state_hint,
                     district=district_hint,
                     limit=8,
+                    strict_locality=bool(state_hint),
                 )
-                mandi_data = get_live_mandis(state=state_hint, limit=8)
+                mandi_data = get_live_mandis(state=state_hint, limit=8, strict_locality=bool(state_hint))
                 lines.append("MARKET_DATA=" + self._compact_text(json.dumps(market_data, ensure_ascii=True), 3000))
                 lines.append("MANDI_DATA=" + self._compact_text(json.dumps(mandi_data, ensure_ascii=True), 3000))
         except Exception as exc:  # noqa: BLE001
@@ -798,7 +1905,14 @@ class ChatService:
             )
         return response_text + note
 
-    async def process_message(self, user_id: str, session_id: str, message: str, language: str = "hi") -> dict:
+    async def process_message(
+        self,
+        user_id: str,
+        session_id: str,
+        message: str,
+        language: str = "hi",
+        agent_type: str | None = None,
+    ) -> dict:
         db = get_async_db()
 
         session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
@@ -810,9 +1924,28 @@ class ChatService:
         )
         rolling_summary = str(session_data.get("summary", "") or "")
         farmer_facts = session_data.get("farmer_facts", []) if isinstance(session_data.get("farmer_facts", []), list) else []
+        profile_geo = await self._load_profile_geo_context(db=db, user_id=user_id)
+        effective_farmer_facts = self._merge_fact_memory(
+            farmer_facts,
+            self._profile_geo_facts(profile_geo),
+        )
 
-        if self._is_scheme_intent(message):
-            direct = self._render_scheme_detail_response(message=message, language=turn_language, farmer_facts=farmer_facts)
+        agentic_plan = {}
+        if self._agentic_mode_enabled:
+            agentic_plan = await self._execute_agentic_tool_plan(
+                user_message=message,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+                explicit_agent_type=agent_type,
+            )
+
+        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(message):
+            direct = self._render_scheme_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
             if direct.strip():
                 direct = await self._enforce_language(response_text=direct, language=turn_language)
                 await self._persist_turn(
@@ -820,11 +1953,12 @@ class ChatService:
                     user_id=user_id,
                     session_id=session_id,
                     language=turn_language,
+                    agent_type=agent_type,
                     user_message=message,
                     assistant_message=direct,
                     agent_used="scheme_direct",
                     previous_summary=rolling_summary,
-                    previous_facts=farmer_facts,
+                    previous_facts=effective_farmer_facts,
                 )
                 return {
                     "session_id": session_id,
@@ -833,15 +1967,67 @@ class ChatService:
                     "agent_used": "scheme_direct",
                     "provider": "database",
                     "model": "deterministic",
+                    "source_provenance": self._build_source_provenance(
+                        agentic_plan=agentic_plan,
+                        static_sources=["ref_farmer_schemes"],
+                    ),
+                    "agentic_primary_agent": agentic_plan.get("primary_agent"),
+                    "agentic_trace": {
+                        "parallel_tools": agentic_plan.get("parallel_tools", []),
+                        "sequential_tools": agentic_plan.get("sequential_tools", []),
+                    },
                 }
 
-        recent_messages = await self._load_recent_messages(db=db, session_id=session_id, limit=MAX_CONTEXT_MSGS)
+        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(message):
+            direct = self._render_equipment_detail_response(
+                message=message,
+                language=turn_language,
+                farmer_facts=effective_farmer_facts,
+                profile_geo=profile_geo,
+            )
+            if direct.strip():
+                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                await self._persist_turn(
+                    db=db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    language=turn_language,
+                    agent_type=agent_type,
+                    user_message=message,
+                    assistant_message=direct,
+                    agent_used="equipment_direct",
+                    previous_summary=rolling_summary,
+                    previous_facts=effective_farmer_facts,
+                )
+                return {
+                    "session_id": session_id,
+                    "response": direct,
+                    "language": turn_language,
+                    "agent_used": "equipment_direct",
+                    "source_provenance": self._build_source_provenance(
+                        agentic_plan=agentic_plan,
+                        static_sources=["ref_equipment_providers"],
+                    ),
+                    "agentic_primary_agent": agentic_plan.get("primary_agent"),
+                    "agentic_trace": {
+                        "parallel_tools": agentic_plan.get("parallel_tools", []),
+                        "sequential_tools": agentic_plan.get("sequential_tools", []),
+                    },
+                }
+
+        recent_messages = await self._load_recent_messages(
+            db=db,
+            session_id=session_id,
+            user_id=user_id,
+            limit=MAX_CONTEXT_MSGS,
+        )
         context_block = self._build_context_block(
             summary=rolling_summary,
             recent_messages=recent_messages,
             language=turn_language,
-            farmer_facts=farmer_facts,
+            farmer_facts=effective_farmer_facts,
         )
+        agentic_context_block = self._render_agentic_context_block(agentic_plan)
 
         # Use an ephemeral runtime session per turn so model context remains bounded.
         runtime_session_id = f"{session_id}-{uuid.uuid4().hex[:8]}"
@@ -855,6 +2041,7 @@ class ChatService:
 
         augmented_message = (
             f"{context_block}\n\n"
+            f"{agentic_context_block}\n\n"
             f"Current user message:\n{message}\n\n"
             "Respond with farmer-first practical advice and reference specific data when available. "
             "Never use refusal-style wording (cannot, unavailable, not found). "
@@ -874,9 +2061,11 @@ class ChatService:
             user_id=user_id, session_id=runtime_session_id, new_message=content
         ):
             if event.is_final_response():
-                for part in event.content.parts:
-                    if part.text:
-                        response_text += part.text
+                parts = getattr(getattr(event, "content", None), "parts", None) or []
+                for part in parts:
+                    part_text = getattr(part, "text", None)
+                    if part_text:
+                        response_text += part_text
                 agent_used = event.author or "coordinator"
 
         if not response_text.strip():
@@ -897,7 +2086,13 @@ class ChatService:
         response_text = self._enforce_memory_reference(
             response_text=response_text,
             user_message=message,
-            farmer_facts=farmer_facts,
+            farmer_facts=effective_farmer_facts,
+            language=turn_language,
+        )
+        response_text = self._ensure_location_grounding(
+            response_text=response_text,
+            user_message=message,
+            profile_geo=profile_geo,
             language=turn_language,
         )
 
@@ -906,11 +2101,12 @@ class ChatService:
             user_id=user_id,
             session_id=session_id,
             language=turn_language,
+            agent_type=agent_type,
             user_message=message,
             assistant_message=response_text,
             agent_used=agent_used,
             previous_summary=rolling_summary,
-            previous_facts=farmer_facts,
+            previous_facts=effective_farmer_facts,
         )
 
         return {
@@ -918,18 +2114,34 @@ class ChatService:
             "response": response_text,
             "language": turn_language,
             "agent_used": agent_used,
+            "source_provenance": self._build_source_provenance(agentic_plan=agentic_plan),
+            "agentic_primary_agent": agentic_plan.get("primary_agent"),
+            "agentic_trace": {
+                "parallel_tools": agentic_plan.get("parallel_tools", []),
+                "sequential_tools": agentic_plan.get("sequential_tools", []),
+            },
         }
 
     async def list_sessions(self, user_id: str) -> list:
         db = get_async_db()
-        from shared.db.mongodb import FieldFilter
         docs = await db.collection(MongoCollections.AGENT_SESSIONS).where(
             filter=FieldFilter("user_id", "==", user_id)
         ).get()
-        items = [{"id": d.id, **d.to_dict()} for d in docs]
-        # Sort in Python (avoids composite index requirement)
-        items.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
-        return items
+        sessions = []
+        for d in docs:
+            data = d.to_dict() or {}
+            sessions.append(
+                {
+                    "session_id": data.get("session_id") or d.id,
+                    "farmer_id": data.get("farmer_id") or data.get("user_id") or user_id,
+                    "agent_type": data.get("agent_type") or "general",
+                    "message_count": int(data.get("message_count") or 0),
+                    "created_at": data.get("created_at") or data.get("updated_at"),
+                    "last_activity": data.get("last_activity") or data.get("updated_at"),
+                }
+            )
+        sessions.sort(key=lambda x: x.get("last_activity") or "", reverse=True)
+        return sessions
 
     async def get_session_history(self, session_id: str, user_id: str) -> dict:
         db = get_async_db()
@@ -937,7 +2149,25 @@ class ChatService:
         if not session_doc.exists or session_doc.to_dict().get("user_id") != user_id:
             from shared.errors import not_found
             raise not_found("Session")
-        messages = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").order_by("timestamp").get()
+
+        messages = await (
+            db.collection(MongoCollections.AGENT_SESSION_MESSAGES)
+            .where(filter=FieldFilter("session_id", "==", session_id))
+            .where(filter=FieldFilter("user_id", "==", user_id))
+            .order_by("timestamp")
+            .get()
+        )
+
+        if not messages:
+            # Legacy fallback for old writes.
+            messages = await (
+                db.collection(MongoCollections.AGENT_SESSIONS)
+                .document(session_id)
+                .collection("messages")
+                .order_by("timestamp")
+                .get()
+            )
+
         return {
             "session_id": session_id,
             "messages": [m.to_dict() for m in messages],
@@ -949,8 +2179,64 @@ class ChatService:
         if not session_doc.exists or session_doc.to_dict().get("user_id") != user_id:
             from shared.errors import not_found
             raise not_found("Session")
-        messages = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).collection("messages").get()
+
+        messages = await (
+            db.collection(MongoCollections.AGENT_SESSION_MESSAGES)
+            .where(filter=FieldFilter("session_id", "==", session_id))
+            .where(filter=FieldFilter("user_id", "==", user_id))
+            .get()
+        )
         for msg in messages:
             await msg.reference.delete()
+
+        legacy_messages = await (
+            db.collection(MongoCollections.AGENT_SESSIONS)
+            .document(session_id)
+            .collection("messages")
+            .get()
+        )
+        for msg in legacy_messages:
+            await msg.reference.delete()
+
         await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).delete()
+
+    async def delete_all_sessions(self, user_id: str) -> dict:
+        db = get_async_db()
+
+        session_docs = await db.collection(MongoCollections.AGENT_SESSIONS).where(
+            filter=FieldFilter("user_id", "==", user_id)
+        ).get()
+
+        session_ids = []
+        for doc in session_docs:
+            data = doc.to_dict() or {}
+            session_ids.append(data.get("session_id") or doc.id)
+
+        deleted_messages = 0
+        messages = await db.collection(MongoCollections.AGENT_SESSION_MESSAGES).where(
+            filter=FieldFilter("user_id", "==", user_id)
+        ).get()
+        for msg in messages:
+            await msg.reference.delete()
+            deleted_messages += 1
+
+        for sid in session_ids:
+            legacy_messages = await (
+                db.collection(MongoCollections.AGENT_SESSIONS)
+                .document(sid)
+                .collection("messages")
+                .get()
+            )
+            for msg in legacy_messages:
+                await msg.reference.delete()
+
+        deleted_sessions = 0
+        for doc in session_docs:
+            await doc.reference.delete()
+            deleted_sessions += 1
+
+        return {
+            "deleted_sessions": deleted_sessions,
+            "deleted_messages": deleted_messages,
+        }
 

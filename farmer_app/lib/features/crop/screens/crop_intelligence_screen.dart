@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/agent_service.dart';
 import '../../../shared/services/crop_service.dart';
+import '../../../shared/services/farmer_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -36,6 +37,13 @@ class _CropIntelligenceScreenState
     super.dispose();
   }
 
+  String get _season {
+    final month = DateTime.now().month;
+    if (month >= 6 && month <= 10) return 'Kharif';
+    if (month >= 11 || month <= 2) return 'Rabi';
+    return 'Zaid';
+  }
+
   Future<void> _analyze() async {
     final crop = _cropController.text.trim();
     if (crop.isEmpty) {
@@ -49,18 +57,33 @@ class _CropIntelligenceScreenState
       _error = null;
     });
     try {
+      final profile = await ref
+        .read(farmerServiceProvider)
+        .getMyProfile()
+        .catchError((_) => <String, dynamic>{});
+
+      final soilType = (profile['soil_type'] ?? profile['soilType'] ?? 'Loamy')
+        .toString()
+        .trim();
+      final state = (profile['state'] ?? '').toString().trim();
+
       // Fire both requests in parallel
       final results = await Future.wait([
         ref.read(agentServiceProvider).chat(
               message:
-                  'Analyze crop: $crop. Give detailed info about duration, '
+            'Analyze crop: $crop for Indian farming conditions. '
+            'Context: soil type $soilType, season $_season'
+            '${state.isNotEmpty ? ', state $state' : ''}. '
+            'Give detailed info about duration, '
                   'water needs, season, soil requirements, pest management, '
                   'yield estimation, growth stages, market outlook, and best '
                   'practices.',
+          language: context.locale.languageCode,
             ),
         ref.read(cropServiceProvider).getRecommendations(
-              soilType: 'Loamy',
-              season: 'Kharif',
+          soilType: soilType,
+          season: _season,
+          state: state.isEmpty ? null : state,
             ),
       ]);
       setState(() {

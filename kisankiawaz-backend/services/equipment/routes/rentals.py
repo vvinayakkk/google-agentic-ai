@@ -12,6 +12,7 @@ from services.rental_service import RentalService
 router = APIRouter(prefix="/rentals", tags=["Rentals"])
 
 
+@router.get("", status_code=HttpStatus.OK, include_in_schema=False)
 @router.get("/", status_code=HttpStatus.OK)
 async def list_rentals(
     user: dict = Depends(get_current_farmer),

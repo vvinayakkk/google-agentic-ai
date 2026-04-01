@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
@@ -226,6 +227,21 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen>
     } finally {
       setState(() => _isLoadingAI = false);
     }
+  }
+
+  Future<void> _shareCalculation() async {
+    if (_calcResult.trim().isEmpty) return;
+    final text = [
+      'Best Out Of Waste Analysis',
+      'Waste Type: $_selectedWaste',
+      'Current Disposal: $_selectedDisposal',
+      '',
+      _calcResult,
+    ].join('\n');
+
+    await SharePlus.instance.share(
+      ShareParams(text: text),
+    );
   }
 
   Future<void> _calculate() async {
@@ -675,8 +691,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen>
           AppButton(
             label: 'Share Results',
             icon: Icons.share,
-            onPressed: () =>
-                context.showSnack('Sharing coming soon!', isError: false),
+            onPressed: _shareCalculation,
             width: double.infinity,
           ),
         ],

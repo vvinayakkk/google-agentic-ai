@@ -1,0 +1,80 @@
+{
+  "generated_at_utc": "2026-04-01T17:04:16.607052+00:00",
+  "summary": {
+    "total_probes": 115,
+    "failed_probes": 3
+  },
+  "by_service": {
+    "auth": {
+      "total": 10,
+      "failed": 0
+    },
+    "farmer": {
+      "total": 8,
+      "failed": 0
+    },
+    "crop": {
+      "total": 10,
+      "failed": 0
+    },
+    "market": {
+      "total": 1,
+      "failed": 1
+    },
+    "equipment": {
+      "total": 1,
+      "failed": 1
+    },
+    "agent": {
+      "total": 1,
+      "failed": 1
+    },
+    "voice": {
+      "total": 6,
+      "failed": 0
+    },
+    "notification": {
+      "total": 11,
+      "failed": 0
+    },
+    "schemes": {
+      "total": 8,
+      "failed": 0
+    },
+    "geo": {
+      "total": 5,
+      "failed": 0
+    },
+    "admin": {
+      "total": 36,
+      "failed": 0
+    },
+    "analytics": {
+      "total": 18,
+      "failed": 0
+    }
+  },
+  "failures": [
+    {
+      "service": "market",
+      "method": "OPENAPI",
+      "path": "/openapi.json",
+      "status": 0,
+      "reason": "openapi_fetch_failed: timed out"
+    },
+    {
+      "service": "equipment",
+      "method": "OPENAPI",
+      "path": "/openapi.json",
+      "status": 0,
+      "reason": "openapi_fetch_failed: timed out"
+    },
+    {
+      "service": "agent",
+      "method": "OPENAPI",
+      "path": "/openapi.json",
+      "status": 0,
+      "reason": "openapi_fetch_failed: timed out"
+    }
+  ]
+}

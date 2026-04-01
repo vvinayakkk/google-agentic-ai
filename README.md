@@ -7,7 +7,7 @@
 ### AI-Powered Agricultural Intelligence Platform for Indian Farmers
 
 *Voice-first. Multilingual. Built for Bharat.*
-
+powershell -ExecutionPolicy Bypass -File run-android-dev.ps1
 ---
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
@@ -338,9 +338,11 @@ SARVAM_API_KEY=<from sarvam.ai>
 GEMINI_API_KEY=<from aistudio.google.com>
 GROQ_API_KEY=<from console.groq.com>
 
-# ── Market Data ───────────────────────────────────────────────
-OPENWEATHERMAP_API_KEY=<from openweathermap.org>
+# ── Market Data / Weather Intelligence ────────────────────────
 DATA_GOV_API_KEY=<from data.gov.in>   # optional — enables live feed
+OPENWEATHERMAP_API_KEY=<optional fallback for legacy weather clients>
+WEATHER_FULL_CACHE_TTL_SECONDS=3600
+SOIL_COMPOSITION_CACHE_TTL_SECONDS=2592000
 ```
 
 > **Security note:** Never commit your `.env` file. It is in `.gitignore` by default.
@@ -379,9 +381,9 @@ curl http://localhost:8000/api/v1/auth/health
 # → {"status": "ok"}
 ```
 
-### 5. Seed Reference Data
+### 5. Seed and Harden Data
 
-Seed the admin user and reference datasets:
+Seed the admin user and reference datasets, then run data-quality and index hardening:
 
 ```bash
 # Seed admin user
@@ -390,9 +392,20 @@ docker-compose exec auth-service python /app/scripts/seed_admin.py
 # Seed reference data (mandi directory, schemes, pincode master, etc.)
 docker-compose exec market-service python /app/scripts/seed_reference_data.py
 
+# Normalize and audit ingested records (state canonicalization, date normalization)
+docker-compose exec agent-service python /app/scripts/fix_and_audit_data_quality.py
+
+# Build Mongo production indexes (nested/compound where applicable)
+docker-compose exec agent-service python /app/scripts/build_production_indexes.py
+
 # Build Qdrant vector indexes
 docker-compose exec agent-service python /app/scripts/generate_qdrant_indexes.py
+
+# Build Qdrant payload indexes for fast metadata filters
+docker-compose exec agent-service python /app/scripts/build_qdrant_payload_indexes.py
 ```
+
+Index and quality scripts are idempotent and safe to rerun after bulk imports.
 
 Or trigger all via the admin API after logging in:
 ```bash
@@ -578,7 +591,7 @@ GET    /api/v1/crops/recommendations    # Crop recommendations
 POST   /api/v1/crops/cycles             # Create cycle record
 ```
 
-### Market (52 routes)
+### Market (54 routes)
 
 ```http
 # Live market data
@@ -586,8 +599,13 @@ GET  /api/v1/market/prices              # Query mandi prices
 GET  /api/v1/market/msp                 # Minimum Support Prices
 GET  /api/v1/market/mandis              # Mandi directory
 GET  /api/v1/market/trends              # Price trends
-GET  /api/v1/market/weather             # Weather data
-GET  /api/v1/market/soil                # Soil health data
+GET  /api/v1/market/weather/full        # Aggregated weather intelligence
+GET  /api/v1/market/weather/soil-composition  # SoilGrids soil composition
+GET  /api/v1/market/weather/city        # Legacy weather by city (compat)
+GET  /api/v1/market/weather/coords      # Legacy weather by coords (compat)
+GET  /api/v1/market/weather/forecast/city    # Legacy forecast by city (compat)
+GET  /api/v1/market/weather/forecast/coords  # Legacy forecast by coords (compat)
+GET  /api/v1/market/soil-moisture       # Legacy soil moisture dataset
 
 # Reference data (read-only)
 GET  /api/v1/market/cold-storage        # Cold storage facilities
@@ -614,11 +632,14 @@ POST   /api/v1/market/admin/sync        # Trigger live data sync
 
 ```http
 POST /api/v1/agent/chat                 # Send chat message
+POST /api/v1/agent/chat/prepare         # Stage 1: fast partial response + request_id
+POST /api/v1/agent/chat/finalize        # Stage 2: poll final enriched response
 GET  /api/v1/agent/sessions             # List my sessions
 GET  /api/v1/agent/sessions/{id}        # Session detail + transcript
 DELETE /api/v1/agent/sessions/{id}      # Delete session
+DELETE /api/v1/agent/sessions           # Delete all sessions for current user
 GET  /api/v1/agent/sessions/{id}/messages
-GET  /api/v1/agent/keys/status          # [Admin] Key pool health
+GET  /api/v1/agent/key-pool/status      # [Admin] Key pool health
 POST /api/v1/agent/search               # Knowledge base search
 GET  /api/v1/agent/health
 ```
@@ -633,6 +654,21 @@ curl -X POST http://localhost:8000/api/v1/agent/chat \
     "session_id": null,
     "language": "hi"
   }'
+```
+
+**Two-Phase Chat Example (partial + final):**
+```bash
+# 1) Prepare: immediate partial answer
+curl -X POST http://localhost:8000/api/v1/agent/chat/prepare \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Nearby wheat mandi trend?","language":"en"}'
+
+# 2) Finalize: poll with request_id from prepare response
+curl -X POST http://localhost:8000/api/v1/agent/chat/finalize \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"request_id":"<prepare_request_id>","timeout_ms":30000}'
 ```
 
 ### Voice
@@ -849,8 +885,10 @@ The pentest suite verifies:
 | `GROQ_API_KEY` | ✅ | Groq — agent LLM fallback |
 | `GROQ_API_KEYS` | ⬜ | Comma-separated pool |
 | `GROQ_MODEL` | ✅ | Default: `llama-3.3-70b-versatile` |
-| `OPENWEATHERMAP_API_KEY` | ✅ | Weather endpoint |
+| `OPENWEATHERMAP_API_KEY` | ⬜ | Optional legacy weather fallback |
 | `DATA_GOV_API_KEY` | ⬜ | data.gov.in — enables live market feed |
+| `WEATHER_FULL_CACHE_TTL_SECONDS` | ⬜ | Aggregated weather cache TTL (default: `3600`) |
+| `SOIL_COMPOSITION_CACHE_TTL_SECONDS` | ⬜ | SoilGrids cache TTL (default: `2592000`) |
 | `VOICE_STT_TIMEOUT_SECONDS` | ⬜ | Default: `12` |
 | `VOICE_AGENT_TIMEOUT_SECONDS` | ⬜ | Default: `20` |
 | `VOICE_AGENT_MAX_RETRIES` | ⬜ | Default: `3` |

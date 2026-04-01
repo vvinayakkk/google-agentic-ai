@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_cache.dart';
 
 /// Reusable glassmorphism card used across weather screens.
 class GlassCard extends StatelessWidget {
@@ -59,7 +60,13 @@ class GlassCard extends StatelessWidget {
     );
 
     if (onTap == null) return card;
-    return GestureDetector(onTap: onTap, child: card);
+    return GestureDetector(
+      onTap: () {
+        Haptics.light();
+        onTap!.call();
+      },
+      child: card,
+    );
   }
 }
 
@@ -89,7 +96,12 @@ class GlassIconButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: onPressed == null
+            ? null
+            : () {
+                Haptics.light();
+                onPressed!.call();
+              },
         borderRadius: BorderRadius.circular(12),
         child: Container(
           height: size,

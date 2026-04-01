@@ -24,6 +24,7 @@ class CropCycleScreen extends ConsumerStatefulWidget {
 
 class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
   List<Map<String, dynamic>>? _crops;
+  Map<String, int> _cycleStepCountByCrop = <String, int>{};
   bool _loading = true;
   String? _error;
 
@@ -40,8 +41,16 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
     });
     try {
       final crops = await ref.read(cropServiceProvider).listCrops();
+      Map<String, int> stepMap = <String, int>{};
+      try {
+        final cycles = await ref.read(cropServiceProvider).listCycles();
+        stepMap = _buildCycleStepIndex(cycles);
+      } catch (_) {
+        // keep crop list usable even if cycle reference call fails
+      }
       setState(() {
         _crops = crops;
+        _cycleStepCountByCrop = stepMap;
         _loading = false;
       });
     } catch (e) {
@@ -82,6 +91,28 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
         if (mounted) context.showSnack(e.toString(), isError: true);
       }
     }
+  }
+
+  Map<String, int> _buildCycleStepIndex(List<Map<String, dynamic>> cycles) {
+    final out = <String, int>{};
+    for (final cycle in cycles) {
+      final cropName =
+          (cycle['crop_name'] ?? cycle['crop'] ?? cycle['name'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+      if (cropName.isEmpty) continue;
+
+      final steps = cycle['steps'] ?? cycle['stages'] ?? cycle['timeline'];
+      int count = 0;
+      if (steps is List) count = steps.length;
+      if (steps is Map) count = steps.length;
+      if (count <= 0 && cycle['duration_days'] != null) {
+        count = 1;
+      }
+      if (count > 0) out[cropName] = count;
+    }
+    return out;
   }
 
   void _showAddCropSheet() {
@@ -289,6 +320,219 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
     );
   }
 
+  Future<void> _showEditCropSheet(String id) async {
+    if (id.isEmpty) return;
+
+    Map<String, dynamic> crop;
+    try {
+      crop = await ref.read(cropServiceProvider).getCropById(id);
+    } catch (e) {
+      if (mounted) context.showSnack(e.toString(), isError: true);
+      return;
+    }
+
+    final nameCtrl = TextEditingController(
+      text: (crop['name'] ?? '').toString(),
+    );
+    final areaCtrl = TextEditingController(
+      text: (crop['area_acres'] ?? '').toString(),
+    );
+    final varietyCtrl = TextEditingController(
+      text: (crop['variety'] ?? '').toString(),
+    );
+    String selectedSeason = (crop['season'] ?? 'Kharif').toString();
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.lg,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit Crop',
+                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  label: 'crop_cycle.crop_name'.tr(),
+                  hint: 'crop_cycle.crop_name_hint'.tr(),
+                  controller: nameCtrl,
+                  prefixIcon: Icons.eco,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedSeason,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.wb_sunny),
+                    border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Kharif', child: Text('Kharif')),
+                    DropdownMenuItem(value: 'Rabi', child: Text('Rabi')),
+                    DropdownMenuItem(value: 'Zaid', child: Text('Zaid')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setSheetState(() => selectedSeason = v);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'crop_cycle.area'.tr(),
+                  hint: 'crop_cycle.area_hint'.tr(),
+                  controller: areaCtrl,
+                  prefixIcon: Icons.square_foot,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'crop_cycle.variety'.tr(),
+                  hint: 'crop_cycle.variety_hint'.tr(),
+                  controller: varietyCtrl,
+                  prefixIcon: Icons.category,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                AppButton(
+                  label: 'Save Changes',
+                  icon: Icons.check,
+                  isLoading: saving,
+                  onPressed: () async {
+                    final name = nameCtrl.text.trim();
+                    final area = double.tryParse(areaCtrl.text.trim());
+                    if (name.isEmpty || area == null || area <= 0) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Please fill valid values.')),
+                        );
+                      }
+                      return;
+                    }
+
+                    setSheetState(() => saving = true);
+                    try {
+                      await ref.read(cropServiceProvider).updateCrop(id, {
+                        'name': name,
+                        'season': selectedSeason,
+                        'area_acres': area,
+                        'variety': varietyCtrl.text.trim().isEmpty
+                            ? null
+                            : varietyCtrl.text.trim(),
+                      });
+
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _loadCrops();
+                      if (mounted) context.showSnack('common.success'.tr());
+                    } catch (e) {
+                      setSheetState(() => saving = false);
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showCycleDetailsForCrop(String cropName) async {
+    final name = cropName.trim();
+    if (name.isEmpty) return;
+
+    try {
+      final cycles = await ref.read(cropServiceProvider).getCyclesByName(name);
+      if (!mounted) return;
+
+      final lines = <String>[];
+      for (final cycle in cycles) {
+        final steps = cycle['steps'] ?? cycle['stages'] ?? cycle['timeline'];
+        if (steps is List && steps.isNotEmpty) {
+          for (final step in steps) {
+            final label = (step is Map)
+                ? (step['name'] ?? step['stage'] ?? step['title'] ?? step.toString())
+                    .toString()
+                : step.toString();
+            if (label.trim().isNotEmpty) lines.add(label.trim());
+          }
+        }
+      }
+
+      showModalBottomSheet<void>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$name Cycle Guide',
+                style: context.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (lines.isEmpty)
+                Text(
+                  'No detailed cycle stages found for this crop.',
+                  style: context.textTheme.bodyMedium,
+                )
+              else
+                ...lines.take(8).map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6),
+                              child: Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(line)),
+                          ],
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) context.showSnack(e.toString(), isError: true);
+    }
+  }
+
   static const _subFeatures = <_SubFeature>[
     _SubFeature('crop_cycle.contract_farming', Icons.handshake,
         RoutePaths.contractFarming, AppColors.primary),
@@ -388,6 +632,7 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: AppCard(
+        onTap: () => _showCycleDetailsForCrop(name),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,9 +667,20 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
                 const SizedBox(width: AppSpacing.xs),
                 PopupMenuButton<String>(
                   onSelected: (v) {
+                    if (v == 'edit') _showEditCropSheet(id);
                     if (v == 'delete') _deleteCrop(id);
                   },
                   itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit, size: 20),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text('common.edit'.tr()),
+                        ],
+                      ),
+                    ),
                     PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -464,6 +720,12 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
                 icon: Icons.event_available,
                 label: 'crop_cycle.expected_harvest'.tr(),
                 value: _formatDate(harvestDate),
+              ),
+            if (_cycleStepCountByCrop[name.toLowerCase()] != null)
+              _InfoRow(
+                icon: Icons.timeline,
+                label: 'Cycle stages',
+                value: '${_cycleStepCountByCrop[name.toLowerCase()]} steps',
               ),
           ],
         ),

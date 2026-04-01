@@ -49,6 +49,8 @@ abstract final class ApiEndpoints {
     static const marketWeatherCoords = '/api/v1/market/weather/coords';
     static const marketWeatherForecastCity = '/api/v1/market/weather/forecast/city';
     static const marketWeatherForecastCoords = '/api/v1/market/weather/forecast/coords';
+    static const marketWeatherFull = '/api/v1/market/weather/full';
+    static const marketWeatherSoilComposition = '/api/v1/market/weather/soil-composition';
     static const marketSoilMoisture = '/api/v1/market/soil-moisture';
 
   // ── Document Builder ──────────────────────────────────
@@ -73,6 +75,7 @@ abstract final class ApiEndpoints {
 
   // ── Equipment (:8005 → /api/v1/equipment) ──────────────
   static const equipment = '/api/v1/equipment/';
+    static const equipmentBrowse = '/api/v1/equipment/?browse=true';
   static String equipmentById(String id) => '/api/v1/equipment/$id';
   static const rentals = '/api/v1/equipment/rentals/';
   static String rentalById(String id) => '/api/v1/equipment/rentals/$id';
@@ -99,9 +102,21 @@ abstract final class ApiEndpoints {
       '/api/v1/equipment/rental-rates/search?q=$query';
   static String equipmentRentalByState(String state) =>
       '/api/v1/equipment/rental-rates/state/$state';
+  static String equipmentRentalByName(String name) =>
+      '/api/v1/equipment/rental-rates/$name';
+  static String equipmentMechanizationStats([String? state]) =>
+      state == null || state.isEmpty
+          ? '/api/v1/equipment/rental-rates/mechanization-stats'
+          : '/api/v1/equipment/rental-rates/mechanization-stats?state=$state';
+  static String equipmentRateHistory(String name, [String? state]) =>
+      state == null || state.isEmpty
+          ? '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name'
+          : '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name&state=$state';
 
   // ── Agent (:8006 → /api/v1/agent) ─────────────────────
   static const agentChat = '/api/v1/agent/chat';
+    static const agentChatPrepare = '/api/v1/agent/chat/prepare';
+    static const agentChatFinalize = '/api/v1/agent/chat/finalize';
   static const agentSessions = '/api/v1/agent/sessions';
   static String agentSessionById(String id) => '/api/v1/agent/sessions/$id';
   static const agentSearch = '/api/v1/agent/search';

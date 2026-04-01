@@ -2,10 +2,13 @@
 
 import math
 from datetime import datetime, timezone
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from shared.auth.deps import get_current_admin, get_current_super_admin
 from shared.auth.security import hash_password, verify_password, create_access_token, create_refresh_token
-from shared.db.mongodb import get_async_db
+from shared.db.mongodb import get_async_db, FieldFilter
 from shared.core.constants import MongoCollections
 from shared.errors import HttpStatus, bad_request, not_found, conflict, ErrorCode
 from shared.schemas.admin import (
@@ -20,8 +23,26 @@ from shared.schemas.admin import (
 )
 from services.bulk_import_service import bulk_import_schemes as run_bulk_import_schemes
 from services.bulk_import_service import bulk_import_equipment as run_bulk_import_equipment
+from services.bulk_import_service import _slug
 
 router = APIRouter()
+
+
+class RateHistoryEntry(BaseModel):
+    equipment_name: str = Field(..., min_length=1, max_length=240)
+    category: Optional[str] = Field(default=None, max_length=120)
+    state: str = Field(..., min_length=1, max_length=120)
+    rate_daily: Optional[float] = Field(default=None, ge=0)
+    rate_hourly: Optional[float] = Field(default=None, ge=0)
+    rate_per_acre: Optional[float] = Field(default=None, ge=0)
+    period: str = Field(..., pattern=r"^\d{4}-\d{2}$")
+    source_note: Optional[str] = Field(default=None, max_length=500)
+
+    model_config = {"strict": False, "extra": "allow"}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _admin_browseable_collections() -> set[str]:
@@ -255,6 +276,7 @@ async def list_providers(admin: dict = Depends(get_current_admin)):
     async for doc in db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).stream():
         data = doc.to_dict()
         data["id"] = doc.id
+        data.setdefault("rental_id", doc.id)
         items.append(data)
     return {"items": items, "total": len(items)}
 
@@ -263,13 +285,27 @@ async def list_providers(admin: dict = Depends(get_current_admin)):
 async def create_provider(data: ProviderUpsertRequest, admin: dict = Depends(get_current_admin)):
     db = get_async_db()
     payload = data.model_dump(exclude_none=True)
-    payload["_ingested_at"] = datetime.now(timezone.utc).isoformat()
-    rental_id = payload.get("rental_id", "")
-    if rental_id:
-        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).set(payload, merge=True)
-    else:
-        await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).add(payload)
-    return {"detail": "Provider created"}
+    now = datetime.now(timezone.utc).isoformat()
+    payload["_ingested_at"] = now
+    payload["updated_at"] = now
+
+    # Keep API/admin payload compatibility with runtime equipment routes.
+    if payload.get("contact_phone") and not payload.get("provider_phone"):
+        payload["provider_phone"] = payload.get("contact_phone")
+    if payload.get("provider_phone") and not payload.get("contact_phone"):
+        payload["contact_phone"] = payload.get("provider_phone")
+
+    rental_id = str(payload.get("rental_id") or "").strip()
+    if not rental_id:
+        provider_key = str(payload.get("provider_id") or payload.get("provider_name") or "provider")
+        equipment_key = str(payload.get("name") or payload.get("category") or "equipment")
+        state_key = str(payload.get("state") or "")
+        district_key = str(payload.get("district") or "")
+        rental_id = f"rental_{_slug(provider_key)}_{_slug(equipment_key)}_{_slug(state_key)}_{_slug(district_key)}"
+
+    payload["rental_id"] = rental_id
+    await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).set(payload, merge=True)
+    return {"detail": "Provider created", "id": rental_id}
 
 
 @router.put("/data/equipment-providers/{rental_id}", status_code=HttpStatus.OK)
@@ -279,8 +315,295 @@ async def update_provider(rental_id: str, data: ProviderUpsertRequest, admin: di
     if not doc.exists:
         raise not_found("Provider not found")
     payload = data.model_dump(exclude_none=True)
+
+    if payload.get("contact_phone") and not payload.get("provider_phone"):
+        payload["provider_phone"] = payload.get("contact_phone")
+    if payload.get("provider_phone") and not payload.get("contact_phone"):
+        payload["contact_phone"] = payload.get("provider_phone")
+
+    payload["rental_id"] = rental_id
+    payload["updated_at"] = _now_iso()
     await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id).update(payload)
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "UPDATE_EQUIPMENT_PROVIDER",
+            "target_collection": MongoCollections.REF_EQUIPMENT_PROVIDERS,
+            "target_doc_id": rental_id,
+            "payload_summary": f"fields={','.join(sorted(payload.keys()))}",
+            "timestamp": _now_iso(),
+        }
+    )
     return {"detail": "Provider updated"}
+
+
+@router.delete("/data/equipment-providers/{rental_id}", status_code=HttpStatus.OK)
+async def soft_delete_provider(rental_id: str, admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+    ref = db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(rental_id)
+    doc = await ref.get()
+    if not doc.exists:
+        raise not_found("Provider not found")
+
+    await ref.update({"is_active": False, "updated_at": _now_iso()})
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "SOFT_DELETE_EQUIPMENT_PROVIDER",
+            "target_collection": MongoCollections.REF_EQUIPMENT_PROVIDERS,
+            "target_doc_id": rental_id,
+            "payload_summary": "is_active=False",
+            "timestamp": _now_iso(),
+        }
+    )
+    return {"detail": "Provider deactivated"}
+
+
+@router.get("/data/equipment-providers/search", status_code=HttpStatus.OK)
+async def search_providers(
+    q: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    category: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=200),
+    admin: dict = Depends(get_current_admin),
+):
+    db = get_async_db()
+    query_text = (q or "").strip().lower()
+    state_q = (state or "").strip().lower()
+    category_q = (category or "").strip().lower()
+
+    items = []
+    async for doc in db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).stream():
+        data = doc.to_dict() or {}
+        if is_active is not None and bool(data.get("is_active", True)) != is_active:
+            continue
+        if state_q and str(data.get("state") or "").strip().lower() != state_q:
+            continue
+        if category_q and str(data.get("category") or "").strip().lower() != category_q:
+            continue
+        if query_text and query_text not in str(data).lower():
+            continue
+
+        data["id"] = doc.id
+        data.setdefault("rental_id", doc.id)
+        items.append(data)
+
+    items.sort(key=lambda row: str(row.get("updated_at") or row.get("_ingested_at") or ""), reverse=True)
+    total = len(items)
+    start = (page - 1) * per_page
+    end = start + per_page
+    return {
+        "items": items[start:end],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": math.ceil(total / per_page) if per_page else 0,
+    }
+
+
+@router.post("/data/equipment-rate-history", status_code=HttpStatus.CREATED)
+async def create_rate_history_entry(body: RateHistoryEntry, admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+    payload = body.model_dump(exclude_none=True)
+    now = _now_iso()
+    doc_id = f"{_slug(payload.get('equipment_name', ''))}_{_slug(payload.get('state', ''))}_{_slug(payload.get('period', ''))}"
+    payload.update(
+        {
+            "created_at": now,
+            "updated_at": now,
+            "created_by": admin.get("id", ""),
+        }
+    )
+    await db.collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY).document(doc_id).set(payload, merge=True)
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "CREATE_EQUIPMENT_RATE_HISTORY",
+            "target_collection": MongoCollections.REF_EQUIPMENT_RATE_HISTORY,
+            "target_doc_id": doc_id,
+            "payload_summary": f"{payload.get('equipment_name')}|{payload.get('state')}|{payload.get('period')}",
+            "timestamp": now,
+        }
+    )
+    return {"detail": "Rate history entry created", "id": doc_id}
+
+
+@router.get("/data/equipment-rate-history", status_code=HttpStatus.OK)
+async def list_rate_history_entries(
+    equipment_name: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    admin: dict = Depends(get_current_admin),
+):
+    db = get_async_db()
+    eq_q = (equipment_name or "").strip().lower()
+    st_q = (state or "").strip().lower()
+
+    items = []
+    async for doc in db.collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY).stream():
+        data = doc.to_dict() or {}
+        row_name = str(data.get("equipment_name") or "").strip().lower()
+        row_state = str(data.get("state") or "").strip().lower()
+        if eq_q and eq_q not in row_name:
+            continue
+        if st_q and row_state != st_q:
+            continue
+        data["id"] = doc.id
+        items.append(data)
+
+    items.sort(key=lambda row: str(row.get("period") or ""))
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/rentals", status_code=HttpStatus.OK)
+async def admin_list_rentals(
+    status: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=200),
+    admin: dict = Depends(get_current_admin),
+):
+    db = get_async_db()
+    status_q = (status or "").strip().lower()
+
+    rentals = []
+    query = db.collection(MongoCollections.EQUIPMENT_BOOKINGS)
+    if status_q:
+        query = query.where(filter=FieldFilter("status", "==", status_q))
+
+    async for doc in query.stream():
+        row = doc.to_dict() or {}
+        row["id"] = doc.id
+        rentals.append(row)
+
+    rentals.sort(key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""), reverse=True)
+    total = len(rentals)
+    start = (page - 1) * per_page
+    end = start + per_page
+    return {
+        "items": rentals[start:end],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": math.ceil(total / per_page) if per_page else 0,
+    }
+
+
+@router.get("/rentals/{rental_id}", status_code=HttpStatus.OK)
+async def admin_get_rental(rental_id: str, admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+    doc = await db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id).get()
+    if not doc.exists:
+        raise not_found("Rental not found")
+    data = doc.to_dict() or {}
+    data["id"] = doc.id
+    return data
+
+
+@router.put("/rentals/{rental_id}/force-status", status_code=HttpStatus.OK)
+async def force_rental_status(
+    rental_id: str,
+    new_status: str = Query(..., min_length=1),
+    reason: str = Query(..., min_length=3, max_length=500),
+    admin: dict = Depends(get_current_super_admin),
+):
+    allowed = {"pending", "approved", "rejected", "completed", "cancelled"}
+    status_clean = new_status.strip().lower()
+    if status_clean not in allowed:
+        raise bad_request(f"new_status must be one of {sorted(allowed)}")
+
+    db = get_async_db()
+    ref = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id)
+    doc = await ref.get()
+    if not doc.exists:
+        raise not_found("Rental not found")
+
+    now = _now_iso()
+    updates = {
+        "status": status_clean,
+        "updated_at": now,
+        "admin_override_reason": reason,
+        "admin_override_by": admin.get("id", ""),
+        "admin_override_at": now,
+    }
+    await ref.update(updates)
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin.get("id", ""),
+            "action": "FORCE_RENTAL_STATUS",
+            "target_collection": MongoCollections.EQUIPMENT_BOOKINGS,
+            "target_doc_id": rental_id,
+            "payload_summary": f"status={status_clean};reason={reason}",
+            "timestamp": now,
+        }
+    )
+
+    updated = await ref.get()
+    data = updated.to_dict() or {}
+    data["id"] = updated.id
+    return data
+
+
+@router.get("/equipment/stats", status_code=HttpStatus.OK)
+async def equipment_stats(admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+
+    equipment_items = [d.to_dict() or {} async for d in db.collection(MongoCollections.EQUIPMENT).stream()]
+    booking_items = [d.to_dict() or {} async for d in db.collection(MongoCollections.EQUIPMENT_BOOKINGS).stream()]
+    provider_items = [d.to_dict() or {} async for d in db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).stream()]
+
+    total_listings = len(equipment_items)
+    available_count = sum(1 for row in equipment_items if str(row.get("status") or "").lower() == "available")
+
+    status_counts: dict[str, int] = {}
+    for row in booking_items:
+        key = str(row.get("status") or "unknown").lower()
+        status_counts[key] = status_counts.get(key, 0) + 1
+
+    approved_count = status_counts.get("approved", 0)
+    completed_count = status_counts.get("completed", 0)
+    total_bookings = len(booking_items)
+    approval_rate = round(((approved_count + completed_count) / total_bookings) * 100.0, 2) if total_bookings else 0.0
+    completion_rate = round((completed_count / max(1, approved_count + completed_count)) * 100.0, 2)
+
+    active_providers = [row for row in provider_items if row.get("is_active") is not False]
+    provider_states = {
+        str(row.get("state") or "").strip()
+        for row in active_providers
+        if str(row.get("state") or "").strip()
+    }
+    provider_categories = {
+        str(row.get("category") or "").strip()
+        for row in active_providers
+        if str(row.get("category") or "").strip()
+    }
+
+    by_category: dict[str, int] = {}
+    for row in active_providers:
+        cat = str(row.get("category") or "unknown").strip().lower()
+        by_category[cat] = by_category.get(cat, 0) + 1
+    top_categories = sorted(by_category.items(), key=lambda item: item[1], reverse=True)[:10]
+
+    return {
+        "farmer_listings": {
+            "total": total_listings,
+            "available": available_count,
+        },
+        "bookings": {
+            "total": total_bookings,
+            "by_status": status_counts,
+            "approval_rate": approval_rate,
+            "completion_rate": completion_rate,
+        },
+        "provider_marketplace": {
+            "active_count": len(active_providers),
+            "states_covered": len(provider_states),
+            "categories_covered": len(provider_categories),
+            "top_10_by_category": [
+                {"category": category, "count": count} for category, count in top_categories
+            ],
+        },
+    }
 
 
 @router.post("/data/import/schemes", status_code=HttpStatus.OK)

@@ -1,0 +1,186 @@
+{
+  "started_at_utc": "2026-04-01T14:53:52.045319+00:00",
+  "finished_at_utc": "2026-04-01T14:53:52.530483+00:00",
+  "dry_run": false,
+  "indexes": {
+    "ref_mandi_prices": {
+      "created": [],
+      "skipped_existing": [
+        "ix_state_district_commodity_arrival_desc",
+        "ix_commodity_arrival_desc"
+      ],
+      "failed": [],
+      "post_index_count": 3
+    },
+    "market_prices": {
+      "created": [],
+      "skipped_existing": [
+        "ix_state_district_commodity_date_desc",
+        "ix_state_district_crop_date_desc",
+        "ix_crop_date_desc"
+      ],
+      "failed": [],
+      "post_index_count": 4
+    },
+    "ref_soil_health": {
+      "created": [],
+      "skipped_existing": [
+        "ix_state_district_block_date_desc"
+      ],
+      "failed": [],
+      "post_index_count": 3
+    },
+    "ref_farmer_schemes": {
+      "created": [
+        "ix_beneficiary_state_ingested_desc",
+        "ix_categories_ingested_desc"
+      ],
+      "skipped_existing": [
+        "ix_scheme_id",
+        "ix_beneficiary_state",
+        "ix_categories",
+        "ix_ministry_status"
+      ],
+      "failed": [],
+      "post_index_count": 7
+    },
+    "ref_equipment_providers": {
+      "created": [],
+      "skipped_existing": [
+        "ix_active_state_district_category_source",
+        "ix_state_district_name",
+        "ix_provider_id"
+      ],
+      "failed": [],
+      "post_index_count": 4
+    },
+    "equipment": {
+      "created": [],
+      "skipped_existing": [
+        "ix_farmer_updated_desc",
+        "ix_status_type_updated_desc"
+      ],
+      "failed": [],
+      "post_index_count": 3
+    },
+    "equipment_bookings": {
+      "created": [],
+      "skipped_existing": [
+        "ix_renter_created_desc",
+        "ix_owner_status_updated_desc",
+        "ix_equipment_status_start"
+      ],
+      "failed": [],
+      "post_index_count": 4
+    },
+    "farmer_profiles": {
+      "created": [],
+      "skipped_existing": [
+        "ux_user_id",
+        "ix_created_at_desc",
+        "ix_state_district"
+      ],
+      "failed": [],
+      "post_index_count": 4
+    },
+    "livestock": {
+      "created": [],
+      "skipped_existing": [
+        "ix_farmer_updated_desc",
+        "ix_farmer_type"
+      ],
+      "failed": [],
+      "post_index_count": 3
+    }
+  },
+  "verify": {
+    "ref_mandi_prices": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_state_district_commodity_arrival_desc"
+      ]
+    },
+    "market_prices_commodity": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_state_district_commodity_date_desc"
+      ]
+    },
+    "market_prices": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_state_district_crop_date_desc"
+      ]
+    },
+    "ref_soil_health": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_state_district_date_desc"
+      ]
+    },
+    "ref_equipment_providers": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_active_state_district_category_source"
+      ]
+    },
+    "ref_farmer_schemes_state": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_beneficiary_state_ingested_desc"
+      ]
+    },
+    "ref_farmer_schemes_category": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_categories_ingested_desc"
+      ]
+    },
+    "equipment_bookings": {
+      "winning_stage": "SORT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_owner_status_updated_desc"
+      ]
+    },
+    "farmer_profiles": {
+      "winning_stage": "LIMIT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ux_user_id"
+      ]
+    },
+    "livestock": {
+      "winning_stage": "SORT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_farmer_updated_desc"
+      ]
+    },
+    "equipment": {
+      "winning_stage": "SORT",
+      "input_stage": "FETCH",
+      "index_name": null,
+      "index_candidates": [
+        "ix_status_type_updated_desc"
+      ]
+    }
+  }
+}

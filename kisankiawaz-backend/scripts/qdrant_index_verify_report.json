@@ -1,0 +1,102 @@
+{
+  "timestamp_utc": "2026-04-01T15:14:03.855686+00:00",
+  "qdrant_host": "localhost",
+  "qdrant_port": 6333,
+  "collections": {
+    "schemes_semantic": {
+      "schema_fields_present": {
+        "scheme_id": true,
+        "ministry": true,
+        "beneficiary_state": true,
+        "categories": true,
+        "source": true
+      },
+      "filter_query_checks": {
+        "scheme_id": {
+          "ok": true,
+          "returned_count": 0
+        },
+        "ministry": {
+          "ok": true,
+          "returned_count": 0
+        }
+      }
+    },
+    "mandi_price_intelligence": {
+      "schema_fields_present": {
+        "commodity": true,
+        "state": true,
+        "district": true,
+        "market": true,
+        "trend": true
+      },
+      "filter_query_checks": {
+        "commodity": {
+          "ok": true,
+          "returned_count": 0
+        },
+        "state": {
+          "ok": true,
+          "returned_count": 0
+        }
+      }
+    },
+    "crop_advisory_kb": {
+      "schema_fields_present": {
+        "topic": true,
+        "crop": true,
+        "state": true,
+        "source": true,
+        "language": true
+      },
+      "filter_query_checks": {
+        "topic": {
+          "ok": true,
+          "returned_count": 0
+        },
+        "crop": {
+          "ok": true,
+          "returned_count": 0
+        }
+      }
+    },
+    "geo_location_index": {
+      "schema_fields_present": {
+        "pincode": true,
+        "district_name": true,
+        "state_name": true,
+        "source": true
+      },
+      "filter_query_checks": {
+        "pincode": {
+          "ok": true,
+          "returned_count": 0
+        },
+        "district_name": {
+          "ok": true,
+          "returned_count": 0
+        }
+      }
+    },
+    "equipment_semantic": {
+      "schema_fields_present": {
+        "equipment_id": true,
+        "state": true,
+        "district": true,
+        "category": true,
+        "source": true,
+        "is_active": true
+      },
+      "filter_query_checks": {
+        "equipment_id": {
+          "ok": true,
+          "returned_count": 0
+        },
+        "state": {
+          "ok": true,
+          "returned_count": 0
+        }
+      }
+    }
+  }
+}

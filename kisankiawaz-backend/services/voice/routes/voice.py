@@ -446,6 +446,18 @@ async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
 
 
 async def _fetch_weather_snapshot(token: str, transcript: str) -> dict:
+    try:
+        resp = await asyncio.wait_for(
+            market_client.get(
+                "/api/v1/market/weather/full",
+                headers={"Authorization": f"Bearer {token}"},
+            ),
+            timeout=VOICE_SERVICE_TIMEOUT_SECONDS,
+        )
+        return _as_mapping(resp)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Voice weather full snapshot failed, trying city fallback: {exc}")
+
     city = _extract_city(transcript)
     try:
         resp = await asyncio.wait_for(
@@ -458,7 +470,7 @@ async def _fetch_weather_snapshot(token: str, transcript: str) -> dict:
         )
         return _as_mapping(resp)
     except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Voice weather snapshot failed: {exc}")
+        logger.warning(f"Voice weather city snapshot failed: {exc}")
         return {}
 
 

@@ -2,19 +2,54 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
+import '../../core/utils/app_cache.dart';
 
 class CropService {
   final ApiClient _client;
 
+  static const int _ttlShort = 900;
+  static const int _ttlMedium = 1800;
+
   CropService(this._client);
+
+  List<Map<String, dynamic>> _listFromCache(dynamic cached) {
+    if (cached is! List) return const <Map<String, dynamic>>[];
+    return cached
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList(growable: false);
+  }
+
+  Future<void> _invalidateCropCaches() async {
+    await AppCache.invalidatePrefix('crops:list');
+    await AppCache.invalidatePrefix('crops:cycles');
+  }
 
   // ── Crop CRUD ─────────────────────────────────────────────
 
   /// GET /api/v1/crops/ → list all crops for the current farmer.
-  Future<List<Map<String, dynamic>>> listCrops() async {
-    final res = await _client.get(ApiEndpoints.crops);
-    final list = res.data as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> listCrops({
+    bool preferCache = true,
+    bool forceRefresh = false,
+  }) async {
+    const key = 'crops:list';
+    if (!forceRefresh && preferCache) {
+      final cached = await AppCache.get(key);
+      if (cached != null) return _listFromCache(cached);
+    }
+
+    try {
+      final res = await _client.get(ApiEndpoints.crops);
+      final list = (res.data as List<dynamic>).cast<Map<String, dynamic>>();
+      await AppCache.put(key, list, ttlSeconds: _ttlShort);
+      return list;
+    } catch (_) {
+      if (!forceRefresh) {
+        final cached = await AppCache.get(key);
+        if (cached != null) return _listFromCache(cached);
+      }
+      rethrow;
+    }
   }
 
   /// POST /api/v1/crops/ → create a new crop.
@@ -38,6 +73,7 @@ class CropService {
         if (variety != null) 'variety': variety,
       },
     );
+    await _invalidateCropCaches();
     return res.data as Map<String, dynamic>;
   }
 
@@ -51,28 +87,67 @@ class CropService {
   Future<Map<String, dynamic>> updateCrop(
       String id, Map<String, dynamic> data) async {
     final res = await _client.put(ApiEndpoints.cropById(id), data: data);
+    await _invalidateCropCaches();
     return res.data as Map<String, dynamic>;
   }
 
   /// DELETE /api/v1/crops/{id}.
   Future<void> deleteCrop(String id) async {
     await _client.delete(ApiEndpoints.cropById(id));
+    await _invalidateCropCaches();
   }
 
   // ── Crop cycles ───────────────────────────────────────────
 
   /// GET /api/v1/crops/cycles → list all cycles.
-  Future<List<Map<String, dynamic>>> listCycles() async {
-    final res = await _client.get(ApiEndpoints.cropCycles);
-    final list = res.data as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> listCycles({
+    bool preferCache = true,
+    bool forceRefresh = false,
+  }) async {
+    const key = 'crops:cycles:list';
+    if (!forceRefresh && preferCache) {
+      final cached = await AppCache.get(key);
+      if (cached != null) return _listFromCache(cached);
+    }
+
+    try {
+      final res = await _client.get(ApiEndpoints.cropCycles);
+      final list = (res.data as List<dynamic>).cast<Map<String, dynamic>>();
+      await AppCache.put(key, list, ttlSeconds: _ttlMedium);
+      return list;
+    } catch (_) {
+      if (!forceRefresh) {
+        final cached = await AppCache.get(key);
+        if (cached != null) return _listFromCache(cached);
+      }
+      rethrow;
+    }
   }
 
   /// GET /api/v1/crops/cycles/{name} → cycles by crop name.
-  Future<List<Map<String, dynamic>>> getCyclesByName(String name) async {
-    final res = await _client.get(ApiEndpoints.cropCyclesByName(name));
-    final list = res.data as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> getCyclesByName(
+    String name, {
+    bool preferCache = true,
+    bool forceRefresh = false,
+  }) async {
+    final key = 'crops:cycles:name:${name.toLowerCase().trim()}';
+    if (!forceRefresh && preferCache) {
+      final cached = await AppCache.get(key);
+      if (cached != null) return _listFromCache(cached);
+    }
+
+    try {
+      final res = await _client.get(ApiEndpoints.cropCyclesByName(name));
+      final list = (res.data as List<dynamic>).cast<Map<String, dynamic>>();
+      await AppCache.put(key, list, ttlSeconds: _ttlMedium);
+      return list;
+    } catch (_) {
+      if (!forceRefresh) {
+        final cached = await AppCache.get(key);
+        if (cached != null) return _listFromCache(cached);
+      }
+      rethrow;
+    }
   }
 
   // ── Recommendations ───────────────────────────────────────

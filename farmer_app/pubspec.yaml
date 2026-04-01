@@ -34,6 +34,7 @@ dependencies:
   cached_network_image: any
   shimmer: any
   flutter_animate: any
+  fl_chart: ^0.69.0
   table_calendar: ^3.0.9
 
   # Maps & Location

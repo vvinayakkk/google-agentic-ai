@@ -57,6 +57,29 @@ def safe_int(val, default=0):
         return default
 
 
+def safe_date_iso(val, default=""):
+    """Normalize common date-string formats to YYYY-MM-DD."""
+    if val is None:
+        return default
+    raw = str(val).strip()
+    if not raw:
+        return default
+
+    formats = (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%m/%d/%Y",
+        "%Y/%m/%d",
+    )
+    for fmt in formats:
+        try:
+            return datetime.strptime(raw, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return default
+
+
 def batch_write(db, collection_name: str, docs: list[tuple[str, dict]], label: str = ""):
     """Write docs to MongoCollections in batches of 500."""
     total = len(docs)
@@ -100,6 +123,7 @@ def seed_mandi_prices(db, reports_dir: str) -> int:
                 "variety": row.get("Variety", row.get("variety", "")),
                 "grade": row.get("Grade", row.get("grade", "")),
                 "arrival_date": arrival_date,
+                "arrival_date_iso": safe_date_iso(arrival_date, ""),
                 "min_price": safe_int(row.get("Min_Price", row.get("min_price"))),
                 "max_price": safe_int(row.get("Max_Price", row.get("max_price"))),
                 "modal_price": safe_int(row.get("Modal_Price", row.get("modal_price"))),
@@ -126,6 +150,7 @@ def seed_mandi_prices(db, reports_dir: str) -> int:
                 "commodity": commodity,
                 "variety": row.get("variety", ""),
                 "arrival_date": arrival_date,
+                "arrival_date_iso": safe_date_iso(arrival_date, ""),
                 "min_price": safe_int(row.get("min_price")),
                 "max_price": safe_int(row.get("max_price")),
                 "modal_price": safe_int(row.get("modal_price")),
@@ -154,6 +179,7 @@ def seed_mandi_prices(db, reports_dir: str) -> int:
                 "variety": row.get("Variety", ""),
                 "grade": row.get("Grade", ""),
                 "arrival_date": arrival_date,
+                "arrival_date_iso": safe_date_iso(arrival_date, ""),
                 "min_price": safe_int(row.get("Min_Price")),
                 "max_price": safe_int(row.get("Max_Price")),
                 "modal_price": safe_int(row.get("Modal_Price")),
@@ -267,6 +293,7 @@ def seed_soil_health(db, reports_dir: str) -> int:
             docs.append((doc_id, {
                 "state": state, "district": district,
                 "date": row.get("Date", ""),
+                "date_iso": safe_date_iso(row.get("Date", ""), ""),
                 "year": safe_int(year),
                 "month": safe_int(month),
                 "avg_smlvl_at15cm": safe_float(row.get("Avg_smlvl_at15cm")),
@@ -343,10 +370,24 @@ def seed_reservoir(db, reports_dir: str) -> int:
             state = row.get("state", "")
             if not state:
                 continue
-            docs.append((slugify(state), {
+            project_or_deficiency = str(
+                row.get("projects_having_deficiency___equal_to_and_less_than_80__of_average_of_last_10_years_", "")
+            ).strip()
+            project_name = str(row.get("project_name", "")).strip() or project_or_deficiency
+            deficiency_pct = safe_float(project_or_deficiency, default=None)
+            if deficiency_pct is not None and not str(row.get("project_name", "")).strip():
+                project_name = ""
+
+            doc_suffix = project_name or str(row.get("current_year_s_storage_as__age_of_normal", "")).strip() or "unknown"
+            doc_id = f"{slugify(state)}_{slugify(doc_suffix)}"
+
+            docs.append((doc_id, {
                 "state": state,
-                "projects_deficiency_pct": row.get("projects_having_deficiency___equal_to_and_less_than_80__of_average_of_last_10_years_", ""),
-                "current_storage_pct_of_normal": row.get("current_year_s_storage_as__age_of_normal", ""),
+                "project_name": project_name,
+                "projects_deficiency_pct": deficiency_pct,
+                "current_storage_pct_of_normal": safe_float(
+                    row.get("current_year_s_storage_as__age_of_normal", ""), default=None
+                ),
                 "resource_id": row.get("_resource_id", ""),
                 "_ingested_at": now,
                 "_source_resource_id": row.get("_source_resource_id", ""),
@@ -427,6 +468,10 @@ def seed_fertilizer(db, reports_dir: str) -> int:
         for i, row in enumerate(read_csv_file(csv_path)):
             doc_id = f"fertilizer_{i}"
             row_data = dict(row)
+            row_data["latitude"] = safe_float(row.get("latitude", row.get("Latitude")), default=None)
+            row_data["longitude"] = safe_float(row.get("longitude", row.get("Longitude")), default=None)
+            if row.get("date") is not None:
+                row_data["date_iso"] = safe_date_iso(row.get("date"), "")
             row_data["_ingested_at"] = now
             row_data["_source_resource_id"] = row.get("_source_resource_id", "")
             docs.append((doc_id, row_data))

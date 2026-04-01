@@ -1,0 +1,115 @@
+{
+  "started_at_utc": "2026-04-01T13:00:41.931310+00:00",
+  "finished_at_utc": "2026-04-01T13:03:54.567598+00:00",
+  "dry_run": false,
+  "before": {
+    "reservoir": {
+      "non_numeric_deficiency": 0,
+      "missing_project_name": 0,
+      "non_numeric_current_storage": 0
+    },
+    "schemes": {
+      "docs_with_mojibake": 91,
+      "mojibake_field_hits": 91
+    },
+    "dates": {
+      "ref_mandi_prices_missing_arrival_date_iso": 35067,
+      "market_prices_missing_date_iso": 20288,
+      "ref_soil_health_missing_date_iso": 4454
+    },
+    "fertilizer": {
+      "string_latitude": 0,
+      "string_longitude": 0
+    },
+    "state_canonicalization": {
+      "ref_mandi_prices.state": 2000,
+      "ref_mandi_directory.state": 33,
+      "ref_reservoir_data.state": 3,
+      "ref_soil_health.state": 168,
+      "ref_pin_master.state_name": 0,
+      "market_prices.state": 0
+    }
+  },
+  "actions": {
+    "reservoir_reseed": {
+      "deleted": 23,
+      "reseeded": 23,
+      "dry_run": false
+    },
+    "reservoir_numeric": {
+      "total_docs": 23,
+      "updated_docs": 0
+    },
+    "scheme_encoding": {
+      "total_docs": 155,
+      "docs_changed": 91,
+      "updated_docs": 91
+    },
+    "fertilizer_geo": {
+      "total_docs": 200,
+      "updated_docs": 0
+    },
+    "state_canonicalization": {
+      "ref_mandi_prices.state": 2000,
+      "ref_mandi_directory.state": 33,
+      "ref_reservoir_data.state": 3,
+      "ref_soil_health.state": 168,
+      "ref_pin_master.state_name": 0,
+      "market_prices.state": 0
+    },
+    "date_normalization": {
+      "ref_mandi_prices": {
+        "total_docs": 75391,
+        "with_source_date": 75391,
+        "normalizable_dates": 75391,
+        "updated_docs": 35067
+      },
+      "market_prices": {
+        "total_docs": 20288,
+        "with_source_date": 20288,
+        "normalizable_dates": 20288,
+        "updated_docs": 20288
+      },
+      "ref_soil_health": {
+        "total_docs": 4454,
+        "with_source_date": 4454,
+        "normalizable_dates": 4454,
+        "updated_docs": 4454
+      }
+    }
+  },
+  "qdrant_security_audit": {
+    "collections_scanned": 0,
+    "sensitive_key_hits": 0,
+    "by_collection": {},
+    "error": "[Errno 11001] getaddrinfo failed"
+  },
+  "after": {
+    "reservoir": {
+      "non_numeric_deficiency": 0,
+      "missing_project_name": 0,
+      "non_numeric_current_storage": 0
+    },
+    "schemes": {
+      "docs_with_mojibake": 0,
+      "mojibake_field_hits": 0
+    },
+    "dates": {
+      "ref_mandi_prices_missing_arrival_date_iso": 0,
+      "market_prices_missing_date_iso": 0,
+      "ref_soil_health_missing_date_iso": 0
+    },
+    "fertilizer": {
+      "string_latitude": 0,
+      "string_longitude": 0
+    },
+    "state_canonicalization": {
+      "ref_mandi_prices.state": 0,
+      "ref_mandi_directory.state": 0,
+      "ref_reservoir_data.state": 0,
+      "ref_soil_health.state": 0,
+      "ref_pin_master.state_name": 0,
+      "market_prices.state": 0
+    }
+  }
+}

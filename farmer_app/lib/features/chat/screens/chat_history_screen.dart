@@ -10,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/models/chat_message_model.dart';
 import '../../../shared/services/agent_service.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/error_view.dart';
 
 /// Chat history / sessions list screen – fetches real data from backend.
@@ -44,6 +43,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
       final list = (data['sessions'] as List<dynamic>?)
               ?.map((s) => ChatSession.fromJson(s as Map<String, dynamic>))
+              .where((s) => s.sessionId.trim().isNotEmpty)
               .toList() ??
           [];
 
@@ -72,6 +72,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: context.appColors.card,
+        surfaceTintColor: Colors.transparent,
         title: Text('chat_history.delete'.tr()),
         content: Text('chat_history.delete_confirm'.tr()),
         actions: [
@@ -106,7 +108,52 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     }
   }
 
+  Future<void> _clearAll() async {
+    if (_sessions.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: context.appColors.card,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Clear all chat history?'),
+        content: const Text('This will permanently delete all your chat sessions.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Clear All',
+              style: TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final agent = ref.read(agentServiceProvider);
+      await agent.deleteAllSessions();
+
+      if (!mounted) return;
+      setState(() => _sessions = []);
+      context.showSnack('Chat history cleared');
+    } catch (_) {
+      if (!mounted) return;
+      context.showSnack('common.error'.tr(), isError: true);
+    }
+  }
+
   void _openSession(ChatSession session) {
+    if (session.sessionId.trim().isEmpty) {
+      context.showSnack('Invalid chat session', isError: true);
+      return;
+    }
     final agentType = session.agentType ?? 'general';
     context.push(
       '${RoutePaths.chat}?agent=$agentType&session=${session.sessionId}',
@@ -115,50 +162,181 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final titleColor = isDark ? AppColors.darkText : AppColors.lightText;
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: Text('chat_history.title'.tr()),
+        title: Text(
+          'chat_history.title'.tr(),
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: titleColor,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'common.refresh'.tr(),
+            onPressed: _load,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: 'Clear all sessions',
+            onPressed: _clearAll,
+          ),
+        ],
       ),
-      body: _buildBody(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [AppColors.darkBackground, AppColors.darkSurface]
+                : [AppColors.lightBackground, AppColors.lightSurface],
+          ),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).padding.top + kToolbarHeight,
+            ),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (_error != null) {
-      return ErrorView(
-        message: _error!,
-        onRetry: _load,
+      return Padding(
+        padding: AppSpacing.allLg,
+        child: ErrorView(
+          message: _error!,
+          onRetry: _load,
+        ),
       );
     }
 
     if (_sessions.isEmpty) {
-      return EmptyView(
-        icon: Icons.forum_outlined,
-        title: 'chat_history.empty'.tr(),
-        subtitle: 'chat_history.subtitle'.tr(),
+      return Center(
+        child: Padding(
+          padding: AppSpacing.allLg,
+          child: Container(
+            width: double.infinity,
+            padding: AppSpacing.allXl,
+            decoration: BoxDecoration(
+              color: context.isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.56),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: context.isDark
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.8),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (context.isDark ? Colors.black : AppColors.primaryDark)
+                      .withValues(alpha: context.isDark ? 0.22 : 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: EmptyView(
+              icon: Icons.forum_outlined,
+              title: 'chat_history.empty'.tr(),
+              subtitle: 'chat_history.subtitle'.tr(),
+            ),
+          ),
+        ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _load,
       color: AppColors.primary,
-      child: ListView.separated(
+      child: ListView(
         padding: AppSpacing.allLg,
-        itemCount: _sessions.length,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (_, i) => _SessionCard(
-          session: _sessions[i],
-          onTap: () => _openSession(_sessions[i]),
-          onDelete: () => _delete(_sessions[i]),
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: AppSpacing.allMd,
+            decoration: BoxDecoration(
+              color: context.isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.56),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: context.isDark
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.8),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (context.isDark ? Colors.black : AppColors.primaryDark)
+                      .withValues(alpha: context.isDark ? 0.22 : 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Recent conversations',
+                    style: context.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_sessions.length}',
+                  style: context.textTheme.labelLarge?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...List.generate(_sessions.length, (i) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: i == _sessions.length - 1 ? AppSpacing.xl : AppSpacing.md,
+              ),
+              child: _SessionCard(
+                session: _sessions[i],
+                onTap: () => _openSession(_sessions[i]),
+                onDelete: () => _delete(_sessions[i]),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -177,15 +355,6 @@ class _SessionCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  static const _agentIcons = <String, IconData>{
-    'crop': Icons.agriculture,
-    'market': Icons.trending_up,
-    'scheme': Icons.account_balance,
-    'weather': Icons.cloud,
-    'cattle': Icons.pets,
-    'general': Icons.smart_toy,
-  };
-
   static const _agentColors = <String, Color>{
     'crop': AppColors.primary,
     'market': AppColors.info,
@@ -198,8 +367,13 @@ class _SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final agentType = session.agentType ?? 'general';
-    final icon = _agentIcons[agentType] ?? Icons.smart_toy;
     final color = _agentColors[agentType] ?? AppColors.primary;
+    final cardColor = context.isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.white.withValues(alpha: 0.56);
+    final borderColor = context.isDark
+        ? Colors.white.withValues(alpha: 0.18)
+        : Colors.white.withValues(alpha: 0.8);
 
     return Dismissible(
       key: ValueKey(session.sessionId),
@@ -217,57 +391,83 @@ class _SessionCard extends StatelessWidget {
         ),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      child: AppCard(
+      child: InkWell(
+        borderRadius: AppRadius.mdAll,
         onTap: onTap,
-        child: Row(
-          children: [
-            // Agent icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+        child: Container(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: (context.isDark ? Colors.black : AppColors.primaryDark)
+                    .withValues(alpha: context.isDark ? 0.22 : 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    agentType.capitalize,
-                    style: context.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+            ],
+          ),
+          padding: AppSpacing.allMd,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            agentType.capitalize,
+                            style: context.textTheme.labelSmall?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${session.messageCount} messages',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.appColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${session.messageCount} messages',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.appColors.textSecondary,
+                    const SizedBox(height: 6),
+                    Text(
+                      'Session ${session.sessionId.substring(0, session.sessionId.length > 10 ? 10 : session.sessionId.length)}',
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Timestamp
-            if (session.lastActivity != null)
-              Text(
-                session.lastActivity!.timeAgo,
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.appColors.textSecondary,
+                  ],
                 ),
               ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: context.appColors.textSecondary,
-            ),
-          ],
+              if (session.lastActivity != null)
+                Text(
+                  session.lastActivity!.timeAgo,
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: context.appColors.textSecondary,
+              ),
+            ],
+          ),
         ),
       ),
     );

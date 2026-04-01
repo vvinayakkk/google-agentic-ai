@@ -1,0 +1,6629 @@
+{
+  "collection_count": 30,
+  "collections": {
+    "admin_audit_logs": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 7,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "action",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "admin_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "payload_summary",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "target_collection",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "target_doc_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "timestamp",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "a443f80f6a084dfaaff715e342a65282",
+          "admin_id": "admin_admin",
+          "action": "UPDATE_FARMER_STATUS",
+          "target_collection": "users",
+          "target_doc_id": "seed_farmer_01",
+          "payload_summary": "is_active=False",
+          "timestamp": "2026-03-30T09:34:07.378687+00:00"
+        },
+        {
+          "_id": "2b96762e2fd14d0f9125403be82c9ea2",
+          "admin_id": "admin_admin",
+          "action": "UPDATE_FARMER_STATUS",
+          "target_collection": "users",
+          "target_doc_id": "seed_farmer_01",
+          "payload_summary": "is_active=True",
+          "timestamp": "2026-03-30T09:34:11.735877+00:00"
+        },
+        {
+          "_id": "4d642393c7e0403495af6fe7d0f9a7e7",
+          "admin_id": "admin_admin",
+          "action": "UPDATE_FARMER_STATUS",
+          "target_collection": "users",
+          "target_doc_id": "seed_farmer_03",
+          "payload_summary": "is_active=False",
+          "timestamp": "2026-03-30T09:34:15.297149+00:00"
+        }
+      ]
+    },
+    "admin_users": {
+      "count": 2,
+      "sampled_for_schema": 2,
+      "field_count": 10,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "admin_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "created_by",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "email",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "is_active",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "last_login_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "password_hash",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "role",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "admin_superadmin",
+          "admin_id": "admin_superadmin",
+          "email": "superadmin@kisankiawaz.in",
+          "password_hash": "$2b$12$TOisPuaLK9ajJ95ITUXwJ.2vjM6nWojAOuYF2RZ3gHoiNfzexQJf2",
+          "name": "Super Admin",
+          "role": "super_admin",
+          "is_active": true,
+          "created_at": "2026-03-26T20:03:54.744538+00:00",
+          "last_login_at": "2026-03-31T15:16:19.240125+00:00",
+          "created_by": "seed_script"
+        },
+        {
+          "_id": "admin_admin",
+          "admin_id": "admin_admin",
+          "email": "admin@kisankiawaz.in",
+          "password_hash": "$2b$12$NRZPYUd00KNhPtmgHy5Bj.bGY7wGuPapKJkhQu.BNlpJGrKi9G4aq",
+          "name": "Admin User",
+          "role": "admin",
+          "is_active": true,
+          "created_at": "2026-03-26T20:03:54.744538+00:00",
+          "last_login_at": "2026-03-31T14:43:13.357802+00:00",
+          "created_by": "seed_script"
+        }
+      ]
+    },
+    "agent_session_messages": {
+      "count": 82,
+      "sampled_for_schema": 50,
+      "field_count": 7,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "agent",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 25,
+          "sampled_docs": 50
+        },
+        {
+          "path": "content",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "role",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "session_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "timestamp",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "user_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "e0be650552644d4aa122d88c3c20ced1",
+          "session_id": "176215d6-a19b-4531-b840-0ac5ddc0e034",
+          "user_id": "seed_farmer_01",
+          "role": "user",
+          "content": "Will it rain tomorrow in my area and is evening spray safe?",
+          "timestamp": "2026-04-01T11:04:20.816271+00:00"
+        },
+        {
+          "_id": "e2f3a1943326480b81b1c8acb4580388",
+          "session_id": "176215d6-a19b-4531-b840-0ac5ddc0e034",
+          "user_id": "seed_farmer_01",
+          "role": "assistant",
+          "content": "Here's the weather update and advice for your area (Pune):\n\n*   **Data Now (Source: OpenWeatherMap, retrieved 2026-04-01 11:04 UTC):**\n    *   **Tonight (April 1st):** Expect scattered clouds around 6 PM, but light rain is predicted around 9 PM.\n    *   **Tomorrow (April 2nd):** Light rain is foreca...<truncated>",
+          "agent": "WeatherAgent",
+          "timestamp": "2026-04-01T11:04:20.816271+00:00"
+        },
+        {
+          "_id": "10e9d4055a8048f18e57ca0e417d21b0",
+          "session_id": "176215d6-a19b-4531-b840-0ac5ddc0e034",
+          "user_id": "seed_farmer_01",
+          "role": "user",
+          "content": "PM-KISAN eligibility, required documents, and exact apply process for a Maharashtra farmer.",
+          "timestamp": "2026-04-01T11:04:23.332189+00:00"
+        }
+      ]
+    },
+    "agent_sessions": {
+      "count": 11,
+      "sampled_for_schema": 11,
+      "field_count": 13,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        },
+        {
+          "path": "agent_type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "farmer_facts",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        },
+        {
+          "path": "farmer_facts[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 69,
+          "sampled_docs": 11
+        },
+        {
+          "path": "farmer_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "language",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        },
+        {
+          "path": "last_activity",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "message_count",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "session_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 7,
+          "sampled_docs": 11
+        },
+        {
+          "path": "summary",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        },
+        {
+          "path": "user_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 11
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "f7c968a8-994c-4e0d-9a18-14a1cec70c8a",
+          "language": "en",
+          "updated_at": "2026-04-01T10:19:24.130824+00:00",
+          "user_id": "seed_farmer_01",
+          "farmer_facts": [
+            "topics=weather"
+          ],
+          "summary": "[2026-04-01T10:18:29.926236+00:00] User intent: hi what's the weather right now | Assistant response gist: Here's the current weather update for Pune, India, as of April 1, 2026, at 10:11 AM UTC (3:41 PM IST): * **Data Now:** The temperature is 35.22\u00b0C with scattered clouds. The humidity is 31%, and...<truncated>"
+        },
+        {
+          "_id": "6e7eb3d7-365d-4d6c-956c-118bcdbad259",
+          "language": "en",
+          "updated_at": "2026-04-01T10:29:23.943562+00:00",
+          "user_id": "seed_farmer_01",
+          "farmer_facts": [],
+          "summary": "[2026-04-01T10:29:23.943562+00:00] User intent: Give one concise daily farming recommendation in 1-2 sentences for calendar planning. Upcoming tasks: Market Alert on Mar 24 at 9:00 AM. | Assistant response gist: * **Data Now:** Be aware of the upcoming Market Alert scheduled for March 24 at 9:00 AM,...<truncated>"
+        },
+        {
+          "_id": "08b703dd-f895-4d1c-a541-a566fb9eed48",
+          "language": "en",
+          "updated_at": "2026-04-01T10:36:42.361084+00:00",
+          "user_id": "seed_farmer_01",
+          "farmer_facts": [
+            "crops_of_interest=rice"
+          ],
+          "summary": "[2026-04-01T10:35:29.891561+00:00] User intent: hi what's the price of tomat9 | Assistant response gist: Exact local match is limited in current records, so here is the closest verified data and practical action plan. Here's what the nearest available data shows for other crops, as these are fallbac...<truncated>"
+        }
+      ]
+    },
+    "analytics_snapshots": {
+      "count": 2,
+      "sampled_for_schema": 2,
+      "field_count": 52,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "generated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement.activation_rate_pct",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement.active_farmers",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement.conversation_per_active_farmer",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement.retention_risk_pct",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.engagement.voice_sessions_window",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.generated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.bookings",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.bookings[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.bookings[].date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.bookings[].value",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.conversations",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.conversations[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.conversations[].date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.conversations[].value",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.farmers",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.farmers[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.farmers[].date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.growth_trends.farmers[].value",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 20,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.market_intelligence",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.market_intelligence.records_window",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.market_intelligence.top_commodities",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.market_intelligence.tracked_commodities",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.avg_data_freshness_lag_days",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.profile_completeness_pct",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.system_health_score",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.top_states",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.top_states[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 9,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.top_states[].farmers",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 9,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.top_states[].state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 9,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.operational_health.unread_notifications",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.opportunities",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.opportunities.district_coverage_gaps",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.opportunities.farmers_without_crops",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.opportunities.inactive_farmers",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.recommendations",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.recommendations[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[].context",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[].delta",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[].title",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[].trend",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.scorecard[].value",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 2
+        },
+        {
+          "path": "insights.window_days",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        },
+        {
+          "path": "window_days",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 2
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "2026-03-26",
+          "date": "2026-03-26",
+          "window_days": 30,
+          "insights": {
+            "window_days": 30,
+            "generated_at": "2026-03-26T22:39:27.786498+00:00",
+            "scorecard": [
+              {
+                "title": "Total Farmers",
+                "value": 8,
+                "delta": 100.0,
+                "trend": "up",
+                "context": "New farmers in last 30 days: 8"
+              },
+              {
+                "title": "Active Farmers",
+                "value": 1,
+                "delta": 12.5,
+                "trend": "neutral",
+                "context": "Activation rate in 30 days: 12.5%"
+              },
+              {
+                "title": "Conversations",
+                "value": 0,
+                "delta": 0.0,
+                "trend": "down",
+                "context": "Agent usage intensity over current window"
+              },
+              {
+                "title": "Equipment Demand",
+                "value": 1,
+                "delta": 100.0,
+                "trend": "up",
+                "context": "Bookings created in current window"
+              }
+            ],
+            "growth_trends": {
+              "farmers": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+25 items>"
+              ],
+              "conversations": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+25 items>"
+              ],
+              "bookings": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+25 items>"
+              ]
+            },
+            "engagement": {
+              "active_farmers": 1,
+              "activation_rate_pct": 12.5,
+              "retention_risk_pct": 87.5,
+              "conversation_per_active_farmer": 0.0,
+              "voice_sessions_window": 0
+            },
+            "operational_health": {
+              "profile_completeness_pct": 0.0,
+              "unread_notifications": 1,
+              "avg_data_freshness_lag_days": 1.95,
+              "top_states": [
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                },
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                },
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                },
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                },
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                },
+                "<+3 items>"
+              ],
+              "system_health_score": 31.0
+            },
+            "market_intelligence": {
+              "top_commodities": [],
+              "tracked_commodities": 0,
+              "records_window": 0
+            },
+            "opportunities": {
+              "farmers_without_crops": 0,
+              "inactive_farmers": 7,
+              "district_coverage_gaps": 0
+            },
+            "recommendations": [
+              "Run a 14-day onboarding nudging campaign for new farmers to improve activation.",
+              "Prioritize at-risk farmers with targeted notifications and local language outreach.",
+              "Launch profile completion prompts; missing profile data is blocking insight precision."
+            ]
+          },
+          "generated_at": "2026-03-26T22:39:27.801871+00:00"
+        },
+        {
+          "_id": "2026-03-30",
+          "date": "2026-03-30",
+          "window_days": 90,
+          "insights": {
+            "window_days": 90,
+            "generated_at": "2026-03-30T15:19:00.610096+00:00",
+            "scorecard": [
+              {
+                "title": "Total Farmers",
+                "value": 8,
+                "delta": 100.0,
+                "trend": "up",
+                "context": "New farmers in last 90 days: 8"
+              },
+              {
+                "title": "Active Farmers",
+                "value": 1,
+                "delta": 12.5,
+                "trend": "neutral",
+                "context": "Activation rate in 90 days: 12.5%"
+              },
+              {
+                "title": "Conversations",
+                "value": 0,
+                "delta": 0.0,
+                "trend": "down",
+                "context": "Agent usage intensity over current window"
+              },
+              {
+                "title": "Equipment Demand",
+                "value": 1,
+                "delta": 100.0,
+                "trend": "up",
+                "context": "Bookings created in current window"
+              }
+            ],
+            "growth_trends": {
+              "farmers": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+85 items>"
+              ],
+              "conversations": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+85 items>"
+              ],
+              "bookings": [
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                {
+                  "date": "<max-depth>",
+                  "value": "<max-depth>"
+                },
+                "<+85 items>"
+              ]
+            },
+            "engagement": {
+              "active_farmers": 1,
+              "activation_rate_pct": 12.5,
+              "retention_risk_pct": 87.5,
+              "conversation_per_active_farmer": 0.0,
+              "voice_sessions_window": 0
+            },
+            "operational_health": {
+              "profile_completeness_pct": 0.0,
+              "unread_notifications": 1,
+              "avg_data_freshness_lag_days": 5.65,
+              "top_states": [
+                {
+                  "state": "<max-depth>",
+                  "farmers": "<max-depth>"
+                }
+              ],
+              "system_health_score": 18.67
+            },
+            "market_intelligence": {
+              "top_commodities": [],
+              "tracked_commodities": 0,
+              "records_window": 0
+            },
+            "opportunities": {
+              "farmers_without_crops": 0,
+              "inactive_farmers": 7,
+              "district_coverage_gaps": 0
+            },
+            "recommendations": [
+              "Run a 14-day onboarding nudging campaign for new farmers to improve activation.",
+              "Prioritize at-risk farmers with targeted notifications and local language outreach.",
+              "Launch profile completion prompts; missing profile data is blocking insight precision."
+            ]
+          },
+          "generated_at": "2026-03-30T15:19:00.617884+00:00"
+        }
+      ]
+    },
+    "app_config": {
+      "count": 1,
+      "sampled_for_schema": 1,
+      "field_count": 13,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "agent_enabled",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "data_gov_api_keys",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "feature_flags",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "feature_flags.admin_dashboard",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "feature_flags.price_alerts",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "feature_flags.schemes_search",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "feature_flags.voice_streaming",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "maintenance_mode",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "max_price_alert_per_user",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "updated_by",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "voice_enabled",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "global",
+          "agent_enabled": true,
+          "data_gov_api_keys": [],
+          "feature_flags": {
+            "schemes_search": true,
+            "voice_streaming": true,
+            "price_alerts": true,
+            "admin_dashboard": true
+          },
+          "maintenance_mode": false,
+          "max_price_alert_per_user": 10,
+          "updated_at": "2026-03-24T21:00:25.151136+00:00",
+          "updated_by": "seed_script",
+          "voice_enabled": true
+        }
+      ]
+    },
+    "crops": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 11,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "area",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "farmer_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "season",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "sowing_date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "variety",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "crop_seed_farmer_01",
+          "farmer_id": "seed_farmer_01",
+          "name": "Wheat",
+          "variety": "HD-2967",
+          "season": "kharif",
+          "area": 1.5,
+          "sowing_date": "2026-06-15",
+          "status": "growing",
+          "created_at": "2026-03-24T21:00:43.627707+00:00",
+          "updated_at": "2026-03-24T21:00:43.627707+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "crop_seed_farmer_02",
+          "farmer_id": "seed_farmer_02",
+          "name": "Rice",
+          "variety": "Pusa Basmati 1121",
+          "season": "rabi",
+          "area": 2.0,
+          "sowing_date": "2026-11-12",
+          "status": "growing",
+          "created_at": "2026-03-24T21:00:44.007359+00:00",
+          "updated_at": "2026-03-24T21:00:44.007359+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "crop_seed_farmer_03",
+          "farmer_id": "seed_farmer_03",
+          "name": "Soybean",
+          "variety": "JS-335",
+          "season": "kharif",
+          "area": 2.5,
+          "sowing_date": "2026-06-15",
+          "status": "growing",
+          "created_at": "2026-03-24T21:00:44.283882+00:00",
+          "updated_at": "2026-03-24T21:00:44.283882+00:00",
+          "is_seed_data": true
+        }
+      ]
+    },
+    "document_builder_sessions": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 36,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "farmer_id",
+          "types": [
+            "null"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.aadhaar_number",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.date_of_birth",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.farmer_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "filled_fields.village",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].field",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].hindi_label",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].label",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].options",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].options[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 24,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].required",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "form_fields[].type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "questions_asked",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "questions_asked[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 80,
+          "sampled_docs": 8
+        },
+        {
+          "path": "required_documents",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "required_documents[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 8
+        },
+        {
+          "path": "scheme_category",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "scheme_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "scheme_short_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "session_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[]",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[].extracted_fields",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[].extracted_fields[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 16,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[].filename",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[].path",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "uploaded_documents[].uploaded_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "a30367d66a6047cfa0bd9510ce5163d1",
+          "session_id": "a30367d66a6047cfa0bd9510ce5163d1",
+          "farmer_id": null,
+          "scheme_name": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
+          "scheme_short_name": "PM-KISAN",
+          "scheme_category": "income_support",
+          "form_fields": [
+            {
+              "field": "farmer_name",
+              "label": "Full Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "father_name",
+              "label": "Father's Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u093f\u0924\u093e \u0915\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "gender",
+              "label": "Gender",
+              "type": "select",
+              "options": [
+                "Male",
+                "Female",
+                "Other"
+              ],
+              "required": true,
+              "hindi_label": "\u0932\u093f\u0902\u0917"
+            },
+            {
+              "field": "date_of_birth",
+              "label": "Date of Birth",
+              "type": "date",
+              "required": true,
+              "hindi_label": "\u091c\u0928\u094d\u092e \u0924\u093f\u0925\u093f"
+            },
+            {
+              "field": "aadhaar_number",
+              "label": "Aadhaar Number",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u0906\u0927\u093e\u0930 \u0928\u0902\u092c\u0930"
+            },
+            "<+12 items>"
+          ],
+          "filled_fields": {
+            "state": "state",
+            "district": "district",
+            "village": "village",
+            "aadhaar_number": "123456789012",
+            "farmer_name": "Vinayak",
+            "date_of_birth": "01/01/1990"
+          },
+          "required_documents": [
+            "Aadhaar Card",
+            "Land ownership documents / Land records (Khatauni/Khasra)",
+            "Bank account details (passbook copy)",
+            "Mobile number linked with Aadhaar",
+            "State/UT domicile certificate",
+            "<+1 items>"
+          ],
+          "uploaded_documents": [
+            {
+              "filename": "sample.txt",
+              "path": "/tmp/doc_uploads/a30367d66a6047cfa0bd9510ce5163d1_sample.txt",
+              "extracted_fields": [
+                "farmer_name",
+                "date_of_birth"
+              ],
+              "uploaded_at": "2026-03-24T21:04:50.597422+00:00"
+            }
+          ],
+          "status": "in_progress",
+          "questions_asked": [
+            "ifsc_code",
+            "bank_account_number",
+            "father_name",
+            "mobile_number",
+            "sub_district",
+            "<+5 items>"
+          ],
+          "created_at": "2026-03-24T21:04:37.662351+00:00",
+          "updated_at": "2026-03-24T21:04:50.597432+00:00"
+        },
+        {
+          "_id": "3b6056a4e2a24d0a8976a9ce7ea8f51b",
+          "session_id": "3b6056a4e2a24d0a8976a9ce7ea8f51b",
+          "farmer_id": null,
+          "scheme_name": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
+          "scheme_short_name": "PM-KISAN",
+          "scheme_category": "income_support",
+          "form_fields": [
+            {
+              "field": "farmer_name",
+              "label": "Full Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "father_name",
+              "label": "Father's Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u093f\u0924\u093e \u0915\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "gender",
+              "label": "Gender",
+              "type": "select",
+              "options": [
+                "Male",
+                "Female",
+                "Other"
+              ],
+              "required": true,
+              "hindi_label": "\u0932\u093f\u0902\u0917"
+            },
+            {
+              "field": "date_of_birth",
+              "label": "Date of Birth",
+              "type": "date",
+              "required": true,
+              "hindi_label": "\u091c\u0928\u094d\u092e \u0924\u093f\u0925\u093f"
+            },
+            {
+              "field": "aadhaar_number",
+              "label": "Aadhaar Number",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u0906\u0927\u093e\u0930 \u0928\u0902\u092c\u0930"
+            },
+            "<+12 items>"
+          ],
+          "filled_fields": {
+            "state": "state",
+            "district": "district",
+            "village": "village",
+            "aadhaar_number": "123456789012",
+            "farmer_name": "Vinayak",
+            "date_of_birth": "01/01/1990"
+          },
+          "required_documents": [
+            "Aadhaar Card",
+            "Land ownership documents / Land records (Khatauni/Khasra)",
+            "Bank account details (passbook copy)",
+            "Mobile number linked with Aadhaar",
+            "State/UT domicile certificate",
+            "<+1 items>"
+          ],
+          "uploaded_documents": [
+            {
+              "filename": "sample.txt",
+              "path": "/tmp/doc_uploads/3b6056a4e2a24d0a8976a9ce7ea8f51b_sample.txt",
+              "extracted_fields": [
+                "farmer_name",
+                "date_of_birth"
+              ],
+              "uploaded_at": "2026-03-24T21:10:14.211331+00:00"
+            }
+          ],
+          "status": "in_progress",
+          "questions_asked": [
+            "ifsc_code",
+            "bank_account_number",
+            "father_name",
+            "mobile_number",
+            "sub_district",
+            "<+5 items>"
+          ],
+          "created_at": "2026-03-24T21:10:05.041778+00:00",
+          "updated_at": "2026-03-24T21:10:14.211341+00:00"
+        },
+        {
+          "_id": "de19e9f9621a461bb67caadcc2fa3005",
+          "session_id": "de19e9f9621a461bb67caadcc2fa3005",
+          "farmer_id": null,
+          "scheme_name": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
+          "scheme_short_name": "PM-KISAN",
+          "scheme_category": "income_support",
+          "form_fields": [
+            {
+              "field": "farmer_name",
+              "label": "Full Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "father_name",
+              "label": "Father's Name",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u092a\u093f\u0924\u093e \u0915\u093e \u0928\u093e\u092e"
+            },
+            {
+              "field": "gender",
+              "label": "Gender",
+              "type": "select",
+              "options": [
+                "Male",
+                "Female",
+                "Other"
+              ],
+              "required": true,
+              "hindi_label": "\u0932\u093f\u0902\u0917"
+            },
+            {
+              "field": "date_of_birth",
+              "label": "Date of Birth",
+              "type": "date",
+              "required": true,
+              "hindi_label": "\u091c\u0928\u094d\u092e \u0924\u093f\u0925\u093f"
+            },
+            {
+              "field": "aadhaar_number",
+              "label": "Aadhaar Number",
+              "type": "text",
+              "required": true,
+              "hindi_label": "\u0906\u0927\u093e\u0930 \u0928\u0902\u092c\u0930"
+            },
+            "<+12 items>"
+          ],
+          "filled_fields": {
+            "state": "state",
+            "district": "district",
+            "village": "village",
+            "aadhaar_number": "123456789012",
+            "farmer_name": "Vinayak",
+            "date_of_birth": "01/01/1990"
+          },
+          "required_documents": [
+            "Aadhaar Card",
+            "Land ownership documents / Land records (Khatauni/Khasra)",
+            "Bank account details (passbook copy)",
+            "Mobile number linked with Aadhaar",
+            "State/UT domicile certificate",
+            "<+1 items>"
+          ],
+          "uploaded_documents": [
+            {
+              "filename": "sample.txt",
+              "path": "/tmp/doc_uploads/de19e9f9621a461bb67caadcc2fa3005_sample.txt",
+              "extracted_fields": [
+                "farmer_name",
+                "date_of_birth"
+              ],
+              "uploaded_at": "2026-03-24T21:15:59.943685+00:00"
+            }
+          ],
+          "status": "in_progress",
+          "questions_asked": [
+            "ifsc_code",
+            "bank_account_number",
+            "father_name",
+            "mobile_number",
+            "sub_district",
+            "<+5 items>"
+          ],
+          "created_at": "2026-03-24T21:15:49.843855+00:00",
+          "updated_at": "2026-03-24T21:15:59.943694+00:00"
+        }
+      ]
+    },
+    "equipment": {
+      "count": 48,
+      "sampled_for_schema": 48,
+      "field_count": 107,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 48
+        },
+        {
+          "path": "availability",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "booking_advance_days",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "category",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "contact_phone",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 48
+        },
+        {
+          "path": "description",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "farmer_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "fuel_cost_extra",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "hindi_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "is_active",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 48
+        },
+        {
+          "path": "location",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 48
+        },
+        {
+          "path": "operator_included",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 48
+        },
+        {
+          "path": "popular_brands",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 48
+        },
+        {
+          "path": "popular_brands[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rate_per_day",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rate_per_hour",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rate_source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.daily",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 13,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.daily.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 13,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.daily.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 13,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.daily.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 13,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.hourly",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.hourly.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.hourly.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.hourly.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.monthly",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.monthly.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.monthly.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.monthly.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_acre",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 26,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_acre.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 26,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_acre.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 26,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_acre.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 26,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_quintal",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_quintal.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_quintal.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_quintal.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_trip",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_trip.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_trip.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.per_trip.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.seasonal",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.seasonal.avg",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.seasonal.max",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "rental_rates.seasonal.min",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "requires_tractor",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 12,
+          "sampled_docs": 48
+        },
+        {
+          "path": "source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 40,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_rate",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_rate.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_rate.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 16,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Andhra Pradesh",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Andhra Pradesh.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Andhra Pradesh.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Assam",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Assam.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Bihar",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Bihar.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Bihar.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Chhattisgarh",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Chhattisgarh.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Gujarat",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Gujarat.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Gujarat.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 3,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Haryana",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Haryana.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Haryana.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Jharkhand",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Jharkhand.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Karnataka",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Karnataka.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Karnataka.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Kerala",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Kerala.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Madhya Pradesh",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Madhya Pradesh.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Madhya Pradesh.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Maharashtra",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Maharashtra.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Maharashtra.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Odisha",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Odisha.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Punjab",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Punjab.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Punjab.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Rajasthan",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Rajasthan.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Rajasthan.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 5,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Tamil Nadu",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Tamil Nadu.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Tamil Nadu.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Telangana",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Telangana.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Telangana.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Uttar Pradesh",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Uttar Pradesh.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.Uttar Pradesh.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 11,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.West Bengal",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.West Bengal.daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 48
+        },
+        {
+          "path": "state_variations.West Bengal.per_acre",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 48
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 48
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 48,
+          "sampled_docs": 48
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "equipment_seed_farmer_01",
+          "farmer_id": "seed_farmer_01",
+          "name": "Tractor 45HP",
+          "type": "farm_machinery",
+          "status": "available",
+          "rate_per_hour": 600,
+          "rate_per_day": 3500,
+          "location": "Indapur, Pune",
+          "contact_phone": "+919800000001",
+          "created_at": "2026-03-24T21:00:43.627707+00:00",
+          "updated_at": "2026-03-24T21:00:43.627707+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "equipment_seed_farmer_02",
+          "farmer_id": "seed_farmer_02",
+          "name": "Rotavator",
+          "type": "farm_machinery",
+          "status": "available",
+          "rate_per_hour": 640,
+          "rate_per_day": 3750,
+          "location": "Samrala, Ludhiana",
+          "contact_phone": "+919800000002",
+          "created_at": "2026-03-24T21:00:44.007359+00:00",
+          "updated_at": "2026-03-24T21:00:44.007359+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "equipment_seed_farmer_03",
+          "farmer_id": "seed_farmer_03",
+          "name": "Seed Drill",
+          "type": "farm_machinery",
+          "status": "available",
+          "rate_per_hour": 680,
+          "rate_per_day": 4000,
+          "location": "Malihabad, Lucknow",
+          "contact_phone": "+919800000003",
+          "created_at": "2026-03-24T21:00:44.283882+00:00",
+          "updated_at": "2026-03-24T21:00:44.283882+00:00",
+          "is_seed_data": true
+        }
+      ]
+    },
+    "equipment_bookings": {
+      "count": 1,
+      "sampled_for_schema": 1,
+      "field_count": 12,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "end_date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "equipment_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "equipment_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "message",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "owner_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "renter_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "start_date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "booking_seed_01",
+          "equipment_id": "equipment_seed_farmer_01",
+          "equipment_name": "Tractor 45HP",
+          "owner_id": "seed_farmer_01",
+          "renter_id": "seed_farmer_02",
+          "start_date": "2026-03-25",
+          "end_date": "2026-03-27",
+          "message": "Need for pre-sowing field prep",
+          "status": "approved",
+          "created_at": "2026-03-24T21:00:46.679447+00:00",
+          "updated_at": "2026-03-24T21:00:46.679447+00:00",
+          "is_seed_data": true
+        }
+      ]
+    },
+    "farmer_profiles": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 19,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "farm_size",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "farm_size_unit",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "irrigation_type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "land_size_acres",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 8
+        },
+        {
+          "path": "language",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 8
+        },
+        {
+          "path": "location_label",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "phone",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "pin_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "preferred_language",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "soil_type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "user_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "village",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "profile_seed_farmer_01",
+          "user_id": "seed_farmer_01",
+          "name": "Seed Farmer 1",
+          "phone": "+919800000001",
+          "village": "Shirur",
+          "district": "Pune",
+          "state": "Maharashtra",
+          "pin_code": "412210",
+          "farm_size": 2.5,
+          "farm_size_unit": "acres",
+          "soil_type": "Loamy",
+          "irrigation_type": "Drip",
+          "preferred_language": "hi",
+          "created_at": "2026-03-24T21:00:43.627707+00:00",
+          "updated_at": "2026-04-01T11:39:08.630439+00:00",
+          "is_seed_data": true,
+          "location_label": "Near Mumbai",
+          "land_size_acres": 3.2,
+          "language": "en"
+        },
+        {
+          "_id": "profile_seed_farmer_02",
+          "user_id": "seed_farmer_02",
+          "name": "Seed Farmer 2",
+          "phone": "+919800000002",
+          "village": "Andheri East",
+          "district": "Mumbai Suburban",
+          "state": "Maharashtra",
+          "pin_code": "400069",
+          "farm_size": 3.3,
+          "farm_size_unit": "acres",
+          "soil_type": "black",
+          "irrigation_type": "canal",
+          "preferred_language": "mr",
+          "created_at": "2026-03-24T21:00:44.007359+00:00",
+          "updated_at": "2026-03-30T08:51:34.622522+00:00",
+          "is_seed_data": true,
+          "location_label": "Near Mumbai"
+        },
+        {
+          "_id": "profile_seed_farmer_03",
+          "user_id": "seed_farmer_03",
+          "name": "Seed Farmer 3",
+          "phone": "+919800000003",
+          "village": "Andheri East",
+          "district": "Mumbai Suburban",
+          "state": "Maharashtra",
+          "pin_code": "400069",
+          "farm_size": 4.1,
+          "farm_size_unit": "acres",
+          "soil_type": "red",
+          "irrigation_type": "tube_well",
+          "preferred_language": "en",
+          "created_at": "2026-03-24T21:00:44.283882+00:00",
+          "updated_at": "2026-03-30T08:51:34.642582+00:00",
+          "is_seed_data": true,
+          "location_label": "Near Mumbai"
+        }
+      ]
+    },
+    "livestock": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 9,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "breed",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "count",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "farmer_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "health_status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "livestock_seed_farmer_01",
+          "farmer_id": "seed_farmer_01",
+          "type": "cow",
+          "breed": "Sahiwal",
+          "count": 3,
+          "health_status": "healthy",
+          "created_at": "2026-03-24T21:00:43.627707+00:00",
+          "updated_at": "2026-03-24T21:00:43.627707+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "livestock_seed_farmer_02",
+          "farmer_id": "seed_farmer_02",
+          "type": "buffalo",
+          "breed": "Murrah",
+          "count": 4,
+          "health_status": "healthy",
+          "created_at": "2026-03-24T21:00:44.007359+00:00",
+          "updated_at": "2026-03-24T21:00:44.007359+00:00",
+          "is_seed_data": true
+        },
+        {
+          "_id": "livestock_seed_farmer_03",
+          "farmer_id": "seed_farmer_03",
+          "type": "goat",
+          "breed": "Jamunapari",
+          "count": 5,
+          "health_status": "healthy",
+          "created_at": "2026-03-24T21:00:44.283882+00:00",
+          "updated_at": "2026-03-24T21:00:44.283882+00:00",
+          "is_seed_data": true
+        }
+      ]
+    },
+    "market_prices": {
+      "count": 20288,
+      "sampled_for_schema": 50,
+      "field_count": 13,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "crop_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "mandi_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "max_price",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "min_price",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "modal_price",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "unit",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "variety",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "527ccf04c0e7495e9978ab02463e0c1f",
+          "crop_name": "Green Gram Dal (Moong Dal)",
+          "variety": "Green Gram Dal",
+          "mandi_name": "Pamarru",
+          "state": "Andhra Pradesh",
+          "district": "Krishna",
+          "min_price": 9500.0,
+          "max_price": 10500.0,
+          "modal_price": 10000.0,
+          "unit": "quintal",
+          "date": "09/05/2016",
+          "source": "data.gov.in",
+          "created_at": "2026-03-25T13:16:53.956000+00:00"
+        },
+        {
+          "_id": "505844b07fc84525b23d346c2d6fce8c",
+          "crop_name": "Ground Nut Seed",
+          "variety": "Other",
+          "mandi_name": "Rayachoti",
+          "state": "Andhra Pradesh",
+          "district": "Cuddapah",
+          "min_price": 7400.0,
+          "max_price": 7800.0,
+          "modal_price": 7600.0,
+          "unit": "quintal",
+          "date": "19/04/2016",
+          "source": "data.gov.in",
+          "created_at": "2026-03-25T13:16:53.956000+00:00"
+        },
+        {
+          "_id": "5c5bebd45c364104ae4875bc1957bcfb",
+          "crop_name": "Ground Nut Seed",
+          "variety": "Other",
+          "mandi_name": "Rayachoti",
+          "state": "Andhra Pradesh",
+          "district": "Cuddapah",
+          "min_price": 7400.0,
+          "max_price": 7800.0,
+          "modal_price": 7600.0,
+          "unit": "quintal",
+          "date": "27/04/2016",
+          "source": "data.gov.in",
+          "created_at": "2026-03-25T13:16:53.956000+00:00"
+        }
+      ]
+    },
+    "notifications": {
+      "count": 1,
+      "sampled_for_schema": 1,
+      "field_count": 8,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "body",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "is_read",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "title",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        },
+        {
+          "path": "user_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 1
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "notif_seed_01",
+          "user_id": "seed_farmer_01",
+          "title": "Market Alert",
+          "body": "Wheat modal price increased in nearby mandi.",
+          "type": "market",
+          "is_read": false,
+          "created_at": "2026-03-24T21:00:46.692638+00:00",
+          "is_seed_data": true
+        }
+      ]
+    },
+    "ref_cold_storage": {
+      "count": 32,
+      "sampled_for_schema": 32,
+      "field_count": 7,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "available_capacity_mt",
+          "types": [
+            "float",
+            "null"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "capacity_required_mt",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 32,
+          "sampled_docs": 32
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "andhra_pradesh",
+          "_ingested_at": "2026-03-24T21:00:14.796022+00:00",
+          "_source_resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "available_capacity_mt": 1577828.0,
+          "capacity_required_mt": 530925.0,
+          "resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "state": "Andhra Pradesh"
+        },
+        {
+          "_id": "arunachal_pradesh",
+          "_ingested_at": "2026-03-24T21:00:14.796022+00:00",
+          "_source_resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "available_capacity_mt": 5000.0,
+          "capacity_required_mt": 7508.0,
+          "resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "state": "Arunachal Pradesh"
+        },
+        {
+          "_id": "assam",
+          "_ingested_at": "2026-03-24T21:00:14.796022+00:00",
+          "_source_resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "available_capacity_mt": 119652.0,
+          "capacity_required_mt": 71996.0,
+          "resource_id": "a75195de-8cd6-4ecf-a818-54c761dfa24a",
+          "state": "Assam"
+        }
+      ]
+    },
+    "ref_crop_varieties": {
+      "count": 18,
+      "sampled_for_schema": 18,
+      "field_count": 7,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "crop",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "production_target_2016_17",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        },
+        {
+          "path": "season",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 18
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "rice_kharif",
+          "_ingested_at": "2026-03-24T21:00:15.849534+00:00",
+          "_source_resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "crop": "Rice",
+          "production_target_2016_17": "93",
+          "resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "season": "Kharif"
+        },
+        {
+          "_id": "rice_rabi",
+          "_ingested_at": "2026-03-24T21:00:15.849534+00:00",
+          "_source_resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "crop": "Rice",
+          "production_target_2016_17": "15.5",
+          "resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "season": "Rabi"
+        },
+        {
+          "_id": "total_total",
+          "_ingested_at": "2026-03-24T21:00:15.849534+00:00",
+          "_source_resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "crop": "Total",
+          "production_target_2016_17": "270.1",
+          "resource_id": "7b9f57f0-5f8a-4442-9759-352dacb9d71b",
+          "season": "Total"
+        }
+      ]
+    },
+    "ref_data_ingestion_meta": {
+      "count": 19,
+      "sampled_for_schema": 19,
+      "field_count": 18,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 19,
+          "sampled_docs": 19
+        },
+        {
+          "path": "dataset",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 17,
+          "sampled_docs": 19
+        },
+        {
+          "path": "deleted_docs",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "input_file",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 4,
+          "sampled_docs": 19
+        },
+        {
+          "path": "input_rows",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "inserted",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "inserted_docs",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "invalid_rows",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "last_run_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 17,
+          "sampled_docs": 19
+        },
+        {
+          "path": "normalized_rows",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "providers_count",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 19
+        },
+        {
+          "path": "reembed",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "row_count",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 15,
+          "sampled_docs": 19
+        },
+        {
+          "path": "script",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 17,
+          "sampled_docs": 19
+        },
+        {
+          "path": "skipped_duplicate_in_db",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "skipped_duplicate_in_file",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 18,
+          "sampled_docs": 19
+        },
+        {
+          "path": "timestamp",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 2,
+          "sampled_docs": 19
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "seed_reference_data_ref_mandi_prices",
+          "script": "seed_reference_data",
+          "dataset": "ref_mandi_prices",
+          "last_run_at": "2026-03-24T21:00:25.200470+00:00",
+          "row_count": 92407,
+          "status": "success"
+        },
+        {
+          "_id": "seed_reference_data_ref_mandi_directory",
+          "script": "seed_reference_data",
+          "dataset": "ref_mandi_directory",
+          "last_run_at": "2026-03-24T21:00:25.200470+00:00",
+          "row_count": 1566,
+          "status": "success"
+        },
+        {
+          "_id": "seed_reference_data_ref_farmer_schemes",
+          "script": "seed_reference_data",
+          "dataset": "ref_farmer_schemes",
+          "last_run_at": "2026-03-24T21:00:25.200470+00:00",
+          "row_count": 743,
+          "status": "success"
+        }
+      ]
+    },
+    "ref_equipment_providers": {
+      "count": 1210,
+      "sampled_for_schema": 50,
+      "field_count": 50,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "address",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "alternate_phone",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "availability",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "booking_channels",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "booking_channels[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 150,
+          "sampled_docs": 50
+        },
+        {
+          "path": "category",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "city",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "contact_person",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "discount_percent",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "documents_required",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "documents_required[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 150,
+          "sampled_docs": 50
+        },
+        {
+          "path": "eligibility",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "eligibility[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 200,
+          "sampled_docs": 50
+        },
+        {
+          "path": "equipment_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "eta_mins",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "fuel_extra",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "geo",
+          "types": [
+            "object"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "geo.lat",
+          "types": [
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "geo.lng",
+          "types": [
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "image_url",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "last_verified_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "location_key",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "min_booking_hours",
+          "types": [
+            "int",
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "mrp",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "operator_included",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "pincode",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "provider_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "provider_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "provider_phone",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rate_daily",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rate_hourly",
+          "types": [
+            "int",
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rate_per_acre",
+          "types": [
+            "int",
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rate_per_trip",
+          "types": [
+            "int",
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rating",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "rental_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "review_count",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "season_note",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "security_deposit_policy",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "service_radius_km",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source_type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source_url",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "stock_left",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "whatsapp",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "working_hours",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "prov-mahpun1--tractor-45-hp",
+          "rental_id": "prov-mahpun1--tractor-45-hp",
+          "provider_id": "PROV-MAHPUN1",
+          "provider_name": "Pune Agro Rental Centre",
+          "source_type": "CHC",
+          "source_url": "https://agrimachinery.nic.in/CustomHiring",
+          "source": "equipment_pan_india_curated_2026",
+          "equipment_id": "equip-tractor-45-hp-maharashtra-pune",
+          "name": "Tractor 45 HP",
+          "category": "land_preparation",
+          "state": "Maharashtra",
+          "district": "Pune",
+          "city": "Pune",
+          "pincode": "564995",
+          "address": "Pune Mandi Road, Pune, Maharashtra",
+          "contact_person": "Rental Manager",
+          "provider_phone": "+918807527732",
+          "alternate_phone": "+918807537833",
+          "whatsapp": "+918807527732",
+          "eligibility": [
+            "Valid mobile number",
+            "Farmer ID or Aadhaar",
+            "Advance booking token",
+            "Fuel charges extra where applicable"
+          ],
+          "documents_required": [
+            "Aadhaar Card",
+            "Any farm proof (land record/tenant letter)",
+            "Mobile number"
+          ],
+          "security_deposit_policy": "Refundable deposit varies by equipment from Rs. 500 to Rs. 5000",
+          "working_hours": "08:00-18:00",
+          "booking_channels": [
+            "phone",
+            "whatsapp",
+            "centre_visit"
+          ],
+          "service_radius_km": 35,
+          "geo": {
+            "lat": null,
+            "lng": null
+          },
+          "rate_hourly": 682,
+          "rate_daily": 4410,
+          "rate_per_acre": 1155,
+          "rate_per_trip": null,
+          "mrp": 5203.8,
+          "discount_percent": 15,
+          "stock_left": 3,
+          "eta_mins": 24,
+          "rating": 4.5,
+          "review_count": 865,
+          "image_url": "https://picsum.photos/seed/Tractor+45+HP/640/420",
+          "operator_included": false,
+          "fuel_extra": true,
+          "availability": "medium",
+          "min_booking_hours": 2,
+          "season_note": "Peak season booking recommended 2-5 days in advance",
+          "last_verified_at": "2026-03-26",
+          "location_key": "maharashtra-pune",
+          "_ingested_at": "2026-03-31T19:40:33.114342+00:00"
+        },
+        {
+          "_id": "prov-mahpun1--rotavator-7-feet",
+          "rental_id": "prov-mahpun1--rotavator-7-feet",
+          "provider_id": "PROV-MAHPUN1",
+          "provider_name": "Pune Agro Rental Centre",
+          "source_type": "CHC",
+          "source_url": "https://agrimachinery.nic.in/CustomHiring",
+          "source": "equipment_pan_india_curated_2026",
+          "equipment_id": "equip-rotavator-7-feet-maharashtra-pune",
+          "name": "Rotavator 7 feet",
+          "category": "land_preparation",
+          "state": "Maharashtra",
+          "district": "Pune",
+          "city": "Pune",
+          "pincode": "564995",
+          "address": "Pune Mandi Road, Pune, Maharashtra",
+          "contact_person": "Rental Manager",
+          "provider_phone": "+918807527732",
+          "alternate_phone": "+918807537833",
+          "whatsapp": "+918807527732",
+          "eligibility": [
+            "Valid mobile number",
+            "Farmer ID or Aadhaar",
+            "Advance booking token",
+            "Fuel charges extra where applicable"
+          ],
+          "documents_required": [
+            "Aadhaar Card",
+            "Any farm proof (land record/tenant letter)",
+            "Mobile number"
+          ],
+          "security_deposit_policy": "Refundable deposit varies by equipment from Rs. 500 to Rs. 5000",
+          "working_hours": "08:00-18:00",
+          "booking_channels": [
+            "phone",
+            "whatsapp",
+            "centre_visit"
+          ],
+          "service_radius_km": 35,
+          "geo": {
+            "lat": null,
+            "lng": null
+          },
+          "rate_hourly": 525,
+          "rate_daily": 3360,
+          "rate_per_acre": 945,
+          "rate_per_trip": null,
+          "mrp": 3964.8,
+          "discount_percent": 15,
+          "stock_left": 3,
+          "eta_mins": 24,
+          "rating": 4.8,
+          "review_count": 1208,
+          "image_url": "https://picsum.photos/seed/Rotavator+7+feet/640/420",
+          "operator_included": false,
+          "fuel_extra": true,
+          "availability": "medium",
+          "min_booking_hours": 2,
+          "season_note": "Peak season booking recommended 2-5 days in advance",
+          "last_verified_at": "2026-03-26",
+          "location_key": "maharashtra-pune",
+          "_ingested_at": "2026-03-31T19:40:33.114342+00:00"
+        },
+        {
+          "_id": "prov-mahpun1--seed-drill-9-row",
+          "rental_id": "prov-mahpun1--seed-drill-9-row",
+          "provider_id": "PROV-MAHPUN1",
+          "provider_name": "Pune Agro Rental Centre",
+          "source_type": "CHC",
+          "source_url": "https://agrimachinery.nic.in/CustomHiring",
+          "source": "equipment_pan_india_curated_2026",
+          "equipment_id": "equip-seed-drill-9-row-maharashtra-pune",
+          "name": "Seed Drill 9-row",
+          "category": "sowing_planting",
+          "state": "Maharashtra",
+          "district": "Pune",
+          "city": "Pune",
+          "pincode": "564995",
+          "address": "Pune Mandi Road, Pune, Maharashtra",
+          "contact_person": "Rental Manager",
+          "provider_phone": "+918807527732",
+          "alternate_phone": "+918807537833",
+          "whatsapp": "+918807527732",
+          "eligibility": [
+            "Valid mobile number",
+            "Farmer ID or Aadhaar",
+            "Advance booking token",
+            "Fuel charges extra where applicable"
+          ],
+          "documents_required": [
+            "Aadhaar Card",
+            "Any farm proof (land record/tenant letter)",
+            "Mobile number"
+          ],
+          "security_deposit_policy": "Refundable deposit varies by equipment from Rs. 500 to Rs. 5000",
+          "working_hours": "08:00-18:00",
+          "booking_channels": [
+            "phone",
+            "whatsapp",
+            "centre_visit"
+          ],
+          "service_radius_km": 35,
+          "geo": {
+            "lat": null,
+            "lng": null
+          },
+          "rate_hourly": 315,
+          "rate_daily": 2310,
+          "rate_per_acre": 735,
+          "rate_per_trip": null,
+          "mrp": 2725.8,
+          "discount_percent": 15,
+          "stock_left": 3,
+          "eta_mins": 24,
+          "rating": 4.6,
+          "review_count": 1000,
+          "image_url": "https://picsum.photos/seed/Seed+Drill+9-row/640/420",
+          "operator_included": false,
+          "fuel_extra": true,
+          "availability": "medium",
+          "min_booking_hours": 2,
+          "season_note": "Peak season booking recommended 2-5 days in advance",
+          "last_verified_at": "2026-03-26",
+          "location_key": "maharashtra-pune",
+          "_ingested_at": "2026-03-31T19:40:33.114342+00:00"
+        }
+      ]
+    },
+    "ref_farmer_schemes": {
+      "count": 155,
+      "sampled_for_schema": 50,
+      "field_count": 46,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "acronym",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "application_process",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "application_process[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 195,
+          "sampled_docs": 50
+        },
+        {
+          "path": "beneficiary_state",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "beneficiary_state[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "benefits",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "benefits[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 108,
+          "sampled_docs": 50
+        },
+        {
+          "path": "categories",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "categories[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "conditions",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "conditions[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 205,
+          "sampled_docs": 50
+        },
+        {
+          "path": "contact_emails",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "contact_emails[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 33,
+          "sampled_docs": 50
+        },
+        {
+          "path": "contact_numbers",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "contact_numbers[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 53,
+          "sampled_docs": 50
+        },
+        {
+          "path": "coverage",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "department",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "document_links",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "eligibility",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "eligibility[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 208,
+          "sampled_docs": 50
+        },
+        {
+          "path": "financial_assistance_amount",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "how_to_apply",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "is_active",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 1,
+          "sampled_docs": 50
+        },
+        {
+          "path": "launched_year",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "level",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "ministry",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "objective",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "office_addresses",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "official_links",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "official_links[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 69,
+          "sampled_docs": 50
+        },
+        {
+          "path": "required_documents",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "required_documents[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 212,
+          "sampled_docs": 50
+        },
+        {
+          "path": "scheme_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "scheme_name_local",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "scheme_type",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "status",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "summary",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "tags",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "tags[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 349,
+          "sampled_docs": 50
+        },
+        {
+          "path": "target_beneficiaries",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "title",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "where_to_apply",
+          "types": [
+            "array"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "where_to_apply[]",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 150,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "scheme_central-pm-kisan",
+          "source": "scheme_json_user_upload",
+          "scheme_id": "central-pm-kisan",
+          "title": "Pradhan Mantri Kisan Samman Nidhi",
+          "scheme_name_local": "\u00e0\u00a4\u00aa\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a4\u00a7\u00e0\u00a4\u00be\u00e0\u00a4\u00a8\u00e0\u00a4\u00ae\u00e0\u00a4\u201a\u00e0\u00a4\u00a4\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a5\u20ac \u00e0\u00a4\u2022\u00e0\u00a4\u00bf\u00e0\u00a4\u00b8\u00e0\u00a4\u00be\u00e0\u00a4\u00a8 \u00e0\u00a4\u00b8\u00e0\u00a4\u00ae\u00e0\u00a5\u008d\u00e0\u00a4\u00ae\u00e0\u00a4\u00be\u00e0\u00a4\u00a8 \u00e0\u00a4\u00a8\u00e0\u00a4\u00bf\u00e0\u00a4\u00a7\u00e0\u00a4\u00bf",
+          "acronym": "PM-KISAN",
+          "summary": "PM-KISAN is a 100% centrally funded scheme that provides income support of Rs. 6,000 per year to all landholding farmer families across India. The amount is disbursed in three equal instalments of Rs. 2,000 every four months directly into Aadhaar-linked bank accounts via Direct Benefit Transfer (DBT...<truncated>",
+          "objective": "To supplement the financial needs of farmers in procuring agricultural inputs and meeting domestic needs, ensuring proper crop health and appropriate yield.",
+          "ministry": "Ministry of Agriculture & Farmers Welfare",
+          "department": "Department of Agriculture & Farmers Welfare",
+          "categories": [
+            "Income Support"
+          ],
+          "beneficiary_state": [
+            "All"
+          ],
+          "tags": [
+            "income support",
+            "DBT",
+            "direct benefit transfer",
+            "small farmer",
+            "marginal farmer",
+            "<+2 items>"
+          ],
+          "official_links": [
+            "https://pmkisan.gov.in",
+            "https://pmkisan.gov.in/RegistrationFormupdated.aspx"
+          ],
+          "document_links": [],
+          "contact_numbers": [
+            "155261 / 011-24300606",
+            "1800-180-1551"
+          ],
+          "contact_emails": [
+            "pmkisan-ict@gov.in"
+          ],
+          "office_addresses": "Department of Agriculture & Farmers Welfare, Krishi Bhawan, New Delhi - 110001",
+          "how_to_apply": "Step 1: Visit the official PM-KISAN portal Go to the homepage of pmkisan.gov.in (https://pmkisan.gov.in) -> Step 2: Click on 'New Farmer Registration' under Farmers Corner Choose 'Rural Farmer Registration' or 'Urban Farmer Registration' (https://pmkisan.gov.in/RegistrationFormupdated.aspx) -> Step ...<truncated>",
+          "application_process": [
+            "Step 1: Visit the official PM-KISAN portal Go to the homepage of pmkisan.gov.in (https://pmkisan.gov.in)",
+            "Step 2: Click on 'New Farmer Registration' under Farmers Corner Choose 'Rural Farmer Registration' or 'Urban Farmer Registration' (https://pmkisan.gov.in/RegistrationFormupdated.aspx)",
+            "Step 3: Enter Aadhaar number, select state and captcha System checks if farmer is already registered",
+            "Step 4: Fill the registration form Enter personal details, bank account details (account number, IFSC), land details",
+            "Step 5: Upload required documents Upload Aadhaar, land records, bank passbook",
+            "<+3 items>"
+          ],
+          "eligibility": [
+            "Must be a landholding farmer family (husband, wife and minor children)",
+            "Must own cultivable agricultural land",
+            "Must be an Indian citizen",
+            "Bank account must be linked with Aadhaar",
+            "Land records must be updated in state revenue records"
+          ],
+          "conditions": [
+            "Institutional landholders not eligible",
+            "Farmer families holding constitutional posts excluded",
+            "Serving/retired officers of Central/State Government excluded (except Group D employees)",
+            "All serving or retired employees of PSUs and autonomous bodies of Central/State Government excluded",
+            "Professionals registered under Professional bodies like doctors, engineers, lawyers, CAs etc. excluded",
+            "<+3 items>"
+          ],
+          "required_documents": [
+            "Aadhaar Card (mandatory)",
+            "Land ownership document / Khasra-Khatauni / 7/12 extract",
+            "Bank account passbook with IFSC code",
+            "Mobile number linked to Aadhaar",
+            "Passport-size photograph",
+            "<+1 items>"
+          ],
+          "benefits": [
+            "Rs. 6",
+            "000 per year (Rs. 2",
+            "000 per instalment every 4 months) directly deposited into Aadhaar-linked bank accounts via DBT. Reduces dependency on moneylenders."
+          ],
+          "where_to_apply": [
+            "Official portal: https://pmkisan.gov.in",
+            "Nearest CSC",
+            "District Agriculture Department Office"
+          ],
+          "coverage": "Pan India - All States and Union Territories",
+          "target_beneficiaries": "All landholding farmer families with cultivable land",
+          "financial_assistance_amount": "Rs. 6,000 per year (3 instalments of Rs. 2,000 each)",
+          "status": "Active",
+          "scheme_type": "Central Sector",
+          "level": "Central",
+          "launched_year": 2019,
+          "_ingested_at": "2026-03-25T20:48:26.173577+00:00"
+        },
+        {
+          "_id": "scheme_central-pm-kmy",
+          "source": "scheme_json_user_upload",
+          "scheme_id": "central-pm-kmy",
+          "title": "Pradhan Mantri Kisan Maandhan Yojana",
+          "scheme_name_local": "\u00e0\u00a4\u00aa\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a4\u00a7\u00e0\u00a4\u00be\u00e0\u00a4\u00a8\u00e0\u00a4\u00ae\u00e0\u00a4\u201a\u00e0\u00a4\u00a4\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a5\u20ac \u00e0\u00a4\u2022\u00e0\u00a4\u00bf\u00e0\u00a4\u00b8\u00e0\u00a4\u00be\u00e0\u00a4\u00a8 \u00e0\u00a4\u00ae\u00e0\u00a4\u00be\u00e0\u00a4\u00a8\u00e0\u00a4\u00a7\u00e0\u00a4\u00a8 \u00e0\u00a4\u00af\u00e0\u00a5\u2039\u00e0\u00a4\u0153\u00e0\u00a4\u00a8\u00e0\u00a4\u00be",
+          "acronym": "PM-KMY",
+          "summary": "PM-KMY is a voluntary and contributory pension scheme launched on September 12, 2019, providing old-age social security to small and marginal farmers. Life Insurance Corporation of India (LIC) is the Pension Fund Manager. Farmers contribute between Rs. 55 to Rs. 200 per month (matched equally by the...<truncated>",
+          "objective": "To provide social security in the form of minimum pension of Rs. 3,000 per month to small and marginal farmers at the age of 60 years.",
+          "ministry": "Ministry of Agriculture & Farmers Welfare",
+          "department": "Department of Agriculture & Farmers Welfare",
+          "categories": [
+            "Pension"
+          ],
+          "beneficiary_state": [
+            "All"
+          ],
+          "tags": [
+            "pension",
+            "social security",
+            "old age",
+            "small farmer",
+            "voluntary",
+            "<+1 items>"
+          ],
+          "official_links": [
+            "https://maandhan.in",
+            "https://maandhan.in/pmkmy"
+          ],
+          "document_links": [],
+          "contact_numbers": [
+            "1800-267-6888"
+          ],
+          "contact_emails": [
+            "pmkmy-agri@gov.in"
+          ],
+          "office_addresses": "LIC of India, Central Office, Yogakshema, Jeevan Bima Marg, Mumbai - 400021",
+          "how_to_apply": "Step 1: Visit PM-KMY portal or nearest CSC Access the scheme via the official portal (https://maandhan.in) -> Step 2: Select 'Pradhan Mantri Kisan Maandhan Yojana' option Click Self Enrollment option (https://maandhan.in/pmkmy) -> Step 3: Enter mobile number and complete OTP verification OTP sent to...<truncated>",
+          "application_process": [
+            "Step 1: Visit PM-KMY portal or nearest CSC Access the scheme via the official portal (https://maandhan.in)",
+            "Step 2: Select 'Pradhan Mantri Kisan Maandhan Yojana' option Click Self Enrollment option (https://maandhan.in/pmkmy)",
+            "Step 3: Enter mobile number and complete OTP verification OTP sent to registered mobile",
+            "Step 4: Fill enrollment form with Aadhaar, bank and land details Fill all required fields accurately",
+            "Step 5: Set up auto-debit from bank account or PM-KISAN Pension premium can be auto-deducted from PM-KISAN instalment",
+            "<+1 items>"
+          ],
+          "eligibility": [
+            "Small and Marginal Farmers (land holding upto 2 hectares)",
+            "Age between 18 to 40 years at entry",
+            "Must not be covered under NPS, ESIC, EPFO",
+            "Must not be an income tax payer",
+            "Must be registered under PM-KISAN scheme (preferred but not mandatory)"
+          ],
+          "conditions": [
+            "Voluntary exit allowed after 10 years of contribution with interest",
+            "Contribution amount depends on age of entry (younger = lower contribution)",
+            "On exit before 60, corpus + interest returned",
+            "Premium deducted directly from PM-KISAN instalment if opted"
+          ],
+          "required_documents": [
+            "Aadhaar Card",
+            "Bank account passbook / IFSC code",
+            "Land ownership documents (Khasra/Khatauni)",
+            "Mobile number",
+            "Self-declaration regarding land holding"
+          ],
+          "benefits": [
+            "Rs. 3",
+            "000 per month pension after age 60. Central Government matches farmer's contribution on 50:50 basis. Spouse (widow/widower) gets Rs. 1",
+            "500 per month on farmer's death. Nominee gets the corpus on farmer's death before 60."
+          ],
+          "where_to_apply": [
+            "Official portal: https://maandhan.in",
+            "Nearest CSC",
+            "District Agriculture Department Office"
+          ],
+          "coverage": "Pan India",
+          "target_beneficiaries": "Small and Marginal Farmers aged 18-40 with landholding up to 2 hectares",
+          "financial_assistance_amount": "Rs. 3,000 per month pension; Government contribution: Rs. 55 - Rs. 200 per month (matched with farmer contribution)",
+          "status": "Active",
+          "scheme_type": "Central Sector",
+          "level": "Central",
+          "launched_year": 2019,
+          "_ingested_at": "2026-03-25T20:48:26.173577+00:00",
+          "is_active": false
+        },
+        {
+          "_id": "scheme_central-pmfby",
+          "source": "scheme_json_user_upload",
+          "scheme_id": "central-pmfby",
+          "title": "Pradhan Mantri Fasal Bima Yojana",
+          "scheme_name_local": "\u00e0\u00a4\u00aa\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a4\u00a7\u00e0\u00a4\u00be\u00e0\u00a4\u00a8\u00e0\u00a4\u00ae\u00e0\u00a4\u201a\u00e0\u00a4\u00a4\u00e0\u00a5\u008d\u00e0\u00a4\u00b0\u00e0\u00a5\u20ac \u00e0\u00a4\u00ab\u00e0\u00a4\u00b8\u00e0\u00a4\u00b2 \u00e0\u00a4\u00ac\u00e0\u00a5\u20ac\u00e0\u00a4\u00ae\u00e0\u00a4\u00be \u00e0\u00a4\u00af\u00e0\u00a5\u2039\u00e0\u00a4\u0153\u00e0\u00a4\u00a8\u00e0\u00a4\u00be",
+          "acronym": "PMFBY",
+          "summary": "PMFBY provides comprehensive crop insurance from pre-sowing to post-harvest stages against natural calamities, pests and diseases. Launched in Kharif 2016, it replaced the National Agriculture Insurance Scheme (NAIS). The scheme is demand-driven and voluntary for non-loanee farmers since Kharif 2020...<truncated>",
+          "objective": "To provide financial support to farmers suffering crop loss/damage due to unforeseen events (natural calamities, pests and diseases), stabilize farmer income and encourage modern farming practices.",
+          "ministry": "Ministry of Agriculture & Farmers Welfare",
+          "department": "Department of Agriculture & Farmers Welfare",
+          "categories": [
+            "Crop Insurance"
+          ],
+          "beneficiary_state": [
+            "All"
+          ],
+          "tags": [
+            "crop insurance",
+            "natural calamity",
+            "kharif",
+            "rabi",
+            "horticulture",
+            "<+3 items>"
+          ],
+          "official_links": [
+            "https://pmfby.gov.in",
+            "https://pmfby.gov.in/farmerRegistrationForm"
+          ],
+          "document_links": [],
+          "contact_numbers": [
+            "14447",
+            "1800-200-7710"
+          ],
+          "contact_emails": [
+            "help.agri@gov.in"
+          ],
+          "office_addresses": "Department of Agriculture & Farmers Welfare, Krishi Bhawan, New Delhi",
+          "how_to_apply": "Step 1: Visit PMFBY portal Access official crop insurance portal (https://pmfby.gov.in) -> Step 2: Click on 'Farmer Application' > 'Guest Farmer' For new registration (https://pmfby.gov.in/farmerRegistrationForm) -> Step 3: Register with mobile number, Aadhaar and bank details Complete OTP verificat...<truncated>",
+          "application_process": [
+            "Step 1: Visit PMFBY portal Access official crop insurance portal (https://pmfby.gov.in)",
+            "Step 2: Click on 'Farmer Application' > 'Guest Farmer' For new registration (https://pmfby.gov.in/farmerRegistrationForm)",
+            "Step 3: Register with mobile number, Aadhaar and bank details Complete OTP verification",
+            "Step 4: Select State, District, Sub-District, Village, Season, Year and Crop Enter land details and area sown",
+            "Step 5: Pay premium online (Net Banking / UPI / Debit Card) Very low premium (2% Kharif / 1.5% Rabi crops)",
+            "<+3 items>"
+          ],
+          "eligibility": [
+            "All farmers (loanee and non-loanee) growing notified crops in notified areas",
+            "Loanee farmers: mandatory enrollment if crop loan availed for notified crops",
+            "Non-loanee farmers: voluntary enrollment",
+            "Both owner and tenant farmers eligible",
+            "Share-croppers eligible"
+          ],
+          "conditions": [
+            "Must be enrolled before cut-off date (10 days from Kharif sowing / 31 days for Rabi)",
+            "Crop must be notified for the specific district/block",
+            "Post-harvest losses covered for crops left in cut and spread condition for up to 14 days",
+            "Localized risks (hailstorm, landslide, inundation) covered at individual farm level",
+            "Prevented sowing/planting covered if more than 75% area is affected",
+            "<+1 items>"
+          ],
+          "required_documents": [
+            "Aadhaar Card",
+            "Land records (7/12 extract or Khasra/Khatauni)",
+            "Bank account passbook",
+            "Sowing certificate from Patwari/VLW",
+            "Loan documents (for loanee farmers)",
+            "<+1 items>"
+          ],
+          "benefits": [
+            "Full sum insured coverage for crop loss. Very low farmer premium (2% Kharif",
+            "1.5% Rabi",
+            "5% horticulture). Balance premium paid by Government. Coverage for prevented sowing",
+            "mid-season",
+            "post-harvest and localized risks."
+          ],
+          "where_to_apply": [
+            "Official portal: https://pmfby.gov.in",
+            "Nearest CSC",
+            "District Agriculture Department Office"
+          ],
+          "coverage": "Pan India - Notified crops in notified areas across all states",
+          "target_beneficiaries": "All farmers growing notified crops in notified areas",
+          "financial_assistance_amount": "Premium: 2% (Kharif), 1.5% (Rabi), 5% (Horticulture) of Sum Insured. Claim: Full sum insured for total loss. Government pays balance premium.",
+          "status": "Active",
+          "scheme_type": "Centrally Sponsored",
+          "level": "Central",
+          "launched_year": 2016,
+          "_ingested_at": "2026-03-25T20:48:26.173577+00:00"
+        }
+      ]
+    },
+    "ref_fasal_data": {
+      "count": 21,
+      "sampled_for_schema": 21,
+      "field_count": 10,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "crop",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "crop_cutting_experiments_firkas",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "crop_cutting_experiments_villages",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "notified_firkas",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "notified_villages",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        },
+        {
+          "path": "sl_no",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 21,
+          "sampled_docs": 21
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "paddy_k_k_s",
+          "_ingested_at": "2026-03-24T21:00:20.867750+00:00",
+          "_source_resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "crop": "Paddy K/K/S",
+          "crop_cutting_experiments_firkas": "NA",
+          "crop_cutting_experiments_villages": "21872",
+          "notified_firkas": "NA",
+          "notified_villages": "5468",
+          "resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "sl_no": "1"
+        },
+        {
+          "_id": "paddy_s_t_p",
+          "_ingested_at": "2026-03-24T21:00:20.867750+00:00",
+          "_source_resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "crop": "Paddy S/T/P",
+          "crop_cutting_experiments_firkas": "NA",
+          "crop_cutting_experiments_villages": "47116",
+          "notified_firkas": "NA",
+          "notified_villages": "11779",
+          "resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "sl_no": "2"
+        },
+        {
+          "_id": "banana",
+          "_ingested_at": "2026-03-24T21:00:20.867750+00:00",
+          "_source_resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "crop": "Banana",
+          "crop_cutting_experiments_firkas": "NA",
+          "crop_cutting_experiments_villages": "4316",
+          "notified_firkas": "NA",
+          "notified_villages": "1079",
+          "resource_id": "14f6f0d0-311d-4b71-acfe-ac08bbecfd1c",
+          "sl_no": "3"
+        }
+      ]
+    },
+    "ref_fertilizer_data": {
+      "count": 200,
+      "sampled_for_schema": 50,
+      "field_count": 15,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "circlename",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "delivery",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "divisionname",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "latitude",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "longitude",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "officename",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "officetype",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "pincode",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "regionname",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "statename",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "fertilizer_0",
+          "_ingested_at": "2026-03-24T21:00:16.434309+00:00",
+          "_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "_source_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "circlename": "Telangana Circle",
+          "delivery": "Delivery",
+          "district": "KUMURAM BHEEM ASIFABAD",
+          "divisionname": "Adilabad Division",
+          "latitude": "19.3638689",
+          "longitude": "79.5376658",
+          "officename": "Kothimir B.O",
+          "officetype": "BO",
+          "pincode": "504273",
+          "regionname": "Hyderabad Region",
+          "statename": "TELANGANA"
+        },
+        {
+          "_id": "fertilizer_1",
+          "_ingested_at": "2026-03-24T21:00:16.434309+00:00",
+          "_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "_source_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "circlename": "Telangana Circle",
+          "delivery": "Delivery",
+          "district": "KUMURAM BHEEM ASIFABAD",
+          "divisionname": "Adilabad Division",
+          "latitude": "19.4764899",
+          "longitude": "79.5839230",
+          "officename": "Papanpet B.O",
+          "officetype": "BO",
+          "pincode": "504299",
+          "regionname": "Hyderabad Region",
+          "statename": "TELANGANA"
+        },
+        {
+          "_id": "fertilizer_2",
+          "_ingested_at": "2026-03-24T21:00:16.434309+00:00",
+          "_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "_source_resource_id": "5c2f62fe-5afa-4119-a499-fec9d604d5bd",
+          "circlename": "Telangana Circle",
+          "delivery": "Delivery",
+          "district": "KUMURAM BHEEM ASIFABAD",
+          "divisionname": "Adilabad Division",
+          "latitude": "NA",
+          "longitude": "NA",
+          "officename": "Kukuda B.O",
+          "officetype": "BO",
+          "pincode": "504299",
+          "regionname": "Hyderabad Region",
+          "statename": "TELANGANA"
+        }
+      ]
+    },
+    "ref_mandi_directory": {
+      "count": 976,
+      "sampled_for_schema": 50,
+      "field_count": 9,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "geocode_quality",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "latitude",
+          "types": [
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "longitude",
+          "types": [
+            "null"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "source",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "west_bengal_coochbehar_pundibari",
+          "_ingested_at": "2026-03-25T21:16:07.072428+00:00",
+          "district": "Coochbehar",
+          "geocode_quality": "",
+          "latitude": null,
+          "longitude": null,
+          "name": "Pundibari",
+          "source": "data.gov.in_daily_prices",
+          "state": "West Bengal"
+        },
+        {
+          "_id": "west_bengal_coochbehar_toofanganj",
+          "_ingested_at": "2026-03-25T21:16:07.072428+00:00",
+          "district": "Coochbehar",
+          "geocode_quality": "",
+          "latitude": null,
+          "longitude": null,
+          "name": "Toofanganj",
+          "source": "data.gov.in_daily_prices",
+          "state": "West Bengal"
+        },
+        {
+          "_id": "west_bengal_hooghly_sheoraphuly",
+          "_ingested_at": "2026-03-25T21:16:07.072428+00:00",
+          "district": "Hooghly",
+          "geocode_quality": "",
+          "latitude": null,
+          "longitude": null,
+          "name": "Sheoraphuly",
+          "source": "data.gov.in_daily_prices",
+          "state": "West Bengal"
+        }
+      ]
+    },
+    "ref_mandi_prices": {
+      "count": 75391,
+      "sampled_for_schema": 50,
+      "field_count": 15,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "arrival_date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "commodity",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "commodity_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "grade",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "market",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "max_price",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "min_price",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "modal_price",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "variety",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "west_bengal_coochbehar_pundibari_pointed_gourd_parval_18_06_2010",
+          "_ingested_at": "2026-03-24T20:19:48.396062+00:00",
+          "_source_resource_id": "",
+          "arrival_date": "18/06/2010",
+          "commodity": "Pointed gourd (Parval)",
+          "commodity_code": "303",
+          "district": "Coochbehar",
+          "grade": "FAQ",
+          "market": "Pundibari",
+          "max_price": 11000,
+          "min_price": 10500,
+          "modal_price": 10750,
+          "resource_id": "35985678-0d79-46b4-9ed6-6f13308a1d24",
+          "state": "West Bengal",
+          "variety": "Other"
+        },
+        {
+          "_id": "west_bengal_coochbehar_pundibari_pointed_gourd_parval_06_07_2010",
+          "_ingested_at": "2026-03-24T20:19:48.396062+00:00",
+          "_source_resource_id": "",
+          "arrival_date": "06/07/2010",
+          "commodity": "Pointed gourd (Parval)",
+          "commodity_code": "303",
+          "district": "Coochbehar",
+          "grade": "FAQ",
+          "market": "Pundibari",
+          "max_price": 11400,
+          "min_price": 10800,
+          "modal_price": 11200,
+          "resource_id": "35985678-0d79-46b4-9ed6-6f13308a1d24",
+          "state": "West Bengal",
+          "variety": "Other"
+        },
+        {
+          "_id": "west_bengal_coochbehar_pundibari_pointed_gourd_parval_06_08_2010",
+          "_ingested_at": "2026-03-24T20:19:48.396062+00:00",
+          "_source_resource_id": "",
+          "arrival_date": "06/08/2010",
+          "commodity": "Pointed gourd (Parval)",
+          "commodity_code": "303",
+          "district": "Coochbehar",
+          "grade": "FAQ",
+          "market": "Pundibari",
+          "max_price": 13300,
+          "min_price": 12800,
+          "modal_price": 13000,
+          "resource_id": "35985678-0d79-46b4-9ed6-6f13308a1d24",
+          "state": "West Bengal",
+          "variety": "Other"
+        }
+      ]
+    },
+    "ref_msp_prices": {
+      "count": 10,
+      "sampled_for_schema": 10,
+      "field_count": 6,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        },
+        {
+          "path": "crop",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        },
+        {
+          "path": "oilseeds_production_lakh_tonnes",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 10,
+          "sampled_docs": 10
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "groundnut",
+          "_ingested_at": "2026-03-24T21:00:16.276456+00:00",
+          "_source_resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e",
+          "crop": "Groundnut",
+          "oilseeds_production_lakh_tonnes": 101.19,
+          "resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e"
+        },
+        {
+          "_id": "castor",
+          "_ingested_at": "2026-03-24T21:00:16.276456+00:00",
+          "_source_resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e",
+          "crop": "Castor",
+          "oilseeds_production_lakh_tonnes": 17.74,
+          "resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e"
+        },
+        {
+          "_id": "sesame",
+          "_ingested_at": "2026-03-24T21:00:16.276456+00:00",
+          "_source_resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e",
+          "crop": "Sesame",
+          "oilseeds_production_lakh_tonnes": 7.92,
+          "resource_id": "5e6056c8-b644-40a8-a346-3da6b3d8e67e"
+        }
+      ]
+    },
+    "ref_pesticide_advisory": {
+      "count": 14,
+      "sampled_for_schema": 14,
+      "field_count": 6,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "crop",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "production_million_tonnes",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "rice",
+          "_ingested_at": "2026-03-24T21:00:20.252527+00:00",
+          "_source_resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b",
+          "crop": "Rice",
+          "production_million_tonnes": 104.99,
+          "resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b"
+        },
+        {
+          "_id": "bajra",
+          "_ingested_at": "2026-03-24T21:00:20.252527+00:00",
+          "_source_resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b",
+          "crop": "Bajra",
+          "production_million_tonnes": 9.75,
+          "resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b"
+        },
+        {
+          "_id": "maize",
+          "_ingested_at": "2026-03-24T21:00:20.252527+00:00",
+          "_source_resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b",
+          "crop": "Maize",
+          "production_million_tonnes": 23.1,
+          "resource_id": "98a33686-715f-4076-97da-fa3dcf6bc61b"
+        }
+      ]
+    },
+    "ref_pin_master": {
+      "count": 2726,
+      "sampled_for_schema": 50,
+      "field_count": 12,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "pincode",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "subdistrict_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "subdistrict_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "village_code",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "village_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "847409_219990",
+          "_ingested_at": "2026-03-25T21:16:38.251018+00:00",
+          "_source_resource_id": "f17a1608-5f10-4610-bb50-a63c80d83974",
+          "district_code": "206",
+          "district_name": "Madhubani",
+          "pincode": "847409",
+          "state_code": "10",
+          "state_name": "Bihar",
+          "subdistrict_code": "1085",
+          "subdistrict_name": "Laukaha",
+          "village_code": "219990",
+          "village_name": "Bagha Kusmar"
+        },
+        {
+          "_id": "488446_937938",
+          "_ingested_at": "2026-03-25T21:16:38.251018+00:00",
+          "_source_resource_id": "f17a1608-5f10-4610-bb50-a63c80d83974",
+          "district_code": "420",
+          "district_name": "Panna",
+          "pincode": "488446",
+          "state_code": "23",
+          "state_name": "Madhya Pradesh",
+          "subdistrict_code": "3440",
+          "subdistrict_name": "Pawai",
+          "village_code": "937938",
+          "village_name": "Maheda"
+        },
+        {
+          "_id": "483119_916287",
+          "_ingested_at": "2026-03-25T21:16:38.251018+00:00",
+          "_source_resource_id": "f17a1608-5f10-4610-bb50-a63c80d83974",
+          "district_code": "411",
+          "district_name": "Jabalpur",
+          "pincode": "483119",
+          "state_code": "23",
+          "state_name": "Madhya Pradesh",
+          "subdistrict_code": "3629",
+          "subdistrict_name": "Patan",
+          "village_code": "916287",
+          "village_name": "Karhaiyakhurd"
+        }
+      ]
+    },
+    "ref_pmfby_data": {
+      "count": 6,
+      "sampled_for_schema": 6,
+      "field_count": 10,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "claims_paid_crores",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "farmer_premium_crores",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "goi_premium_crores",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "state_premium_crores",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "total_farmer_applications_lakhs",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        },
+        {
+          "path": "year",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 6,
+          "sampled_docs": 6
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "pmfby_2016_17",
+          "_ingested_at": "2026-03-24T21:00:16.185383+00:00",
+          "_source_resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "claims_paid_crores": 16795.5,
+          "farmer_premium_crores": 4085.1,
+          "goi_premium_crores": 8648.7,
+          "resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "state_premium_crores": 8944.6,
+          "total_farmer_applications_lakhs": 581.7,
+          "year": "2016-17"
+        },
+        {
+          "_id": "pmfby_2017_18",
+          "_ingested_at": "2026-03-24T21:00:16.185383+00:00",
+          "_source_resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "claims_paid_crores": 22065.5,
+          "farmer_premium_crores": 4172.0,
+          "goi_premium_crores": 10055.9,
+          "resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "state_premium_crores": 10239.8,
+          "total_farmer_applications_lakhs": 531.8,
+          "year": "2017-18"
+        },
+        {
+          "_id": "pmfby_2018_19",
+          "_ingested_at": "2026-03-24T21:00:16.185383+00:00",
+          "_source_resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "claims_paid_crores": 28651.8,
+          "farmer_premium_crores": 4695.7,
+          "goi_premium_crores": 12316.7,
+          "resource_id": "a330e681-6562-4552-a94b-58f1df7eccf3",
+          "state_premium_crores": 12676.6,
+          "total_farmer_applications_lakhs": 582.0,
+          "year": "2018-19"
+        }
+      ]
+    },
+    "ref_reservoir_data": {
+      "count": 14,
+      "sampled_for_schema": 14,
+      "field_count": 7,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "current_storage_pct_of_normal",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "projects_deficiency_pct",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 14,
+          "sampled_docs": 14
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "andhra_pradesh_and_telengana",
+          "_ingested_at": "2026-03-24T21:00:15.196754+00:00",
+          "_source_resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "current_storage_pct_of_normal": "76",
+          "projects_deficiency_pct": "Srisailam",
+          "resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "state": "Andhra Pradesh and Telengana"
+        },
+        {
+          "_id": "andhra_pradesh",
+          "_ingested_at": "2026-03-24T21:00:15.196754+00:00",
+          "_source_resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "current_storage_pct_of_normal": "80",
+          "projects_deficiency_pct": "Donkarayi",
+          "resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "state": "Andhra Pradesh"
+        },
+        {
+          "_id": "telengana",
+          "_ingested_at": "2026-03-24T21:00:15.196754+00:00",
+          "_source_resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "current_storage_pct_of_normal": "56",
+          "projects_deficiency_pct": "Priyadarshini Jurala",
+          "resource_id": "247146af-5216-47ff-80f6-ddea261f1139",
+          "state": "Telengana"
+        }
+      ]
+    },
+    "ref_soil_health": {
+      "count": 4454,
+      "sampled_for_schema": 50,
+      "field_count": 11,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_ingested_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "_source_resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "agency_name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "avg_smlvl_at15cm",
+          "types": [
+            "float"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "date",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "month",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "resource_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        },
+        {
+          "path": "year",
+          "types": [
+            "int"
+          ],
+          "present_in_sample_docs": 50,
+          "sampled_docs": 50
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "maharashtra_hingoli_2018_09",
+          "_ingested_at": "2026-03-24T20:51:29.493084+00:00",
+          "_source_resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "agency_name": "NRSC VIC MODEL",
+          "avg_smlvl_at15cm": 16.4381105,
+          "date": "2018-09-27",
+          "district": "Hingoli",
+          "month": 9,
+          "resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "state": "Maharashtra",
+          "year": 2018
+        },
+        {
+          "_id": "maharashtra_jalgaon_2018_09",
+          "_ingested_at": "2026-03-24T20:51:29.493084+00:00",
+          "_source_resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "agency_name": "NRSC VIC MODEL",
+          "avg_smlvl_at15cm": 20.5712846,
+          "date": "2018-09-26",
+          "district": "Jalgaon",
+          "month": 9,
+          "resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "state": "Maharashtra",
+          "year": 2018
+        },
+        {
+          "_id": "maharashtra_jalna_2018_09",
+          "_ingested_at": "2026-03-24T20:51:29.493084+00:00",
+          "_source_resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "agency_name": "NRSC VIC MODEL",
+          "avg_smlvl_at15cm": 11.5378352,
+          "date": "2018-09-26",
+          "district": "Jalna",
+          "month": 9,
+          "resource_id": "4554a3c8-74e3-4f93-8727-8fd92161e345",
+          "state": "Maharashtra",
+          "year": 2018
+        }
+      ]
+    },
+    "users": {
+      "count": 8,
+      "sampled_for_schema": 8,
+      "field_count": 13,
+      "fields": [
+        {
+          "path": "_id",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "created_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "district",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "is_active",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "is_seed_data",
+          "types": [
+            "bool"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "language",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "name",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "password_hash",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "phone",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "role",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "state",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "updated_at",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        },
+        {
+          "path": "village",
+          "types": [
+            "str"
+          ],
+          "present_in_sample_docs": 8,
+          "sampled_docs": 8
+        }
+      ],
+      "sample_docs": [
+        {
+          "_id": "seed_farmer_01",
+          "phone": "+919800000001",
+          "password_hash": "$2b$12$ghiEe7Rg8AAdnRIHTGx4Lefcf8G0DkSt.j5cKSbgXmrH1psCgwpim",
+          "name": "Seed Farmer 1",
+          "role": "farmer",
+          "language": "en",
+          "is_active": true,
+          "created_at": "2026-03-24T21:00:43.627707+00:00",
+          "updated_at": "2026-03-30T09:34:11.726380+00:00",
+          "is_seed_data": true,
+          "district": "Mumbai Suburban",
+          "state": "Maharashtra",
+          "village": "Andheri East"
+        },
+        {
+          "_id": "seed_farmer_02",
+          "phone": "+919800000002",
+          "password_hash": "$2b$12$hK0zJkJWyGJYuwz1Mpf.N.cRXg8q/.XNk93XuCT0xoN8Xqezp2f0y",
+          "name": "Seed Farmer 2",
+          "role": "farmer",
+          "language": "mr",
+          "is_active": true,
+          "created_at": "2026-03-24T21:00:44.007359+00:00",
+          "updated_at": "2026-03-30T08:51:34.634169+00:00",
+          "is_seed_data": true,
+          "district": "Mumbai Suburban",
+          "state": "Maharashtra",
+          "village": "Andheri East"
+        },
+        {
+          "_id": "seed_farmer_03",
+          "phone": "+919800000003",
+          "password_hash": "$2b$12$2SPyIgY0rYVp0VDhkwevQe3Wn3HkoqS.J7vlpmIw0.6Ae5oAnjmEa",
+          "name": "Seed Farmer 3",
+          "role": "farmer",
+          "language": "en",
+          "is_active": true,
+          "created_at": "2026-03-24T21:00:44.283882+00:00",
+          "updated_at": "2026-03-30T09:34:17.987068+00:00",
+          "is_seed_data": true,
+          "district": "Mumbai Suburban",
+          "state": "Maharashtra",
+          "village": "Andheri East"
+        }
+      ]
+    }
+  }
+}

@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
@@ -33,6 +34,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   String _transcript = '';
   String _response = '';
   String? _sessionId;
+  String? _lastAudioBase64;
 
   late final AnimationController _pulseController;
   final AudioRecorder _recorder = AudioRecorder();
@@ -46,6 +48,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() => _state = _VoiceState.idle);
+      }
+    });
   }
 
   @override
@@ -110,6 +117,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _state = _VoiceState.processing;
       _transcript = '';
       _response = '';
+      _lastAudioBase64 = null;
     });
 
     try {
@@ -130,22 +138,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       setState(() {
         _transcript = transcript;
         _response = response;
+        _lastAudioBase64 = audioBase64.isEmpty ? null : audioBase64;
       });
 
       // Play audio response
       if (audioBase64.isNotEmpty) {
-        setState(() => _state = _VoiceState.playing);
-
-        final bytes = base64Decode(audioBase64);
-        final audioDir = await getTemporaryDirectory();
-        final audioFile = File(
-            '${audioDir.path}/voice_resp_${DateTime.now().millisecondsSinceEpoch}.wav');
-        await audioFile.writeAsBytes(bytes);
-
-        await _audioPlayer.play(DeviceFileSource(audioFile.path));
-        _audioPlayer.onPlayerComplete.listen((_) {
-          if (mounted) setState(() => _state = _VoiceState.idle);
-        });
+        await _playAudioBase64(audioBase64);
       } else {
         setState(() => _state = _VoiceState.idle);
       }
@@ -157,6 +155,65 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       });
       context.showSnack('voice_assistant.error'.tr(), isError: true);
     }
+  }
+
+  Future<void> _playAudioBase64(String base64Audio) async {
+    if (base64Audio.isEmpty) return;
+
+    setState(() => _state = _VoiceState.playing);
+    final bytes = base64Decode(base64Audio);
+    final audioDir = await getTemporaryDirectory();
+    final audioFile = File(
+      '${audioDir.path}/voice_resp_${DateTime.now().millisecondsSinceEpoch}.wav',
+    );
+    await audioFile.writeAsBytes(bytes);
+    await _audioPlayer.play(DeviceFileSource(audioFile.path));
+  }
+
+  Future<void> _replayLastResponse() async {
+    if (_lastAudioBase64 != null && _lastAudioBase64!.isNotEmpty) {
+      await _playAudioBase64(_lastAudioBase64!);
+      return;
+    }
+
+    if (_response.isEmpty) {
+      context.showSnack('No response available to replay.', isError: true);
+      return;
+    }
+
+    try {
+      final voice = ref.read(voiceServiceProvider);
+      final generated = await voice.ttsBase64(
+        text: _response,
+        language: context.locale.languageCode,
+      );
+      final generatedBase64 = generated['audio_base64'] as String? ?? '';
+      if (generatedBase64.isEmpty) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+        return;
+      }
+      _lastAudioBase64 = generatedBase64;
+      await _playAudioBase64(generatedBase64);
+    } catch (_) {
+      if (mounted) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+      }
+    }
+  }
+
+  void _openTranscriptInChat() {
+    final query = _transcript.isNotEmpty ? _transcript : _response;
+    if (query.isEmpty) {
+      context.showSnack('Speak first to open this in chat.', isError: true);
+      return;
+    }
+
+    final encoded = Uri.encodeQueryComponent(query);
+    context.push('${RoutePaths.chat}?agent=general&q=$encoded');
+  }
+
+  void _openSpeechToText() {
+    context.push(RoutePaths.speechToText);
   }
 
   @override
@@ -325,11 +382,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   children: [
                     _ControlIcon(
                       icon: Icons.keyboard_rounded,
-                      onTap: () => context.pop(),
+                      onTap: _openTranscriptInChat,
                     ),
                     _ControlIcon(
                       icon: Icons.smart_toy_outlined,
-                      onTap: () {},
+                      onTap: _openTranscriptInChat,
                     ),
                     _ControlIcon(
                       icon: isActive ? Icons.stop_rounded : Icons.mic_rounded,
@@ -338,11 +395,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                     ),
                     _ControlIcon(
                       icon: Icons.volume_up_rounded,
-                      onTap: () {},
+                      onTap: _replayLastResponse,
                     ),
                     _ControlIcon(
                       icon: Icons.settings_voice_rounded,
-                      onTap: () {},
+                      onTap: _openSpeechToText,
                     ),
                   ],
                 ),

@@ -1,0 +1,140 @@
+{
+  "generated_at_utc": "2026-04-01T14:54:10.902061+00:00",
+  "chat_patterns": {
+    "top_exact_queries": [
+      {
+        "query": "what is today's tomato mandi price in pune, maharashtra? give nearest mandi and action.",
+        "count": 6
+      },
+      {
+        "query": "kal baarish chance kitna hai aur spraying kab karu?",
+        "count": 5
+      },
+      {
+        "query": "need tractor rental options near pune with practical booking steps.",
+        "count": 5
+      },
+      {
+        "query": "pm-kisan eligibility, required documents, and exact apply process for a maharashtra farmer.",
+        "count": 5
+      },
+      {
+        "query": "will it rain tomorrow in my area and is evening spray safe?",
+        "count": 5
+      },
+      {
+        "query": "cow mastitis early signs and immediate low-cost steps for farmers.",
+        "count": 4
+      },
+      {
+        "query": "give soybean sowing advisory for this week in maharashtra with risk tips.",
+        "count": 4
+      },
+      {
+        "query": "should i sell tomato today or wait <num> days in pune district?",
+        "count": 4
+      },
+      {
+        "query": "based on your previous tomato advice, give me a <num>-step plan for the next <num> hours.",
+        "count": 3
+      },
+      {
+        "query": "cow mastitis early signs and immediate steps",
+        "count": 2
+      },
+      {
+        "query": "soybean sowing advisory for this week",
+        "count": 2
+      },
+      {
+        "query": "need tractor rental options in pune district",
+        "count": 2
+      },
+      {
+        "query": "pm-kisan eligibility and documents for maharashtra farmer",
+        "count": 2
+      },
+      {
+        "query": "will it rain tomorrow and is evening spray safe",
+        "count": 2
+      },
+      {
+        "query": "tomato mandi price in pune today with action",
+        "count": 2
+      },
+      {
+        "query": "tomato mandi price in pune today",
+        "count": 2
+      }
+    ],
+    "top_token_patterns": [
+      {
+        "pattern": "need tractor rental options",
+        "count": 7
+      },
+      {
+        "pattern": "will it rain tomorrow",
+        "count": 7
+      },
+      {
+        "pattern": "cow mastitis early signs",
+        "count": 6
+      },
+      {
+        "pattern": "what is today s",
+        "count": 6
+      },
+      {
+        "pattern": "kal baarish chance kitna",
+        "count": 5
+      },
+      {
+        "pattern": "pm kisan eligibility required",
+        "count": 5
+      },
+      {
+        "pattern": "tomato mandi price in",
+        "count": 4
+      },
+      {
+        "pattern": "give soybean sowing advisory",
+        "count": 4
+      },
+      {
+        "pattern": "should i sell tomato",
+        "count": 4
+      },
+      {
+        "pattern": "based on your previous",
+        "count": 3
+      },
+      {
+        "pattern": "soybean sowing advisory for",
+        "count": 2
+      },
+      {
+        "pattern": "pm kisan eligibility and",
+        "count": 2
+      }
+    ],
+    "total_user_messages_scanned": 55
+  },
+  "api_patterns": {
+    "collection": "admin_audit_logs",
+    "top_routes": [],
+    "top_actions": [
+      {
+        "action": "UPDATE_FARMER_STATUS",
+        "count": 6
+      },
+      {
+        "action": "UPDATE_EQUIPMENT_PROVIDER",
+        "count": 1
+      },
+      {
+        "action": "SOFT_DELETE_EQUIPMENT_PROVIDER",
+        "count": 1
+      }
+    ]
+  }
+}

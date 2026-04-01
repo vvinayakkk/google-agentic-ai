@@ -30,7 +30,7 @@ Template now covers:
 - Runtime mode and CORS
 - Mongo, Redis, Celery, Qdrant
 - JWT and security-sensitive auth parameters
-- AI/API providers (Sarvam, OpenWeather, Gemini, Groq, data.gov)
+- AI/API providers (Sarvam, Open-Meteo stack, NASA POWER, SoilGrids, Gemini, Groq, data.gov, OpenWeather legacy fallback)
 - All service URLs (ports 8001 through 8012)
 - Voice latency and timeout tuning knobs
 - Test and E2E variables including admin credentials
@@ -116,9 +116,9 @@ Source: `services/info.txt` + route files.
 - auth-service (8001): auth lifecycle, JWT, OTP, password workflows.
 - farmer-service (8002): farmer profiles and farmer dashboard views.
 - crop-service (8003): crop CRUD, crop cycles, disease detection, recommendations.
-- market-service (8004): mandi prices, live sync, schemes, weather/soil, document builder, reference data.
+- market-service (8004): mandi prices, live sync, schemes, aggregated weather intelligence, soil composition, document builder, reference data.
 - equipment-service (8005): equipment/livestock CRUD, rentals, rental-rate intelligence.
-- agent-service (8006): multi-agent chat/search orchestration and session handling.
+- agent-service (8006): multi-agent chat/search orchestration, staged prepare/finalize chat flow, and session handling.
 - voice-service (8007): STT -> agent -> TTS voice pipeline with latency metadata.
 - notification-service (8008): user notifications + preference management.
 - schemes-service (8009): scheme search/eligibility and advisory endpoints.
@@ -137,12 +137,12 @@ From `services/info.txt`:
 - equipment: 25 routes
 - farmer: 7 routes
 - geo: 4 routes
-- market: 52 routes
+- market: 54 routes
 - notification: 10 routes
 - schemes: 7 routes
 - voice: 2 routes
 
-Total detected API routes: 176
+Total detected API routes: 178
 
 ## 3.3 Functional responsibility per service
 
@@ -165,7 +165,8 @@ Market:
 - Core market CRUD (admin) for mandis/prices/schemes.
 - Live market endpoints (prices, msp, mandi list, sync jobs).
 - Document-builder flow (multi-step session + extraction + downloads).
-- Weather and soil endpoints.
+- Aggregated weather intelligence (`/weather/full`) and SoilGrids composition (`/weather/soil-composition`) with district/profile-based coordinate resolution.
+- Legacy weather compatibility endpoints (`/weather/city`, `/weather/coords`, `/weather/forecast/*`) plus `/soil-moisture`.
 - Read-only ref-data windows (cold storage, reservoir, trends, etc).
 
 Equipment:
@@ -176,6 +177,8 @@ Equipment:
 
 Agent:
 - Chat orchestration over toolchain and KB search.
+- Supports both single-shot chat (`/chat`) and staged chat (`/chat/prepare` then `/chat/finalize`).
+- Staged finalize jobs are tracked in a short-lived in-memory request store with TTL cleanup and partial/final merge semantics.
 - Session list/detail/delete.
 - Key-pool status endpoint guarded for admin visibility.
 
@@ -350,6 +353,16 @@ Agent contracts (`shared/schemas/agent.py`):
 - ConversationMessage:
   - `role`, `content`, `agent_used`, `tools_called`, `latency_ms`, `timestamp`
 
+Route-local staged chat contracts (`services/agent/routes/chat.py`):
+- ChatPrepareRequest:
+  - `message`, `session_id`, `language`, `farmer_id`
+- ChatFinalizeRequest:
+  - `request_id`, `timeout_ms`
+- Prepare flow response:
+  - returns `request_id`, `partial_response`, and `status` (`in_progress` or `completed`)
+- Finalize flow response:
+  - returns `status` (`completed`, `in_progress`, or `failed`), plus merged final payload when completed
+
 Admin contracts (`shared/schemas/admin.py`):
 - AdminLoginRequest, AdminUserCreate/Response
 - AppConfigUpdate/Response
@@ -422,6 +435,12 @@ Cron setup script:
 Scripts inventory:
 - `scripts/info.txt` documents 51 script/data files.
 - includes ingestion generators, seeders, Qdrant builders, curated replacement scripts.
+- hardening runbook scripts:
+  - `scripts/fix_and_audit_data_quality.py`
+  - `scripts/build_production_indexes.py`
+  - `scripts/generate_qdrant_indexes.py`
+  - `scripts/build_qdrant_payload_indexes.py`
+  - outputs written to audit/report artifacts under `scripts/*.json`
 
 Tests inventory:
 - `tests/info.txt` documents:

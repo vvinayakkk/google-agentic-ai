@@ -4,12 +4,47 @@ Real-world rental rates across Indian states for farm equipment, machinery, and 
 Sourced from CHC (Custom Hiring Centres), FMTTIs, ICAR publications, and state agriculture departments.
 """
 
-import uuid
+import json
 import logging
+import os
+import uuid
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
+
+
+DATAGOV_MECHANIZATION_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070"
+
+FALLBACK_MECHANIZATION_DATA: Dict[str, Dict[str, float]] = {
+    "punjab": {"mechanization_percentage": 98.0, "tractors_per_1000ha": 145.0},
+    "haryana": {"mechanization_percentage": 94.0, "tractors_per_1000ha": 132.0},
+    "gujarat": {"mechanization_percentage": 68.0, "tractors_per_1000ha": 82.0},
+    "tamil nadu": {"mechanization_percentage": 62.0, "tractors_per_1000ha": 76.0},
+    "uttar pradesh": {"mechanization_percentage": 72.0, "tractors_per_1000ha": 88.0},
+    "maharashtra": {"mechanization_percentage": 58.0, "tractors_per_1000ha": 71.0},
+    "karnataka": {"mechanization_percentage": 55.0, "tractors_per_1000ha": 66.0},
+    "madhya pradesh": {"mechanization_percentage": 48.0, "tractors_per_1000ha": 59.0},
+    "rajasthan": {"mechanization_percentage": 52.0, "tractors_per_1000ha": 63.0},
+    "bihar": {"mechanization_percentage": 41.0, "tractors_per_1000ha": 49.0},
+    "west bengal": {"mechanization_percentage": 45.0, "tractors_per_1000ha": 53.0},
+    "andhra pradesh": {"mechanization_percentage": 61.0, "tractors_per_1000ha": 74.0},
+}
+
+STATE_ALIASES = {
+    "up": "uttar pradesh",
+    "u.p.": "uttar pradesh",
+    "mp": "madhya pradesh",
+    "m.p.": "madhya pradesh",
+    "wb": "west bengal",
+    "w.b.": "west bengal",
+    "tn": "tamil nadu",
+    "t.n.": "tamil nadu",
+    "ap": "andhra pradesh",
+    "a.p.": "andhra pradesh",
+}
 
 
 # ── Equipment Categories ─────────────────────────────────────────
@@ -763,6 +798,155 @@ def search_equipment(query: str) -> List[Dict]:
         ):
             results.append(e)
     return results
+
+
+def _normalize_state_name(value: Optional[str]) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    compact = " ".join(raw.replace("_", " ").replace("-", " ").split())
+    return STATE_ALIASES.get(compact, compact)
+
+
+def _to_float(value: Any) -> Optional[float]:
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value or "").strip().replace(",", "")
+    if not text:
+        return None
+    cleaned = "".join(ch for ch in text if ch.isdigit() or ch in ".-")
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _fallback_mechanization_payload(state: Optional[str] = None) -> Dict[str, Any]:
+    norm_state = _normalize_state_name(state)
+    rows = []
+    for key, values in FALLBACK_MECHANIZATION_DATA.items():
+        if norm_state and key != norm_state:
+            continue
+        rows.append(
+            {
+                "state": key.title(),
+                "mechanization_percentage": values["mechanization_percentage"],
+                "tractors_per_1000ha": values["tractors_per_1000ha"],
+            }
+        )
+    rows.sort(key=lambda item: item["state"])
+    return {
+        "state": state,
+        "has_real_data": False,
+        "source": "fallback_2022_23_census",
+        "records": rows,
+        "note": "Using built-in 2022-23 mechanization reference data because DATAGOV_API_KEY/DATA_GOV_API_KEY is not configured or live fetch failed.",
+    }
+
+
+def fetch_mechanization_stats(state: Optional[str] = None) -> Dict[str, Any]:
+    """Fetch state mechanization stats from data.gov.in with deterministic fallback."""
+    resource_id = (
+        os.getenv("DATAGOV_MECHANIZATION_RESOURCE_ID", "").strip()
+        or os.getenv("DATA_GOV_MECHANIZATION_RESOURCE_ID", "").strip()
+        or DATAGOV_MECHANIZATION_RESOURCE_ID
+    )
+    api_key = os.getenv("DATAGOV_API_KEY", "").strip() or os.getenv("DATA_GOV_API_KEY", "").strip()
+    if not api_key:
+        return _fallback_mechanization_payload(state)
+
+    params = {
+        "api-key": api_key,
+        "format": "json",
+        "limit": "500",
+    }
+    if state:
+        params["filters[state]"] = state
+
+    url = (
+        f"https://api.data.gov.in/resource/{resource_id}"
+        f"?{urllib.parse.urlencode(params)}"
+    )
+
+    try:
+        with urllib.request.urlopen(url, timeout=8) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to fetch mechanization stats from data.gov.in: %s", exc)
+        return _fallback_mechanization_payload(state)
+
+    records = payload.get("records") if isinstance(payload, dict) else []
+    if not isinstance(records, list) or not records:
+        return _fallback_mechanization_payload(state)
+
+    # Guardrail: some resource ids return unrelated datasets (for example market prices).
+    sample_row = records[0] if records and isinstance(records[0], dict) else {}
+    sample_keys = [str(key).strip().lower() for key in sample_row.keys()]
+    has_mechanization_columns = any("mechanization" in key for key in sample_keys)
+    has_tractor_density_columns = any("tractor" in key and ("1000" in key or "ha" in key) for key in sample_keys)
+    if not (has_mechanization_columns or has_tractor_density_columns):
+        logger.warning(
+            "Data.gov resource %s does not expose mechanization columns; using fallback dataset.",
+            resource_id,
+        )
+        return _fallback_mechanization_payload(state)
+
+    parsed_by_state: Dict[str, Dict[str, Any]] = {}
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+
+        state_name = (
+            row.get("state")
+            or row.get("states")
+            or row.get("state_name")
+            or row.get("name_of_state")
+        )
+        norm_state = _normalize_state_name(str(state_name or ""))
+        if not norm_state:
+            continue
+
+        mech = None
+        tractors = None
+        for key, value in row.items():
+            key_l = str(key).strip().lower()
+            if mech is None and "mechanization" in key_l:
+                mech = _to_float(value)
+            if tractors is None and "tractor" in key_l and ("1000" in key_l or "ha" in key_l):
+                tractors = _to_float(value)
+
+        if mech is None and tractors is None:
+            continue
+
+        parsed_by_state[norm_state] = {
+            "state": norm_state.title(),
+            "mechanization_percentage": mech,
+            "tractors_per_1000ha": tractors,
+        }
+
+    if not parsed_by_state:
+        return _fallback_mechanization_payload(state)
+
+    requested_state = _normalize_state_name(state)
+    rows = []
+    for key, value in parsed_by_state.items():
+        if requested_state and key != requested_state:
+            continue
+        rows.append(value)
+
+    if not rows:
+        return _fallback_mechanization_payload(state)
+
+    rows.sort(key=lambda item: item["state"])
+    return {
+        "state": state,
+        "has_real_data": True,
+        "source": "data_gov_in",
+        "records": rows,
+        "note": "Live mechanization data from data.gov.in.",
+    }
 
 
 class EquipmentRentalSyncService:

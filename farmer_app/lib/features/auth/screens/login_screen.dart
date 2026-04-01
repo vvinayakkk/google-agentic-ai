@@ -212,6 +212,176 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
+  String _fullPhoneFromInput([String? rawPhone]) {
+    final national = (rawPhone ?? _phoneController.text)
+        .trim()
+        .replaceAll(RegExp(r'[^\d]'), '');
+    final dial = kCountryList[_selectedCountry]['dial']!.replaceAll('+', '');
+    return '$dial$national';
+  }
+
+  Future<void> _showForgotPasswordSheet() async {
+    final phoneCtrl = TextEditingController(text: _phoneController.text.trim());
+    final otpCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool sendingOtp = false;
+    bool resetting = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.lg,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Reset Password',
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Send OTP to your phone, then set a new password.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  label: 'Phone Number',
+                  hint: 'Enter registered phone',
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  prefixIcon: Icons.phone,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: sendingOtp
+                        ? null
+                        : () async {
+                            final fullPhone = _fullPhoneFromInput(phoneCtrl.text);
+                            if (fullPhone.trim().isEmpty) {
+                              if (ctx.mounted) {
+                                context.showSnack('Enter phone number', isError: true);
+                              }
+                              return;
+                            }
+                            setSheetState(() => sendingOtp = true);
+                            final ok = await ref
+                                .read(authStateProvider.notifier)
+                                .sendOtp(fullPhone);
+                            if (ctx.mounted) {
+                              context.showSnack(
+                                ok ? 'OTP sent successfully' : 'Failed to send OTP',
+                                isError: !ok,
+                              );
+                            }
+                            if (ctx.mounted) {
+                              setSheetState(() => sendingOtp = false);
+                            }
+                          },
+                    icon: const Icon(Icons.sms_outlined),
+                    label: Text(sendingOtp ? 'Sending...' : 'Send OTP'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'OTP',
+                  hint: 'Enter OTP',
+                  controller: otpCtrl,
+                  keyboardType: TextInputType.number,
+                  prefixIcon: Icons.password,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'New Password',
+                  hint: 'Enter new password',
+                  controller: newPassCtrl,
+                  obscureText: true,
+                  prefixIcon: Icons.lock_outline,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'Confirm Password',
+                  hint: 'Confirm new password',
+                  controller: confirmCtrl,
+                  obscureText: true,
+                  prefixIcon: Icons.lock,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppButton(
+                  label: 'Reset Password',
+                  icon: Icons.check,
+                  isLoading: resetting,
+                  onPressed: () async {
+                    final fullPhone = _fullPhoneFromInput(phoneCtrl.text);
+                    final otp = otpCtrl.text.trim();
+                    final pass = newPassCtrl.text.trim();
+                    final confirm = confirmCtrl.text.trim();
+
+                    if (fullPhone.isEmpty || otp.isEmpty || pass.isEmpty || confirm.isEmpty) {
+                      if (ctx.mounted) {
+                        context.showSnack('Please fill all fields', isError: true);
+                      }
+                      return;
+                    }
+                    if (pass != confirm) {
+                      if (ctx.mounted) {
+                        context.showSnack('Passwords do not match', isError: true);
+                      }
+                      return;
+                    }
+
+                    setSheetState(() => resetting = true);
+                    final notifier = ref.read(authStateProvider.notifier);
+                    final otpOk = await notifier.verifyOtp(fullPhone, otp);
+                    if (!otpOk) {
+                      if (ctx.mounted) {
+                        setSheetState(() => resetting = false);
+                        context.showSnack('Invalid OTP', isError: true);
+                      }
+                      return;
+                    }
+
+                    final ok = await notifier.resetPassword(
+                      phone: fullPhone,
+                      otp: otp,
+                      newPassword: pass,
+                    );
+                    if (!ctx.mounted) return;
+                    setSheetState(() => resetting = false);
+                    if (ok) {
+                      Navigator.pop(ctx);
+                      context.showSnack('Password reset successful. Please login.');
+                    } else {
+                      context.showSnack('Failed to reset password', isError: true);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── UI ────────────────────────────────────────────────
 
   @override
@@ -371,6 +541,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       : _loginFields(key: const ValueKey('login')),
                                 ),
                               ),
+
+                              if (!_isRegisterMode) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _isLoading ? null : _showForgotPasswordSheet,
+                                    child: const Text(
+                                      'Forgot password?',
+                                      style: TextStyle(fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                ),
+                              ],
 
                               const SizedBox(height: AppSpacing.lg),
 

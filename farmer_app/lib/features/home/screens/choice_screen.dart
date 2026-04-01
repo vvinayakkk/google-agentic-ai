@@ -234,7 +234,13 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                     const SizedBox(width: 8),
                     _languageMenu(ref, context, iconBg),
                     const SizedBox(width: 8),
-                    _topIcon(Icons.settings, Colors.blue, context, iconBg),
+                    _topIcon(
+                      Icons.person_rounded,
+                      AppColors.primaryDark,
+                      context,
+                      iconBg,
+                      route: RoutePaths.profile,
+                    ),
                   ],
                 ),
 
@@ -355,7 +361,13 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     );
   }
 
-  Widget _topIcon(IconData icon, Color color, BuildContext context, Color bg) {
+  Widget _topIcon(
+    IconData icon,
+    Color color,
+    BuildContext context,
+    Color bg, {
+    required String route,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -363,7 +375,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
       ),
       child: IconButton(
         icon: Icon(icon, color: color, size: 20),
-        onPressed: () => context.push(RoutePaths.settings),
+        onPressed: () => context.push(route),
       ),
     );
   }

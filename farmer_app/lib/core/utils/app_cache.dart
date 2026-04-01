@@ -51,6 +51,16 @@ class AppCache {
     await prefs.remove('cache_$key');
   }
 
+  /// Invalidate all keys starting with the given prefix.
+  static Future<void> invalidatePrefix(String prefix) async {
+    final prefs = await _instance;
+    final target = 'cache_$prefix';
+    final keys = prefs.getKeys().where((k) => k.startsWith(target)).toList(growable: false);
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
+  }
+
   /// Clear all cache entries.
   static Future<void> clearAll() async {
     final prefs = await _instance;

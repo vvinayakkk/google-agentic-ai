@@ -8,6 +8,26 @@ import json
 import re
 
 
+SCHEME_ID_HINTS = {
+    "pm-kisan": "pm_kisan",
+    "pmfby": "pmfby",
+    "pm-kusum": "pm_kusum",
+    "kcc": "kcc",
+    "enam": "enam",
+}
+
+EQUIPMENT_CATEGORY_HINTS = {
+    "tractor": "tractor",
+    "harvester": "harvester",
+    "sprayer": "sprayer",
+    "drone": "drone",
+    "rotavator": "rotavator",
+    "seed": "seed drill",
+    "trolley": "trolley",
+    "thresher": "thresher",
+}
+
+
 def _get_embedding_service() -> EmbeddingService:
     import main as m
     return m.embedding_service
@@ -77,6 +97,26 @@ def _score_scheme_row(row: dict, query: str) -> int:
     return score
 
 
+def _extract_scheme_id_hint(query: str) -> str:
+    txt = (query or "").strip().lower()
+    if not txt:
+        return ""
+    for marker, scheme_id in SCHEME_ID_HINTS.items():
+        if marker in txt:
+            return scheme_id
+    return ""
+
+
+def _extract_equipment_category_hint(query: str) -> str:
+    txt = (query or "").strip().lower()
+    if not txt:
+        return ""
+    for marker, category in EQUIPMENT_CATEGORY_HINTS.items():
+        if marker in txt:
+            return category
+    return ""
+
+
 def _map_local_scheme_row(row: dict) -> dict:
     links = []
     for c in [row.get("official_portal"), row.get("application_link")]:
@@ -136,7 +176,23 @@ def search_government_schemes(query: str, state: str = "") -> dict:
     state_filter = (state or "").strip().lower()
     try:
         db = get_db()
-        docs = list(db.collection("ref_farmer_schemes").limit(1200).stream())
+        collection = db.collection("ref_farmer_schemes")
+        state_raw = (state or "").strip()
+        if state_raw:
+            collection = collection.where("beneficiary_state", "array_contains", state_raw)
+
+        scheme_id_hint = _extract_scheme_id_hint(query)
+        if scheme_id_hint:
+            collection = collection.where("scheme_id", "==", scheme_id_hint)
+
+        docs = list(collection.limit(500).stream())
+        if not docs and state_raw:
+            # Relax state filter only when strict state query has no rows.
+            collection = db.collection("ref_farmer_schemes")
+            if scheme_id_hint:
+                collection = collection.where("scheme_id", "==", scheme_id_hint)
+            docs = list(collection.limit(500).stream())
+
         scored = []
         for d in docs:
             item = d.to_dict() or {}
@@ -221,7 +277,17 @@ def check_scheme_eligibility(scheme_name: str, land_size: str = "", category: st
     name = (scheme_name or "").strip().lower()
     try:
         db = get_db()
-        docs = list(db.collection("ref_farmer_schemes").limit(1200).stream())
+        scheme_id_hint = _extract_scheme_id_hint(scheme_name)
+        if scheme_id_hint:
+            docs = list(
+                db.collection("ref_farmer_schemes")
+                .where("scheme_id", "==", scheme_id_hint)
+                .limit(20)
+                .stream()
+            )
+        else:
+            docs = list(db.collection("ref_farmer_schemes").limit(500).stream())
+
         best = None
         best_score = -1
         for d in docs:
@@ -299,12 +365,24 @@ def search_equipment_rentals(query: str, state: str = "") -> dict:
     st = (state or "").strip().lower()
     try:
         db = get_db()
-        docs = list(db.collection("ref_equipment_providers").limit(800).stream())
+        category_hint = _extract_equipment_category_hint(query)
+        collection = db.collection("ref_equipment_providers").where("is_active", "==", True)
+        if st:
+            collection = collection.where("state", "==", state.strip())
+        if category_hint:
+            collection = collection.where("category", "==", category_hint)
+
+        docs = list(collection.limit(500).stream())
+        if not docs and category_hint:
+            # Relax category only; keep state filter when present.
+            collection = db.collection("ref_equipment_providers").where("is_active", "==", True)
+            if st:
+                collection = collection.where("state", "==", state.strip())
+            docs = list(collection.limit(500).stream())
+
         rows = []
         for d in docs:
             item = d.to_dict() or {}
-            if st and str(item.get("state", "")).strip().lower() != st:
-                continue
             hay = f"{item.get('name','')} {item.get('category','')} {item.get('provider_name','')}".lower()
             if q and q not in hay and not any(t in hay for t in q.split() if len(t) > 2):
                 continue

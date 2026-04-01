@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/app_cache.dart';
 
 /// Primary CTA button used app-wide.
 class AppButton extends StatelessWidget {
@@ -46,7 +47,12 @@ class AppButton extends StatelessWidget {
       return SizedBox(
         width: width ?? double.infinity,
         child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: isLoading || onPressed == null
+              ? null
+              : () {
+                  Haptics.light();
+                  onPressed!.call();
+                },
           child: child,
         ),
       );
@@ -55,7 +61,12 @@ class AppButton extends StatelessWidget {
     return SizedBox(
       width: width ?? double.infinity,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isLoading || onPressed == null
+            ? null
+            : () {
+                Haptics.light();
+                onPressed!.call();
+              },
         child: child,
       ),
     );

@@ -12,9 +12,7 @@ import '../../features/home/screens/featured_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/live_voice_screen.dart';
 import '../../features/chat/screens/chat_history_screen.dart';
-import '../../features/profile/screens/farmer_profile_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
-import '../../features/settings/screens/settings_screen.dart';
 import '../../features/crop/screens/crop_cycle_screen.dart';
 import '../../features/crop/screens/crop_intelligence_screen.dart';
 import '../../features/crop/screens/crop_doctor_screen.dart';
@@ -26,10 +24,14 @@ import '../../features/crop/screens/crop_cycle_sub/power_supply_screen.dart';
 import '../../features/crop/screens/crop_cycle_sub/soil_health_screen.dart';
 import '../../features/market/screens/market_prices_screen.dart';
 import '../../features/market/screens/add_crop_listing_screen.dart';
-import '../../features/equipment/screens/rental_screen.dart';
 import '../../features/equipment/screens/listing_details_screen.dart';
 import '../../features/equipment/screens/my_bookings_screen.dart';
 import '../../features/equipment/screens/earnings_screen.dart';
+import '../../features/equipment/screens/equipment_hub_screen.dart';
+import '../../features/equipment/screens/equipment_marketplace_screen.dart';
+import '../../features/equipment/screens/rental_rate_detail_screen.dart';
+import '../../features/equipment/screens/rental_ticket_screen.dart';
+import '../../features/equipment/screens/my_equipment_screen.dart';
 import '../../features/weather/screens/weather_screen.dart';
 import '../../features/weather/screens/soil_moisture_screen.dart';
 import '../../features/cattle/screens/cattle_screen.dart';
@@ -38,7 +40,6 @@ import '../../features/voice/screens/speech_to_text_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/upi/screens/upi_screen.dart';
 import '../../features/documents/screens/document_builder_screen.dart';
-import '../../features/equipment/screens/equipment_rental_rates_screen.dart';
 import '../../features/waste/screens/best_out_of_waste_screen.dart';
 import '../../features/mental_health/screens/suicide_prevention_screen.dart';
 import '../../features/farm_viz/screens/farm_visualizer_screen.dart';
@@ -54,9 +55,7 @@ abstract final class RoutePaths {
   static const chat = '/chat';
   static const liveVoice = '/live-voice';
   static const chatHistory = '/chat-history';
-  static const farmerProfile = '/farmer-profile';
   static const profile = '/profile';
-  static const settings = '/settings';
   static const cropCycle = '/crop-cycle';
   static const cropIntelligence = '/crop-intelligence';
   static const cropDoctor = '/crop-doctor';
@@ -70,6 +69,11 @@ abstract final class RoutePaths {
   static const marketPrices = '/market-prices';
   static const addListing = '/add-listing';
   static const rental = '/rental';
+  static const equipmentHub = '/equipment-hub';
+  static const equipmentMarketplace = '/equipment-marketplace';
+  static const rentalTicket = '/rental-ticket';
+  static const rentalRateDetail = '/rental-rate-detail';
+  static const myEquipment = '/my-equipment';
   static const listingDetails = '/listing-details';
   static const myBookings = '/my-bookings';
   static const earnings = '/earnings';
@@ -152,10 +156,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Chat / Voice ─────────────────────────────────
       GoRoute(
         path: RoutePaths.chat,
-        builder: (_, state) => ChatScreen(
-          agentType: state.uri.queryParameters['agent'] ?? 'crop',
-          sessionId: state.uri.queryParameters['session'],
-        ),
+        builder: (_, state) {
+          final rawSession = state.uri.queryParameters['session'];
+          final cleanedSession = (rawSession == null || rawSession.trim().isEmpty)
+              ? null
+              : rawSession.trim();
+          return ChatScreen(
+            agentType: state.uri.queryParameters['agent'] ?? 'crop',
+            sessionId: cleanedSession,
+            initialMessage: state.uri.queryParameters['q'],
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.liveVoice,
@@ -172,16 +183,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Profile ──────────────────────────────────────
       GoRoute(
-        path: RoutePaths.farmerProfile,
-        builder: (_, _) => const FarmerProfileScreen(),
-      ),
-      GoRoute(
         path: RoutePaths.profile,
         builder: (_, _) => const ProfileScreen(),
-      ),
-      GoRoute(
-        path: RoutePaths.settings,
-        builder: (_, _) => const SettingsScreen(),
       ),
 
       // ── Crop ─────────────────────────────────────────
@@ -237,7 +240,35 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Equipment ────────────────────────────────────
-      GoRoute(path: RoutePaths.rental, builder: (_, _) => const RentalScreen()),
+      GoRoute(path: RoutePaths.rental, builder: (_, _) => const EquipmentHubScreen()),
+      GoRoute(
+        path: RoutePaths.equipmentHub,
+        builder: (_, _) => const EquipmentHubScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.equipmentMarketplace,
+        builder: (_, state) => EquipmentMarketplaceScreen(
+          initialCategory: state.uri.queryParameters['category'],
+          initialState: state.uri.queryParameters['state'],
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.rentalTicket,
+        builder: (_, state) => RentalTicketScreen(
+          rentalId: state.uri.queryParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.rentalRateDetail,
+        builder: (_, state) => RentalRateDetailScreen(
+          equipmentName: state.uri.queryParameters['name'] ?? '',
+          category: state.uri.queryParameters['category'],
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.myEquipment,
+        builder: (_, _) => const MyEquipmentScreen(),
+      ),
       GoRoute(
         path: RoutePaths.listingDetails,
         builder: (_, state) => ListingDetailsScreen(
@@ -286,7 +317,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.equipmentRentalRates,
-        builder: (_, _) => const EquipmentRentalRatesScreen(),
+        builder: (_, _) => const EquipmentMarketplaceScreen(),
       ),
       GoRoute(
         path: RoutePaths.waste,

@@ -107,6 +107,8 @@ services:
     restart: unless-stopped
 
   # -- Market Service -------------------------------------------------
+  # Provides aggregated weather intelligence and soil composition APIs.
+  # Requires outbound internet access to Open-Meteo, NASA POWER, and SoilGrids.
   market-service:
     build:
       context: ./kisankiawaz-backend

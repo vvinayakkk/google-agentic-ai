@@ -26,6 +26,96 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
   String? _error;
   Map<String, dynamic>? _data;
 
+  String _displayAnimalName(Map<String, dynamic>? data) {
+    final name = data?['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+
+    final type = data?['animal_type']?.toString().trim();
+    if (type != null && type.isNotEmpty) return type.capitalize;
+
+    return 'Animal';
+  }
+
+  String _ageLabel(dynamic ageMonths) {
+    final months = int.tryParse(ageMonths?.toString() ?? '');
+    if (months == null || months <= 0) return 'Age not recorded';
+    final years = months ~/ 12;
+    final remMonths = months % 12;
+    if (years <= 0) return '$months months';
+    if (remMonths == 0) return '$years yrs';
+    return '$years yrs $remMonths mo';
+  }
+
+  String _statusRaw(Map<String, dynamic>? data) {
+    return data?['health_status']?.toString() ?? 'healthy';
+  }
+
+  String _statusLabel(String status) {
+    return status
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.isEmpty ? word : word.capitalize)
+        .join(' ');
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return AppColors.success;
+      case 'sick':
+        return AppColors.danger;
+      case 'under_treatment':
+        return AppColors.warning;
+      default:
+        return AppColors.info;
+    }
+  }
+
+  String _milkStat(Map<String, dynamic>? data) {
+    if (data == null) return '--';
+    final direct = data['avg_milk_liters_per_day'] ?? data['milk_per_day'];
+    final liters = double.tryParse(direct?.toString() ?? '');
+    if (liters != null) return '${liters.toStringAsFixed(liters % 1 == 0 ? 0 : 1)}L/day';
+
+    final trend = _extractMilk(data);
+    if (trend.isNotEmpty) {
+      final avg = trend.reduce((a, b) => a + b) / trend.length;
+      return '${avg.toStringAsFixed(avg % 1 == 0 ? 0 : 1)}L/day';
+    }
+    return '--';
+  }
+
+  String _weightStat(Map<String, dynamic>? data) {
+    if (data == null) return '--';
+    final weight = double.tryParse(
+      (data['weight_kg'] ?? data['weight']).toString(),
+    );
+    if (weight == null) return '--';
+    return '${weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1)}kg';
+  }
+
+  String _taggedStat(Map<String, dynamic>? data) {
+    if (data == null) return '--';
+    final raw = data['created_at'] ?? data['tagged_on'] ?? data['updated_at'];
+    final dt = DateTime.tryParse(raw?.toString() ?? '');
+    if (dt == null) return '--';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.year}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,9 +145,312 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
     }
   }
 
+  Future<void> _showEditAnimalSheet() async {
+    final data = _data ?? <String, dynamic>{};
+    final nameCtrl = TextEditingController(text: data['name']?.toString() ?? '');
+    final breedCtrl = TextEditingController(text: data['breed']?.toString() ?? '');
+    final countCtrl = TextEditingController(
+      text: (data['count'] ?? 1).toString(),
+    );
+    final ageCtrl = TextEditingController(
+      text: (data['age_months'] ?? '').toString(),
+    );
+    String healthStatus = _statusRaw(data);
+    bool saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.lg,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.appColors.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: context.appColors.border),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Text(
+                  'Edit Animal Profile',
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    prefixIcon: Icon(Icons.pets),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: breedCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Breed',
+                    prefixIcon: Icon(Icons.category),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: countCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Count',
+                          prefixIcon: Icon(Icons.numbers),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: TextField(
+                        controller: ageCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Age (months)',
+                          prefixIcon: Icon(Icons.cake),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  initialValue: healthStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Health Status',
+                    prefixIcon: Icon(Icons.health_and_safety),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'healthy', child: Text('Healthy')),
+                    DropdownMenuItem(
+                      value: 'under_treatment',
+                      child: Text('Under Treatment'),
+                    ),
+                    DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setSheetState(() => healthStatus = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            setSheetState(() => saving = true);
+                            try {
+                              await ref.read(livestockServiceProvider).updateLivestock(
+                                widget.livestockId,
+                                {
+                                  'name': nameCtrl.text.trim(),
+                                  'breed': breedCtrl.text.trim(),
+                                  'count': int.tryParse(countCtrl.text.trim()) ?? 1,
+                                  'age_months': int.tryParse(ageCtrl.text.trim()),
+                                  'health_status': healthStatus,
+                                },
+                              );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              await _fetch();
+                              if (mounted) {
+                                context.showSnack('Animal profile updated');
+                              }
+                            } catch (e) {
+                              if (ctx.mounted) {
+                                setSheetState(() => saving = false);
+                                ctx.showSnack(e.toString(), isError: true);
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.save),
+                    label: Text(saving ? 'Saving...' : 'Save Changes'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
+  Future<void> _showAddHealthRecordSheet() async {
+    final notesCtrl = TextEditingController();
+    final milkCtrl = TextEditingController(text: _data?['milk_per_day']?.toString() ?? '');
+    final weightCtrl = TextEditingController(text: _data?['weight_kg']?.toString() ?? '');
+    String healthStatus = _statusRaw(_data);
+    bool saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.lg,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.appColors.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: context.appColors.border),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Text(
+                  'Add Health Record',
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: notesCtrl,
+                  minLines: 3,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Health Notes',
+                    hintText: 'Symptoms, treatment, observations...',
+                    prefixIcon: Icon(Icons.note_alt_outlined),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: milkCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Milk (L/day)',
+                          prefixIcon: Icon(Icons.water_drop_outlined),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: TextField(
+                        controller: weightCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Weight (kg)',
+                          prefixIcon: Icon(Icons.monitor_weight_outlined),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  initialValue: healthStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Health Status',
+                    prefixIcon: Icon(Icons.health_and_safety),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'healthy', child: Text('Healthy')),
+                    DropdownMenuItem(
+                      value: 'under_treatment',
+                      child: Text('Under Treatment'),
+                    ),
+                    DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setSheetState(() => healthStatus = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (notesCtrl.text.trim().isEmpty &&
+                                milkCtrl.text.trim().isEmpty &&
+                                weightCtrl.text.trim().isEmpty) {
+                              ctx.showSnack('Add at least one health detail', isError: true);
+                              return;
+                            }
+
+                            final payload = <String, dynamic>{
+                              'health_status': healthStatus,
+                              if (notesCtrl.text.trim().isNotEmpty)
+                                'health_notes': notesCtrl.text.trim(),
+                              if (milkCtrl.text.trim().isNotEmpty)
+                                'milk_per_day': double.tryParse(milkCtrl.text.trim()),
+                              if (weightCtrl.text.trim().isNotEmpty)
+                                'weight_kg': double.tryParse(weightCtrl.text.trim()),
+                            };
+
+                            setSheetState(() => saving = true);
+                            try {
+                              await ref
+                                  .read(livestockServiceProvider)
+                                  .updateLivestock(widget.livestockId, payload);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              await _fetch();
+                              if (mounted) {
+                                context.showSnack('Health record added');
+                              }
+                            } catch (e) {
+                              if (ctx.mounted) {
+                                setSheetState(() => saving = false);
+                                ctx.showSnack(e.toString(), isError: true);
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: Text(saving ? 'Saving...' : 'Save Health Record'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final animalName = _displayAnimalName(_data);
+    final statusRaw = _statusRaw(_data);
+    final statusColor = _statusColor(statusRaw);
+    final breed = _data?['breed']?.toString();
+    final ageText = _ageLabel(_data?['age_months']);
+
     return Scaffold(
       backgroundColor: isDark
           ? AppColors.darkBackground
@@ -90,7 +483,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                               ),
                             ),
                             Text(
-                              _data?['name']?.toString() ?? 'Gauri',
+                              animalName,
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
@@ -98,7 +491,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                               alignment: Alignment.centerRight,
                               child: GlassIconButton(
                                 icon: const Icon(Icons.edit, size: 18),
-                                onPressed: () {},
+                                onPressed: _showEditAnimalSheet,
                               ),
                             ),
                           ],
@@ -132,7 +525,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _data?['name']?.toString() ?? 'Gauri',
+                                      animalName,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge
@@ -142,7 +535,11 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      '${_data?['breed'] ?? 'HF Cross'} • ${_data?['age_months'] != null ? '${(_data!['age_months'] / 12).floor()} yrs' : '4 years'}',
+                                      [
+                                        if (breed != null && breed.isNotEmpty)
+                                          breed,
+                                        ageText,
+                                      ].join(' • '),
                                       style: context.textTheme.bodySmall
                                           ?.copyWith(
                                             color:
@@ -152,22 +549,27 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  color: AppColors.success.withValues(
-                                    alpha: 0.12,
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 120),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
                                   ),
-                                ),
-                                child: Text(
-                                  'HEALTHY',
-                                  style: context.textTheme.labelSmall?.copyWith(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w700,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: statusColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _statusLabel(statusRaw).toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -175,11 +577,12 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _statBox(context, '12L/day', 'Milk'),
-                              _statBox(context, '280kg', 'Weight'),
-                              _statBox(context, 'Jan 2024', 'Tagged'),
+                              Expanded(child: _statBox(context, _milkStat(_data), 'Milk')),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(child: _statBox(context, _weightStat(_data), 'Weight')),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(child: _statBox(context, _taggedStat(_data), 'Tagged')),
                             ],
                           ),
                         ],
@@ -272,7 +675,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: _showAddHealthRecordSheet,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -305,6 +708,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
 
   Widget _statBox(BuildContext context, String value, String label) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -312,18 +716,26 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
             color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
-            value,
-            style: context.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+          child: Center(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          label,
-          style: context.textTheme.bodySmall?.copyWith(
-            color: context.appColors.textSecondary,
+        Center(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.appColors.textSecondary,
+            ),
           ),
         ),
       ],

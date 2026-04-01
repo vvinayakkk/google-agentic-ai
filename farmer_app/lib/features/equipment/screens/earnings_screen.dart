@@ -10,7 +10,7 @@ import '../../../shared/services/equipment_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/detail_card.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/loading_overlay.dart';
+import '../widgets/equipment_shell.dart';
 
 class EarningsScreen extends ConsumerStatefulWidget {
   const EarningsScreen({super.key});
@@ -21,6 +21,7 @@ class EarningsScreen extends ConsumerStatefulWidget {
 
 class _EarningsScreenState extends ConsumerState<EarningsScreen> {
   bool _loading = false;
+  bool _refreshing = false;
   String? _error;
   List<Map<String, dynamic>> _completedRentals = [];
   _TimeFilter _filter = _TimeFilter.allTime;
@@ -28,17 +29,37 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchRentals();
+    _primeData();
   }
 
-  Future<void> _fetchRentals() async {
+  bool get _hasSnapshot => _completedRentals.isNotEmpty;
+
+  Future<void> _primeData() async {
+    await _fetchRentals();
+    if (!mounted) return;
+    _fetchRentals(forceRefresh: true, silent: true);
+  }
+
+  Future<void> _fetchRentals({
+    bool forceRefresh = false,
+    bool silent = false,
+  }) async {
+    final hasSnapshot = _hasSnapshot;
     setState(() {
-      _loading = true;
+      if (silent || hasSnapshot) {
+        _refreshing = true;
+      } else {
+        _loading = true;
+      }
       _error = null;
     });
     try {
       final all =
-          await ref.read(equipmentServiceProvider).listRentals();
+          await ref.read(equipmentServiceProvider).listRentals(
+                preferCache: !forceRefresh,
+                forceRefresh: forceRefresh,
+              );
+      if (!mounted) return;
       setState(() {
         _completedRentals = all
             .where((r) =>
@@ -46,12 +67,20 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                 'completed')
             .toList();
         _loading = false;
+        _refreshing = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _refreshing = false;
+        if (!hasSnapshot) {
+          _error = e.toString();
+        }
         _loading = false;
       });
+      if (hasSnapshot) {
+        context.showSnack('Could not sync latest earnings. Showing recent snapshot.', isError: true);
+      }
     }
   }
 
@@ -105,117 +134,88 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text('earnings.title'.tr())),
-      body: _loading
-          ? const LoadingState(itemCount: 5)
-          : _error != null
-              ? ErrorView(
-                  message: _error!, onRetry: _fetchRentals)
-              : RefreshIndicator(
-                  onRefresh: _fetchRentals,
-                  child: SingleChildScrollView(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(),
-                    padding: AppSpacing.allLg,
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        // ── Total Earnings ──
-                        MetricCard(
-                          label: 'earnings.total'.tr(),
-                          value: _totalEarnings.inr,
-                          icon:
-                              Icons.account_balance_wallet,
-                          color: AppColors.success,
-                        ),
-
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // ── Filter chips ──
-                        SizedBox(
-                          height: 40,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children:
-                                _TimeFilter.values.map((f) {
-                              final selected =
-                                  _filter == f;
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.only(
-                                        right:
-                                            AppSpacing.sm),
-                                child: ChoiceChip(
-                                  label: Text(f.label),
-                                  selected: selected,
-                                  onSelected: (_) =>
-                                      setState(() =>
-                                          _filter = f),
-                                  selectedColor: AppColors
-                                      .primary
-                                      .withValues(
-                                          alpha: 0.15),
-                                ),
-                              );
-                            }).toList(),
+      body: EquipmentPageBackground(
+        child: _loading && !_hasSnapshot
+            ? const EquipmentContentSkeleton(cardCount: 5)
+            : _error != null && !_hasSnapshot
+                ? ErrorView(
+                    message: _error!, onRetry: () => _fetchRentals(forceRefresh: true))
+                : RefreshIndicator(
+                    onRefresh: () => _fetchRentals(forceRefresh: true),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: AppSpacing.allLg,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          EquipmentHeaderCard(
+                            title: 'Earnings Snapshot',
+                            subtitle: 'Track rental income, monthly performance, and completed bookings.',
+                            icon: Icons.account_balance_wallet_outlined,
+                            badges: [
+                              EquipmentInfoBadge(label: '${items.length} completed rentals'),
+                              EquipmentInfoBadge(label: _filter.label),
+                            ],
                           ),
-                        ),
-
-                        const SizedBox(
-                            height: AppSpacing.xl),
-
-                        // ── Bar Chart ──
-                        Text(
-                          'earnings.monthly'.tr(),
-                          style: context
-                              .textTheme.titleMedium
-                              ?.copyWith(
-                                  fontWeight:
-                                      FontWeight.bold),
-                        ),
-                        const SizedBox(
-                            height: AppSpacing.md),
-                        _buildBarChart(context),
-
-                        const SizedBox(
-                            height: AppSpacing.xl),
-
-                        // ── Completed bookings list ──
-                        Text(
-                          'earnings.completed_bookings'
-                              .tr(),
-                          style: context
-                              .textTheme.titleMedium
-                              ?.copyWith(
-                                  fontWeight:
-                                      FontWeight.bold),
-                        ),
-                        const SizedBox(
-                            height: AppSpacing.md),
-                        if (items.isEmpty)
-                          EmptyView(
-                            icon:
-                                Icons.money_off_outlined,
-                            title:
-                                'earnings.no_earnings'
-                                    .tr(),
-                          )
-                        else
-                          ...items.map((r) => Padding(
-                                padding:
-                                    const EdgeInsets.only(
-                                        bottom: AppSpacing
-                                            .md),
-                                child:
-                                    _EarningRow(rental: r),
-                              )),
-
-                        const SizedBox(
-                            height: AppSpacing.xxl),
-                      ],
+                          const SizedBox(height: AppSpacing.sm),
+                          EquipmentRefreshStrip(
+                            refreshing: _refreshing,
+                            label: 'Refreshing earnings and payout history...',
+                          ),
+                          MetricCard(
+                            label: 'earnings.total'.tr(),
+                            value: _totalEarnings.inr,
+                            icon: Icons.account_balance_wallet,
+                            color: AppColors.success,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          SizedBox(
+                            height: 40,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: _TimeFilter.values.map((f) {
+                                final selected = _filter == f;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                                  child: ChoiceChip(
+                                    label: Text(f.label),
+                                    selected: selected,
+                                    onSelected: (_) => setState(() => _filter = f),
+                                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Text(
+                            'earnings.monthly'.tr(),
+                            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _buildBarChart(context),
+                          const SizedBox(height: AppSpacing.xl),
+                          Text(
+                            'earnings.completed_bookings'.tr(),
+                            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          if (items.isEmpty)
+                            EmptyView(
+                              icon: Icons.money_off_outlined,
+                              title: 'earnings.no_earnings'.tr(),
+                            )
+                          else
+                            ...items.map((r) => Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  child: _EarningRow(rental: r),
+                                )),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+      ),
     );
   }
 

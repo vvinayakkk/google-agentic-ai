@@ -129,14 +129,38 @@ class ProviderUpsertRequest(BaseModel):
     """Validated request for equipment provider create/update."""
 
     rental_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
-    provider_name: str = Field(..., min_length=2, max_length=240)
+    provider_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    provider_name: Optional[str] = Field(default=None, min_length=2, max_length=240)
+    source_type: Optional[str] = Field(default=None, max_length=64)
+    source_url: Optional[str] = Field(default=None, max_length=512)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=240)
+    category: Optional[str] = Field(default=None, max_length=120)
+    rate_hourly: Optional[float] = Field(default=None, ge=0)
+    rate_daily: Optional[float] = Field(default=None, ge=0)
+    rate_per_acre: Optional[float] = Field(default=None, ge=0)
+    rate_per_trip: Optional[float] = Field(default=None, ge=0)
+    operator_included: Optional[bool] = None
+    fuel_extra: Optional[bool] = None
+    availability: Optional[str] = Field(default=None, max_length=64)
+    season_note: Optional[str] = Field(default=None, max_length=500)
+    min_booking_hours: Optional[int] = Field(default=None, ge=0)
     state: Optional[str] = Field(default=None, max_length=120)
     district: Optional[str] = Field(default=None, max_length=120)
+    city: Optional[str] = Field(default=None, max_length=120)
+    pincode: Optional[str] = Field(default=None, max_length=20)
+    address: Optional[str] = Field(default=None, max_length=400)
+    service_radius_km: Optional[float] = Field(default=None, ge=0)
+    contact_person: Optional[str] = Field(default=None, max_length=120)
     contact_phone: Optional[str] = Field(default=None, max_length=20)
-    is_active: Optional[bool] = True
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    alternate_phone: Optional[str] = Field(default=None, max_length=20)
+    whatsapp: Optional[str] = Field(default=None, max_length=20)
+    working_hours: Optional[str] = Field(default=None, max_length=120)
+    eligibility: List[str] = Field(default_factory=list)
+    documents_required: List[str] = Field(default_factory=list)
+    is_active: Optional[bool] = None
+    last_verified_at: Optional[str] = Field(default=None, max_length=64)
 
-    model_config = {"strict": True}
+    model_config = {"strict": False, "extra": "allow"}
 
 
 class FeatureFlagsUpdate(BaseModel):

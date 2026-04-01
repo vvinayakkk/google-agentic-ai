@@ -1,5 +1,5 @@
 ﻿import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict
 
 import requests
@@ -11,6 +11,7 @@ from shared.db.mongodb import get_db
 
 DATA_GOV_BASE = "https://api.data.gov.in/resource"
 DAILY_PRICE_RESOURCE_ID = "35985678-0d79-46b4-9ed6-6f13308a1d24"
+MAX_LIVE_ARRIVAL_AGE_DAYS = int((os.getenv("LIVE_MANDI_MAX_AGE_DAYS") or "45").strip() or "45")
 
 
 def _get_embedding_service() -> EmbeddingService:
@@ -61,6 +62,20 @@ def _freshness_from_rows(rows: list[dict]) -> dict:
     }
 
 
+def _live_rows_are_stale(rows: list[dict], max_age_days: int = MAX_LIVE_ARRIVAL_AGE_DAYS) -> bool:
+    if not rows:
+        return True
+    latest = datetime.min
+    for row in rows:
+        d = _parse_date(str(row.get("arrival_date", "") or ""))
+        if d > latest:
+            latest = d
+    if latest == datetime.min:
+        return True
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=max_age_days)
+    return latest < cutoff
+
+
 def _match_metadata(state: str = "", district: str = "", fallback_mode: str = "none") -> dict:
     return {
         "requested_filters": {
@@ -73,18 +88,13 @@ def _match_metadata(state: str = "", district: str = "", fallback_mode: str = "n
     }
 
 
-def _query_ref_prices(crop_name: str, state: str = "", district: str = "", limit: int = 20) -> list[dict]:
-    db = get_db()
-    q = db.collection("ref_mandi_prices")
-    if crop_name.strip():
-        q = q.where("commodity", "==", crop_name.strip())
-    if state.strip():
-        q = q.where("state", "==", state.strip())
-    if district.strip():
-        q = q.where("district", "==", district.strip())
+def _norm(value: str) -> str:
+    return str(value or "").strip().lower()
 
+
+def _collect_price_rows(query, limit: int) -> list[dict]:
     rows = []
-    for d in q.limit(min(max(limit, 1), 500)).stream():
+    for d in query.limit(min(max(limit, 1), 500)).stream():
         item = d.to_dict() or {}
         rows.append(
             {
@@ -102,6 +112,34 @@ def _query_ref_prices(crop_name: str, state: str = "", district: str = "", limit
         )
     rows.sort(key=lambda x: _parse_date(x.get("arrival_date", "")), reverse=True)
     return rows[:limit]
+
+
+def _query_ref_prices(crop_name: str, state: str = "", district: str = "", limit: int = 20) -> list[dict]:
+    db = get_db()
+    q = db.collection("ref_mandi_prices")
+    if crop_name.strip():
+        q = q.where("commodity", "==", crop_name.strip())
+    if state.strip():
+        q = q.where("state", "==", state.strip())
+    if district.strip():
+        q = q.where("district", "==", district.strip())
+    rows = _collect_price_rows(q, limit=limit)
+    if rows or (not state.strip() and not district.strip()):
+        return rows
+
+    # Case-insensitive retry for profile/location strings with casing mismatch.
+    q_ci = db.collection("ref_mandi_prices")
+    if crop_name.strip():
+        q_ci = q_ci.where("commodity", "==", crop_name.strip())
+    broad_rows = _collect_price_rows(q_ci, limit=min(max(limit * 25, 120), 500))
+    state_n = _norm(state)
+    district_n = _norm(district)
+    return [
+        row
+        for row in broad_rows
+        if (not state_n or _norm(row.get("state", "")) == state_n)
+        and (not district_n or _norm(row.get("district", "")) == district_n)
+    ][:limit]
 
 
 def _query_ref_mandis(state: str = "", district: str = "", limit: int = 50) -> list[dict]:
@@ -124,7 +162,29 @@ def _query_ref_mandis(state: str = "", district: str = "", limit: int = 50) -> l
                 "ingested_at": item.get("_ingested_at", ""),
             }
         )
-    return rows[:limit]
+    if rows or not state.strip():
+        return rows[:limit]
+
+    # Case-insensitive retry for state mismatch in stored records.
+    rows_ci = []
+    state_n = _norm(state)
+    district_n = _norm(district)
+    for d in db.collection("ref_mandi_directory").limit(min(max(limit * 20, 120), 500)).stream():
+        item = d.to_dict() or {}
+        if state_n and _norm(item.get("state", "")) != state_n:
+            continue
+        if district_n and _norm(item.get("district", "")) != district_n:
+            continue
+        rows_ci.append(
+            {
+                "name": item.get("name", ""),
+                "state": item.get("state", ""),
+                "district": item.get("district", ""),
+                "source": item.get("source", "ref_mandi_directory"),
+                "ingested_at": item.get("_ingested_at", ""),
+            }
+        )
+    return rows_ci[:limit]
 
 
 def search_market_prices(crop_name: str, state: str = "") -> dict:
@@ -141,7 +201,7 @@ def search_market_prices(crop_name: str, state: str = "") -> dict:
 
     svc = _get_embedding_service()
     query = f"{crop_name} market price mandi rate {state}"
-    results = svc.search(QdrantCollections.MARKET_KNOWLEDGE, query, top_k=5)
+    results = svc.search(QdrantCollections.MANDI_PRICE_INTELLIGENCE, query, top_k=5)
     if not results:
         broad_rows = _query_ref_prices(crop_name="", state="", district="", limit=10)
         return {
@@ -201,7 +261,7 @@ def get_nearby_mandis(state: str, district: str = "") -> dict:
 
     svc = _get_embedding_service()
     query = f"mandi market {st} {dist} location address"
-    results = svc.search(QdrantCollections.MARKET_KNOWLEDGE, query, top_k=5)
+    results = svc.search(QdrantCollections.MANDI_PRICE_INTELLIGENCE, query, top_k=5)
     if not results:
         broad_rows = _query_ref_mandis(state="", district="", limit=20)
         return {
@@ -222,7 +282,7 @@ def get_price_trends(crop_name: str, period: str = "monthly") -> dict:
     """Get price trend information for a crop over a specified period."""
     svc = _get_embedding_service()
     query = f"{crop_name} price trend {period} historical rate change"
-    results = svc.search(QdrantCollections.MARKET_KNOWLEDGE, query, top_k=5)
+    results = svc.search(QdrantCollections.MANDI_PRICE_INTELLIGENCE, query, top_k=5)
     if not results:
         rows = _query_ref_prices(crop_name=crop_name, state="", district="", limit=20)
         return {
@@ -236,7 +296,13 @@ def get_price_trends(crop_name: str, period: str = "monthly") -> dict:
     return {"found": True, "results": [r["text"] for r in results]}
 
 
-def get_live_mandi_prices(crop_name: str, state: str = "", district: str = "", limit: int = 20) -> Dict[str, Any]:
+def get_live_mandi_prices(
+    crop_name: str,
+    state: str = "",
+    district: str = "",
+    limit: int = 20,
+    strict_locality: bool = False,
+) -> Dict[str, Any]:
     """Fetch live prices, with ref_mandi_prices fallback and freshness markers."""
     key = _data_gov_key()
     if key:
@@ -284,15 +350,19 @@ def get_live_mandi_prices(crop_name: str, state: str = "", district: str = "", l
                     and (not district.strip() or str(r.get("district", "")).strip().lower() == district.strip().lower())
                 ]
             if compact:
-                return {
-                    "found": True,
-                    "source": "data.gov.in",
-                    "resource_id": DAILY_PRICE_RESOURCE_ID,
-                    "total_records": len(records),
-                    **_match_metadata(state=state, district=district, fallback_mode="none"),
-                    **_freshness_from_rows(compact),
-                    "prices": compact,
-                }
+                if _live_rows_are_stale(compact):
+                    # Prefer fresher curated ref rows when live feed is too old.
+                    compact = []
+                else:
+                    return {
+                        "found": True,
+                        "source": "data.gov.in",
+                        "resource_id": DAILY_PRICE_RESOURCE_ID,
+                        "total_records": len(records),
+                        **_match_metadata(state=state, district=district, fallback_mode="none"),
+                        **_freshness_from_rows(compact),
+                        "prices": compact,
+                    }
         except Exception:
             pass
 
@@ -306,6 +376,33 @@ def get_live_mandi_prices(crop_name: str, state: str = "", district: str = "", l
             **_match_metadata(state=state, district=district, fallback_mode="strict"),
             **_freshness_from_rows(fallback_rows),
             "prices": fallback_rows,
+        }
+
+    st = state.strip()
+    dist = district.strip()
+    if st and dist:
+        district_relaxed_rows = _query_ref_prices(crop_name=crop_name, state=st, district="", limit=limit)
+        if district_relaxed_rows:
+            return {
+                "found": True,
+                "source": "ref_mandi_prices",
+                "resource_id": DAILY_PRICE_RESOURCE_ID,
+                "total_records": len(district_relaxed_rows),
+                **_match_metadata(state=state, district=district, fallback_mode="district_relaxed_state_strict"),
+                **_freshness_from_rows(district_relaxed_rows),
+                "prices": district_relaxed_rows,
+                "note": "District-level rows were limited; returned same-state nearest mandi rows.",
+            }
+
+    if st and strict_locality:
+        return {
+            "found": False,
+            "source": "ref_mandi_prices",
+            "resource_id": DAILY_PRICE_RESOURCE_ID,
+            "total_records": 0,
+            **_match_metadata(state=state, district=district, fallback_mode="state_strict_no_match"),
+            "prices": [],
+            "note": "No verified mandi price rows found for requested state. Cross-state fallback disabled.",
         }
 
     relaxed_rows = _query_ref_prices(crop_name=crop_name, state="", district="", limit=limit)
@@ -333,7 +430,7 @@ def get_live_mandi_prices(crop_name: str, state: str = "", district: str = "", l
     }
 
 
-def get_live_mandis(state: str = "", limit: int = 50) -> Dict[str, Any]:
+def get_live_mandis(state: str = "", limit: int = 50, strict_locality: bool = False) -> Dict[str, Any]:
     """Build mandi directory from live feed with reference fallback."""
     key = _data_gov_key()
     if key:
@@ -393,6 +490,17 @@ def get_live_mandis(state: str = "", limit: int = 50) -> Dict[str, Any]:
             "total_records": len(ref_mandis),
             **_match_metadata(state=state, district="", fallback_mode="strict"),
             "mandis": ref_mandis,
+        }
+
+    if state.strip() and strict_locality:
+        return {
+            "found": False,
+            "source": "ref_mandi_directory",
+            "resource_id": DAILY_PRICE_RESOURCE_ID,
+            "total_records": 0,
+            **_match_metadata(state=state, district="", fallback_mode="state_strict_no_match"),
+            "mandis": [],
+            "note": "No mandi directory rows found for requested state. Cross-state fallback disabled.",
         }
 
     relaxed_mandis = _query_ref_mandis(state="", limit=limit)

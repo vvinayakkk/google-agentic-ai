@@ -1,0 +1,62 @@
+{
+  "timestamp_utc": "2026-04-01T15:13:01.168713+00:00",
+  "qdrant_host": "localhost",
+  "qdrant_port": 6333,
+  "results": {
+    "schemes_semantic": {
+      "status": "ok",
+      "created": [
+        "scheme_id",
+        "ministry",
+        "beneficiary_state",
+        "categories",
+        "source"
+      ],
+      "failed": []
+    },
+    "mandi_price_intelligence": {
+      "status": "ok",
+      "created": [
+        "commodity",
+        "state",
+        "district",
+        "market",
+        "trend"
+      ],
+      "failed": []
+    },
+    "crop_advisory_kb": {
+      "status": "ok",
+      "created": [
+        "topic",
+        "crop",
+        "state",
+        "source",
+        "language"
+      ],
+      "failed": []
+    },
+    "geo_location_index": {
+      "status": "ok",
+      "created": [
+        "pincode",
+        "district_name",
+        "state_name",
+        "source"
+      ],
+      "failed": []
+    },
+    "equipment_semantic": {
+      "status": "ok",
+      "created": [
+        "equipment_id",
+        "state",
+        "district",
+        "category",
+        "source",
+        "is_active"
+      ],
+      "failed": []
+    }
+  }
+}

@@ -224,7 +224,7 @@ NGINX LOCATION PRESENT: yes
 DEPENDS_ON: redis, qdrant
 DOCKERFILE: services/market/Dockerfile
 REQUIREMENTS: services/market/requirements.txt
-TOTAL ROUTES: 52
+TOTAL ROUTES: 54
 ROUTES:
   - GET /api/v1/market/document-builder/schemes  (file: routes\document_builder.py, path: /schemes)
   - GET /api/v1/market/document-builder/schemes/{scheme_name}  (file: routes\document_builder.py, path: /schemes/{scheme_name})
@@ -273,6 +273,8 @@ ROUTES:
   - PUT /api/v1/market/schemes/{scheme_id}  (file: routes\schemes.py, path: /{scheme_id})
   - DELETE /api/v1/market/schemes/{scheme_id}  (file: routes\schemes.py, path: /{scheme_id})
   - POST /api/v1/market/schemes/check-eligibility  (file: routes\schemes.py, path: /check-eligibility)
+  - GET /api/v1/market/weather/full  (file: routes\weather_soil.py, path: /weather/full)
+  - GET /api/v1/market/weather/soil-composition  (file: routes\weather_soil.py, path: /weather/soil-composition)
   - GET /api/v1/market/weather/city  (file: routes\weather_soil.py, path: /weather/city)
   - GET /api/v1/market/weather/coords  (file: routes\weather_soil.py, path: /weather/coords)
   - GET /api/v1/market/weather/forecast/city  (file: routes\weather_soil.py, path: /weather/forecast/city)

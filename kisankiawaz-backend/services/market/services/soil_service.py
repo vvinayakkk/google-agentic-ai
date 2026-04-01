@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -38,6 +39,39 @@ def _find_moisture_value(record: Dict[str, Any]) -> Optional[Any]:
         if "moisture" in k:
             return value
     return None
+
+
+def _extract_key_metrics(record: Dict[str, Any]) -> Dict[str, Any]:
+    aliases = {
+        "soil_moisture": ["moisture"],
+        "ph": ["ph", "ph_level"],
+        "nitrogen": ["nitrogen", "\bn\b"],
+        "phosphorus": ["phosphorus", "phosphate", "\bp\b", "p2o5"],
+        "potassium": ["potassium", "\bk\b", "k2o"],
+        "electrical_conductivity": ["electrical_conductivity", "ec"],
+        "organic_carbon": ["organic_carbon", "organic matter", "oc"],
+        "soil_temperature": ["soil_temperature", "soil temp", "temperature"],
+    }
+
+    out: Dict[str, Any] = {}
+    lowered_items = [(str(k).lower(), v) for k, v in record.items()]
+
+    for metric, keys in aliases.items():
+        for key, value in lowered_items:
+            matched = False
+            for token in keys:
+                if token.startswith("\\b"):
+                    if re.search(token, key):
+                        matched = True
+                        break
+                elif token in key:
+                    matched = True
+                    break
+            if matched:
+                out[metric] = value
+                break
+
+    return out
 
 
 async def get_soil_moisture_data(
@@ -93,12 +127,14 @@ async def get_soil_moisture_data(
 
     latest_records: List[Dict[str, Any]] = []
     for rec in latest_by_region.values():
+        parsed_metrics = _extract_key_metrics(rec)
         latest_records.append(
             {
                 "state": rec.get("State") or rec.get("state"),
                 "district": rec.get("District") or rec.get("district"),
                 "date": rec.get("Date") or rec.get("date"),
                 "soil_moisture": _find_moisture_value(rec),
+                "metrics": parsed_metrics,
                 "raw": rec,
             }
         )

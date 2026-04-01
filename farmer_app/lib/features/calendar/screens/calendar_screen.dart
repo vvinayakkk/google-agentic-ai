@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/services/agent_service.dart';
+import '../../../shared/services/notification_service.dart';
 
 class _TaskEntry {
   final String title;
@@ -21,21 +26,26 @@ class _TaskEntry {
   });
 }
 
-class CalendarScreen extends StatefulWidget {
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   @override
-  State<CalendarScreen> createState() => _CalendarScreenState();
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedDay = DateTime(2026, 3, 1);
   DateTime _selectedDay = DateTime(2026, 3, 3);
 
   bool _heroVisible = false;
   final List<bool> _taskVisible = <bool>[false, false, false];
 
-  final Map<DateTime, List<String>> _events = <DateTime, List<String>>{
+  bool _backendLoading = false;
+  bool _heroLoading = true;
+  String? _heroRecommendation;
+  List<_TaskEntry> _backendTasks = <_TaskEntry>[];
+
+  static final Map<DateTime, List<String>> _seedEvents = <DateTime, List<String>>{
     DateTime(2026, 3, 3): <String>['high', 'normal'],
     DateTime(2026, 3, 8): <String>['normal'],
     DateTime(2026, 3, 14): <String>['high'],
@@ -43,12 +53,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     DateTime(2026, 3, 18): <String>['normal', 'ai'],
   };
 
+  Map<DateTime, List<String>> _events = <DateTime, List<String>>{};
+
   final List<_TaskEntry> _customTasks = <_TaskEntry>[];
 
   @override
   void initState() {
     super.initState();
+    _rebuildEventMap();
     _startAnimations();
+    _loadBackendCalendarSignals();
   }
 
   void _startAnimations() {
@@ -65,6 +79,142 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  void _rebuildEventMap() {
+    final rebuilt = <DateTime, List<String>>{};
+    for (final entry in _seedEvents.entries) {
+      rebuilt[entry.key] = List<String>.from(entry.value);
+    }
+
+    for (final task in _customTasks) {
+      final key = _stripTime(task.date);
+      final list = List<String>.from(rebuilt[key] ?? const <String>[]);
+      list.add(task.isHigh ? 'high' : 'normal');
+      rebuilt[key] = list;
+    }
+
+    for (final task in _backendTasks) {
+      final key = _stripTime(task.date);
+      final list = List<String>.from(rebuilt[key] ?? const <String>[]);
+      list.add(task.isHigh ? 'high' : 'ai');
+      rebuilt[key] = list;
+    }
+
+    _events = rebuilt;
+  }
+
+  TimeOfDay _parseTime(dynamic value) {
+    final str = value?.toString().trim() ?? '';
+    if (str.isEmpty) return const TimeOfDay(hour: 9, minute: 0);
+
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(str);
+    if (match == null) return const TimeOfDay(hour: 9, minute: 0);
+
+    final h = int.tryParse(match.group(1) ?? '') ?? 9;
+    final m = int.tryParse(match.group(2) ?? '') ?? 0;
+    return TimeOfDay(hour: h.clamp(0, 23), minute: m.clamp(0, 59));
+  }
+
+  String _fallbackRecommendation() {
+    if (_backendTasks.isEmpty) {
+      return 'Plan one irrigation and one field-inspection task today, then review weather before spraying.';
+    }
+
+    final highCount = _backendTasks.where((t) => t.isHigh).length;
+    if (highCount > 0) {
+      return 'Prioritize $highCount high-priority task${highCount > 1 ? 's' : ''} first, then complete routine operations.';
+    }
+    return 'Follow your synced calendar tasks in order and keep a short buffer before sunset for follow-up checks.';
+  }
+
+  Future<void> _loadBackendCalendarSignals() async {
+    if (!mounted) return;
+
+    setState(() {
+      _backendLoading = true;
+      _heroLoading = true;
+    });
+
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      final raw = await notificationService.list(perPage: 100);
+      final items = (raw['items'] as List?) ??
+          (raw['notifications'] as List?) ??
+          const <dynamic>[];
+
+      final parsedTasks = <_TaskEntry>[];
+      for (final item in items) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item as Map<dynamic, dynamic>);
+        final title = (map['title'] ?? '').toString().trim();
+        final body = (map['body'] ?? '').toString().trim();
+        final type = (map['type'] ?? '').toString().toLowerCase();
+        final data = (map['data'] is Map)
+            ? Map<String, dynamic>.from(map['data'] as Map<dynamic, dynamic>)
+            : <String, dynamic>{};
+
+        final rawDate = data['task_date'] ?? data['date'] ?? map['created_at'];
+        final parsedDate = DateTime.tryParse(rawDate?.toString() ?? '');
+        if (parsedDate == null) continue;
+
+        final isTaskLike =
+            type.contains('reminder') || type.contains('calendar') || type.contains('crop') || type.contains('weather');
+        if (!isTaskLike && title.isEmpty && body.isEmpty) continue;
+
+        final isHigh = type.contains('alert') ||
+            title.toLowerCase().contains('urgent') ||
+            body.toLowerCase().contains('urgent') ||
+            title.toLowerCase().contains('high');
+
+        parsedTasks.add(
+          _TaskEntry(
+            title: title.isNotEmpty ? title : 'Farm Task',
+            subtitle: body.isNotEmpty ? body : 'Synced from backend notifications',
+            date: parsedDate,
+            time: _parseTime(data['time']),
+            isHigh: isHigh,
+          ),
+        );
+      }
+
+      String recommendation = _fallbackRecommendation();
+      try {
+        final topTasks = parsedTasks
+            .take(3)
+            .map((t) => '${t.title} on ${_shortDate(t.date)} at ${_formatTime(t.time)}')
+            .join('; ');
+        final prompt =
+            'Give one concise daily farming recommendation in 1-2 sentences for calendar planning. '
+            'Upcoming tasks: ${topTasks.isEmpty ? 'None provided' : topTasks}.';
+        final ai = await ref.read(agentServiceProvider).chat(
+              message: prompt,
+              language: 'en',
+            );
+        final text = ai['response']?.toString().trim();
+        if (text != null && text.isNotEmpty) {
+          recommendation = text;
+        }
+      } catch (_) {
+        // keep fallback recommendation
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _backendTasks = parsedTasks;
+        _heroRecommendation = recommendation;
+        _backendLoading = false;
+        _heroLoading = false;
+        _rebuildEventMap();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _backendLoading = false;
+        _heroLoading = false;
+        _heroRecommendation = _fallbackRecommendation();
+      });
+    }
+  }
 
   List<String> _getEventsForDay(DateTime day) =>
       _events[_stripTime(day)] ?? const <String>[];
@@ -408,12 +558,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   isHigh: highPriority,
                                 ),
                               );
-
-                              final existing = List<String>.from(
-                                _events[dateKey] ?? const <String>[],
-                              );
-                              existing.add(marker);
-                              _events[dateKey] = existing;
+                              _rebuildEventMap();
                             });
 
                             Navigator.of(sheetContext).pop();
@@ -503,7 +648,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           icon: Icons.notifications_outlined,
                           color: AppColors.primaryDark,
                           background: iconBg,
-                          onTap: () => _showSnack('Notifications coming soon'),
+                          onTap: () => context.push(RoutePaths.notifications),
                         ),
                       ),
                     ],
@@ -512,12 +657,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               const SizedBox(height: 14),
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
+                child: RefreshIndicator(
+                  onRefresh: _loadBackendCalendarSignals,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
                       AnimatedSlide(
                         offset: _heroVisible ? Offset.zero : const Offset(0, -0.05),
                         duration: const Duration(milliseconds: 300),
@@ -525,7 +672,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 300),
                           opacity: _heroVisible ? 1 : 0,
-                          child: const _HeroCard(),
+                          child: _HeroCard(
+                            recommendation: _heroRecommendation,
+                            isLoading: _heroLoading,
+                            onSchedule: _openScheduleTaskSheet,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -606,6 +757,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      if (_backendLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.white.withValues(alpha: 0.45),
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      if (_backendTasks.isNotEmpty) ...<Widget>[
+                        ..._backendTasks.take(3).map(
+                          (task) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _TaskCard(
+                              iconBg: task.isHigh
+                                  ? const Color(0xFFFFEBEE)
+                                  : const Color(0xFFE8F5E9),
+                              iconColor: task.isHigh
+                                  ? const Color(0xFFC62828)
+                                  : AppColors.primaryDark,
+                              icon: task.isHigh
+                                  ? Icons.priority_high_rounded
+                                  : Icons.notifications_active_outlined,
+                              title: task.title,
+                              subtitle: task.subtitle,
+                              dateTime: '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
+                              priority: task.isHigh ? 'HIGH' : 'SYNCED',
+                              isHigh: task.isHigh,
+                              cardColor: cardColor,
+                              textColor: textColor,
+                              subColor: subColor,
+                              onTap: () => _showSnack('Synced task: ${task.title}'),
+                            ),
+                          ),
+                        ),
+                      ],
                       _AnimatedTaskCard(
                         visible: _taskVisible[0],
                         child: _TaskCard(
@@ -688,7 +874,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: () => _showSnack('All tasks view coming soon'),
+                          onPressed: () => context.push(RoutePaths.notifications),
                           child: Text(
                             'View All Tasks  →',
                             style: TextStyle(
@@ -701,6 +887,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
             ],
@@ -776,7 +963,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard();
+  final String? recommendation;
+  final bool isLoading;
+  final VoidCallback onSchedule;
+
+  const _HeroCard({
+    this.recommendation,
+    required this.isLoading,
+    required this.onSchedule,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -817,12 +1012,15 @@ class _HeroCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Soil moisture levels in the North Quad are at 18%. Based on the 4 PM forecast, we recommend starting irrigation at 05:00 AM tomorrow.',
+                isLoading
+                    ? 'Syncing backend recommendations...'
+                    : (recommendation ??
+                        'Soil moisture levels in the North Quad are at 18%. Based on the 4 PM forecast, we recommend starting irrigation at 05:00 AM tomorrow.'),
                 style: CalendarTextStyles.heroBody,
               ),
               const SizedBox(height: 14),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: onSchedule,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: CalendarColors.primaryDark,

@@ -1,7 +1,9 @@
 param(
   [string]$ProjectPath = "farmer_app",
   [int]$Port = 8000,
-  [switch]$NoFlutterRun
+  [switch]$NoFlutterRun,
+  [switch]$NoUninstallFirst,
+  [switch]$OpenEquipment
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +44,20 @@ if ($NoFlutterRun) {
 Push-Location $ProjectPath
 try {
   Write-Host "Launching Flutter app in USB mode..."
-  flutter run --dart-define=ANDROID_NETWORK_MODE=usb
+  $flutterArgs = @(
+    "run",
+    "--dart-define=ANDROID_NETWORK_MODE=usb"
+  )
+
+  if (-not $NoUninstallFirst) {
+    $flutterArgs += "--uninstall-first"
+  }
+
+  if ($OpenEquipment) {
+    $flutterArgs += "--route=/rental"
+  }
+
+  flutter @flutterArgs
 }
 finally {
   Pop-Location

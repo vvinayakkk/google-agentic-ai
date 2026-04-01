@@ -48,4 +48,5 @@ class FarmerInsightSummary(BaseModel):
     totals: dict
     activity: dict
     benchmarks: dict
+    equipment: dict = Field(default_factory=dict)
     recommendations: list[str]

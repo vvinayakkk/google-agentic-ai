@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
@@ -9,6 +11,7 @@ import '../../../core/utils/extensions.dart';
 import '../../../shared/services/agent_service.dart';
 import '../../../shared/services/crop_service.dart';
 import '../../../shared/services/farmer_service.dart';
+import '../../../shared/services/weather_soil_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -42,6 +45,11 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
   double _healthScore = 0;
   bool _healthLoading = false;
 
+  // Live weather snapshot
+  bool _weatherLoading = false;
+  String _weatherSummary = 'Loading latest weather...';
+  String _weatherSource = '';
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +80,7 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
         _isLoading = false;
       });
       _fetchHealthScore();
+      _fetchLiveWeather();
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -88,7 +97,7 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
       final res = await ref.read(agentServiceProvider).chat(
             message:
                 'Rate this farm health 0-100 as a single number only. Crops: $cropNames, Total area: $_totalAcres acres, Location: $_location. Reply ONLY with a number.',
-            language: 'en',
+            language: context.locale.languageCode,
           );
       final raw = (res['response'] ?? '75').toString().replaceAll(
             RegExp(r'[^0-9.]'),
@@ -121,7 +130,7 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
           '$prompt\n\nFarmer: ${_profile['name'] ?? 'Farmer'}, Location: $_location, Crops: $cropInfo, Total area: $_totalAcres acres.';
       final res = await ref.read(agentServiceProvider).chat(
             message: fullPrompt,
-            language: 'en',
+        language: context.locale.languageCode,
           );
       setState(() {
         _aiResponse = res['response']?.toString() ?? 'No response received.';
@@ -153,6 +162,58 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
         'common.unknown'.tr();
   }
 
+  String _weatherCityQuery() {
+    final district = (_profile['district'] ?? '').toString().trim();
+    final village = (_profile['village'] ?? '').toString().trim();
+    final state = (_profile['state'] ?? '').toString().trim();
+
+    if (district.isNotEmpty) return '$district,IN';
+    if (village.isNotEmpty) return '$village,IN';
+    if (state.isNotEmpty) return '$state,IN';
+    return 'Nandurbar,IN';
+  }
+
+  Future<void> _fetchLiveWeather() async {
+    if (!mounted) return;
+    setState(() {
+      _weatherLoading = true;
+      _weatherSource = _weatherCityQuery();
+    });
+
+    try {
+      final weather = await ref
+          .read(weatherSoilServiceProvider)
+          .getWeatherByCity(city: _weatherSource);
+
+      final main = weather['main'] as Map<String, dynamic>?;
+      final temp = (main?['temp'] as num?)?.toDouble();
+      final humidity = (main?['humidity'] as num?)?.toInt();
+      final windSpeed =
+          ((weather['wind'] as Map<String, dynamic>?)?['speed'] as num?)
+              ?.toDouble();
+      final condition = ((weather['weather'] as List?)?.isNotEmpty ?? false)
+          ? ((weather['weather'] as List).first as Map<String, dynamic>)['description']
+                  ?.toString() ??
+              'clear'
+          : 'clear';
+
+      final summary =
+          'Now in $_weatherSource: ${condition.toUpperCase()}${temp != null ? ', ${temp.toStringAsFixed(1)}C' : ''}${humidity != null ? ', humidity $humidity%' : ''}${windSpeed != null ? ', wind ${windSpeed.toStringAsFixed(1)} km/h' : ''}.';
+
+      if (!mounted) return;
+      setState(() {
+        _weatherSummary = summary;
+        _weatherLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _weatherSummary = _seasonalWeatherSummary;
+        _weatherLoading = false;
+      });
+    }
+  }
+
   String get _currentSeason {
     final month = DateTime.now().month;
     if (month >= 6 && month <= 10) return 'Kharif';
@@ -160,7 +221,7 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
     return 'Zaid';
   }
 
-  String get _weatherSummary {
+  String get _seasonalWeatherSummary {
     final month = DateTime.now().month;
     if (month >= 6 && month <= 9) {
       return 'Monsoon season — expect moderate to heavy rainfall. Ideal for Kharif crops.';
@@ -224,8 +285,7 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
       floatingActionButton: _tabController.index == 1
           ? FloatingActionButton(
               backgroundColor: AppColors.primary,
-              onPressed: () =>
-                  context.showSnack('Coming soon — add via profile'),
+              onPressed: () => context.push(RoutePaths.profile),
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -460,7 +520,10 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
                     children: [
                       Text('Weather Outlook', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
-                      Text(_weatherSummary, style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
+                      Text(
+                        _weatherLoading ? 'Refreshing weather...' : _weatherSummary,
+                        style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+                      ),
                     ],
                   ),
                 ),
@@ -873,9 +936,12 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
           ),
           const SizedBox(height: AppSpacing.md),
           AppButton(
-            label: 'Download Report',
-            icon: Icons.download_rounded,
-            onPressed: () => context.showSnack('Coming soon'),
+            label: 'Open In Chat',
+            icon: Icons.chat_bubble_outline_rounded,
+            onPressed: () {
+              final encoded = Uri.encodeQueryComponent(_aiResponse);
+              context.push('${RoutePaths.chat}?agent=crop&q=$encoded');
+            },
           ),
         ],
         const SizedBox(height: AppSpacing.xxxl),
