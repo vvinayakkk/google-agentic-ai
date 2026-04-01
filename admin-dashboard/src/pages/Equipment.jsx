@@ -1514,7 +1514,7 @@ const Equipment = () => {
   const replaceSeed = useCallback(async (file) => {
     const text = await file.text();
     const payload = JSON.parse(text);
-    await apiTry(["/api/v1/equipment/replace-seed", "/api/v1/equipment/providers/replace"], {
+    await apiTry(["/api/v1/equipment/rental-rates/replace-seed"], {
       method: "POST",
       body: JSON.stringify({ input_file: payload.input_file || "scripts/reports/equipment_rental_pan_india_2026.json" }),
     });

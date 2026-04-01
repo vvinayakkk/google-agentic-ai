@@ -49,7 +49,6 @@ const Farmers = () => {
         ]),
         apiTry([
           `/api/v1/admin/farmers/${farmer.id}/conversations`,
-          `/api/v1/agent/conversations/${farmer.id}`,
         ]).catch(() => ({ conversations: [] })),
         apiTry([
           `/api/v1/analytics/farmer/${farmer.id}/summary?days=30`,

@@ -509,7 +509,14 @@ const getEndpoints = (tab,{state,commodity,district,market,search}) => {
   if(tab==="mandis")     return [q("/api/v1/market/live-market/mandis",{state:state||undefined,limit:500}),q("/api/v1/admin/data/collection/mandis",{page:1,per_page:pp,search}),q("/api/v1/admin/data/collection/ref_mandi_directory",{page:1,per_page:pp,search})];
   if(tab==="cold")       return [q("/api/v1/market/ref-data/cold-storage",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_cold_storage",{page:1,per_page:pp,search})];
   if(tab==="reservoir")  return [q("/api/v1/market/ref-data/reservoir",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_reservoir_data",{page:1,per_page:pp,search})];
-  if(tab==="equipment")  return [q("/api/v1/admin/data/collection/ref_equipment_providers",{page:1,per_page:pp,search}),q("/api/v1/admin/data/equipment-providers",{state:state||undefined,category:commodity||undefined}),q("/api/v1/equipment/search",{search:search||undefined,state:state||undefined})];
+  if(tab==="equipment") {
+    const equipmentQuery = search || commodity || undefined;
+    return [
+      q("/api/v1/admin/data/collection/ref_equipment_providers",{page:1,per_page:pp,search}),
+      q("/api/v1/admin/data/equipment-providers",{state:state||undefined,category:commodity||undefined}),
+      ...(equipmentQuery ? [q("/api/v1/equipment/rental-rates/search",{q:equipmentQuery,state:state||undefined,district:district||undefined})] : []),
+    ];
+  }
   const col=COLL_MAP[tab]||"";
   return [...(col?[q(`/api/v1/admin/data/collection/${col}`,{page:1,per_page:pp,search})]:[]),...(tab==="fertilizer"?["/api/v1/schemes/fertilizer-advisory"]:[]),...(tab==="pesticide"?["/api/v1/schemes/pesticide-advisory"]:[])];
 };

@@ -371,10 +371,7 @@ const Analytics = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiTry([
-        `/api/v1/analytics/overview?days=${windowDays}`,
-        `/api/v1/analytics/admin/overview?window_days=${windowDays}`,
-      ]);
+      const data = await apiTry([`/api/v1/analytics/overview?days=${windowDays}`]);
       setOverview(data);
     } catch (err) {
       setError(err.message || "Failed to load analytics overview");
@@ -390,10 +387,7 @@ const Analytics = () => {
   const generateSnapshot = useCallback(async () => {
     setGenerating(true);
     try {
-      await apiTry(
-        [`/api/v1/analytics/snapshots/generate?days=${windowDays}`, "/api/v1/analytics/admin/generate"],
-        { method: "POST", body: JSON.stringify({}) }
-      );
+      await apiTry([`/api/v1/analytics/snapshots/generate?days=${windowDays}`], { method: "POST", body: JSON.stringify({}) });
       await loadOverview();
     } finally {
       setGenerating(false);

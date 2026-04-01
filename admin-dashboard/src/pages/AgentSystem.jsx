@@ -339,7 +339,7 @@ const AgentSystem = () => {
   const loadSessions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiTry(["/api/v1/agent/sessions", "/api/v1/agent/conversations/"]);
+      const data = await apiTry(["/api/v1/agent/sessions"]);
       const list = data.sessions || data.conversations || data.items || [];
       setSessions(list);
       if (list.length && !selected) setSelected(list[0]);
@@ -352,7 +352,7 @@ const AgentSystem = () => {
     setLoadingDetail(true);
     try {
       const id = session.session_id || session.id;
-      const data = await apiTry([`/api/v1/agent/sessions/${id}`, `/api/v1/agent/conversations/${id}`, `/api/v1/agent/conversations/${id}/`]);
+      const data = await apiTry([`/api/v1/agent/sessions/${id}`]);
       setDetail(data);
     } catch { setDetail(null); }
     setLoadingDetail(false);
@@ -360,7 +360,7 @@ const AgentSystem = () => {
 
   const fetchKeyPool = async () => {
     try {
-      const data = await apiTry(["/api/v1/agent/key-pool/status", "/api/v1/agent/keys/status"]);
+      const data = await apiTry(["/api/v1/agent/key-pool/status"]);
       setKeyPool(data);
       setKeyPoolOpen(true);
     } catch { setKeyPool(null); }

@@ -437,7 +437,7 @@ const DatabaseExplorer = () => {
       setSyncLatency(Math.round(performance.now() - t0));
       setLastUpdate(new Date().toISOString());
 
-      const fresh = await apiTry(["/api/v1/admin/data-freshness", "/api/v1/admin/freshness"]).catch(() => null);
+      const fresh = await apiTry(["/api/v1/admin/data-freshness"]).catch(() => null);
       setFreshness(fresh);
     } catch (err) {
       setRows([]); setTotal(0); setTotalPages(1);

@@ -294,13 +294,9 @@ const Schemes = () => {
       const [schemes, documents] = await Promise.all([
         apiTry([
           withQuery("/api/v1/admin/data/schemes", { page: 1, per_page: 100 }),
-          withQuery("/api/v1/schemes/search", { query: "", limit: 100 }),
           withQuery("/api/v1/schemes/", { page: 1, per_page: 100 }),
         ]),
-        apiTry([
-          "/api/v1/market/scheme-docs",
-          "/api/v1/market/document-builder/scheme-docs",
-        ]).catch(() => ({ items: [] })),
+        apiTry(["/api/v1/market/document-builder/scheme-docs"]).catch(() => ({ items: [] })),
       ]);
 
       const items = schemes.items || schemes.schemes || (Array.isArray(schemes) ? schemes : []);
@@ -330,7 +326,6 @@ const Schemes = () => {
     };
     await apiTry([
       "/api/v1/admin/data/schemes",
-      "/api/v1/admin/schemes/upsert",
     ], { method: "POST", body: JSON.stringify(body) });
     setShowModal(false);
     setForm(initialForm);
@@ -341,7 +336,6 @@ const Schemes = () => {
     if (!window.confirm("Delete this scheme?")) return;
     await apiTry([
       `/api/v1/admin/data/schemes/${id}`,
-      `/api/v1/admin/schemes/${id}`,
     ], { method: "DELETE" });
     load();
   }, [load]);
@@ -351,7 +345,6 @@ const Schemes = () => {
     const payload = JSON.parse(text);
     await apiTry([
       "/api/v1/admin/data/import/schemes",
-      "/api/v1/admin/schemes/import",
     ], {
       method: "POST",
       body: JSON.stringify({ input_file: payload.input_file || "scripts/reports/scheme.json", reembed: Boolean(payload.reembed) }),

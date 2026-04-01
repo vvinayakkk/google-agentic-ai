@@ -782,13 +782,13 @@ const SystemConfig = () => {
         setConfig(data || {});
         setFlags(data?.feature_flags || {});
       } else if (tab === "Ingestion") {
-        const data = await apiTry(["/api/v1/admin/ingestion/logs", "/api/v1/admin/freshness"]);
+        const data = await apiTry(["/api/v1/admin/ingestion/logs"]);
         setIngestion(data.items || []);
       } else if (tab === "Admin Users") {
         const data = await apiTry(["/api/v1/admin/admins"]);
         setAdmins(data.items || []);
       } else if (tab === "Audit Log") {
-        const data = await apiTry(["/api/v1/admin/audit-logs", "/api/v1/admin/ingestion/logs"]);
+        const data = await apiTry(["/api/v1/admin/ingestion/logs"]);
         setAudit(data.items || []);
       }
     } catch {
