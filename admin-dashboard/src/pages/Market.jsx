@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import {
   Activity, AlertCircle, BarChart2, BarChart3, Bug, ChevronDown,
-  ChevronRight, ChevronUp, CircleDollarSign, Droplets, Filter,
+  ChevronRight, ChevronUp, CircleDollarSign, Droplets,
   Leaf, MapPin, Package, RefreshCw, Search, Shield, Sprout,
   Table, TrendingDown, TrendingUp, Warehouse, Zap, Eye, X,
   Tractor, Layers, Wind, Thermometer, Info, Flame, Droplet,
@@ -22,22 +22,22 @@ import { apiTry, withQuery } from "../api/client";
    TAB CONFIG
 ═══════════════════════════════════════════════════════════════ */
 const TABS = [
-  { id:"prices",     label:"Mandi Prices",    icon:CircleDollarSign, accent:"#00e5a0", glow:"rgba(0,229,160,0.3)",   bg:"rgba(0,229,160,0.06)"  },
-  { id:"msp",        label:"MSP",             icon:TrendingUp,        accent:"#60a5fa", glow:"rgba(96,165,250,0.3)",  bg:"rgba(96,165,250,0.06)" },
-  { id:"trends",     label:"Price Trends",    icon:BarChart2,         accent:"#c084fc", glow:"rgba(192,132,252,0.3)", bg:"rgba(192,132,252,0.06)"},
-  { id:"mandis",     label:"Mandis",          icon:MapPin,            accent:"#fbbf24", glow:"rgba(251,191,36,0.3)",  bg:"rgba(251,191,36,0.06)" },
-  { id:"cold",       label:"Cold Storage",    icon:Warehouse,         accent:"#22d3ee", glow:"rgba(34,211,238,0.3)",  bg:"rgba(34,211,238,0.06)" },
-  { id:"reservoir",  label:"Reservoir",       icon:Droplets,          accent:"#38bdf8", glow:"rgba(56,189,248,0.3)",  bg:"rgba(56,189,248,0.06)" },
-  { id:"fasal",      label:"FASAL",           icon:Sprout,            accent:"#4ade80", glow:"rgba(74,222,128,0.3)",  bg:"rgba(74,222,128,0.06)" },
-  { id:"fertilizer", label:"Fertilizer",      icon:Leaf,              accent:"#a3e635", glow:"rgba(163,230,53,0.3)",  bg:"rgba(163,230,53,0.06)" },
-  { id:"pesticide",  label:"Pesticide",       icon:Bug,               accent:"#fb923c", glow:"rgba(251,146,60,0.3)",  bg:"rgba(251,146,60,0.06)" },
-  { id:"equipment",  label:"Equipment",       icon:Tractor,           accent:"#f472b6", glow:"rgba(244,114,182,0.3)", bg:"rgba(244,114,182,0.06)"},
+  { id:"prices",     label:"Mandi Prices",    icon:CircleDollarSign, accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"msp",        label:"MSP",             icon:TrendingUp,        accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"trends",     label:"Price Trends",    icon:BarChart2,         accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"mandis",     label:"Mandis",          icon:MapPin,            accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"cold",       label:"Cold Storage",    icon:Warehouse,         accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"reservoir",  label:"Reservoir",       icon:Droplets,          accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"fasal",      label:"FASAL",           icon:Sprout,            accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"fertilizer", label:"Fertilizer",      icon:Leaf,              accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"pesticide",  label:"Pesticide",       icon:Bug,               accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
+  { id:"equipment",  label:"Equipment",       icon:Tractor,           accent:"#22c55e", glow:"rgba(34,197,94,0.3)", bg:"rgba(34,197,94,0.08)" },
 ];
 
 const PALETTE = [
-  "#00e5a0","#60a5fa","#c084fc","#fbbf24","#22d3ee","#fb923c",
-  "#4ade80","#f472b6","#38bdf8","#a3e635","#f87171","#34d399",
-  "#818cf8","#fdba74","#67e8f9","#86efac","#fca5a5","#fde68a"
+  "#22c55e","#16a34a","#15803d","#4ade80","#86efac","#14532d",
+  "#65a30d","#84cc16","#166534","#052e16","#10b981","#34d399",
+  "#2f855a","#3f6212","#4d7c0f","#6ee7b7","#1f7a1f","#0b3d0b"
 ];
 
 /* ═══════════════════════════════════════════════════════════════
@@ -81,8 +81,8 @@ if (!document.getElementById(STYLE_ID)) {
     .mkt-tab-btn.active { color:#fff; }
     .mkt-tab-btn.active::after {
       content:''; position:absolute; bottom:-1px; left:14px; right:14px; height:2px;
-      border-radius:1px; background:var(--tab-accent,#00e5a0);
-      box-shadow:0 0 8px var(--tab-accent,#00e5a0);
+      border-radius:1px; background:var(--tab-accent,#22c55e);
+      box-shadow:0 0 8px var(--tab-accent,#22c55e);
     }
 
     .mkt-btn {
@@ -92,7 +92,7 @@ if (!document.getElementById(STYLE_ID)) {
       color:rgba(255,255,255,0.75); transition:all 0.15s; outline:none;
     }
     .mkt-btn:hover { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.22); color:#fff; }
-    .mkt-btn.active-btn { background:rgba(0,229,160,0.12); border-color:rgba(0,229,160,0.4); color:#00e5a0; }
+    .mkt-btn.active-btn { background:rgba(34,197,94,0.12); border-color:rgba(34,197,94,0.4); color:#22c55e; }
 
     .mkt-sel {
       background:rgba(10,12,18,0.95); color:#e8edf2; border:1px solid rgba(255,255,255,0.1);
@@ -206,7 +206,7 @@ const groupAvg = (rows,groupKey,valKey) => {
 /* ═══════════════════════════════════════════════════════════════
    CUSTOM TOOLTIP
 ═══════════════════════════════════════════════════════════════ */
-const MktTooltip = ({ active, payload, label, accent="#00e5a0", isMoney=false, formatter }) => {
+const MktTooltip = ({ active, payload, label, accent="#22c55e", isMoney=false, formatter }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{background:"rgba(6,8,14,0.98)",border:`1px solid ${accent}40`,borderRadius:11,padding:"11px 14px",fontSize:11,boxShadow:`0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)`,fontFamily:"'JetBrains Mono',monospace",backdropFilter:"blur(12px)"}}>
@@ -227,7 +227,7 @@ const MktTooltip = ({ active, payload, label, accent="#00e5a0", isMoney=false, f
 /* ═══════════════════════════════════════════════════════════════
    LOADING SKELETON
 ═══════════════════════════════════════════════════════════════ */
-const ChartSkeleton = ({ h=280, label="Loading…", accent="#00e5a0" }) => (
+const ChartSkeleton = ({ h=280, label="Loading…", accent="#22c55e" }) => (
   <div style={{height:h,position:"relative",borderRadius:14,background:"rgba(255,255,255,0.015)",overflow:"hidden",border:"1px solid rgba(255,255,255,0.06)"}}>
     <div className="mkt-skeleton" style={{position:"absolute",inset:0}}/>
     <div className="scan-overlay"><div className="scan-line"/></div>
@@ -244,7 +244,7 @@ const ChartSkeleton = ({ h=280, label="Loading…", accent="#00e5a0" }) => (
 /* ═══════════════════════════════════════════════════════════════
    STAT CARD
 ═══════════════════════════════════════════════════════════════ */
-const StatCard = ({ label, value, sub, accent="#00e5a0", trend, icon:Icon, delay=0, sparkData }) => {
+const StatCard = ({ label, value, sub, accent="#22c55e", trend, icon:Icon, delay=0, sparkData }) => {
   const isPos = trend>0;
   return (
     <div className="mkt-card mkt-fade-up" style={{padding:"15px 17px",animationDelay:`${delay}ms`,background:`linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))`}}>
@@ -255,7 +255,7 @@ const StatCard = ({ label, value, sub, accent="#00e5a0", trend, icon:Icon, delay
       <div className="kpi-number" style={{fontSize:24,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:"rgba(255,255,255,0.95)",lineHeight:1,animationDelay:`${delay+80}ms`}}>{value}</div>
       <div style={{display:"flex",alignItems:"center",gap:7,marginTop:8}}>
         {trend!=null&&(
-          <span style={{fontSize:10,fontWeight:700,color:isPos?accent:"#f87171",display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:20,background:isPos?`${accent}14`:"rgba(248,113,113,0.12)",border:`1px solid ${isPos?accent+"30":"rgba(248,113,113,0.3)"}`}}>
+          <span style={{fontSize:10,fontWeight:700,color:isPos?accent:"#16a34a",display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:20,background:isPos?`${accent}14`:"rgba(34,197,94,0.12)",border:`1px solid ${isPos?accent+"30":"rgba(34,197,94,0.3)"}`}}>
             {isPos?<ArrowUpRight size={9}/>:<ArrowDownRight size={9}/>}
             {isPos?"+":""}{Number(trend).toFixed(1)}%
           </span>
@@ -283,15 +283,32 @@ const StatCard = ({ label, value, sub, accent="#00e5a0", trend, icon:Icon, delay
    TICKER TAPE
 ═══════════════════════════════════════════════════════════════ */
 const TickerTape = ({ rows, accent }) => {
-  const items = rows
-    .slice(0,30)
-    .map(r=>({name:r.commodity||r.market||r.name||"—", val:r.modal_price||r.msp||0, state:r.state||"", chg:r._raw?.change||null}))
-    .filter(i=>i.val>0);
+  const latestByItem = new Map();
+  rows.forEach((row, index) => {
+    const name = String(row.commodity || row.market || row.name || "").trim();
+    const val = Number(row.modal_price ?? row.msp ?? row.price ?? 0);
+    if (!name || !Number.isFinite(val) || val <= 0) return;
+
+    const raw = row._raw || row;
+    const tsSource = raw.arrival_date || raw.date || raw.updated_at || raw.created_at || row.arrival_date || row.date;
+    const parsed = Date.parse(tsSource);
+    const ts = Number.isNaN(parsed) ? index : parsed;
+
+    const prev = latestByItem.get(name);
+    if (!prev || ts >= prev.ts) {
+      latestByItem.set(name, { name, val, state: row.state || "", ts });
+    }
+  });
+
+  const items = [...latestByItem.values()]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 20);
+
   if(!items.length) return null;
-  const doubled = [...items,...items,...items];
+  const doubled = [...items, ...items];
   return (
-    <div style={{background:"rgba(0,0,0,0.4)",borderTop:"1px solid rgba(255,255,255,0.05)",borderBottom:"1px solid rgba(255,255,255,0.05)",padding:"6px 0",display:"flex",alignItems:"center",gap:0}}>
-      <div style={{padding:"0 12px",display:"flex",alignItems:"center",gap:6,flexShrink:0,borderRight:"1px solid rgba(255,255,255,0.07)"}}>
+    <div style={{background:"linear-gradient(90deg, rgba(34,197,94,0.14) 0%, rgba(10,14,12,0.96) 24%, rgba(10,14,12,0.96) 100%)",borderTop:"1px solid rgba(34,197,94,0.25)",borderBottom:"1px solid rgba(34,197,94,0.18)",padding:"5px 0",display:"flex",alignItems:"center",gap:0}}>
+      <div style={{padding:"0 12px",display:"flex",alignItems:"center",gap:6,flexShrink:0,borderRight:"1px solid rgba(34,197,94,0.24)"}}>
         <div className="live-dot" style={{background:accent}}/>
         <span style={{fontSize:9,fontFamily:"'Syne',sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:accent}}>LIVE</span>
       </div>
@@ -486,12 +503,12 @@ const normGeneric   = (p) => toArr(p?.items||p?.rows||p?.data||p).map((r,i)=>({i
 const COLL_MAP = {fasal:"ref_fasal_data",fertilizer:"ref_fertilizer_data",pesticide:"ref_pesticide_advisory"};
 const getEndpoints = (tab,{state,commodity,district,market,search}) => {
   const q=(base,p)=>withQuery(base,p); const pp=200;
-  if(tab==="prices")     return [q("/api/v1/live-market/prices",{state:state||undefined,commodity:commodity||undefined,district:district||undefined,limit:150}),q("/api/v1/admin/data/collection/market_prices",{page:1,per_page:pp,search}),q("/api/v1/admin/data/collection/ref_mandi_prices",{page:1,per_page:pp,search})];
-  if(tab==="msp")        return [q("/api/v1/live-market/msp",{commodity:commodity||undefined}),"/api/v1/live-market/msp/all",q("/api/v1/admin/data/collection/ref_msp_prices",{page:1,per_page:pp})];
-  if(tab==="trends")     return [q("/api/v1/ref-data/price-trends",{commodity:commodity||undefined,state:state||undefined,market:market||undefined}),q("/api/v1/admin/data/collection/ref_mandi_prices",{page:1,per_page:pp,search})];
-  if(tab==="mandis")     return [q("/api/v1/live-market/mandis",{state:state||undefined,limit:150}),q("/api/v1/admin/data/collection/mandis",{page:1,per_page:pp,search}),q("/api/v1/admin/data/collection/ref_mandi_directory",{page:1,per_page:pp,search})];
-  if(tab==="cold")       return [q("/api/v1/ref-data/cold-storage",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_cold_storage",{page:1,per_page:pp,search})];
-  if(tab==="reservoir")  return [q("/api/v1/ref-data/reservoir",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_reservoir_data",{page:1,per_page:pp,search})];
+  if(tab==="prices")     return [q("/api/v1/market/live-market/prices",{state:state||undefined,commodity:commodity||undefined,district:district||undefined,limit:1000}),q("/api/v1/admin/data/collection/market_prices",{page:1,per_page:pp,search}),q("/api/v1/admin/data/collection/ref_mandi_prices",{page:1,per_page:pp,search})];
+  if(tab==="msp")        return [q("/api/v1/market/live-market/msp",{commodity:commodity||undefined}),"/api/v1/market/live-market/msp/all",q("/api/v1/admin/data/collection/ref_msp_prices",{page:1,per_page:pp})];
+  if(tab==="trends")     return [q("/api/v1/market/ref-data/price-trends",{commodity:commodity||undefined,state:state||undefined,market:market||undefined}),q("/api/v1/admin/data/collection/ref_mandi_prices",{page:1,per_page:pp,search})];
+  if(tab==="mandis")     return [q("/api/v1/market/live-market/mandis",{state:state||undefined,limit:500}),q("/api/v1/admin/data/collection/mandis",{page:1,per_page:pp,search}),q("/api/v1/admin/data/collection/ref_mandi_directory",{page:1,per_page:pp,search})];
+  if(tab==="cold")       return [q("/api/v1/market/ref-data/cold-storage",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_cold_storage",{page:1,per_page:pp,search})];
+  if(tab==="reservoir")  return [q("/api/v1/market/ref-data/reservoir",{state:state||undefined}),q("/api/v1/admin/data/collection/ref_reservoir_data",{page:1,per_page:pp,search})];
   if(tab==="equipment")  return [q("/api/v1/admin/data/collection/ref_equipment_providers",{page:1,per_page:pp,search}),q("/api/v1/admin/data/equipment-providers",{state:state||undefined,category:commodity||undefined}),q("/api/v1/equipment/search",{search:search||undefined,state:state||undefined})];
   const col=COLL_MAP[tab]||"";
   return [...(col?[q(`/api/v1/admin/data/collection/${col}`,{page:1,per_page:pp,search})]:[]),...(tab==="fertilizer"?["/api/v1/schemes/fertilizer-advisory"]:[]),...(tab==="pesticide"?["/api/v1/schemes/pesticide-advisory"]:[])];
@@ -566,7 +583,7 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
             <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
             <Area type="monotone" dataKey="max_price"   fill="url(#pgMax2)"   stroke="transparent" name="Max Price" isAnimationActive animationDuration={900}/>
             <Area type="monotone" dataKey="modal_price" fill="url(#pgModal2)" stroke={accent} strokeWidth={2.5} dot={false} name="Modal Price" isAnimationActive animationDuration={1100}/>
-            <Line type="monotone" dataKey="min_price" stroke="#f87171" strokeWidth={1.5} dot={false} strokeDasharray="3 4" name="Min Price" isAnimationActive animationDuration={1300}/>
+            <Line type="monotone" dataKey="min_price" stroke="#16a34a" strokeWidth={1.5} dot={false} strokeDasharray="3 4" name="Min Price" isAnimationActive animationDuration={1300}/>
             {avgModal>0&&<ReferenceLine y={avgModal} stroke={`${accent}60`} strokeDasharray="5 4" label={{value:"AVG",position:"insideRight",fill:`${accent}80`,fontSize:9,fontFamily:"'JetBrains Mono',monospace"}}/>}
             <Brush dataKey="arrival_date" height={24} stroke="rgba(255,255,255,0.08)" fill="rgba(255,255,255,0.025)" travellerWidth={8} tickFormatter={v=>fmtD(v)}/>
           </ComposedChart>
@@ -639,7 +656,7 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
                 <div key={s.state} className="mkt-fade-up" style={{padding:"12px",background:"rgba(255,255,255,0.025)",borderRadius:10,border:"1px solid rgba(255,255,255,0.07)",animationDelay:`${i*50}ms`}}>
                   <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{s.state}</div>
                   <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:col}}>{fmtM(s.avg)}</div>
-                  <div style={{fontSize:9,color:isPos?accent:"#f87171",display:"flex",alignItems:"center",gap:3,marginTop:2,fontFamily:"'Syne',sans-serif"}}>{isPos?<ArrowUpRight size={9}/>:<ArrowDownRight size={9}/>}{isPos?"+":""}{s.trend.toFixed(1)}%</div>
+                  <div style={{fontSize:9,color:isPos?accent:"#16a34a",display:"flex",alignItems:"center",gap:3,marginTop:2,fontFamily:"'Syne',sans-serif"}}>{isPos?<ArrowUpRight size={9}/>:<ArrowDownRight size={9}/>}{isPos?"+":""}{s.trend.toFixed(1)}%</div>
                   <div style={{marginTop:8,height:36}}>
                     <ResponsiveContainer width="100%" height={36}>
                       <AreaChart data={s.vals.map((v,idx)=>({v,idx}))}>
@@ -771,9 +788,9 @@ const MspViz = ({ rows, loading, accent }) => {
           <div className="section-label" style={{marginBottom:12}}>⚠ Lowest MSP Alert · Bottom 5 Crops</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
             {bottom5.map((r,i)=>(
-              <div key={r.id} style={{padding:"12px",background:"rgba(248,113,113,0.06)",borderRadius:10,border:"1px solid rgba(248,113,113,0.18)",textAlign:"center"}}>
+              <div key={r.id} style={{padding:"12px",background:"rgba(34,197,94,0.06)",borderRadius:10,border:"1px solid rgba(34,197,94,0.18)",textAlign:"center"}}>
                 <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{r.commodity}</div>
-                <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:"#f87171"}}>{fmtM(r.msp)}</div>
+                <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:"#16a34a"}}>{fmtM(r.msp)}</div>
               </div>
             ))}
           </div>
@@ -821,9 +838,9 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
             {trendDir&&(
-              <div style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,background:trendDir==="UP"?`${accent}18`:"rgba(248,113,113,0.12)",border:`1px solid ${trendDir==="UP"?accent+"35":"rgba(248,113,113,0.3)"}`}}>
-                {trendDir==="UP"?<TrendingUp size={13} color={accent}/>:<TrendingDown size={13} color="#f87171"/>}
-                <span style={{fontSize:11,fontWeight:700,color:trendDir==="UP"?accent:"#f87171",fontFamily:"'Syne',sans-serif"}}>{trendDir}</span>
+              <div style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,background:trendDir==="UP"?`${accent}18`:"rgba(34,197,94,0.12)",border:`1px solid ${trendDir==="UP"?accent+"35":"rgba(34,197,94,0.3)"}`}}>
+                {trendDir==="UP"?<TrendingUp size={13} color={accent}/>:<TrendingDown size={13} color="#16a34a"/>}
+                <span style={{fontSize:11,fontWeight:700,color:trendDir==="UP"?accent:"#16a34a",fontFamily:"'Syne',sans-serif"}}>{trendDir}</span>
               </div>
             )}
             {allVals.length>0&&(
@@ -865,7 +882,7 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
                 <Tooltip content={<MktTooltip accent={accent} formatter={v=>`${v.toFixed(2)}%`}/>}/>
                 <Bar dataKey="chg" radius={[3,3,0,0]} isAnimationActive animationDuration={900}>
                   {pts.filter((_,i)=>i>0&&i%Math.max(1,Math.floor(pts.length/20))===0).map((_,i)=>{
-                    const chg=_?.chg||0; return <Cell key={i} fill={chg>=0?accent:"#f87171"} fillOpacity={0.8}/>;
+                    const chg=_?.chg||0; return <Cell key={i} fill={chg>=0?accent:"#16a34a"} fillOpacity={0.8}/>;
                   })}
                 </Bar>
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeWidth={1}/>
@@ -878,7 +895,7 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
               {[
                 {label:"Std Dev", value:fmtM(vol.std), col:accent},
-                {label:"CV %", value:`${vol.cv.toFixed(1)}%`, col:vol.cv>20?"#f87171":vol.cv>10?PALETTE[3]:accent},
+                {label:"CV %", value:`${vol.cv.toFixed(1)}%`, col:vol.cv>20?"#16a34a":vol.cv>10?PALETTE[3]:accent},
                 {label:"Range",value:`${fmtM(arrMin(allVals))} – ${fmtM(arrMax(allVals))}`,col:"rgba(255,255,255,0.7)"},
                 {label:"Sample",value:allVals.length,col:"rgba(255,255,255,0.7)"},
               ].map((item,i)=>(
@@ -1019,8 +1036,8 @@ const ColdViz = ({ rows, loading, accent }) => {
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
         <StatCard label="Total Available" value={`${fmtN(Math.round(totAvail/1000))}K MT`} icon={Warehouse} accent={accent} delay={0}  sub="Cold storage capacity"/>
         <StatCard label="Total Required"  value={`${fmtN(Math.round(totReq/1000))}K MT`}   icon={Package}   accent={accent} delay={60} sub="Demand estimate"/>
-        <StatCard label="Surplus / Gap"   value={`${surplus>=0?"+":""}${fmtN(Math.round(surplus/1000))}K MT`} icon={surplus>=0?TrendingUp:TrendingDown} accent={surplus>=0?accent:"#f87171"} delay={120} sub={surplus>=0?"National surplus":"National deficit"}/>
-        <StatCard label="Avg Utilization" value={`${avgUtil.toFixed(0)}%`} icon={Activity} accent={avgUtil>80?"#f87171":avgUtil>60?PALETTE[3]:accent} delay={180} sub={`${critical.length} states critical`}/>
+        <StatCard label="Surplus / Gap"   value={`${surplus>=0?"+":""}${fmtN(Math.round(surplus/1000))}K MT`} icon={surplus>=0?TrendingUp:TrendingDown} accent={surplus>=0?accent:"#16a34a"} delay={120} sub={surplus>=0?"National surplus":"National deficit"}/>
+        <StatCard label="Avg Utilization" value={`${avgUtil.toFixed(0)}%`} icon={Activity} accent={avgUtil>80?"#16a34a":avgUtil>60?PALETTE[3]:accent} delay={180} sub={`${critical.length} states critical`}/>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr",gap:14}}>
@@ -1036,7 +1053,7 @@ const ColdViz = ({ rows, loading, accent }) => {
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.45)"}}/>
               <Bar dataKey="available" name="Available MT" fill={accent} fillOpacity={0.8} radius={[4,4,0,0]} isAnimationActive/>
-              <Bar dataKey="required"  name="Required MT"  fill="#f87171" fillOpacity={0.7} radius={[4,4,0,0]} isAnimationActive/>
+              <Bar dataKey="required"  name="Required MT"  fill="#16a34a" fillOpacity={0.7} radius={[4,4,0,0]} isAnimationActive/>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1046,7 +1063,7 @@ const ColdViz = ({ rows, loading, accent }) => {
           <div className="mkt-card" style={{padding:"16px"}}>
             <div className="section-label" style={{marginBottom:12}}>Utilization Gauge · National</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
-              <CircularProgress value={totReq} max={totAvail||1} size={100} accent={avgUtil>80?"#f87171":avgUtil>60?PALETTE[3]:accent} label="National Utilization" sub={`${fmtN(Math.round(totReq/1000))}K / ${fmtN(Math.round(totAvail/1000))}K MT`}/>
+              <CircularProgress value={totReq} max={totAvail||1} size={100} accent={avgUtil>80?"#16a34a":avgUtil>60?PALETTE[3]:accent} label="National Utilization" sub={`${fmtN(Math.round(totReq/1000))}K / ${fmtN(Math.round(totAvail/1000))}K MT`}/>
             </div>
             <div className="mkt-divider"/>
             <div style={{marginTop:12,fontSize:10,color:"rgba(255,255,255,0.4)",fontFamily:"'Syne',sans-serif",textAlign:"center",lineHeight:1.6}}>
@@ -1058,7 +1075,7 @@ const ColdViz = ({ rows, loading, accent }) => {
             <div className="section-label" style={{marginBottom:12}}>State Utilization Bands</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {stateData.slice(0,8).map((r,i)=>{
-                const col=r.utilization>85?"#f87171":r.utilization>65?PALETTE[3]:accent;
+                const col=r.utilization>85?"#16a34a":r.utilization>65?PALETTE[3]:accent;
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:9}}>
                     <span style={{width:68,fontSize:9,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.state}</span>
@@ -1080,7 +1097,7 @@ const ColdViz = ({ rows, loading, accent }) => {
           <div className="section-label" style={{marginBottom:12}}>State-level Surplus / Deficit Analysis</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
             {stateData.slice(0,12).map((r,i)=>{
-              const s=r.available-r.required; const isSurplus=s>=0; const col=isSurplus?accent:"#f87171";
+              const s=r.available-r.required; const isSurplus=s>=0; const col=isSurplus?accent:"#16a34a";
               return (
                 <div key={i} style={{padding:"11px",background:`${col}08`,borderRadius:9,border:`1px solid ${col}20`}}>
                   <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{short(r.state,12)}</div>
@@ -1118,7 +1135,7 @@ const ReservoirViz = ({ rows, loading, accent }) => {
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
         <StatCard label="States Tracked"    value={sd.length}                   icon={Droplets}    accent={accent} delay={0}   sub="Reservoir monitoring"/>
         <StatCard label="Avg Storage"       value={`${avgStorage.toFixed(1)}%`} icon={Activity}    accent={accent} delay={60}  sub="% of normal"/>
-        <StatCard label="Critical States"   value={critical.length}             icon={AlertCircle} accent="#f87171" delay={120} sub="Below 30% storage"/>
+        <StatCard label="Critical States"   value={critical.length}             icon={AlertCircle} accent="#16a34a" delay={120} sub="Below 30% storage"/>
         <StatCard label="Healthy States"    value={healthy.length}              icon={Shield}      accent="#4ade80" delay={180} sub="Above 70% storage"/>
       </div>
 
@@ -1134,11 +1151,11 @@ const ReservoirViz = ({ rows, loading, accent }) => {
             <Tooltip content={<MktTooltip accent={accent} formatter={v=>`${fmtN(v)}%`}/>}/>
             <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
             <Bar dataKey="storage" name="Storage %" radius={[5,5,0,0]} isAnimationActive animationDuration={1000}>
-              {sd.map((r,i)=><Cell key={i} fill={r.storage<30?"#f87171":r.storage<60?PALETTE[3]:accent} fillOpacity={0.82}/>)}
+              {sd.map((r,i)=><Cell key={i} fill={r.storage<30?"#16a34a":r.storage<60?PALETTE[3]:accent} fillOpacity={0.82}/>)}
             </Bar>
             <Line type="monotone" dataKey="deficiency" name="Deficiency %" stroke={PALETTE[10]} strokeWidth={2.5} dot={{fill:PALETTE[10],r:3,strokeWidth:0}} isAnimationActive animationDuration={1300}/>
             <ReferenceLine y={100} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" label={{value:"100%",position:"insideRight",fill:"rgba(255,255,255,0.2)",fontSize:9}}/>
-            <ReferenceLine y={30} stroke="rgba(248,113,113,0.4)" strokeDasharray="3 3" label={{value:"CRITICAL",position:"insideRight",fill:"#f87171",fontSize:8}}/>
+            <ReferenceLine y={30} stroke="rgba(34,197,94,0.4)" strokeDasharray="3 3" label={{value:"CRITICAL",position:"insideRight",fill:"#16a34a",fontSize:8}}/>
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -1167,7 +1184,7 @@ const ReservoirViz = ({ rows, loading, accent }) => {
           <div className="section-label" style={{marginBottom:12}}>Health Matrix · All States</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
             {sd.slice(0,12).map((r,i)=>{
-              const col=r.storage<30?"#f87171":r.storage<60?PALETTE[3]:accent;
+              const col=r.storage<30?"#16a34a":r.storage<60?PALETTE[3]:accent;
               return (
                 <div key={i} style={{padding:"10px 8px",background:`${col}0c`,borderRadius:8,border:`1px solid ${col}22`,textAlign:"center"}}>
                   <div style={{fontSize:8,color:"rgba(255,255,255,0.4)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{short(r.state,9)}</div>
@@ -1525,21 +1542,22 @@ const Market = () => {
   const [districtF,    setDistrictF]    = useState("");
   const [marketF,      setMarketF]      = useState("");
   const [selectedRow,  setSelectedRow]  = useState(null);
-  const [viewMode,     setViewMode]     = useState("viz");   // viz | split | table
+  const [viewMode,     setViewMode]     = useState("split");   // split | viz | table
   const [allStates,    setAllStates]    = useState([]);
   const [allCommodities,setAllCommodities]=useState([]);
   const [tick,         setTick]         = useState(0);
   const [updatedAt,    setUpdatedAt]    = useState("");
-  const [filtersOpen,  setFiltersOpen]  = useState(false);
   const [showRight,    setShowRight]    = useState(true);
 
   const tabMeta = TABS.find(t=>t.id===activeTab)||TABS[0];
   const accent  = tabMeta.accent;
+  const pageBg = "var(--bg)";
+  const panelBg = "var(--surface)";
 
   /* bootstrap filter lists */
   useEffect(()=>{
     let alive=true;
-    Promise.all([apiTry(["/api/v1/live-market/states"]),apiTry(["/api/v1/live-market/commodities"])])
+    Promise.all([apiTry(["/api/v1/market/live-market/states"]),apiTry(["/api/v1/market/live-market/commodities"])])
       .then(([s,c])=>{ if(!alive) return; setAllStates(uniq(s?.states||[])); setAllCommodities(uniq(c?.commodities||[])); })
       .catch(()=>{});
     return ()=>{ alive=false; };
@@ -1620,26 +1638,22 @@ const Market = () => {
 
   /* ── RENDER ── */
   return (
-    <div style={{fontFamily:"'Syne','Inter',system-ui,sans-serif",minHeight:"100vh",background:"#07090f",color:"#e8edf2"}}>
+    <div style={{fontFamily:"'Syne','Inter',system-ui,sans-serif",display:"flex",flexDirection:"column",height:"calc(100vh - 68px)",overflow:"hidden",background:pageBg,color:"var(--text)",marginTop:"-24px"}}>
 
       {/* ── STICKY HEADER ── */}
-      <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(7,9,15,0.97)",backdropFilter:"blur(16px)",borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
+      <div style={{position:"sticky",top:0,zIndex:50,flexShrink:0,background:panelBg,borderBottom:"1px solid var(--border)"}}>
 
         {/* Top bar */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:16}}>
-            <div style={{display:"flex",alignItems:"center",gap:9}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:accent,boxShadow:`0 0 12px ${accent}`}} className="live-dot"/>
-              <span style={{fontSize:13,fontWeight:700,fontFamily:"'Syne',sans-serif",letterSpacing:"-0.01em"}}>Market Intelligence</span>
-              <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",fontFamily:"'JetBrains Mono',monospace",marginLeft:4}}>v2</span>
-            </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:accent,boxShadow:`0 0 12px ${accent}`}} className="live-dot"/>
             {updatedAt&&(
               <span style={{fontSize:9.5,color:"rgba(255,255,255,0.28)",fontFamily:"'JetBrains Mono',monospace",display:"flex",alignItems:"center",gap:5}}>
                 <Clock size={9}/>{new Date(updatedAt).toLocaleTimeString("en-IN")}
               </span>
             )}
             {priceChgPct!==null&&(
-              <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:20,background:priceChgPct>=0?`${accent}18`:"rgba(248,113,113,0.12)",color:priceChgPct>=0?accent:"#f87171",display:"flex",alignItems:"center",gap:4,fontFamily:"'JetBrains Mono',monospace",border:`1px solid ${priceChgPct>=0?accent+"30":"rgba(248,113,113,0.3)"}`}}>
+              <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:20,background:priceChgPct>=0?`${accent}18`:"rgba(34,197,94,0.12)",color:priceChgPct>=0?accent:"#16a34a",display:"flex",alignItems:"center",gap:4,fontFamily:"'JetBrains Mono',monospace",border:`1px solid ${priceChgPct>=0?accent+"30":"rgba(34,197,94,0.3)"}`}}>
                 {priceChgPct>=0?<ArrowUpRight size={11}/>:<ArrowDownRight size={11}/>}{priceChgPct>=0?"+":""}{priceChgPct.toFixed(2)}%
               </span>
             )}
@@ -1647,14 +1661,13 @@ const Market = () => {
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {/* View toggles */}
             <div style={{display:"flex",gap:2,background:"rgba(255,255,255,0.04)",borderRadius:9,padding:"3px"}}>
-              {[["viz","Viz",BarChart3],["split","Split",LayoutGrid],["table","Table",Table]].map(([mode,title,Icon])=>(
+              {[["split","Split",LayoutGrid],["viz","Viz",BarChart3],["table","Table",Table]].map(([mode,title,Icon])=>(
                 <button key={mode} title={title} className={`mkt-btn${viewMode===mode?" active-btn":""}`}
                   onClick={()=>setViewMode(mode)} type="button" style={{padding:"5px 10px",border:"none",borderRadius:6}}>
                   <Icon size={13}/>
                 </button>
               ))}
             </div>
-            <button className={`mkt-btn${filtersOpen?" active-btn":""}`} type="button" onClick={()=>setFiltersOpen(v=>!v)}><Filter size={12}/> Filters {filtersOpen&&<X size={10}/>}</button>
             <button className={`mkt-btn${showRight?"":" active-btn"}`} type="button" onClick={()=>setShowRight(v=>!v)} title="Toggle sidebar"><Eye size={12}/></button>
             <button className="mkt-btn" type="button" onClick={()=>setTick(v=>v+1)}>
               <RefreshCw size={12} className={loading?"mkt-spin":""}/>Refresh
@@ -1678,8 +1691,7 @@ const Market = () => {
         </div>
 
         {/* Filters */}
-        {filtersOpen&&(
-          <div className="mkt-fade-in" style={{padding:"12px 20px",background:"rgba(6,8,14,0.9)",borderTop:"1px solid rgba(255,255,255,0.05)",display:"flex",gap:9,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div className="mkt-fade-in" style={{padding:"12px 20px",background:panelBg,borderTop:"1px solid var(--border)",display:"flex",gap:9,flexWrap:"wrap",alignItems:"flex-end"}}>
             <div style={{position:"relative",minWidth:190}}>
               <Search size={11} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.28)"}}/>
               <input className="mkt-inp" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search rows…" style={{width:190}}/>
@@ -1714,8 +1726,7 @@ const Market = () => {
             <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",fontFamily:"'Syne',sans-serif",alignSelf:"center"}}>
               {visibleRows.length} of {rows.length} rows
             </span>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ── TICKER TAPE (prices/msp only) ── */}
@@ -1725,17 +1736,17 @@ const Market = () => {
 
       {/* ── ERROR ── */}
       {error&&(
-        <div style={{margin:"12px 20px",padding:"12px 16px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.22)",borderRadius:11,fontSize:11,color:"#fca5a5",display:"flex",gap:9,alignItems:"center",fontFamily:"'Syne',sans-serif"}}>
-          <AlertCircle size={14} color="#f87171"/> {error}
+        <div style={{margin:"12px 20px",padding:"12px 16px",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.22)",borderRadius:11,fontSize:11,color:"#86efac",display:"flex",gap:9,alignItems:"center",fontFamily:"'Syne',sans-serif"}}>
+          <AlertCircle size={14} color="#16a34a"/> {error}
         </div>
       )}
 
       {/* ── BODY ── */}
-      <div style={{display:"grid",gridTemplateColumns:viewMode==="table"?"1fr":`1fr${showRight?" 280px":""}`,minHeight:"calc(100vh - 120px)"}}>
+      <div style={{display:"grid",gridTemplateColumns:viewMode==="table"?"1fr":`1fr${showRight?" 280px":""}`,flex:1,minHeight:0}}>
 
         {/* ── LEFT: VIZ + TABLE ── */}
         <div style={{borderRight:showRight&&viewMode!=="table"?"1px solid rgba(255,255,255,0.06)":"none",overflowY:"auto"}} className="mkt-scroll">
-          <div style={{padding:"20px"}}>
+          <div style={{padding:"10px 20px 20px"}}>
 
             {/* VIZ section */}
             {viewMode!=="table"&&renderViz()}
@@ -1765,7 +1776,7 @@ const Market = () => {
 
         {/* ── RIGHT SIDEBAR ── */}
         {showRight&&viewMode!=="table"&&(
-          <div style={{display:"flex",flexDirection:"column",overflowY:"auto",background:"rgba(6,8,14,0.5)"}} className="mkt-scroll">
+          <div style={{display:"flex",flexDirection:"column",overflowY:"auto",background:panelBg,borderLeft:"1px solid var(--border)"}} className="mkt-scroll">
 
             {/* Tab meta */}
             <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
