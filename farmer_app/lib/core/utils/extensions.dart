@@ -8,8 +8,7 @@ extension StringX on String {
       isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 
   /// Title case every word.
-  String get titleCase =>
-      split(' ').map((w) => w.capitalize).join(' ');
+  String get titleCase => split(' ').map((w) => w.capitalize).join(' ');
 }
 
 /// DateTime helpers.
@@ -34,10 +33,10 @@ extension DateTimeX on DateTime {
 extension NumX on num {
   /// ₹1,234.56
   String get inr => NumberFormat.currency(
-        locale: 'en_IN',
-        symbol: '₹',
-        decimalDigits: toInt() == this ? 0 : 2,
-      ).format(this);
+    locale: 'en_IN',
+    symbol: '₹',
+    decimalDigits: toInt() == this ? 0 : 2,
+  ).format(this);
 
   /// 1.2K, 3.4M etc.
   String get compact => NumberFormat.compact().format(this);
@@ -52,11 +51,17 @@ extension WidgetSpacing on num {
 /// Snackbar convenience.
 extension SnackbarX on BuildContext {
   void showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(this).showSnackBar(
+    if (this is! Element) return;
+    final element = this as Element;
+    if (!element.mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(this);
+    if (messenger == null) return;
+
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor:
-            isError ? Theme.of(this).colorScheme.error : null,
+        backgroundColor: isError ? Colors.red.shade700 : null,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),

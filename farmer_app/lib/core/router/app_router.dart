@@ -40,6 +40,9 @@ import '../../features/voice/screens/speech_to_text_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/upi/screens/upi_screen.dart';
 import '../../features/documents/screens/document_builder_screen.dart';
+import '../../features/documents/screens/document_agent_screen.dart';
+import '../../features/documents/screens/document_vault_screen.dart';
+import '../../features/documents/screens/loan_application_screen.dart';
 import '../../features/waste/screens/best_out_of_waste_screen.dart';
 import '../../features/mental_health/screens/suicide_prevention_screen.dart';
 import '../../features/farm_viz/screens/farm_visualizer_screen.dart';
@@ -86,6 +89,9 @@ abstract final class RoutePaths {
   static const upi = '/upi';
   static const documents = '/documents';
   static const documentBuilder = '/document-builder';
+  static const documentBuild = '/document-build';
+  static const documentVault = '/document-vault';
+  static const documentAgent = '/document-agent';
   static const equipmentRentalRates = '/equipment-rental-rates';
   static const waste = '/waste';
   static const mentalHealth = '/mental-health';
@@ -323,6 +329,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.documentBuilder,
         builder: (_, _) => const DocumentBuilderScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.documentBuild,
+        builder: (_, state) {
+          final schemeId = (state.uri.queryParameters['scheme_id'] ?? '')
+              .trim();
+          final docType = state.uri.queryParameters['doc_type'];
+          return LoanApplicationScreen(schemeId: schemeId, docType: docType);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.documentVault,
+        builder: (_, _) => const DocumentVaultScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.documentAgent,
+        builder: (_, _) => const DocumentAgentScreen(),
       ),
       GoRoute(
         path: RoutePaths.equipmentRentalRates,

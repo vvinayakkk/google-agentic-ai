@@ -23,21 +23,23 @@ class SchemeForm {
   });
 
   factory SchemeForm.fromJson(Map<String, dynamic> json) => SchemeForm(
-        schemeId: json['scheme_id']?.toString() ?? json['id']?.toString() ?? '',
-        name: json['name']?.toString() ?? '',
-        shortName: json['short_name']?.toString(),
-        description: json['description']?.toString(),
-        category: json['category']?.toString(),
-        formFields: (json['form_fields'] as List<dynamic>?)
-                ?.map((e) => DocFormField.fromJson(e as Map<String, dynamic>))
-                .toList() ??
-            [],
-        requiredDocuments: (json['required_documents'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [],
-        applicationUrl: json['application_url']?.toString(),
-      );
+    schemeId: json['scheme_id']?.toString() ?? json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    shortName: json['short_name']?.toString(),
+    description: json['description']?.toString(),
+    category: json['category']?.toString(),
+    formFields:
+        (json['form_fields'] as List<dynamic>?)
+            ?.map((e) => DocFormField.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+    requiredDocuments:
+        (json['required_documents'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [],
+    applicationUrl: json['application_url']?.toString(),
+  );
 }
 
 class DocFormField {
@@ -58,15 +60,15 @@ class DocFormField {
   });
 
   factory DocFormField.fromJson(Map<String, dynamic> json) => DocFormField(
-        name: json['name']?.toString() ?? '',
-        label: json['label']?.toString() ?? json['name']?.toString() ?? '',
-        type: json['type']?.toString() ?? 'text',
-        required: json['required'] == true,
-        hint: json['hint']?.toString(),
-        options: (json['options'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList(),
-      );
+    name: json['name']?.toString() ?? '',
+    label: json['label']?.toString() ?? json['name']?.toString() ?? '',
+    type: json['type']?.toString() ?? 'text',
+    required: json['required'] == true,
+    hint: json['hint']?.toString(),
+    options: (json['options'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList(),
+  );
 }
 
 class DocumentSession {
@@ -88,10 +90,13 @@ class DocumentSession {
       DocumentSession(
         sessionId: json['session_id']?.toString() ?? '',
         schemeId: json['scheme_id']?.toString() ?? '',
-        filledFields: (json['filled_fields'] as Map<String, dynamic>?)
-                ?.map((k, v) => MapEntry(k, v.toString())) ??
+        filledFields:
+            (json['filled_fields'] as Map<String, dynamic>?)?.map(
+              (k, v) => MapEntry(k, v.toString()),
+            ) ??
             {},
-        remainingFields: (json['remaining_fields'] as List<dynamic>?)
+        remainingFields:
+            (json['remaining_fields'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             [],
@@ -111,15 +116,17 @@ class ExtractedData {
   });
 
   factory ExtractedData.fromJson(Map<String, dynamic> json) => ExtractedData(
-        documentType: json['document_type']?.toString() ?? 'unknown',
-        fields: (json['fields'] as Map<String, dynamic>?)
-                ?.map((k, v) => MapEntry(k, v.toString())) ??
-            (json['extracted_data'] as Map<String, dynamic>?)
-                ?.map((k, v) => MapEntry(k, v.toString())) ??
-            {},
-        confidence:
-            (json['confidence'] as num?)?.toDouble() ?? 0.0,
-      );
+    documentType: json['document_type']?.toString() ?? 'unknown',
+    fields:
+        (json['fields'] as Map<String, dynamic>?)?.map(
+          (k, v) => MapEntry(k, v.toString()),
+        ) ??
+        (json['extracted_data'] as Map<String, dynamic>?)?.map(
+          (k, v) => MapEntry(k, v.toString()),
+        ) ??
+        {},
+    confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+  );
 }
 
 class SchemeDocument {
@@ -136,9 +143,48 @@ class SchemeDocument {
   });
 
   factory SchemeDocument.fromJson(Map<String, dynamic> json) => SchemeDocument(
-        filename: json['filename']?.toString() ?? '',
-        schemeName: json['scheme_name']?.toString() ?? '',
-        sizeBytes: json['size_bytes'] as int?,
-        downloadUrl: json['download_url']?.toString(),
-      );
+    filename: json['filename']?.toString() ?? '',
+    schemeName: json['scheme_name']?.toString() ?? '',
+    sizeBytes: json['size_bytes'] as int?,
+    downloadUrl: json['download_url']?.toString(),
+  );
+}
+
+class SavedDocument {
+  final String schemeId;
+  final String schemeName;
+  final String sessionId;
+  final String documentUrl;
+  final DateTime generatedAt;
+  final String status;
+
+  const SavedDocument({
+    required this.schemeId,
+    required this.schemeName,
+    required this.sessionId,
+    required this.documentUrl,
+    required this.generatedAt,
+    this.status = 'Saved',
+  });
+
+  factory SavedDocument.fromJson(Map<String, dynamic> json) {
+    final rawDate = (json['generated_at'] ?? '').toString();
+    return SavedDocument(
+      schemeId: (json['scheme_id'] ?? '').toString(),
+      schemeName: (json['scheme_name'] ?? '').toString(),
+      sessionId: (json['session_id'] ?? '').toString(),
+      documentUrl: (json['document_url'] ?? '').toString(),
+      generatedAt: DateTime.tryParse(rawDate) ?? DateTime.now(),
+      status: (json['status'] ?? 'Saved').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'scheme_id': schemeId,
+    'scheme_name': schemeName,
+    'session_id': sessionId,
+    'document_url': documentUrl,
+    'generated_at': generatedAt.toIso8601String(),
+    'status': status,
+  };
 }

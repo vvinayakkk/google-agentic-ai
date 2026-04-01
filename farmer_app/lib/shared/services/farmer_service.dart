@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/utils/app_cache.dart';
@@ -37,10 +38,21 @@ class FarmerService {
 
     try {
       final res = await _client.get(ApiEndpoints.farmerProfile);
-      final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
       await AppCache.put(_profileKey, data, ttlSeconds: _ttlProfile);
       return data;
-    } catch (_) {
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        const fallback = <String, dynamic>{
+          'id': '',
+          'profile_exists': false,
+          'saved_documents': <dynamic>[],
+        };
+        await AppCache.put(_profileKey, fallback, ttlSeconds: _ttlProfile);
+        return Map<String, dynamic>.from(fallback);
+      }
       if (!forceRefresh) {
         final cached = _mapFromCache(await AppCache.get(_profileKey));
         if (cached != null) return cached;
@@ -73,17 +85,20 @@ class FarmerService {
         if (language != null) 'language': language,
       },
     );
-    final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+    final data = Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
     await AppCache.put(_profileKey, data, ttlSeconds: _ttlProfile);
     await AppCache.invalidate(_dashboardKey);
     return data;
   }
 
   /// PUT /api/v1/farmers/me/profile → update profile (all fields optional).
-  Future<Map<String, dynamic>> updateProfile(
-      Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     final res = await _client.put(ApiEndpoints.farmerProfile, data: data);
-    final updated = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+    final updated = Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
     await AppCache.put(_profileKey, updated, ttlSeconds: _ttlProfile);
     await AppCache.invalidate(_dashboardKey);
     return updated;
@@ -109,7 +124,9 @@ class FarmerService {
 
     try {
       final res = await _client.get(ApiEndpoints.farmerDashboard);
-      final data = Map<String, dynamic>.from((res.data as Map).cast<dynamic, dynamic>());
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
       await AppCache.put(_dashboardKey, data, ttlSeconds: _ttlDashboard);
       return data;
     } catch (_) {

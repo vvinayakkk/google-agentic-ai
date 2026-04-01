@@ -10,6 +10,35 @@ from shared.errors import not_found, conflict, ErrorCode
 class FarmerService:
     """Static methods for farmer profile operations."""
 
+    _REQUIRED_PROFILE_KEYS = (
+        "village",
+        "district",
+        "state",
+        "pin_code",
+        "land_size_acres",
+    )
+
+    @staticmethod
+    def _is_profile_stub(profile: dict) -> bool:
+        """Return True when the document only has lightweight fields."""
+        for key in FarmerService._REQUIRED_PROFILE_KEYS:
+            value = profile.get(key)
+            if value is None:
+                return True
+            if isinstance(value, str) and not value.strip():
+                return True
+        return False
+
+    @staticmethod
+    def _empty_profile(user_id: str) -> dict:
+        """Safe empty profile payload for first-time users."""
+        return {
+            "id": "",
+            "user_id": user_id,
+            "saved_documents": [],
+            "profile_exists": False,
+        }
+
     # ── Get profile ──────────────────────────────────────────────
 
     @staticmethod
@@ -22,9 +51,11 @@ class FarmerService:
         )
         docs = [d async for d in query.stream()]
         if not docs:
-            raise not_found("Farmer profile not found")
+            return FarmerService._empty_profile(user_id)
         profile = docs[0].to_dict()
         profile["id"] = docs[0].id
+        profile.setdefault("saved_documents", [])
+        profile["profile_exists"] = not FarmerService._is_profile_stub(profile)
         return profile
 
     # ── Create profile ───────────────────────────────────────────
@@ -39,15 +70,44 @@ class FarmerService:
         )
         docs = [d async for d in existing.stream()]
         if docs:
-            raise conflict("Profile already exists", ErrorCode.RESOURCE_EXISTS)
+            existing_doc = docs[0].to_dict()
+            if not FarmerService._is_profile_stub(existing_doc):
+                raise conflict("Profile already exists", ErrorCode.RESOURCE_EXISTS)
+
+            now = datetime.now(timezone.utc).isoformat()
+            merged = {
+                **existing_doc,
+                **data,
+                "user_id": user_id,
+                "saved_documents": data.get("saved_documents")
+                or existing_doc.get("saved_documents", []),
+                "updated_at": now,
+            }
+            await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).set(
+                merged,
+                merge=True,
+            )
+            updated = await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).get()
+            result = updated.to_dict()
+            result["id"] = updated.id
+            result["saved_documents"] = result.get("saved_documents", [])
+            result["profile_exists"] = True
+            return result
 
         profile_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 
-        doc = {**data, "user_id": user_id, "created_at": now, "updated_at": now}
+        doc = {
+            **data,
+            "saved_documents": data.get("saved_documents", []),
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now,
+        }
         await db.collection(MongoCollections.FARMER_PROFILES).document(profile_id).set(doc)
 
         doc["id"] = profile_id
+        doc["profile_exists"] = True
         return doc
 
     # ── Update profile ───────────────────────────────────────────
@@ -70,6 +130,39 @@ class FarmerService:
         updated = await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).get()
         result = updated.to_dict()
         result["id"] = updated.id
+        return result
+
+    @staticmethod
+    async def patch_profile(db, user_id: str, data: dict) -> dict:
+        """Patch selected profile fields (used by document vault updates)."""
+        query = (
+            db.collection(MongoCollections.FARMER_PROFILES)
+            .where("user_id", "==", user_id)
+            .limit(1)
+        )
+        docs = [d async for d in query.stream()]
+        if not docs:
+            profile_id = str(uuid.uuid4())
+            now = datetime.now(timezone.utc).isoformat()
+            new_doc = {
+                "user_id": user_id,
+                "saved_documents": data.get("saved_documents", []),
+                "created_at": now,
+                "updated_at": now,
+            }
+            await db.collection(MongoCollections.FARMER_PROFILES).document(profile_id).set(new_doc)
+            new_doc["id"] = profile_id
+            new_doc["profile_exists"] = False
+            return new_doc
+
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).update(data)
+
+        updated = await db.collection(MongoCollections.FARMER_PROFILES).document(docs[0].id).get()
+        result = updated.to_dict()
+        result["id"] = updated.id
+        result["saved_documents"] = result.get("saved_documents", [])
+        result["profile_exists"] = not FarmerService._is_profile_stub(result)
         return result
 
     # ── Delete profile ───────────────────────────────────────────

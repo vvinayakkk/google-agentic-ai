@@ -14,6 +14,7 @@ abstract final class ApiEndpoints {
   // ── Farmer (:8002 → /api/v1/farmers) ───────────────────
   static const farmerProfile = '/api/v1/farmers/me/profile';
   static const farmerDashboard = '/api/v1/farmers/me/dashboard';
+  static const farmerMe = '/api/v1/farmers/me';
 
   // ── Crop (:8003 → /api/v1/crops) ──────────────────────
   static const crops = '/api/v1/crops/';
@@ -40,26 +41,29 @@ abstract final class ApiEndpoints {
   static const liveMarketMandis = '/api/v1/market/live-market/mandis';
   static const liveMarketMsp = '/api/v1/market/live-market/msp';
   static const liveMarketMspAll = '/api/v1/market/live-market/msp/all';
-  static const liveMarketCommodities =
-      '/api/v1/market/live-market/commodities';
+  static const liveMarketCommodities = '/api/v1/market/live-market/commodities';
   static const liveMarketStates = '/api/v1/market/live-market/states';
 
-    // ── Weather + Soil (market service) ───────────────────
-    static const marketWeatherCity = '/api/v1/market/weather/city';
-    static const marketWeatherCoords = '/api/v1/market/weather/coords';
-    static const marketWeatherForecastCity = '/api/v1/market/weather/forecast/city';
-    static const marketWeatherForecastCoords = '/api/v1/market/weather/forecast/coords';
-    static const marketWeatherFull = '/api/v1/market/weather/full';
-    static const marketWeatherSoilComposition = '/api/v1/market/weather/soil-composition';
-    static const marketSoilMoisture = '/api/v1/market/soil-moisture';
+  // ── Weather + Soil (market service) ───────────────────
+  static const marketWeatherCity = '/api/v1/market/weather/city';
+  static const marketWeatherCoords = '/api/v1/market/weather/coords';
+  static const marketWeatherForecastCity =
+      '/api/v1/market/weather/forecast/city';
+  static const marketWeatherForecastCoords =
+      '/api/v1/market/weather/forecast/coords';
+  static const marketWeatherFull = '/api/v1/market/weather/full';
+  static const marketWeatherSoilComposition =
+      '/api/v1/market/weather/soil-composition';
+  static const marketSoilMoisture = '/api/v1/market/soil-moisture';
 
   // ── Document Builder ──────────────────────────────────
-  static const docBuilderSchemes =
-      '/api/v1/market/document-builder/schemes';
+  static const docBuilderSchemes = '/api/v1/market/document-builder/schemes';
   static String docBuilderSchemeById(String id) =>
       '/api/v1/market/document-builder/schemes/$id';
   static const docBuilderStartSession =
       '/api/v1/market/document-builder/sessions/start';
+  static String docBuilderGenerateSession(String sessionId) =>
+      '/api/v1/market/document-builder/sessions/$sessionId/generate';
   static String docBuilderSubmitAnswers(String sessionId) =>
       '/api/v1/market/document-builder/sessions/$sessionId/answer';
   static String docBuilderExtractSession(String sessionId) =>
@@ -72,10 +76,16 @@ abstract final class ApiEndpoints {
       '/api/v1/market/document-builder/sessions/$id';
   static const docBuilderSchemeDocs =
       '/api/v1/market/document-builder/scheme-docs';
+  static String docBuilderSchemeDocsByName(String schemeName) =>
+      '/api/v1/market/document-builder/scheme-docs/$schemeName';
+  static String docBuilderDownloadSchemeDocs(String schemeName) =>
+      '/api/v1/market/document-builder/download-scheme-docs/$schemeName';
+  static String docBuilderSchemeDocFile(String schemeName, String docName) =>
+      '/api/v1/market/document-builder/scheme-docs/$schemeName/file/$docName';
 
   // ── Equipment (:8005 → /api/v1/equipment) ──────────────
   static const equipment = '/api/v1/equipment/';
-    static const equipmentBrowse = '/api/v1/equipment/?browse=true';
+  static const equipmentBrowse = '/api/v1/equipment/?browse=true';
   static String equipmentById(String id) => '/api/v1/equipment/$id';
   static const rentals = '/api/v1/equipment/rentals/';
   static String rentalById(String id) => '/api/v1/equipment/rentals/$id';
@@ -88,12 +98,10 @@ abstract final class ApiEndpoints {
   static String rentalCancel(String id) =>
       '/api/v1/equipment/rentals/$id/cancel';
   static const livestock = '/api/v1/equipment/livestock/';
-  static String livestockById(String id) =>
-      '/api/v1/equipment/livestock/$id';
+  static String livestockById(String id) => '/api/v1/equipment/livestock/$id';
 
   // ── Equipment Rental Rates ────────────────────────────
-  static const equipmentRentalRates =
-      '/api/v1/equipment/rental-rates/';
+  static const equipmentRentalRates = '/api/v1/equipment/rental-rates/';
   static const equipmentRentalCategories =
       '/api/v1/equipment/rental-rates/categories';
   static String equipmentRentalByCategory(String category) =>
@@ -106,17 +114,17 @@ abstract final class ApiEndpoints {
       '/api/v1/equipment/rental-rates/$name';
   static String equipmentMechanizationStats([String? state]) =>
       state == null || state.isEmpty
-          ? '/api/v1/equipment/rental-rates/mechanization-stats'
-          : '/api/v1/equipment/rental-rates/mechanization-stats?state=$state';
+      ? '/api/v1/equipment/rental-rates/mechanization-stats'
+      : '/api/v1/equipment/rental-rates/mechanization-stats?state=$state';
   static String equipmentRateHistory(String name, [String? state]) =>
       state == null || state.isEmpty
-          ? '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name'
-          : '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name&state=$state';
+      ? '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name'
+      : '/api/v1/equipment/rental-rates/rate-history?equipment_name=$name&state=$state';
 
   // ── Agent (:8006 → /api/v1/agent) ─────────────────────
   static const agentChat = '/api/v1/agent/chat';
-    static const agentChatPrepare = '/api/v1/agent/chat/prepare';
-    static const agentChatFinalize = '/api/v1/agent/chat/finalize';
+  static const agentChatPrepare = '/api/v1/agent/chat/prepare';
+  static const agentChatFinalize = '/api/v1/agent/chat/finalize';
   static const agentSessions = '/api/v1/agent/sessions';
   static String agentSessionById(String id) => '/api/v1/agent/sessions/$id';
   static const agentSearch = '/api/v1/agent/search';
@@ -130,10 +138,8 @@ abstract final class ApiEndpoints {
 
   // ── Notification (:8008 → /api/v1/notifications) ──────
   static const notifications = '/api/v1/notifications/';
-  static const notificationsUnreadCount =
-      '/api/v1/notifications/unread/count';
+  static const notificationsUnreadCount = '/api/v1/notifications/unread/count';
   static String notificationById(String id) => '/api/v1/notifications/$id';
-  static String notificationRead(String id) =>
-      '/api/v1/notifications/$id/read';
+  static String notificationRead(String id) => '/api/v1/notifications/$id/read';
   static const notificationReadAll = '/api/v1/notifications/read-all';
 }

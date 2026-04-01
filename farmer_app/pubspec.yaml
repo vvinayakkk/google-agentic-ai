@@ -36,6 +36,8 @@ dependencies:
   flutter_animate: any
   fl_chart: ^0.69.0
   table_calendar: ^3.0.9
+  syncfusion_flutter_pdfviewer: ^29.2.11
+  pdf: ^3.11.1
 
   # Maps & Location
   geolocator: any

@@ -107,6 +107,13 @@ class AppPrefetchService {
       () => market.listPrices(perPage: 100),
       () => market.listMandis(perPage: 100),
       () => market.listSchemes(perPage: 100),
+      () => market.listSchemes(
+            state: state.isEmpty ? null : state,
+            isActive: true,
+            perPage: 80,
+            preferCache: true,
+            forceRefresh: false,
+          ),
       () => liveMarket.getLivePrices(limit: 120),
       () => liveMarket.getLiveMandis(limit: 200),
     ]);
@@ -133,9 +140,32 @@ class AppPrefetchService {
       () => equipment.getMechanizationStats(),
       if (state.isNotEmpty)
         () => equipment.getMechanizationStats(state: state),
-      () => docBuilder.listSchemes(),
+      () => docBuilder.listSchemes(preferCache: true, forceRefresh: false),
       () => docBuilder.listSchemeDocs(),
     ]);
+
+    final docSchemes = await guardValue<List<Map<String, dynamic>>>(
+      () => docBuilder.listSchemes(preferCache: true, forceRefresh: false),
+    );
+    if (docSchemes != null && docSchemes.isNotEmpty) {
+      final candidates = docSchemes.take(3).toList(growable: false);
+      await Future.wait(
+        candidates.map((scheme) {
+          final schemeId =
+              (scheme['id'] ?? scheme['scheme_id'] ?? scheme['short_name'] ?? scheme['name'] ?? '')
+                  .toString()
+                  .trim();
+          if (schemeId.isEmpty) return Future<void>.value();
+          return guard(
+            () => docBuilder.getSchemeForm(
+              schemeId,
+              preferCache: true,
+              forceRefresh: false,
+            ),
+          );
+        }),
+      );
+    }
   }
 }
 

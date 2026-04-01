@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from shared.auth.deps import get_current_user
+from shared.core.constants import MongoCollections
 from shared.db.mongodb import get_async_db
 from shared.errors import AppError, ErrorCode, HttpStatus
 
@@ -22,10 +23,63 @@ router = APIRouter(prefix="/document-builder", tags=["Document Builder"])
 service = DocumentBuilderService()
 
 
+async def _load_db_schemes(db) -> list[dict]:
+    """Load all schemes from Mongo with id normalization."""
+    docs = [d async for d in db.collection(MongoCollections.GOVERNMENT_SCHEMES).stream()]
+    items: list[dict] = []
+    for doc in docs:
+        item = doc.to_dict() or {}
+        item["id"] = doc.id
+        item.setdefault("scheme_id", doc.id)
+        items.append(item)
+    return items
+
+
+async def _resolve_scheme(db, key: str) -> dict | None:
+    """Resolve a scheme by id, scheme_id, short_name, or name."""
+    token = (key or "").strip().lower()
+    if not token:
+        return None
+
+    doc = await db.collection(MongoCollections.GOVERNMENT_SCHEMES).document(key).get()
+    if doc.exists:
+        data = doc.to_dict() or {}
+        data["id"] = doc.id
+        data.setdefault("scheme_id", doc.id)
+        return data
+
+    all_items = await _load_db_schemes(db)
+    for item in all_items:
+        if token in {
+            str(item.get("id", "")).lower(),
+            str(item.get("scheme_id", "")).lower(),
+            str(item.get("short_name", "")).lower(),
+            str(item.get("name", "")).lower(),
+        }:
+            return item
+
+    # Fallback to built-in static dataset.
+    static = get_scheme_by_name(key)
+    if static:
+        return {
+            **static,
+            "id": static.get("id") or static.get("short_name") or static.get("name", ""),
+            "scheme_id": static.get("scheme_id") or static.get("short_name") or static.get("name", ""),
+        }
+
+    return None
+
+
 # ── Request / Response Models ────────────────────────────────────
 
 class StartSessionRequest(BaseModel):
-    scheme_name: str = Field(..., description="Name or short_name of the scheme")
+    scheme_name: Optional[str] = Field(default=None, description="Name or short_name of the scheme")
+    scheme_id: Optional[str] = Field(default=None, description="Internal scheme id/slug")
+    preferred_format: str = Field(default="html", description="Preferred output format (html/pdf)")
+
+
+class GenerateDocumentRequest(BaseModel):
+    format: str = Field(default="html", description="Requested output format (html/pdf)")
 
 class SubmitAnswerRequest(BaseModel):
     answers: dict = Field(..., description="Dict of field_name → value for the answered questions")
@@ -50,7 +104,19 @@ async def list_available_schemes(
     user: dict = Depends(get_current_user),
 ):
     """List all government schemes with their form fields and required documents."""
-    schemes = get_all_schemes()
+    db = get_async_db()
+    schemes = await _load_db_schemes(db)
+
+    if not schemes:
+        builtins = get_all_schemes()
+        schemes = [
+            {
+                **s,
+                "id": s.get("id") or s.get("short_name") or s.get("name", ""),
+                "scheme_id": s.get("scheme_id") or s.get("short_name") or s.get("name", ""),
+            }
+            for s in builtins
+        ]
 
     if category:
         schemes = [s for s in schemes if s.get("category", "").lower() == category.lower()]
@@ -63,20 +129,34 @@ async def list_available_schemes(
             or state_lower in s.get("state", "").lower()
         ]
 
-    # Return summary for listing
+    # Return enriched listing payload (not only summary), so UI can render complete data.
     summaries = []
     for s in schemes:
+        display_name = s.get("name") or s.get("scheme_name") or s.get("short_name") or "Untitled Scheme"
         summaries.append({
-            "name": s["name"],
+            "id": s.get("id") or s.get("scheme_id") or s.get("short_name") or s.get("name", ""),
+            "scheme_id": s.get("scheme_id") or s.get("id") or s.get("short_name") or s.get("name", ""),
+            "name": display_name,
             "short_name": s.get("short_name", ""),
             "description": s.get("description", ""),
             "category": s.get("category", ""),
             "state": s.get("state", "All"),
             "benefits": s.get("benefits", []),
+            "eligibility": s.get("eligibility", []),
             "required_documents": s.get("required_documents", []),
+            "application_process": s.get("application_process", []),
             "application_url": s.get("application_url", ""),
+            "form_download_urls": s.get("form_download_urls", []),
+            "form_fields": s.get("form_fields", []),
+            "ministry": s.get("ministry", ""),
+            "launched_year": s.get("launched_year", s.get("launch_year", "")),
+            "helpline": s.get("helpline", ""),
+            "amount_range": s.get("amount_range", ""),
+            "is_active": s.get("is_active", True),
             "form_field_count": len(s.get("form_fields", [])),
         })
+
+    summaries.sort(key=lambda x: (x.get("name") or "").lower())
 
     return {"schemes": summaries, "total": len(summaries)}
 
@@ -87,7 +167,8 @@ async def get_scheme_detail(
     user: dict = Depends(get_current_user),
 ):
     """Get full details of a scheme including form fields."""
-    scheme = get_scheme_by_name(scheme_name)
+    db = get_async_db()
+    scheme = await _resolve_scheme(db, scheme_name)
     if not scheme:
         raise AppError(
             HttpStatus.NOT_FOUND,
@@ -109,21 +190,48 @@ async def start_session(
     Pre-fills available data from farmer profile and returns first batch of questions.
     """
     db = get_async_db()
-    farmer_id = user.get("uid") or user.get("user_id")
+    farmer_id = user.get("id") or user.get("uid") or user.get("user_id")
 
-    scheme = get_scheme_by_name(body.scheme_name)
+    requested_name = (body.scheme_name or "").strip()
+    requested_id = (body.scheme_id or "").strip()
+
+    if not requested_name and not requested_id:
+        raise AppError(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.MISSING_FIELD,
+            "Either scheme_name or scheme_id is required",
+        )
+
+    scheme = await _resolve_scheme(db, requested_id or requested_name)
     if not scheme:
         raise AppError(
             HttpStatus.NOT_FOUND,
             ErrorCode.SCHEME_NOT_FOUND,
-            f"Scheme '{body.scheme_name}' not found",
+            f"Scheme '{requested_name or requested_id}' not found",
         )
 
     result = await service.start_session(
         db=db,
         farmer_id=farmer_id,
-        scheme_id=scheme.get("short_name", scheme["name"]),
+        scheme_id=scheme.get("id") or scheme.get("scheme_id") or scheme.get("short_name", scheme["name"]),
         scheme_name=scheme["name"],
+        preferred_format=(body.preferred_format or "html").lower(),
+    )
+    return result
+
+
+@router.post("/sessions/{session_id}/generate", status_code=HttpStatus.OK)
+async def generate_document(
+    session_id: str,
+    body: GenerateDocumentRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Generate output document for the given session in preferred format."""
+    db = get_async_db()
+    result = await service.generate_document(
+        db=db,
+        session_id=session_id,
+        preferred_format=(body.format or "html").lower(),
     )
     return result
 
@@ -205,7 +313,7 @@ async def list_sessions(
 ):
     """List all document builder sessions for the current farmer."""
     db = get_async_db()
-    farmer_id = user.get("uid") or user.get("user_id")
+    farmer_id = user.get("id") or user.get("uid") or user.get("user_id")
     result = await service.list_sessions(db=db, farmer_id=farmer_id, status=status)
     return result
 
@@ -224,7 +332,11 @@ async def download_document(
             ErrorCode.RESOURCE_NOT_FOUND,
             "Document not ready. Complete all required fields first.",
         )
-    return result
+    return FileResponse(
+        path=result["filepath"],
+        filename=result.get("filename") or f"application_{session_id}.html",
+        media_type="text/html",
+    )
 
 
 # ── Bulk Scheme Seed ─────────────────────────────────────────────
@@ -276,7 +388,8 @@ async def download_scheme_documents(
     user: dict = Depends(get_current_user),
 ):
     """Download all available PDF forms and documents for a specific scheme."""
-    scheme = get_scheme_by_name(scheme_name)
+    db = get_async_db()
+    scheme = await _resolve_scheme(db, scheme_name)
     if not scheme:
         raise AppError(
             HttpStatus.NOT_FOUND,
@@ -302,8 +415,18 @@ async def list_scheme_documents(
     user: dict = Depends(get_current_user),
 ):
     """List all downloaded documents for a scheme."""
-    docs = downloader.get_scheme_documents(scheme_name)
-    return {"scheme": scheme_name, "documents": docs, "count": len(docs)}
+    db = get_async_db()
+    scheme = await _resolve_scheme(db, scheme_name)
+    canonical = scheme.get("short_name") or scheme.get("name") if scheme else scheme_name
+    docs = downloader.get_scheme_documents(canonical)
+    if not docs and canonical != scheme_name:
+        docs = downloader.get_scheme_documents(scheme_name)
+    return {
+        "scheme": canonical,
+        "requested_scheme": scheme_name,
+        "documents": docs,
+        "count": len(docs),
+    }
 
 
 @router.get("/scheme-docs", status_code=HttpStatus.OK)
@@ -322,7 +445,12 @@ async def serve_scheme_document(
 ):
     """Serve a downloaded scheme document file to the farmer."""
     import os
-    file_path = downloader.get_document_path(scheme_name, doc_name)
+    db = get_async_db()
+    scheme = await _resolve_scheme(db, scheme_name)
+    canonical = scheme.get("short_name") or scheme.get("name") if scheme else scheme_name
+    file_path = downloader.get_document_path(canonical, doc_name)
+    if not file_path and canonical != scheme_name:
+        file_path = downloader.get_document_path(scheme_name, doc_name)
     if not file_path or not os.path.exists(file_path):
         raise AppError(
             HttpStatus.NOT_FOUND,

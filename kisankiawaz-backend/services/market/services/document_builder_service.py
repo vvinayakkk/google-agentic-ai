@@ -29,7 +29,11 @@ class DocumentBuilderService:
 
     @staticmethod
     async def start_session(
-        db, farmer_id: str, scheme_id: str = None, scheme_name: str = None
+        db,
+        farmer_id: str,
+        scheme_id: str = None,
+        scheme_name: str = None,
+        preferred_format: str = "html",
     ) -> dict:
         """
         Start a new document builder session.
@@ -128,6 +132,7 @@ class DocumentBuilderService:
             "scheme_name": scheme.get("name", scheme_name or ""),
             "scheme_short_name": scheme.get("short_name", ""),
             "scheme_category": scheme.get("category", ""),
+            "preferred_format": (preferred_format or "html").lower(),
             "form_fields": form_fields,
             "filled_fields": pre_filled,
             "required_documents": scheme.get("required_documents", []),
@@ -151,6 +156,7 @@ class DocumentBuilderService:
             "remaining_count": len(missing_fields),
             "required_documents": scheme.get("required_documents", []),
             "form_download_urls": scheme.get("form_download_urls", []),
+            "preferred_format": (preferred_format or "html").lower(),
         }
 
     # ── Submit Answers & Get Next Questions ──────────────────────
@@ -229,19 +235,32 @@ class DocumentBuilderService:
                 session_id=session_id,
                 scheme_name=session.get("scheme_name", ""),
                 filled_fields=filled,
+                preferred_format=session.get("preferred_format", "html"),
             )
             document_url = doc_result.get("download_url", "")
+            document_html = doc_result.get("document_html", "")
             session_status = "completed"
         else:
             session_status = "in_progress"
+            document_html = ""
         
         # Update session
-        await session_ref.update({
+        payload = {
             "filled_fields": filled,
             "questions_asked": list(asked),
             "status": session_status,
             "updated_at": datetime.now(timezone.utc).isoformat(),
-        })
+        }
+        if document_ready:
+            payload.update(
+                {
+                    "document_url": document_url,
+                    "document_html": document_html,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+
+        await session_ref.update(payload)
         
         return {
             "session_id": session_id,
@@ -252,6 +271,7 @@ class DocumentBuilderService:
             "remaining_count": len(missing_fields),
             "document_ready": document_ready,
             "document_url": document_url,
+            "document_html": document_html,
             "status": session_status,
         }
 
@@ -443,6 +463,47 @@ Return ONLY the JSON, no markdown, no explanation."""
         result["id"] = doc.id
         return result
 
+    @staticmethod
+    async def generate_document(
+        db,
+        session_id: str,
+        preferred_format: str = "html",
+    ) -> dict:
+        """Generate (or regenerate) a document for a session and persist references."""
+        session_ref = db.collection("document_builder_sessions").document(session_id)
+        session_doc = await session_ref.get()
+
+        if not session_doc.exists:
+            raise not_found("Session not found")
+
+        session = session_doc.to_dict()
+        doc_result = await DocumentBuilderService._generate_document(
+            session_id=session_id,
+            scheme_name=session.get("scheme_name", ""),
+            filled_fields=session.get("filled_fields", {}),
+            preferred_format=(preferred_format or session.get("preferred_format") or "html"),
+        )
+
+        await session_ref.update(
+            {
+                "status": "completed",
+                "preferred_format": (preferred_format or "html").lower(),
+                "document_url": doc_result.get("download_url", ""),
+                "document_html": doc_result.get("document_html", ""),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+
+        return {
+            "session_id": session_id,
+            "scheme_name": session.get("scheme_name", ""),
+            "document_url": doc_result.get("download_url", ""),
+            "document_html": doc_result.get("document_html", ""),
+            "format": doc_result.get("format", "html"),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
     # ── List Farmer's Sessions ───────────────────────────────────
 
     @staticmethod
@@ -480,7 +541,10 @@ Return ONLY the JSON, no markdown, no explanation."""
 
     @staticmethod
     async def _generate_document(
-        session_id: str, scheme_name: str, filled_fields: dict
+        session_id: str,
+        scheme_name: str,
+        filled_fields: dict,
+        preferred_format: str = "html",
     ) -> dict:
         """Generate a filled PDF/HTML application document."""
         output_dir = "/tmp/generated_documents"
@@ -498,8 +562,9 @@ Return ONLY the JSON, no markdown, no explanation."""
         return {
             "filename": filename,
             "filepath": filepath,
-            "format": "html",
-            "download_url": f"/api/v1/market/document-builder/download/{session_id}",
+            "format": (preferred_format or "html").lower(),
+            "document_html": html_content,
+            "download_url": f"/api/v1/market/document-builder/sessions/{session_id}/download",
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -610,6 +675,7 @@ Return ONLY the JSON, no markdown, no explanation."""
             session_id=session_id,
             scheme_name=session.get("scheme_name", ""),
             filled_fields=session.get("filled_fields", {}),
+            preferred_format=session.get("preferred_format", "html"),
         )
         
         return {
