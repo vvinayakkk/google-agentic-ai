@@ -26,8 +26,24 @@ const TopBar = ({ onRefresh }) => {
       </div>
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        <button type="button" className="btn-ghost" onClick={handleRefresh}> <RefreshCw size={14} /> <span style={{ marginLeft: 6 }}>Refresh</span> </button>
-        <button type="button" className="btn-ghost" onClick={() => setExportOpen(true)}> <Download size={14} /> <span style={{ marginLeft: 6 }}>Export</span> </button>
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={handleRefresh}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+        >
+          <RefreshCw size={14} />
+          <span>Refresh</span>
+        </button>
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={() => setExportOpen(true)}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+        >
+          <Download size={14} />
+          <span>Export</span>
+        </button>
         <button type="button" className="icon-btn" style={{ position: "relative" }}> <Bell size={16} /> </button>
 
         <div style={{ position: "relative" }} ref={profileRef}>
