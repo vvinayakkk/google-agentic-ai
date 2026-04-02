@@ -500,6 +500,66 @@ async def admin_get_rental(rental_id: str, admin: dict = Depends(get_current_adm
     return data
 
 
+async def _admin_update_rental_status(db, rental_id: str, status_value: str, admin_id: str, action: str) -> dict:
+    ref = db.collection(MongoCollections.EQUIPMENT_BOOKINGS).document(rental_id)
+    doc = await ref.get()
+    if not doc.exists:
+        raise not_found("Rental not found")
+
+    current = (doc.to_dict() or {}).get("status", "")
+    if str(current).lower() != "pending":
+        raise bad_request("Only pending rentals can be updated by admin")
+
+    now = _now_iso()
+    await ref.update(
+        {
+            "status": status_value,
+            "updated_at": now,
+            "admin_action_by": admin_id,
+            "admin_action_at": now,
+        }
+    )
+    await db.collection(MongoCollections.ADMIN_AUDIT_LOGS).add(
+        {
+            "admin_id": admin_id,
+            "action": action,
+            "target_collection": MongoCollections.EQUIPMENT_BOOKINGS,
+            "target_doc_id": rental_id,
+            "payload_summary": f"status={status_value}",
+            "timestamp": now,
+        }
+    )
+
+    updated = await ref.get()
+    payload = updated.to_dict() or {}
+    payload["id"] = updated.id
+    return payload
+
+
+@router.put("/rentals/{rental_id}/approve", status_code=HttpStatus.OK)
+async def admin_approve_rental(rental_id: str, admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+    return await _admin_update_rental_status(
+        db=db,
+        rental_id=rental_id,
+        status_value="approved",
+        admin_id=admin.get("id", ""),
+        action="ADMIN_APPROVE_RENTAL",
+    )
+
+
+@router.put("/rentals/{rental_id}/reject", status_code=HttpStatus.OK)
+async def admin_reject_rental(rental_id: str, admin: dict = Depends(get_current_admin)):
+    db = get_async_db()
+    return await _admin_update_rental_status(
+        db=db,
+        rental_id=rental_id,
+        status_value="rejected",
+        admin_id=admin.get("id", ""),
+        action="ADMIN_REJECT_RENTAL",
+    )
+
+
 @router.put("/rentals/{rental_id}/force-status", status_code=HttpStatus.OK)
 async def force_rental_status(
     rental_id: str,

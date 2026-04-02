@@ -38,6 +38,7 @@ class MongoCollections:
     AGENT_CONVERSATIONS: str = "agent_conversations"
     VOICE_SESSIONS: str = "voice_sessions"
     FARMER_FEEDBACK: str = "farmer_feedback"
+    CHAT_USER_PREFERENCES: str = "chat_user_preferences"
 
     # ── Reference data (ref_*) — populated by scripts, read-only at runtime ──
     REF_MANDI_PRICES: str = "ref_mandi_prices"

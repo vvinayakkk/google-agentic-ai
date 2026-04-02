@@ -20,6 +20,7 @@ class AgentService {
     String? language,
     String? sessionId,
     String? agentType,
+    String? responseMode,
   }) async {
     final res = await _client.post(
       ApiEndpoints.agentChat,
@@ -28,6 +29,7 @@ class AgentService {
         if (language != null) 'language': language,
         if (sessionId != null) 'session_id': sessionId,
         if (agentType != null) 'agent_type': agentType,
+        if (responseMode != null) 'response_mode': responseMode,
       },
     );
     return res.data as Map<String, dynamic>;
@@ -40,6 +42,7 @@ class AgentService {
     String? sessionId,
     String? agentType,
     bool allowFallback = true,
+    String? responseMode,
   }) async {
     final res = await _client.post(
       ApiEndpoints.agentChatPrepare,
@@ -49,6 +52,7 @@ class AgentService {
         if (sessionId != null) 'session_id': sessionId,
         if (agentType != null) 'agent_type': agentType,
         'allow_fallback': allowFallback,
+        if (responseMode != null) 'response_mode': responseMode,
       },
     );
     return res.data as Map<String, dynamic>;

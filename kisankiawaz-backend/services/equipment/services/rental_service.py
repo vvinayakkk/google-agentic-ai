@@ -50,13 +50,46 @@ class RentalService:
         if not equipment_id:
             raise bad_request("Missing required field: equipment_id")
 
+        start_date = str(data.get("start_date") or "").strip()
+        end_date = str(data.get("end_date") or "").strip()
+        if not start_date or not end_date:
+            raise bad_request("start_date and end_date are required")
+
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+        except ValueError:
+            raise bad_request("start_date and end_date must be valid ISO date-time strings")
+        if end_dt < start_dt:
+            raise bad_request("end_date cannot be before start_date")
+
         # Verify equipment exists
         equip_doc = await db.collection(MongoCollections.EQUIPMENT).document(equipment_id).get()
-        if not equip_doc.exists:
-            raise not_found("Equipment not found")
+        booking_source = "farmer_equipment"
+        equip_data = equip_doc.to_dict() if equip_doc.exists else None
 
-        equip_data = equip_doc.to_dict()
-        owner_id = equip_data.get("farmer_id")
+        if equip_data:
+            owner_id = equip_data.get("farmer_id")
+            equipment_name = equip_data.get("name", "")
+            provider_id = None
+            provider_name = None
+            provider_phone = None
+            state = None
+            district = None
+        else:
+            provider_doc = await db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).document(equipment_id).get()
+            if not provider_doc.exists:
+                raise not_found("Equipment not found")
+
+            booking_source = "reference_provider"
+            provider_data = provider_doc.to_dict() or {}
+            owner_id = str(provider_data.get("owner_id") or provider_data.get("provider_id") or "admin")
+            equipment_name = provider_data.get("name", "")
+            provider_id = provider_data.get("provider_id")
+            provider_name = provider_data.get("provider_name")
+            provider_phone = provider_data.get("provider_phone")
+            state = provider_data.get("state")
+            district = provider_data.get("district")
 
         if owner_id == renter_id:
             raise bad_request("Cannot rent your own equipment")
@@ -66,13 +99,19 @@ class RentalService:
 
         doc = {
             "equipment_id": equipment_id,
-            "equipment_name": equip_data.get("name", ""),
+            "equipment_name": equipment_name,
             "owner_id": owner_id,
             "renter_id": renter_id,
-            "start_date": data.get("start_date", ""),
-            "end_date": data.get("end_date", ""),
+            "start_date": start_date,
+            "end_date": end_date,
             "message": data.get("message", ""),
             "status": "pending",
+            "booking_source": booking_source,
+            "provider_id": provider_id,
+            "provider_name": provider_name,
+            "provider_phone": provider_phone,
+            "state": state,
+            "district": district,
             "created_at": now,
             "updated_at": now,
         }

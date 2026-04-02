@@ -52,6 +52,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _hasText = false;
   bool _isMicRecording = false;
   bool _isMicProcessing = false;
+  String _responseMode = 'detailed';
   int _micWavePhase = 0;
   int _loadingHintIndex = 0;
   String _loadingHint = 'Searching...';
@@ -243,19 +244,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (status == 'completed') {
         final finalResult = (payload['result'] as Map<String, dynamic>?) ??
             <String, dynamic>{};
+        List<String>? suggestions;
+        if (finalResult['suggestions'] is List) {
+          suggestions = (finalResult['suggestions'] as List)
+              .whereType<String>()
+              .where((e) => e.trim().isNotEmpty)
+              .toList(growable: false);
+        } else if (payload['suggestions'] is List) {
+          suggestions = (payload['suggestions'] as List)
+              .whereType<String>()
+              .where((e) => e.trim().isNotEmpty)
+              .toList(growable: false);
+        }
         final finalText = (payload['final_response'] ??
                 finalResult['response'] ??
+                payload['merged_response'] ??
                 finalResult['content'] ??
                 '')
             .toString()
             .trim();
-        final mergedText =
-            (payload['merged_response'] ?? '').toString().trim();
+        var transientRemoved = 0;
 
         setState(() {
-          if (_messages.isNotEmpty && _messages.first.isLoading) {
-            _messages.removeAt(0);
-          }
+          // Replace transient partial/loading assistant content with one final reply.
+          final beforeCount = _messages.length;
+          _messages.removeWhere(
+            (m) =>
+                m.role == 'assistant' &&
+                (m.isLoading || m.isPartial || m.stage == 'partial'),
+          );
+          transientRemoved = beforeCount - _messages.length;
 
           if (finalText.isNotEmpty) {
             _messages.insert(
@@ -265,22 +283,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 content: finalText,
                 timestamp: DateTime.now(),
                 stage: 'final',
-              ),
-            );
-          }
-
-          if (mergedText.isNotEmpty && mergedText != finalText) {
-            _messages.insert(
-              0,
-              ChatMessage(
-                role: 'assistant',
-                content: mergedText,
-                timestamp: DateTime.now(),
-                stage: 'combined',
+                suggestions: suggestions,
               ),
             );
           }
         });
+        debugPrint(
+          'chat_finalize_replace request_id=$requestId removed_transient=$transientRemoved inserted_final=${finalText.isNotEmpty}',
+        );
         return true;
       }
 
@@ -315,6 +325,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       language: context.locale.languageCode,
       sessionId: _sessionId,
       agentType: widget.agentType,
+      responseMode: _responseMode,
     );
     final response = ChatMessage.fromJson(data);
     _sessionId ??= data['session_id'] as String?;
@@ -428,6 +439,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           sessionId: _sessionId,
           agentType: widget.agentType,
           allowFallback: true,
+          responseMode: _responseMode,
         );
         _sessionId ??= (prepare['session_id'] as String?);
 
@@ -709,6 +721,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Widget _modeChip(String value, String label) {
+    final selected = _responseMode == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) {
+        setState(() => _responseMode = value);
+        context.showSnack('Mode set to $label');
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
@@ -784,6 +808,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             setState(() => _replyTarget = msg);
                                   context.showSnack('Reply target selected');
                           },
+                        onSuggestionTap: (suggestion) {
+                          final clean = suggestion.trim();
+                          if (clean.isEmpty) return;
+                          _controller.text = clean;
+                          _controller.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _controller.text.length),
+                          );
+                          _send();
+                        },
                       );
                       },
                     )
@@ -913,6 +946,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
             ),
 
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _modeChip('brief', 'Brief'),
+                  _modeChip('detailed', 'Detailed'),
+                  _modeChip('step-by-step', 'Step-by-step'),
+                  _modeChip('voice-friendly', 'Voice'),
+                ],
+              ),
+            ),
+
             // ── Input bar ─────────────────────────────────
             _ChatInputBar(
               controller: _controller,
@@ -956,6 +1007,7 @@ class _ChatBubble extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback? onTts;
   final VoidCallback? onReply;
+  final void Function(String suggestion)? onSuggestionTap;
 
   const _ChatBubble({
     super.key,
@@ -964,6 +1016,7 @@ class _ChatBubble extends StatelessWidget {
     this.isPlaying = false,
     this.onTts,
     this.onReply,
+    this.onSuggestionTap,
   });
 
   @override
@@ -1091,6 +1144,52 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
+                if ((message.stage == 'final' || !(message.isPartial)) && !message.isLoading) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ...((message.suggestions ?? const <String>[])
+                          .where((s) => s.trim().isNotEmpty)
+                          .take(4)
+                          .map(
+                            (s) => ActionChip(
+                              label: Text(s),
+                              onPressed: onSuggestionTap == null ? null : () => onSuggestionTap!(s),
+                            ),
+                          )),
+                      ActionChip(
+                        label: const Text('View Calendar'),
+                        avatar: const Icon(Icons.calendar_month_outlined, size: 16),
+                        onPressed: () => context.push(RoutePaths.calendar),
+                      ),
+                      ActionChip(
+                        label: const Text('Undo Last Action'),
+                        avatar: const Icon(Icons.undo, size: 16),
+                        onPressed: () {
+                          Clipboard.setData(
+                            const ClipboardData(text: 'Undo my last calendar action and verify.'),
+                          );
+                          context.showSnack('Undo command copied. Paste and send.');
+                        },
+                      ),
+                      ActionChip(
+                        label: const Text('Schedule Follow-up'),
+                        avatar: const Icon(Icons.add_task_outlined, size: 16),
+                        onPressed: () {
+                          Clipboard.setData(
+                            const ClipboardData(
+                              text:
+                                  'Schedule a follow-up task tomorrow 08:00 and verify it from DB.',
+                            ),
+                          );
+                          context.showSnack('Follow-up command copied. Paste and send.');
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ],
           ),

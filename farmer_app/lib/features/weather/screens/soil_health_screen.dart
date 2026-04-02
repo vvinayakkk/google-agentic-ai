@@ -52,7 +52,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   }
 
   Future<void> _fetch({bool forceRefresh = false}) async {
-    final hasSnapshot = _full != null || _soilComposition != null || _legacyRecord != null;
+    final hasSnapshot =
+        _full != null || _soilComposition != null || _legacyRecord != null;
     setState(() {
       if (hasSnapshot) {
         _refreshing = true;
@@ -67,26 +68,31 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       final state = (profile['state'] as String?)?.trim() ?? '';
       final district = (profile['district'] as String?)?.trim();
 
-      if (state.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      final lat = prefs.getDouble('last_location_lat');
+      final lon = prefs.getDouble('last_location_lon');
+
+      if (state.isEmpty && lat == null && lon == null) {
         setState(() {
-          _error = 'Please set your farm location in profile to load soil data.';
+          _error =
+              'Location unavailable. Set farm location in profile or enable location to load soil data.';
           _loading = false;
           _refreshing = false;
         });
         return;
       }
 
-        final fallbackLabel = [profile['district'], profile['state']]
+      final fallbackLabel = [profile['district'], profile['state']]
           .map((e) => (e ?? '').toString().trim())
           .where((e) => e.isNotEmpty)
           .join(', ');
 
       final service = ref.read(weatherSoilServiceProvider);
-      final prefs = await SharedPreferences.getInstance();
-      final lat = prefs.getDouble('last_location_lat');
-      final lon = prefs.getDouble('last_location_lon');
 
-      Future<T?> safeTimeout<T>(Future<T> Function() work, Duration timeout) async {
+      Future<T?> safeTimeout<T>(
+        Future<T> Function() work,
+        Duration timeout,
+      ) async {
         try {
           return await work().timeout(timeout);
         } catch (_) {
@@ -95,49 +101,49 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       }
 
       Map<String, dynamic>? legacy;
-      try {
-        var soil = await service.getSoilMoisture(
-          state: state,
-          district: district,
-          limit: 1,
-          forceRefresh: forceRefresh,
-        );
-        var latest =
-            (soil['latest_records'] as List?)?.cast<Map<String, dynamic>>() ??
-                const <Map<String, dynamic>>[];
-
-        if (latest.isEmpty && district != null && district.isNotEmpty) {
-          soil = await service.getSoilMoisture(
+      if (state.isNotEmpty) {
+        try {
+          var soil = await service.getSoilMoisture(
             state: state,
+            district: district,
             limit: 1,
             forceRefresh: forceRefresh,
           );
-          latest =
+          var latest =
               (soil['latest_records'] as List?)?.cast<Map<String, dynamic>>() ??
-                  const <Map<String, dynamic>>[];
-        }
+              const <Map<String, dynamic>>[];
 
-        if (latest.isNotEmpty) {
-          legacy = latest.first;
+          if (latest.isEmpty && district != null && district.isNotEmpty) {
+            soil = await service.getSoilMoisture(
+              state: state,
+              limit: 1,
+              forceRefresh: forceRefresh,
+            );
+            latest =
+                (soil['latest_records'] as List?)
+                    ?.cast<Map<String, dynamic>>() ??
+                const <Map<String, dynamic>>[];
+          }
+
+          if (latest.isNotEmpty) {
+            legacy = latest.first;
+          }
+        } catch (_) {
+          legacy = null;
         }
-      } catch (_) {
-        legacy = null;
       }
 
-        final full = await service
-            .getFullWeather(
+      final full = await service
+          .getFullWeather(lat: lat, lon: lon, forceRefresh: forceRefresh)
+          .timeout(const Duration(seconds: 12));
+      final composition =
+          await safeTimeout<Map<String, dynamic>>(
+            () => service.getSoilComposition(
               lat: lat,
               lon: lon,
               forceRefresh: forceRefresh,
-            )
-          .timeout(const Duration(seconds: 12));
-        final composition = await safeTimeout<Map<String, dynamic>>(
-              () => service.getSoilComposition(
-                lat: lat,
-                lon: lon,
-                forceRefresh: forceRefresh,
-              ),
-          const Duration(seconds: 9),
+            ),
+            const Duration(seconds: 9),
           ) ??
           const <String, dynamic>{};
 
@@ -159,8 +165,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         _farmLabel = locationLabel.isNotEmpty
             ? locationLabel
             : (fallbackLabel.isEmpty ? 'Farm location' : fallbackLabel);
-        _profileSoilType =
-          (profile['soil_type'] ?? profile['soilType'] ?? '').toString().trim();
+        _profileSoilType = (profile['soil_type'] ?? profile['soilType'] ?? '')
+            .toString()
+            .trim();
         _score = score;
         _loading = false;
         _refreshing = false;
@@ -179,7 +186,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       (_full?['hourly'] as Map?)?.cast<String, dynamic>() ??
       const <String, dynamic>{};
 
-    Map<String, dynamic> get _daily =>
+  Map<String, dynamic> get _daily =>
       (_full?['daily'] as Map?)?.cast<String, dynamic>() ??
       const <String, dynamic>{};
 
@@ -187,11 +194,11 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       ((_soilComposition?['metrics'] as Map?)?.cast<String, dynamic>()) ??
       const <String, dynamic>{};
 
-    Map<String, dynamic> get _soilDepths =>
+  Map<String, dynamic> get _soilDepths =>
       ((_soilComposition?['depths'] as Map?)?.cast<String, dynamic>()) ??
       const <String, dynamic>{};
 
-    Map<String, dynamic> get _legacyMetrics =>
+  Map<String, dynamic> get _legacyMetrics =>
       ((_legacyRecord?['metrics'] as Map?)?.cast<String, dynamic>()) ??
       const <String, dynamic>{};
 
@@ -289,11 +296,14 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
     try {
       final idx = _currentHourlyIndex();
-      final rootMoisture = _hourlyValueAt(
-        const ['soil_moisture_root', 'soil_moisture_3_9cm'],
-        idx,
-      );
-      final temp18 = _hourlyValueAt(const ['soil_temp_18cm', 'soil_temp_6cm'], idx);
+      final rootMoisture = _hourlyValueAt(const [
+        'soil_moisture_root',
+        'soil_moisture_3_9cm',
+      ], idx);
+      final temp18 = _hourlyValueAt(const [
+        'soil_temp_18cm',
+        'soil_temp_6cm',
+      ], idx);
       final clay = _metricValue('clay');
       final sand = _metricValue('sand');
       final silt = _metricValue('silt');
@@ -318,7 +328,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         );
       }
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'soil_health_overview_v1',
             pageName: 'Soil Health',
             languageCode: Localizations.localeOf(context).languageCode,
@@ -348,7 +360,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       if (values.isNotEmpty) {
         final series = values.map(_num).toList(growable: false);
         fallback = series;
-        final hasMeaningful = series.any((v) => v != null && v.abs() > 0.000001);
+        final hasMeaningful = series.any(
+          (v) => v != null && v.abs() > 0.000001,
+        );
         if (hasMeaningful) {
           return series;
         }
@@ -383,7 +397,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   }
 
   double? _depthAverage(String depthKey) {
-    final metricDepths = (_soilDepths[depthKey] as Map?)?.cast<String, dynamic>();
+    final metricDepths = (_soilDepths[depthKey] as Map?)
+        ?.cast<String, dynamic>();
     if (metricDepths == null || metricDepths.isEmpty) return null;
 
     var total = 0.0;
@@ -415,13 +430,29 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       case 'ph':
         return _extractNumber(_legacyByAlias(const ['ph'])?.toString());
       case 'organic_carbon':
-        return _extractNumber(_legacyByAlias(const ['organic_carbon', 'organic carbon', 'oc'])?.toString());
+        return _extractNumber(
+          _legacyByAlias(const [
+            'organic_carbon',
+            'organic carbon',
+            'oc',
+          ])?.toString(),
+        );
       case 'nitrogen':
-        return _extractNumber(_legacyByAlias(const ['nitrogen', 'n'])?.toString());
+        return _extractNumber(
+          _legacyByAlias(const ['nitrogen', 'n'])?.toString(),
+        );
       case 'bulk_density':
-        return _extractNumber(_legacyByAlias(const ['bulk_density', 'bdod', 'bulk density'])?.toString());
+        return _extractNumber(
+          _legacyByAlias(const [
+            'bulk_density',
+            'bdod',
+            'bulk density',
+          ])?.toString(),
+        );
       case 'coarse_fragments':
-        return _extractNumber(_legacyByAlias(const ['coarse_fragments', 'cfvo'])?.toString());
+        return _extractNumber(
+          _legacyByAlias(const ['coarse_fragments', 'cfvo'])?.toString(),
+        );
       case 'sand':
         return _extractNumber(_legacyByAlias(const ['sand'])?.toString());
       case 'silt':
@@ -488,7 +519,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   }) {
     final metrics =
         ((composition['metrics'] as Map?)?.cast<String, dynamic>()) ??
-            const <String, dynamic>{};
+        const <String, dynamic>{};
 
     double val(String key) {
       final m = (metrics[key] as Map?)?.cast<String, dynamic>();
@@ -501,11 +532,14 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final n = val('nitrogen');
     final cec = val('cec');
 
-    final hourly = (full['hourly'] as Map?)?.cast<String, dynamic>() ??
+    final hourly =
+        (full['hourly'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final idx = _currentHourlyIndex();
 
-    final rootMoisture = _num(_list(hourly['soil_moisture_root']).elementAtOrNull(idx));
+    final rootMoisture = _num(
+      _list(hourly['soil_moisture_root']).elementAtOrNull(idx),
+    );
 
     final clay = val('clay');
     final sand = val('sand');
@@ -513,7 +547,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
     final legacyMetrics =
         ((legacy?['metrics'] as Map?)?.cast<String, dynamic>()) ??
-            const <String, dynamic>{};
+        const <String, dynamic>{};
     final legacyP = _extractNumber(legacyMetrics['phosphorus']?.toString());
     final legacyK = _extractNumber(legacyMetrics['potassium']?.toString());
 
@@ -582,19 +616,30 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     return AppColors.danger;
   }
 
-  String _textureClass({required double sand, required double silt, required double clay}) {
+  String _textureClass({
+    required double sand,
+    required double silt,
+    required double clay,
+  }) {
     if (clay >= 40) return 'Clay';
     if (sand >= 70 && clay < 15) return 'Sandy';
     if (silt >= 50 && clay < 27) return 'Silty Loam';
     if (20 <= clay && clay < 40 && 20 <= sand && sand <= 55) return 'Clay Loam';
-    if (7 <= clay && clay < 27 && 28 <= silt && silt < 50 && 23 <= sand && sand <= 52) {
+    if (7 <= clay &&
+        clay < 27 &&
+        28 <= silt &&
+        silt < 50 &&
+        23 <= sand &&
+        sand <= 52) {
       return 'Loam';
     }
     if (sand >= 43 && clay < 20) return 'Sandy Loam';
     return 'Loamy';
   }
 
-  ({double sand, double silt, double clay})? _textureFallbackMix(String rawTexture) {
+  ({double sand, double silt, double clay})? _textureFallbackMix(
+    String rawTexture,
+  ) {
     final t = rawTexture.trim().toLowerCase();
     if (t.isEmpty) return null;
 
@@ -651,33 +696,50 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final bd = _metricValue('bulk_density');
 
     final idx = _currentHourlyIndex();
-    final rootMoisture =
-        _num(_list(_hourly['soil_moisture_root']).elementAtOrNull(idx));
+    final rootMoisture = _num(
+      _list(_hourly['soil_moisture_root']).elementAtOrNull(idx),
+    );
 
     if (clay != null && clay > 50) {
-      recs.add('High clay soil detected. Improve drainage and avoid over-irrigation during this cycle.');
+      recs.add(
+        'High clay soil detected. Improve drainage and avoid over-irrigation during this cycle.',
+      );
     }
     if (soc != null && soc < 5) {
-      recs.add('Organic carbon is low. Add compost, FYM, and crop residue to improve structure.');
+      recs.add(
+        'Organic carbon is low. Add compost, FYM, and crop residue to improve structure.',
+      );
     }
     if (ph != null && ph < 6) {
-      recs.add('Soil is acidic. Apply agricultural lime in split doses before next sowing.');
+      recs.add(
+        'Soil is acidic. Apply agricultural lime in split doses before next sowing.',
+      );
     }
     if (nitrogen != null && nitrogen < 50) {
-      recs.add('Nitrogen reserve is low. Plan split nitrogen application with irrigation scheduling.');
+      recs.add(
+        'Nitrogen reserve is low. Plan split nitrogen application with irrigation scheduling.',
+      );
     }
     if (bd != null && bd > 1.6) {
-      recs.add('Bulk density is high. Reduce compaction with deep tillage and organic amendments.');
+      recs.add(
+        'Bulk density is high. Reduce compaction with deep tillage and organic amendments.',
+      );
     }
     if (rootMoisture != null && rootMoisture < 0.15) {
-      recs.add('Root-zone moisture is below target. Plan light irrigation to avoid crop stress.');
+      recs.add(
+        'Root-zone moisture is below target. Plan light irrigation to avoid crop stress.',
+      );
     }
     if (rootMoisture != null && rootMoisture > 0.38) {
-      recs.add('Root-zone moisture is high. Delay field operations and improve aeration.');
+      recs.add(
+        'Root-zone moisture is high. Delay field operations and improve aeration.',
+      );
     }
 
     if (recs.isEmpty) {
-      recs.add('Soil indicators are broadly stable. Continue periodic testing and moisture monitoring.');
+      recs.add(
+        'Soil indicators are broadly stable. Continue periodic testing and moisture monitoring.',
+      );
     }
 
     return recs;
@@ -704,7 +766,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Text('Location: ${_farmLabel ?? 'Not set'}', style: context.textTheme.bodyMedium),
+            Text(
+              'Location: ${_farmLabel ?? 'Not set'}',
+              style: context.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               available
@@ -727,8 +792,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final clayRaw = _metricValue('clay');
     final sandRaw = _metricValue('sand');
     final siltRaw = _metricValue('silt');
-    final compositionTexture =
-      (_soilComposition?['texture_class'] ?? '').toString().trim();
+    final compositionTexture = (_soilComposition?['texture_class'] ?? '')
+        .toString()
+        .trim();
     final profileTexture = (_profileSoilType ?? '').trim();
     final fallbackTextureText = compositionTexture.isNotEmpty
         ? compositionTexture
@@ -742,40 +808,46 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         : (fallbackTextureText.isEmpty ? 'Unknown' : fallbackTextureText);
 
     final idx = _currentHourlyIndex();
-    final moistureSurface = _hourlyValueAt(
-      const ['soil_moisture_surface', 'soil_moisture_0_1cm'],
-      idx,
-    );
+    final moistureSurface = _hourlyValueAt(const [
+      'soil_moisture_surface',
+      'soil_moisture_0_1cm',
+    ], idx);
     final moistureShallow = _hourlyValueAt(const ['soil_moisture_1_3cm'], idx);
-    final moistureRoot = _hourlyValueAt(
-      const ['soil_moisture_root', 'soil_moisture_3_9cm'],
-      idx,
-    );
+    final moistureRoot = _hourlyValueAt(const [
+      'soil_moisture_root',
+      'soil_moisture_3_9cm',
+    ], idx);
     final moistureDeep = _hourlyValueAt(const ['soil_moisture_9_27cm'], idx);
-    final moistureSubsoil = _hourlyValueAt(
-      const ['soil_moisture_deep', 'soil_moisture_27_81cm'],
-      idx,
-    );
+    final moistureSubsoil = _hourlyValueAt(const [
+      'soil_moisture_deep',
+      'soil_moisture_27_81cm',
+    ], idx);
 
     final temp0 = _hourlyValueAt(const ['soil_temp_0cm'], idx);
     final temp6 = _hourlyValueAt(const ['soil_temp_6cm'], idx);
     final temp18 = _hourlyValueAt(const ['soil_temp_18cm'], idx);
     final temp54 = _hourlyValueAt(const ['soil_temp_54cm'], idx);
 
-    final trendTimesSrc = _list(_hourly['time']).map((e) => e.toString()).toList(growable: false);
-    final trendMoistureSrc = _hourlySeriesForKeys(
-      const ['soil_moisture_root', 'soil_moisture_3_9cm'],
-    );
-    final trendTempSrc = _hourlySeriesForKeys(
-      const ['soil_temp_18cm', 'soil_temp_6cm'],
-    );
+    final trendTimesSrc = _list(
+      _hourly['time'],
+    ).map((e) => e.toString()).toList(growable: false);
+    final trendMoistureSrc = _hourlySeriesForKeys(const [
+      'soil_moisture_root',
+      'soil_moisture_3_9cm',
+    ]);
+    final trendTempSrc = _hourlySeriesForKeys(const [
+      'soil_temp_18cm',
+      'soil_temp_6cm',
+    ]);
     final trendAvailable = <int>[
       trendTimesSrc.length,
       trendMoistureSrc.length,
       trendTempSrc.length,
     ].where((e) => e > 0).fold<int>(0, (p, e) => math.max(p, e));
     final trendStart = idx.clamp(0, math.max(0, trendAvailable - 1)).toInt();
-    final trendCount = trendAvailable == 0 ? 0 : math.min(24, trendAvailable - trendStart).toInt();
+    final trendCount = trendAvailable == 0
+        ? 0
+        : math.min(24, trendAvailable - trendStart).toInt();
     final trendTimes = List<String>.generate(
       trendCount,
       (i) => trendTimesSrc.elementAtOrNull(trendStart + i) ?? '',
@@ -800,17 +872,26 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final wiltingPoint = 0.12;
     final rootM = (moistureRoot ?? 0.0).clamp(0.0, 1.0);
     final rootZoneWaterMm = rootM * 300; // approximate water stock in top 30cm
-    final deficitToFieldCapacityMm = ((fieldCapacity - rootM).clamp(0.0, fieldCapacity)) * 300;
+    final deficitToFieldCapacityMm =
+        ((fieldCapacity - rootM).clamp(0.0, fieldCapacity)) * 300;
 
-    final trendFlat = trendCount <= 1 ||
+    final trendFlat =
+        trendCount <= 1 ||
         (_distinctRoundedCount(trendMoisture, decimals: 4) <= 1 &&
             _distinctRoundedCount(trendTemp, decimals: 2) <= 1);
 
-    final dailyDatesSrc = _list(_daily['date']).map((e) => e.toString()).toList(growable: false);
-    final dailyRainSrc = _list(_daily['precip_sum']).map(_num).toList(growable: false);
+    final dailyDatesSrc = _list(
+      _daily['date'],
+    ).map((e) => e.toString()).toList(growable: false);
+    final dailyRainSrc = _list(
+      _daily['precip_sum'],
+    ).map(_num).toList(growable: false);
     final dailyEt0Src = _list(_daily['et0']).map(_num).toList(growable: false);
     final dailyStart = _todayDailyStartIndex();
-    final dailyCount = math.min(16, math.max(0, dailyDatesSrc.length - dailyStart));
+    final dailyCount = math.min(
+      16,
+      math.max(0, dailyDatesSrc.length - dailyStart),
+    );
     final outlookDates = List<String>.generate(
       dailyCount,
       (i) => dailyDatesSrc.elementAtOrNull(dailyStart + i) ?? '',
@@ -932,7 +1013,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: GlassIconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.lightText),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.lightText,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -947,7 +1031,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      (_farmLabel == null || _farmLabel!.isEmpty) ? 'Farm location' : _farmLabel!,
+                      (_farmLabel == null || _farmLabel!.isEmpty)
+                          ? 'Farm location'
+                          : _farmLabel!,
                       style: context.textTheme.bodySmall?.copyWith(
                         color: context.appColors.textSecondary,
                       ),
@@ -969,12 +1055,20 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                                   color: AppColors.lightText,
                                 ),
                               )
-                            : const Icon(Icons.refresh, color: AppColors.lightText),
-                        onPressed: _refreshing ? null : () => _fetch(forceRefresh: true),
+                            : const Icon(
+                                Icons.refresh,
+                                color: AppColors.lightText,
+                              ),
+                        onPressed: _refreshing
+                            ? null
+                            : () => _fetch(forceRefresh: true),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       GlassIconButton(
-                        icon: const Icon(Icons.info_outline, color: AppColors.lightText),
+                        icon: const Icon(
+                          Icons.info_outline,
+                          color: AppColors.lightText,
+                        ),
                         onPressed: _showSourceInfo,
                       ),
                     ],
@@ -996,284 +1090,319 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         child: SafeArea(
           bottom: false,
           child: _loading && _full == null && _soilComposition == null
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : _error != null && _full == null && _soilComposition == null
-                  ? ErrorView(
-                    message: _error!,
-                    onRetry: () => _fetch(forceRefresh: true),
-                  )
-                  : RefreshIndicator(
-                      onRefresh: () => _fetch(forceRefresh: true),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: AppSpacing.allLg,
-                        children: [
-                          if (_refreshing) const LinearProgressIndicator(minHeight: 2),
-                          if (_refreshing) const SizedBox(height: AppSpacing.md),
-                          if (_error != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: GlassCard(
-                                child: Text(
-                                  _error!,
-                                  style: TextStyle(color: context.appColors.textSecondary),
-                                ),
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
+              : _error != null && _full == null && _soilComposition == null
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _fetch(forceRefresh: true),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _fetch(forceRefresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: AppSpacing.allLg,
+                    children: [
+                      if (_refreshing)
+                        const LinearProgressIndicator(minHeight: 2),
+                      if (_refreshing) const SizedBox(height: AppSpacing.md),
+                      if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: GlassCard(
+                            child: Text(
+                              _error!,
+                              style: TextStyle(
+                                color: context.appColors.textSecondary,
                               ),
                             ),
-                          _aiOverviewSection(),
-                          const SizedBox(height: AppSpacing.xl),
-                          GlassCard(
-                            featured: true,
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 102,
-                                  height: 102,
-                                  child: Stack(
-                                    alignment: Alignment.center,
+                          ),
+                        ),
+                      _aiOverviewSection(),
+                      const SizedBox(height: AppSpacing.xl),
+                      GlassCard(
+                        featured: true,
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 102,
+                              height: 102,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 102,
+                                    height: 102,
+                                    child: CircularProgressIndicator(
+                                      value: _score / 100,
+                                      strokeWidth: 10,
+                                      color: AppColors.primary,
+                                      backgroundColor: AppColors.primary
+                                          .withValues(alpha: 0.12),
+                                    ),
+                                  ),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      SizedBox(
-                                        width: 102,
-                                        height: 102,
-                                        child: CircularProgressIndicator(
-                                          value: _score / 100,
-                                          strokeWidth: 10,
-                                          color: AppColors.primary,
-                                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                                        ),
-                                      ),
-                                      Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            '$_score',
-                                            style: context.textTheme.titleLarge?.copyWith(
+                                      Text(
+                                        '$_score',
+                                        style: context.textTheme.titleLarge
+                                            ?.copyWith(
                                               fontWeight: FontWeight.w800,
                                             ),
-                                          ),
-                                          Text('/100', style: context.textTheme.bodySmall),
-                                        ],
+                                      ),
+                                      Text(
+                                        '/100',
+                                        style: context.textTheme.bodySmall,
                                       ),
                                     ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _scoreColor(
+                                        _score,
+                                      ).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      _scoreStatus(_score),
+                                      style: TextStyle(
+                                        color: _scoreColor(_score),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'Score combines pH, organic carbon, N-P-K signals, real-time moisture, texture suitability, and CEC.',
+                                    style: context.textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Soil Composition Triangle',
+                              style: context.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            SizedBox(
+                              height: 220,
+                              child: CustomPaint(
+                                painter: _SoilTextureTrianglePainter(
+                                  sand: sand,
+                                  silt: silt,
+                                  clay: clay,
+                                  textColor: context.appColors.textSecondary,
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Texture: $texture',
+                              style: context.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Sand ${_fmtPct(sand)} • Silt ${_fmtPct(silt)} • Clay ${_fmtPct(clay)}',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.appColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Chemistry Panel',
+                        style: context.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      GridView.count(
+                        crossAxisCount: MediaQuery.of(context).size.width < 420
+                            ? 1
+                            : 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: AppSpacing.md,
+                        crossAxisSpacing: AppSpacing.md,
+                        childAspectRatio: 2.4,
+                        children: chemistryCards,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Real-time Soil Temperature Profile',
+                              style: context.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            if ([
+                                      temp0,
+                                      temp6,
+                                      temp18,
+                                      temp54,
+                                    ].whereType<double>().toList().length >=
+                                    2 &&
+                                _distinctRoundedCount(
+                                      [
+                                        temp0,
+                                        temp6,
+                                        temp18,
+                                        temp54,
+                                      ].whereType<double>().toList(),
+                                      decimals: 1,
+                                    ) <=
+                                    1) ...[
+                              _tempDepthTile(
+                                '0-54 cm (uniform profile)',
+                                temp18 ?? temp6 ?? temp0 ?? temp54,
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'Provider currently reports near-uniform temperature across depths for this location/time.',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.appColors.textSecondary,
+                                ),
+                              ),
+                            ] else ...[
+                              _tempDepthTile('0 cm', temp0),
+                              const SizedBox(height: AppSpacing.sm),
+                              _tempDepthTile('6 cm', temp6),
+                              const SizedBox(height: AppSpacing.sm),
+                              _tempDepthTile('18 cm', temp18),
+                              const SizedBox(height: AppSpacing.sm),
+                              _tempDepthTile('54 cm', temp54),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Real-time Soil Moisture Profile',
+                              style: context.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            _moistureBar('Surface 0-1cm', moistureSurface),
+                            const SizedBox(height: AppSpacing.sm),
+                            _moistureBar('Shallow 1-3cm', moistureShallow),
+                            const SizedBox(height: AppSpacing.sm),
+                            _moistureBar('Root 3-9cm', moistureRoot),
+                            const SizedBox(height: AppSpacing.sm),
+                            _moistureBar('Deep root 9-27cm', moistureDeep),
+                            const SizedBox(height: AppSpacing.sm),
+                            _moistureBar('Subsoil 27-81cm', moistureSubsoil),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Field capacity ~${fieldCapacity.toStringAsFixed(2)} • Wilting point ~${wiltingPoint.toStringAsFixed(2)}',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.appColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Root-zone Water Stock: ${rootZoneWaterMm.toStringAsFixed(1)} mm',
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Deficit to Field Capacity: ${deficitToFieldCapacityMm.toStringAsFixed(1)} mm',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.appColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!trendFlat && trendCount > 0) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        _soilTrendSection(
+                          times: trendTimes,
+                          moisture: trendMoisture,
+                          temperature: trendTemp,
+                        ),
+                      ],
+                      if (trendFlat && outlookDates.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        _soilWaterOutlookSection(
+                          dates: outlookDates,
+                          rain: outlookRain,
+                          et0: outlookEt0,
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Recommendations',
+                        style: context.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ..._recommendations().map(
+                        (text) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: GlassCard(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
                                 const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: _scoreColor(_score).withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          _scoreStatus(_score),
-                                          style: TextStyle(
-                                            color: _scoreColor(_score),
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                      Text(
-                                        'Score combines pH, organic carbon, N-P-K signals, real-time moisture, texture suitability, and CEC.',
-                                        style: context.textTheme.bodyMedium,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                Expanded(child: Text(text)),
                               ],
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.xl),
-                          GlassCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Soil Composition Triangle',
-                                  style: context.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                SizedBox(
-                                  height: 220,
-                                  child: CustomPaint(
-                                    painter: _SoilTextureTrianglePainter(
-                                      sand: sand,
-                                      silt: silt,
-                                      clay: clay,
-                                      textColor: context.appColors.textSecondary,
-                                    ),
-                                    child: const SizedBox.expand(),
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  'Texture: $texture',
-                                  style: context.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Sand ${_fmtPct(sand)} • Silt ${_fmtPct(silt)} • Clay ${_fmtPct(clay)}',
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.appColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          Text(
-                            'Chemistry Panel',
-                            style: context.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GridView.count(
-                            crossAxisCount: MediaQuery.of(context).size.width < 420 ? 1 : 2,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: AppSpacing.md,
-                            crossAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 2.4,
-                            children: chemistryCards,
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          GlassCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Real-time Soil Temperature Profile',
-                                  style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                if ([temp0, temp6, temp18, temp54].whereType<double>().toList().length >= 2 &&
-                                    _distinctRoundedCount(
-                                          [temp0, temp6, temp18, temp54].whereType<double>().toList(),
-                                          decimals: 1,
-                                        ) <=
-                                        1) ...[
-                                  _tempDepthTile('0-54 cm (uniform profile)', temp18 ?? temp6 ?? temp0 ?? temp54),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    'Provider currently reports near-uniform temperature across depths for this location/time.',
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      color: context.appColors.textSecondary,
-                                    ),
-                                  ),
-                                ] else ...[
-                                  _tempDepthTile('0 cm', temp0),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _tempDepthTile('6 cm', temp6),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _tempDepthTile('18 cm', temp18),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _tempDepthTile('54 cm', temp54),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          GlassCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Real-time Soil Moisture Profile',
-                                  style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                _moistureBar('Surface 0-1cm', moistureSurface),
-                                const SizedBox(height: AppSpacing.sm),
-                                _moistureBar('Shallow 1-3cm', moistureShallow),
-                                const SizedBox(height: AppSpacing.sm),
-                                _moistureBar('Root 3-9cm', moistureRoot),
-                                const SizedBox(height: AppSpacing.sm),
-                                _moistureBar('Deep root 9-27cm', moistureDeep),
-                                const SizedBox(height: AppSpacing.sm),
-                                _moistureBar('Subsoil 27-81cm', moistureSubsoil),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  'Field capacity ~${fieldCapacity.toStringAsFixed(2)} • Wilting point ~${wiltingPoint.toStringAsFixed(2)}',
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.appColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Root-zone Water Stock: ${rootZoneWaterMm.toStringAsFixed(1)} mm',
-                                  style: context.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Deficit to Field Capacity: ${deficitToFieldCapacityMm.toStringAsFixed(1)} mm',
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.appColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!trendFlat && trendCount > 0) ...[
-                            const SizedBox(height: AppSpacing.xl),
-                            _soilTrendSection(
-                              times: trendTimes,
-                              moisture: trendMoisture,
-                              temperature: trendTemp,
-                            ),
-                          ],
-                          if (trendFlat && outlookDates.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.xl),
-                            _soilWaterOutlookSection(
-                              dates: outlookDates,
-                              rain: outlookRain,
-                              et0: outlookEt0,
-                            ),
-                          ],
-                          const SizedBox(height: AppSpacing.xl),
-                          Text(
-                            'Recommendations',
-                            style: context.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          ..._recommendations().map(
-                            (text) => Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: GlassCard(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 42,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(child: Text(text)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 90),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 90),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
@@ -1300,7 +1429,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
           Text(
             _aiExpanded ? _aiDetails : _aiSummary,
             maxLines: _aiExpanded ? null : 3,
-            overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            overflow: _aiExpanded
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
             style: context.textTheme.bodyMedium,
           ),
           if (_aiLoading) ...[
@@ -1319,7 +1450,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _aiLoading ? null : () => _generateAiOverview(forceRefresh: true),
+                  onPressed: _aiLoading
+                      ? null
+                      : () => _generateAiOverview(forceRefresh: true),
                   icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
                   label: Text(
                     _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
@@ -1332,7 +1465,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     elevation: 0,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.8)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
               ),
@@ -1373,7 +1508,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         children: [
           Text(
             '16-Day Soil Water Outlook',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -1397,8 +1534,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) => updateSelection(details.localPosition),
-                  onHorizontalDragUpdate: (details) => updateSelection(details.localPosition),
+                  onTapDown: (details) =>
+                      updateSelection(details.localPosition),
+                  onHorizontalDragUpdate: (details) =>
+                      updateSelection(details.localPosition),
                   child: CustomPaint(
                     painter: _WaterOutlookPainter(
                       rain: rain,
@@ -1459,7 +1598,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Selected ${_fmtDate(dates.elementAtOrNull(selected))}: rain ${rain[selected].toStringAsFixed(1)} mm, ET0 ${et0[selected].toStringAsFixed(1)} mm',
-            style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1485,7 +1626,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         children: [
           Text(
             'Hourly Root Moisture + Soil Temp (24h)',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -1509,7 +1652,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) => updateSelection(details.localPosition),
+                  onTapDown: (details) =>
+                      updateSelection(details.localPosition),
                   onHorizontalDragUpdate: (details) =>
                       updateSelection(details.localPosition),
                   child: CustomPaint(
@@ -1572,7 +1716,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Selected ${_fmtTime(times.elementAtOrNull(selected))}: moisture ${moisture[selected].toStringAsFixed(2)}, temp ${temperature[selected].toStringAsFixed(1)}C',
-            style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1593,7 +1739,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Container(
@@ -1604,7 +1752,11 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                 ),
                 child: Text(
                   status,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -1612,7 +1764,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             value == null ? '--' : value.toStringAsFixed(2),
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Expanded(
@@ -1648,15 +1802,21 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final color = value == null
         ? Colors.grey
         : value < 12
-            ? AppColors.info
-            : value > 32
-                ? AppColors.danger
-                : AppColors.success;
+        ? AppColors.info
+        : value > 32
+        ? AppColors.danger
+        : AppColors.success;
 
     String relevance() {
-      if (value == null) return 'Data unavailable';
-      if (value >= 15 && value <= 25) return 'Good for wheat sowing at this depth';
-      if (value < 15) return 'Cool soil: germination may slow';
+      if (value == null) {
+        return 'Data unavailable';
+      }
+      if (value >= 15 && value <= 25) {
+        return 'Good for wheat sowing at this depth';
+      }
+      if (value < 15) {
+        return 'Cool soil: germination may slow';
+      }
       return 'Warm soil: monitor moisture stress';
     }
 
@@ -1682,13 +1842,20 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  label,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(value == null ? '--' : '${value.toStringAsFixed(1)}C'),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   relevance(),
-                  style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -1700,7 +1867,11 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
   Widget _moistureBar(String label, double? value) {
     final v = (value ?? 0).clamp(0.0, 1.0);
-    final tone = Color.lerp(const Color(0xFF90CAF9), const Color(0xFF1565C0), v)!;
+    final tone = Color.lerp(
+      const Color(0xFF90CAF9),
+      const Color(0xFF1565C0),
+      v,
+    )!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1710,7 +1881,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             Expanded(
               child: Text(
                 label,
-                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             Text(value == null ? '--' : value.toStringAsFixed(2)),
@@ -1771,7 +1944,11 @@ class _SoilTextureTrianglePainter extends CustomPainter {
     void drawLabel(String text, Offset pos) {
       tp.text = TextSpan(
         text: text,
-        style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       );
       tp.layout();
       tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
@@ -1796,12 +1973,18 @@ class _SoilTextureTrianglePainter extends CustomPainter {
     );
 
     canvas.drawCircle(dot, 7, Paint()..color = AppColors.primary);
-    canvas.drawCircle(dot, 12, Paint()..color = AppColors.primary.withValues(alpha: 0.18));
+    canvas.drawCircle(
+      dot,
+      12,
+      Paint()..color = AppColors.primary.withValues(alpha: 0.18),
+    );
   }
 
   @override
   bool shouldRepaint(covariant _SoilTextureTrianglePainter oldDelegate) {
-    return oldDelegate.sand != sand || oldDelegate.silt != silt || oldDelegate.clay != clay;
+    return oldDelegate.sand != sand ||
+        oldDelegate.silt != silt ||
+        oldDelegate.clay != clay;
   }
 }
 
@@ -1851,7 +2034,9 @@ class _SoilTrendPainter extends CustomPainter {
 
     final minTemp = temperature.fold<double>(double.infinity, math.min);
     final maxTemp = temperature.fold<double>(double.negativeInfinity, math.max);
-    final tempRange = (maxTemp - minTemp).abs() < 0.000001 ? 1.0 : (maxTemp - minTemp);
+    final tempRange = (maxTemp - minTemp).abs() < 0.000001
+        ? 1.0
+        : (maxTemp - minTemp);
     final marker = selectedIndex.clamp(0, n - 1);
 
     for (var i = 0; i < n; i++) {
@@ -1880,8 +2065,13 @@ class _SoilTrendPainter extends CustomPainter {
     final cursorX = left + marker * barW + barW * 0.5;
     canvas.drawLine(Offset(cursorX, top), Offset(cursorX, bottom), cursorPaint);
 
-    final selectedTemp = temperature.length > marker ? temperature[marker] : minTemp;
-    final selectedTempNormalized = ((selectedTemp - minTemp) / tempRange).clamp(0.0, 1.0);
+    final selectedTemp = temperature.length > marker
+        ? temperature[marker]
+        : minTemp;
+    final selectedTempNormalized = ((selectedTemp - minTemp) / tempRange).clamp(
+      0.0,
+      1.0,
+    );
     final selectedY = bottom - height * selectedTempNormalized;
     canvas.drawCircle(
       Offset(cursorX, selectedY),
@@ -1992,7 +2182,8 @@ class _WaterOutlookPainter extends CustomPainter {
     final cursorX = left + marker * barW + barW * 0.5;
     canvas.drawLine(Offset(cursorX, top), Offset(cursorX, bottom), cursorPaint);
 
-    final selectedEt = ((et0.length > marker ? et0[marker] : 0).clamp(0.0, maxY)) / maxY;
+    final selectedEt =
+        ((et0.length > marker ? et0[marker] : 0).clamp(0.0, maxY)) / maxY;
     final selectedY = bottom - height * selectedEt;
     canvas.drawCircle(
       Offset(cursorX, selectedY),
@@ -2001,7 +2192,11 @@ class _WaterOutlookPainter extends CustomPainter {
     );
 
     _drawText(canvas, maxY.toStringAsFixed(1), Offset(2, top - 6));
-    _drawText(canvas, (maxY * 0.5).toStringAsFixed(1), Offset(2, top + height * 0.5 - 8));
+    _drawText(
+      canvas,
+      (maxY * 0.5).toStringAsFixed(1),
+      Offset(2, top + height * 0.5 - 8),
+    );
     _drawText(canvas, '0', Offset(12, bottom - 8));
   }
 

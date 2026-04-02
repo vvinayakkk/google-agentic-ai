@@ -23,6 +23,33 @@ class DocumentBuilderService {
   String _schemeFormCacheKey(String schemeId) =>
       'doc_builder:scheme_form:${schemeId.toLowerCase()}';
 
+  String _normalizeSchemeKey(String value) => value.trim().toLowerCase();
+
+  Future<String?> _resolveCanonicalSchemeId(String schemeId) async {
+    final target = _normalizeSchemeKey(schemeId);
+    if (target.isEmpty) return null;
+
+    final schemes = await listSchemes(preferCache: true, forceRefresh: false);
+    for (final scheme in schemes) {
+      final candidateKeys = <String>[
+        (scheme['id'] ?? '').toString(),
+        (scheme['scheme_id'] ?? '').toString(),
+        (scheme['short_name'] ?? '').toString(),
+        (scheme['name'] ?? '').toString(),
+      ];
+      final isMatch = candidateKeys.any(
+        (key) => key.trim().isNotEmpty && _normalizeSchemeKey(key) == target,
+      );
+      if (!isMatch) continue;
+
+      final canonical = (scheme['id'] ?? scheme['scheme_id'] ?? '')
+          .toString()
+          .trim();
+      if (canonical.isNotEmpty) return canonical;
+    }
+    return null;
+  }
+
   List<Map<String, dynamic>>? _listFromCache(dynamic cached) {
     if (cached is! List) return null;
     return cached
@@ -74,18 +101,40 @@ class DocumentBuilderService {
     bool preferCache = true,
     bool forceRefresh = false,
   }) async {
-    final key = _schemeFormCacheKey(schemeId);
+    final normalizedId = schemeId.trim();
+    final key = _schemeFormCacheKey(normalizedId);
     if (!forceRefresh && preferCache) {
       final cached = _mapFromCache(await AppCache.get(key));
       if (cached != null) return cached;
     }
 
-    final res = await _client.get(ApiEndpoints.docBuilderSchemeById(schemeId));
-    final data = Map<String, dynamic>.from(
-      (res.data as Map).cast<dynamic, dynamic>(),
-    );
-    await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
-    return data;
+    Future<Map<String, dynamic>> fetchById(String id) async {
+      final encoded = Uri.encodeComponent(id.trim());
+      final res = await _client.get(ApiEndpoints.docBuilderSchemeById(encoded));
+      return Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+    }
+
+    try {
+      final data = await fetchById(normalizedId);
+      await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
+      return data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+
+      final canonicalId = await _resolveCanonicalSchemeId(normalizedId);
+      if (canonicalId == null || canonicalId == normalizedId) rethrow;
+
+      final data = await fetchById(canonicalId);
+      await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
+      await AppCache.put(
+        _schemeFormCacheKey(canonicalId),
+        data,
+        ttlSeconds: _ttlSchemeForm,
+      );
+      return data;
+    }
   }
 
   /// POST /document-builder/sessions/start → start a form-fill session.
@@ -311,8 +360,9 @@ class DocumentBuilderService {
 
       final extension = _extensionForContentType(contentType, serverFilename);
       final tempDir = await getTemporaryDirectory();
-      final filename =
-          serverFilename.isNotEmpty ? serverFilename : 'application_$sessionId$extension';
+      final filename = serverFilename.isNotEmpty
+          ? serverFilename
+          : 'application_$sessionId$extension';
       final file = File('${tempDir.path}/$filename');
       await file.writeAsBytes(bytes, flush: true);
 
@@ -395,18 +445,28 @@ class DocumentBuilderService {
   }
 
   String _extractFilename(String disposition) {
-    final match = RegExp(r'filename="?([^";]+)"?', caseSensitive: false)
-        .firstMatch(disposition);
+    final match = RegExp(
+      r'filename="?([^";]+)"?',
+      caseSensitive: false,
+    ).firstMatch(disposition);
     if (match == null) return '';
     return (match.group(1) ?? '').trim();
   }
 
   String _extensionForContentType(String contentType, String filename) {
     final lowerName = filename.toLowerCase();
-    if (lowerName.endsWith('.pdf')) return '.pdf';
-    if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) return '.html';
-    if (contentType.contains('application/pdf')) return '.pdf';
-    if (contentType.contains('text/html')) return '.html';
+    if (lowerName.endsWith('.pdf')) {
+      return '.pdf';
+    }
+    if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) {
+      return '.html';
+    }
+    if (contentType.contains('application/pdf')) {
+      return '.pdf';
+    }
+    if (contentType.contains('text/html')) {
+      return '.html';
+    }
     return '.bin';
   }
 }

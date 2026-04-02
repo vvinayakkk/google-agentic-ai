@@ -37,7 +37,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
   bool _aiLoading = false;
   bool _aiGenerated = false;
   bool _aiExpanded = false;
-    bool _showAllCategories = false;
+  bool _showAllCategories = false;
   String _aiSummary =
       'Generate an AI overview for equipment opportunities near you.';
   String _aiDetails =
@@ -57,9 +57,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       _mechanizationStats.isNotEmpty;
 
   Future<void> _primeData() async {
-    await _loadData(forceRefresh: true);
-    if (!mounted) return;
-    _loadData(forceRefresh: true, silent: true);
+    await _loadData(forceRefresh: false);
   }
 
   Future<void> _loadData({
@@ -78,11 +76,17 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
 
     try {
       final svc = ref.read(equipmentServiceProvider);
-      final profile =
-          await ref.read(personalizationServiceProvider).getProfileContext();
+      final profile = await ref
+          .read(personalizationServiceProvider)
+          .getProfileContext();
       if (!mounted) return;
 
+      final profileState = (profile['state'] ?? '').toString().trim();
+      final profileDistrict = (profile['district'] ?? '').toString().trim();
+
       final rates = await svc.listRentalRatesFiltered(
+        state: profileState.isEmpty ? null : profileState,
+        district: profileDistrict.isEmpty ? null : profileDistrict,
         limit: 10,
         preferCache: !forceRefresh,
         forceRefresh: forceRefresh,
@@ -146,22 +150,25 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     if (_aiLoading) return;
     setState(() => _aiLoading = true);
     try {
-      final snippets = _featuredProviders.take(8).map((item) {
-        final name =
-            (item['equipment'] ?? item['name'] ?? '').toString();
-        final provider =
-            ((item['provider'] as Map?)?['name'] ?? '').toString();
-        final district =
-            ((item['location'] as Map?)?['district'] ?? '').toString();
-        final daily =
-            ((item['rates'] as Map?)?['daily'] ?? '').toString();
-        return '$name by $provider in $district at daily rate $daily';
-      }).toList(growable: false);
+      final snippets = _featuredProviders
+          .take(8)
+          .map((item) {
+            final name = (item['equipment'] ?? item['name'] ?? '').toString();
+            final provider = ((item['provider'] as Map?)?['name'] ?? '')
+                .toString();
+            final district = ((item['location'] as Map?)?['district'] ?? '')
+                .toString();
+            final daily = ((item['rates'] as Map?)?['daily'] ?? '').toString();
+            return '$name by $provider in $district at daily rate $daily';
+          })
+          .toList(growable: false);
 
-      final ai = await ref.read(aiOverviewServiceProvider).generate(
+      final ai = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'equipment_hub_overview_v1',
             pageName: 'Equipment Hub',
-        languageCode: Localizations.localeOf(context).languageCode,
+            languageCode: Localizations.localeOf(context).languageCode,
             nearbyData: snippets,
             forceRefresh: true,
           );
@@ -209,18 +216,15 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     try {
       final data = await ref.read(equipmentServiceProvider).getChcInfo();
       if (!mounted) return;
-      final chc =
-          (data['chc'] as Map?)?.cast<String, dynamic>() ?? const {};
-      final tips = (chc['how_to_find'] as List?)
-              ?.map((e) => e.toString())
-              .toList() ??
+      final chc = (data['chc'] as Map?)?.cast<String, dynamic>() ?? const {};
+      final tips =
+          (chc['how_to_find'] as List?)?.map((e) => e.toString()).toList() ??
           const [];
 
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor:
-            context.isDark ? AppColors.darkCard : Colors.white,
+        backgroundColor: context.isDark ? AppColors.darkCard : Colors.white,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -234,8 +238,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                 children: [
                   Text(
                     'What is a Custom Hiring Centre?',
-                    style: ctx.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: ctx.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text((chc['description'] ?? '').toString()),
@@ -265,8 +270,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.full),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
                         elevation: 0,
                       ),
@@ -305,8 +309,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     final cardColor = isDark
         ? AppColors.darkCard.withValues(alpha: 0.72)
         : Colors.white.withValues(alpha: 0.74);
-    final textColor =
-        isDark ? AppColors.darkText : AppColors.lightText;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
     final subColor = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
@@ -315,12 +318,12 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
         (_mechanizationStats['records'] as List?)
             ?.cast<Map<String, dynamic>>() ??
         const [];
-    final metric =
-        records.isNotEmpty ? records.first : const <String, dynamic>{};
+    final metric = records.isNotEmpty
+        ? records.first
+        : const <String, dynamic>{};
     final mechPct =
         (metric['mechanization_percentage'] as num?)?.toDouble() ?? 0;
-    final tractors =
-        (metric['tractors_per_1000ha'] as num?)?.toDouble() ?? 0;
+    final tractors = (metric['tractors_per_1000ha'] as num?)?.toDouble() ?? 0;
 
     return Scaffold(
       backgroundColor: isDark
@@ -351,439 +354,443 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
           child: _loading && !_hasSnapshot
               ? const EquipmentContentSkeleton(cardCount: 7)
               : _error != null && !_hasSnapshot
-                  ? ErrorView(
-                      message: _error!,
-                      onRetry: () => _loadData(forceRefresh: true),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => _loadData(forceRefresh: true),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(
-                          bottom: AppSpacing.xxxl,
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _loadData(forceRefresh: true),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _loadData(forceRefresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
+                    children: [
+                      // ── Top bar ──────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                          AppSpacing.lg,
+                          0,
                         ),
-                        children: [
-                          // ── Top bar ──────────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.lg,
-                              AppSpacing.sm,
-                              AppSpacing.lg,
-                              0,
+                        child: Row(
+                          children: [
+                            _topAction(
+                              icon: Icons.arrow_back_rounded,
+                              color: AppColors.primaryDark,
+                              onTap: () => Navigator.of(context).maybePop(),
                             ),
-                            child: Row(
-                              children: [
-                                _topAction(
-                                  icon: Icons.arrow_back_rounded,
-                                  color: AppColors.primaryDark,
-                                  onTap: () =>
-                                      Navigator.of(context).maybePop(),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Equipment Marketplace',
-                                        textAlign: TextAlign.center,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                      Text(
-                                        'Rent. List. Track.',
-                                        textAlign: TextAlign.center,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(color: subColor),
-                                      ),
-                                    ],
-                                  ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                _topAction(
-                                  icon: Icons.refresh_rounded,
-                                  color: AppColors.primaryDark,
-                                  onTap: () =>
-                                      _loadData(forceRefresh: true),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: AppSpacing.lg),
-
-                          // ── Stale-data warning ────────────────────
-                          if (_error != null && _hasSnapshot) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                              ),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning
-                                      .withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.md,
-                                  ),
-                                  border: Border.all(
-                                    color: AppColors.warning
-                                        .withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Could not sync latest values right now. Displaying recent cached data.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.warning,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── AI Overview ───────────────────────────
-                          _aiOverviewCard(),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── Quick grid ────────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: _quickGrid(
-                              cardColor: cardColor,
-                              textColor: textColor,
-                            ),
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── Featured providers ────────────────────
-                          _featuredProvidersSection(
-                            textColor: textColor,
-                            subColor: subColor,
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── Category chips ────────────────────────
-                          _categoryShowcaseSection(
-                            textColor: textColor,
-                            subColor: subColor,
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── SMAM info card ────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: _glassCard(
-                              cardColor: cardColor,
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.info_outline,
-                                        color: AppColors.primaryDark,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      Text(
-                                        'SMAM Scheme',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    'India has 75,000+ CHCs, SMAM subsidy 40–80%, and USD 4.6B market size by 2025.',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(color: textColor),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  InkWell(
-                                    onTap: _showChcInfoSheet,
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.sm,
-                                    ),
-                                    child: Text(
-                                      'Learn about SMAM →',
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Equipment Marketplace',
+                                      textAlign: TextAlign.center,
                                       style: Theme.of(context)
                                           .textTheme
-                                          .bodyMedium
+                                          .titleLarge
                                           ?.copyWith(
-                                            color: AppColors.primaryDark,
+                                            color: textColor,
                                             fontWeight: FontWeight.w800,
                                           ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── Mini stats ────────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _miniStat(
-                                    label: '75K+ CHCs',
-                                    value: 'Nationwide',
-                                    cardColor: cardColor,
-                                    textColor: textColor,
-                                    subColor: subColor,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: _miniStat(
-                                    label: '2.5L Implements/yr',
-                                    value: 'Deployment',
-                                    cardColor: cardColor,
-                                    textColor: textColor,
-                                    subColor: subColor,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: _miniStat(
-                                    label: '4.1% CAGR',
-                                    value: 'Rental Market',
-                                    cardColor: cardColor,
-                                    textColor: textColor,
-                                    subColor: subColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── Mechanization insight ─────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                _cutBorderAccent(),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  (metric['state'] ??
-                                          (_profile['state'] ?? 'India'))
-                                      .toString(),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: subColor),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  '${mechPct.toStringAsFixed(1)}%',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        color: _mechanizationColor(mechPct),
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                                Text(
-                                  _mechanizationBand(mechPct),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(
-                                        color: textColor,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.full),
-                                  child: LinearProgressIndicator(
-                                    value: (mechPct / 100).clamp(0, 1),
-                                    minHeight: 7,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.24),
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      _mechanizationColor(mechPct),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  'Tractors / 1000 ha: ${tractors.toStringAsFixed(1)}',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: textColor,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  mechPct < 60
-                                      ? 'Opportunity Signal: High Demand'
-                                      : 'Opportunity Signal: Stable Demand',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: _mechanizationColor(mechPct),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // ── CHC Banner ────────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: InkWell(
-                              onTap: _openChcApp,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.lg),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.warning.withValues(
-                                        alpha: context.isDark ? 0.32 : 0.24,
-                                      ),
-                                      Colors.white.withValues(
-                                        alpha: context.isDark ? 0.08 : 0.82,
-                                      ),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.lg,
-                                  ),
-                                  border: Border.all(
-                                    color: AppColors.warning.withValues(
-                                      alpha: context.isDark ? 0.4 : 0.26,
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding:
-                                          const EdgeInsets.all(AppSpacing.sm),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: context.isDark ? 0.14 : 0.84,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          AppRadius.md,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.location_on,
-                                        color: AppColors.warning,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Find Nearest CHC',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  color: textColor,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                          ),
-                                          Text(
-                                            '75,000+ govt hiring centres near your village.',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: subColor,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      color: AppColors.warning,
-                                      size: 16,
+                                    Text(
+                                      'Rent. List. Track.',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: subColor),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.sm),
+                            _topAction(
+                              icon: Icons.refresh_rounded,
+                              color: AppColors.primaryDark,
+                              onTap: () => _loadData(forceRefresh: true),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ── Stale-data warning ────────────────────
+                      if (_error != null && _hasSnapshot) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color: AppColors.warning.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              'Could not sync latest values right now. Displaying recent cached data.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.warning,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── AI Overview ───────────────────────────
+                      _aiOverviewCard(),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── Quick grid ────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        child: _quickGrid(
+                          cardColor: cardColor,
+                          textColor: textColor,
+                        ),
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── Featured providers ────────────────────
+                      _featuredProvidersSection(
+                        textColor: textColor,
+                        subColor: subColor,
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── Category chips ────────────────────────
+                      _categoryShowcaseSection(
+                        textColor: textColor,
+                        subColor: subColor,
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── SMAM + stats (single card) ───────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        child: _glassCard(
+                          cardColor: cardColor,
+                          child: InkWell(
+                            onTap: _showChcInfoSheet,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.warning.withValues(alpha: 0.08),
+                              ),
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.receipt_long,
+                                        color: AppColors.warning,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'SMAM Scheme',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: textColor,
+                                              ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: AppColors.warning,
+                                        size: 14,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'TRACK',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: AppColors.warning,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    'India has 75,000+ CHCs, SMAM subsidy 40–80%, and USD 4.6B market size by 2025.',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: textColor),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(
+                                            AppSpacing.xs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: context.isDark ? 0.1 : 0.8,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.sm,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '75K+ CHCs',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(
+                                                      color: textColor,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                              Text(
+                                                'Nationwide',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(color: subColor),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(
+                                            AppSpacing.xs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: context.isDark ? 0.1 : 0.8,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.sm,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '2.5L Implements/yr',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(
+                                                      color: textColor,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                              Text(
+                                                'Deployment',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(color: subColor),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(
+                                            AppSpacing.xs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: context.isDark ? 0.1 : 0.8,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.sm,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '4.1% CAGR',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(
+                                                      color: textColor,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                              Text(
+                                                'Rental Market',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(color: subColor),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── Mechanization insight ─────────────────
+                      _mechanizationInsightCard(
+                        cardColor: cardColor,
+                        textColor: textColor,
+                        stateLabel:
+                            (metric['state'] ?? (_profile['state'] ?? 'India'))
+                                .toString(),
+                        mechanizationPct: mechPct,
+                        tractorsPerThousandHa: tractors,
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // ── CHC Banner ────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        child: _glassCard(
+                          cardColor: cardColor,
+                          child: InkWell(
+                            onTap: _openChcApp,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.success.withValues(alpha: 0.08),
+                              ),
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.location_on,
+                                        color: AppColors.success,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'Find Nearest CHC',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: textColor,
+                                              ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: AppColors.success,
+                                        size: 14,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'MANAGE',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    '75,000+ govt hiring centres near your village.',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: textColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+        ),
+      ),
     );
   }
 
@@ -800,10 +807,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     );
   }
 
-  Widget _glassCard({
-    required Color cardColor,
-    required Widget child,
-  }) {
+  Widget _glassCard({required Color cardColor, required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
@@ -836,16 +840,14 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.26),
-        ),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.26)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w700,
-            ),
+          color: AppColors.primaryDark,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -856,13 +858,97 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       backgroundColor: const Color(0xFFF5EDDC),
       textColor: AppColors.lightText,
       borderColor: AppColors.primary.withValues(alpha: 0.22),
-      shadowColor: Colors.black.withValues(
-        alpha: context.isDark ? 0.34 : 0.14,
-      ),
+      shadowColor: Colors.black.withValues(alpha: context.isDark ? 0.34 : 0.14),
       scallopRadius: 7,
       scallopSpacing: 8,
       cornerRadius: 20,
       height: 92,
+    );
+  }
+
+  Widget _mechanizationInsightCard({
+    required Color cardColor,
+    required Color textColor,
+    required String stateLabel,
+    required double mechanizationPct,
+    required double tractorsPerThousandHa,
+  }) {
+    final band = _mechanizationBand(mechanizationPct);
+    final signal = mechanizationPct < 60
+        ? 'Opportunity Signal: High Demand'
+        : 'Opportunity Signal: Stable Demand';
+    final accent = AppColors.info;
+    final description =
+        '$stateLabel • ${mechanizationPct.toStringAsFixed(1)}% mechanized • ${tractorsPerThousandHa.toStringAsFixed(1)} tractors/1000 ha • $signal';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: _glassCard(
+        cardColor: cardColor,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.push(RoutePaths.equipmentRentalRates);
+          },
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: accent.withValues(alpha: 0.08),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.travel_explore, color: AppColors.info),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Mechanization Insight',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'EXPLORE',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.info,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Band: $band',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.info,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -875,10 +961,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.auto_awesome,
-                  color: AppColors.primary,
-                ),
+                const Icon(Icons.auto_awesome, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Text(
                   'AI Overview',
@@ -904,9 +987,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                   const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -927,19 +1008,13 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _aiLoading
-                        ? null
-                        : () => _generateAiOverview(),
+                    onPressed: _aiLoading ? null : () => _generateAiOverview(),
                     icon: Icon(
                       _aiGenerated ? Icons.refresh : Icons.auto_awesome,
                     ),
                     label: Text(
-                      _aiGenerated
-                          ? 'Generate Fresh'
-                          : 'Generate AI Overview',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white.withValues(alpha: 0.85),
@@ -970,10 +1045,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     );
   }
 
-  Widget _quickGrid({
-    required Color cardColor,
-    required Color textColor,
-  }) {
+  Widget _quickGrid({required Color cardColor, required Color textColor}) {
     final items = [
       _QuickAction(
         icon: Icons.travel_explore,
@@ -1047,9 +1119,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                           item.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: textColor,
@@ -1062,9 +1132,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                   Text(
                     item.verdict,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: item.color,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: item.color,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Expanded(
@@ -1072,9 +1142,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                       item.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: textColor,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: textColor),
                     ),
                   ),
                 ],
@@ -1090,27 +1160,26 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    final sectionColor = const Color(0xFFF5EDDC).withValues(
-      alpha: context.isDark ? 0.26 : 0.95,
-    );
+    final sectionColor = const Color(
+      0xFFE9F8EE,
+    ).withValues(alpha: context.isDark ? 0.24 : 0.94);
     final sectionGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: context.isDark
           ? <Color>[
-              const Color(0xFFDFAE74).withValues(alpha: 0.34),
+              const Color(0xFF2E6A4A).withValues(alpha: 0.36),
               Colors.white.withValues(alpha: 0.08),
             ]
-          : <Color>[
-              const Color(0xFFF8E0BE),
-              Colors.white,
-            ],
+          : <Color>[const Color(0xFFD8F3E1), const Color(0xFFF8FFFA)],
     );
     return _ScallopedPanel(
       height: 460,
       backgroundColor: sectionColor,
       backgroundGradient: sectionGradient,
-      borderColor: Colors.black.withValues(alpha: 0.86),
+      borderColor: const Color(0xFF0F4D2F).withValues(
+        alpha: context.isDark ? 0.9 : 0.74,
+      ),
       shadowColor: Colors.black.withValues(alpha: context.isDark ? 0.34 : 0.14),
       cornerRadius: 20,
       scallopRadius: 7,
@@ -1128,11 +1197,11 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
               'FEATURED PROVIDERS',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.lightText,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.8,
-                    fontStyle: FontStyle.italic,
-                  ),
+                color: AppColors.lightText,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+                fontStyle: FontStyle.italic,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             SizedBox(
@@ -1146,11 +1215,11 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                 itemCount: _featuredProviders.length,
                 itemBuilder: (_, i) {
                   final item = _featuredProviders[i];
-                  final provider = (item['provider'] as Map?)
-                          ?.cast<String, dynamic>() ??
+                  final provider =
+                      (item['provider'] as Map?)?.cast<String, dynamic>() ??
                       const <String, dynamic>{};
-                  final location = (item['location'] as Map?)
-                          ?.cast<String, dynamic>() ??
+                  final location =
+                      (item['location'] as Map?)?.cast<String, dynamic>() ??
                       const <String, dynamic>{};
                   return Padding(
                     padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -1182,16 +1251,12 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    final rates =
-        (item['rates'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final rates = (item['rates'] as Map?)?.cast<String, dynamic>() ?? const {};
     final daily = _toDouble(rates['daily']);
     final hourly = _toDouble(rates['hourly']);
     final price = daily > 0 ? daily : hourly;
     final backendMrp = _toDouble(
-      rates['mrp'] ??
-          item['mrp'] ??
-          rates['base_price'] ??
-          item['base_price'],
+      rates['mrp'] ?? item['mrp'] ?? rates['base_price'] ?? item['base_price'],
     );
     final mrp = backendMrp > 0 ? backendMrp : price;
     final discount = _resolveDiscount(item, rates, price, mrp);
@@ -1226,7 +1291,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
           mainAxisSize: MainAxisSize.max,
           children: [
             SizedBox(
-              height: 144,
+              height: 136,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -1237,13 +1302,18 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                         child: imageUrl == null
                             ? Icon(
                                 Icons.agriculture_rounded,
-                                color: AppColors.primaryDark.withValues(alpha: 0.6),
+                                color: AppColors.primaryDark.withValues(
+                                  alpha: 0.6,
+                                ),
                                 size: 44,
                               )
                             : _providerImage(
                                 primaryUrl: imageUrl,
-                                seed: (item['equipment'] ?? item['category'] ?? 'equipment')
-                                    .toString(),
+                                seed:
+                                    (item['equipment'] ??
+                                            item['category'] ??
+                                            'equipment')
+                                        .toString(),
                               ),
                       ),
                     ),
@@ -1261,35 +1331,42 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _providerMetaTag(category),
-                _providerMetaTag(displayLocation),
-                _providerMetaTag('#$effectiveIndex'),
-              ],
+            SizedBox(
+              height: 20,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.zero,
+                physics: const ClampingScrollPhysics(),
+                children: [
+                  _providerMetaTag(category),
+                  const SizedBox(width: 6),
+                  _providerMetaTag(displayLocation),
+                  const SizedBox(width: 6),
+                  _providerMetaTag('#$effectiveIndex'),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               (item['equipment'] ?? '').toString(),
-              maxLines: 4,
+              maxLines: 3,
               softWrap: true,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                  ),
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
             ),
             if (providerName.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
                 providerName,
-                maxLines: 2,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 softWrap: true,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: subColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: subColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
             const SizedBox(height: 4),
@@ -1313,9 +1390,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: subColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: subColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -1334,9 +1411,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                   Text(
                     '$etaMins MINS',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: textColor,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -1346,19 +1423,19 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
               Text(
                 'Only $stockLeft left',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.danger,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             const Spacer(),
             if (discount > 0) ...[
-                const SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 '$discount% OFF',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.info,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  color: AppColors.info,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
             const SizedBox(height: 2),
@@ -1368,9 +1445,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                 Text(
                   price <= 0 ? 'NA' : '₹${_formatMoney(price)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: textColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -1381,10 +1458,10 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: subColor,
-                          decoration: TextDecoration.lineThrough,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: subColor,
+                      decoration: TextDecoration.lineThrough,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -1407,11 +1484,13 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       ),
       child: Text(
         label,
-        softWrap: true,
+        softWrap: false,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.lightText,
-              fontWeight: FontWeight.w700,
-            ),
+          color: AppColors.lightText,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -1434,231 +1513,233 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
         .where((e) => e.trim().isNotEmpty)
         .toSet()
         .toList(growable: false);
-    final hasMoreCategories = categories.length > 5;
+    final hasMoreCategories = categories.length > 6;
     final visibleCount = _showAllCategories
-      ? categories.length
-      : (hasMoreCategories ? 5 : categories.length);
-    final visibleCategories = categories.take(visibleCount).toList(growable: false);
+        ? categories.length
+        : (hasMoreCategories ? 6 : categories.length);
+    final visibleCategories = categories
+        .take(visibleCount)
+        .toList(growable: false);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final gap = AppSpacing.sm;
-          final width = constraints.maxWidth;
-          final wideWidth = ((width - gap) / 2).clamp(120.0, width);
-          final row2Width = ((width - (2 * gap)) / 3).clamp(96.0, width);
-
-          final top = visibleCategories.take(2).toList(growable: false);
-          final rest = visibleCategories.skip(2).toList(growable: false);
-          final globalLastWideStart = categories.length - 2;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _outlinedCapsTitle('Smart Categories'),
-              const SizedBox(height: AppSpacing.sm),
-              if (top.isNotEmpty)
-                Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: [
-                    _categoryShowcaseCard(
-                      categoryKey: top[0],
-                      width: wideWidth,
-                      height: 146,
-                      textColor: textColor,
-                      subColor: subColor,
-                      featured: true,
-                    ),
-                    if (top.length > 1)
-                      _categoryShowcaseCard(
-                        categoryKey: top[1],
-                        width: wideWidth,
-                        height: 146,
-                        textColor: textColor,
-                        subColor: subColor,
-                      ),
-                  ],
-                ),
-              if (rest.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: List.generate(rest.length, (i) {
-                    final globalIndex = i + 2;
-                    final isLastTwo = globalIndex >= globalLastWideStart;
-                    final h = isLastTwo
-                        ? 146.0
-                        : (i.isEven ? 126.0 : 118.0);
-                    return _categoryShowcaseCard(
-                      categoryKey: rest[i],
-                      width: isLastTwo ? wideWidth : row2Width,
-                      height: h,
-                      textColor: textColor,
-                      subColor: subColor,
-                    );
-                  }),
-                ),
-              ],
-              if (hasMoreCategories) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      setState(() => _showAllCategories = !_showAllCategories);
-                    },
-                    icon: Icon(
-                      _showAllCategories
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.lightText,
-                    ),
-                    label: Text(
-                      _showAllCategories ? 'SHOW LESS' : 'SHOW MORE',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppColors.lightText,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.8,
-                          ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: context.isDark
+                ? <Color>[
+                    const Color(0xFF163A2A).withValues(alpha: 0.62),
+                    const Color(0xFF0F2A1F).withValues(alpha: 0.54),
+                  ]
+                : <Color>[const Color(0xFFEAF8EE), const Color(0xFFF8FFFA)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF0F4D2F).withValues(
+              alpha: context.isDark ? 0.74 : 0.32,
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _outlinedCapsTitle('Smart Categories'),
+            const SizedBox(height: AppSpacing.sm),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visibleCategories.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: AppSpacing.sm,
+                mainAxisSpacing: AppSpacing.sm,
+                childAspectRatio: 1.12,
+              ),
+              itemBuilder: (_, i) => _categoryShowcaseCard(
+                categoryKey: visibleCategories[i],
+                textColor: textColor,
+                subColor: subColor,
+                featured: i == 0,
+              ),
+            ),
+            if (hasMoreCategories) ...[
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(() => _showAllCategories = !_showAllCategories);
+                  },
+                  icon: Icon(
+                    _showAllCategories
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.success,
+                  ),
+                  label: Text(
+                    _showAllCategories ? 'SHOW LESS' : 'SHOW MORE',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
-              ],
+              ),
             ],
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 
   Widget _outlinedCapsTitle(String text) {
-    final base = Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w900,
-          fontSize: 30,
-          letterSpacing: 1.7,
-        );
-    return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: base?.copyWith(
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 4.4
-                ..color = Colors.black,
-            ),
+    final titleColor = context.isDark ? Colors.white : const Color(0xFF173D2A);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.success.withValues(alpha: context.isDark ? 0.24 : 0.14),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: base?.copyWith(
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 2.6,
-                  offset: const Offset(0.6, 0.8),
-                ),
-              ],
-            ),
+          child: const Icon(
+            Icons.grid_view_rounded,
+            size: 16,
+            color: AppColors.success,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: titleColor,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _categoryShowcaseCard({
     required String categoryKey,
-    required double width,
-    required double height,
     required Color textColor,
     required Color subColor,
     bool featured = false,
   }) {
     final title = categoryDisplay(categoryKey);
-    return SizedBox(
-      width: width,
-      height: height,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          context.push(
-            '${RoutePaths.equipmentMarketplace}?category=$categoryKey',
-          );
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('${RoutePaths.equipmentMarketplace}?category=$categoryKey');
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.98),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF0F4D2F).withValues(
+              alpha: context.isDark ? 0.5 : 0.2,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.sm,
-                  AppSpacing.sm,
-                  AppSpacing.sm,
-                  AppSpacing.xs,
-                ),
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: featured ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                      ),
-                ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: context.isDark ? 0.22 : 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                AppSpacing.sm,
+                AppSpacing.sm,
+                2,
               ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: textColor,
+                      fontWeight: featured ? FontWeight.w900 : FontWeight.w800,
+                    ),
                   ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        _categoryImageUrl(categoryKey),
+                  const SizedBox(height: 2),
+                  Text(
+                    featured ? 'Popular this season' : 'Tap to explore',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: subColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      _categoryImageUrl(categoryKey),
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
+                      errorBuilder: (_, __, ___) => Image.network(
+                        _categoryFallbackImageUrl(categoryKey),
                         fit: BoxFit.cover,
                         filterQuality: FilterQuality.low,
-                        errorBuilder: (_, __, ___) => Image.network(
-                          _categoryFallbackImageUrl(categoryKey),
-                          fit: BoxFit.cover,
-                          filterQuality: FilterQuality.low,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: const Color(0xFFECEFF3),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.agriculture_rounded,
-                              size: 34,
-                              color: AppColors.primaryDark.withValues(alpha: 0.6),
-                            ),
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFFECEFF3),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.agriculture_rounded,
+                            size: 34,
+                            color: AppColors.primaryDark.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1666,14 +1747,20 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
 
   String _categoryImageUrl(String categoryKey) {
     const urls = <String, String>{
-      'land_preparation': 'https://loremflickr.com/640/420/tractor,field?lock=701',
-      'sowing_planting': 'https://loremflickr.com/640/420/seed,drill,farm?lock=702',
-      'irrigation': 'https://loremflickr.com/640/420/irrigation,water,farm?lock=708',
-      'crop_protection': 'https://loremflickr.com/640/420/sprayer,crop,agriculture?lock=703',
+      'land_preparation':
+          'https://loremflickr.com/640/420/tractor,field?lock=701',
+      'sowing_planting':
+          'https://loremflickr.com/640/420/seed,drill,farm?lock=702',
+      'irrigation':
+          'https://loremflickr.com/640/420/irrigation,water,farm?lock=708',
+      'crop_protection':
+          'https://loremflickr.com/640/420/sprayer,crop,agriculture?lock=703',
       'harvesting': 'https://loremflickr.com/640/420/harvester,wheat?lock=704',
-      'horticulture': 'https://loremflickr.com/640/420/orchard,horticulture?lock=705',
+      'horticulture':
+          'https://loremflickr.com/640/420/orchard,horticulture?lock=705',
       'transport': 'https://loremflickr.com/640/420/tractor,trailer?lock=706',
-      'drone_technology': 'https://loremflickr.com/640/420/drone,agriculture?lock=707',
+      'drone_technology':
+          'https://loremflickr.com/640/420/drone,agriculture?lock=707',
     };
     return urls[categoryKey] ??
         'https://loremflickr.com/640/420/agriculture,machinery?lock=720';
@@ -1728,10 +1815,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     return 0;
   }
 
-  int _resolveEta(
-    Map<String, dynamic> item,
-    Map<String, dynamic> provider,
-  ) {
+  int _resolveEta(Map<String, dynamic> item, Map<String, dynamic> provider) {
     final raw = _toInt(
       item['eta_mins'] ?? provider['eta_mins'] ?? item['delivery_minutes'],
     );
@@ -1739,10 +1823,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     return 0;
   }
 
-  int _resolveStock(
-    Map<String, dynamic> item,
-    Map<String, dynamic> provider,
-  ) {
+  int _resolveStock(Map<String, dynamic> item, Map<String, dynamic> provider) {
     final raw = _toInt(
       item['units_available'] ?? item['stock_left'] ?? provider['stock_left'],
     );
@@ -1781,11 +1862,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     return null;
   }
 
-  Widget _providerImage({
-    required String primaryUrl,
-    required String seed,
-  }) {
-    final fallbackUrl = 'https://picsum.photos/seed/${Uri.encodeComponent(seed)}/640/420';
+  Widget _providerImage({required String primaryUrl, required String seed}) {
+    final fallbackUrl =
+        'https://picsum.photos/seed/${Uri.encodeComponent(seed)}/640/420';
 
     return Image.network(
       primaryUrl,
@@ -1804,44 +1883,11 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
             ),
           );
         }
-        return Image.asset(
-          'assets/images/logo_light.png',
-          fit: BoxFit.contain,
-        );
+        return Image.asset('assets/images/logo_light.png', fit: BoxFit.contain);
       },
     );
   }
 
-  Widget _miniStat({
-    required String label,
-    required String value,
-    required Color cardColor,
-    required Color textColor,
-    required Color subColor,
-  }) {
-    return _glassCard(
-      cardColor: cardColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: subColor,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─── Data classes ─────────────────────────────────────────────────────────────
@@ -1916,18 +1962,18 @@ class _ScallopedCouponBanner extends StatelessWidget {
               text,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w900,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 0.8,
-                    shadows: const [
-                      Shadow(
-                        color: Colors.white,
-                        blurRadius: 0,
-                        offset: Offset(0.6, 0.6),
-                      ),
-                    ],
+                color: textColor,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                letterSpacing: 0.8,
+                shadows: const [
+                  Shadow(
+                    color: Colors.white,
+                    blurRadius: 0,
+                    offset: Offset(0.6, 0.6),
                   ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1969,8 +2015,10 @@ class _ScallopedCouponPainter extends CustomPainter {
 
     final scallopPath = Path();
     final safeInset = cornerRadius + scallopRadius;
-    final usableWidth =
-        (size.width - (safeInset * 2)).clamp(0.0, double.infinity);
+    final usableWidth = (size.width - (safeInset * 2)).clamp(
+      0.0,
+      double.infinity,
+    );
     final scallopDiameter = scallopRadius * 2;
     final step = scallopDiameter + scallopSpacing;
 

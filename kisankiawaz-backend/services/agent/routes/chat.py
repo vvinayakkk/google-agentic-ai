@@ -2,13 +2,16 @@ from uuid import uuid4
 import asyncio
 import os
 import time
+import re
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Request
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from shared.auth.deps import get_current_user
 from shared.auth.deps import get_current_admin
 from shared.core.config import get_settings
-from shared.core.constants import QdrantCollections
+from shared.core.constants import QdrantCollections, MongoCollections
+from shared.db.mongodb import FieldFilter, get_async_db
 from services.chat_service import ChatService
 from shared.services.api_key_allocator import get_api_key_allocator
 from loguru import logger
@@ -75,6 +78,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     agent_type: str | None = None
     allow_fallback: bool = False
+    response_mode: str | None = None
 
 
 class ChatPrepareRequest(BaseModel):
@@ -83,6 +87,7 @@ class ChatPrepareRequest(BaseModel):
     session_id: str | None = None
     agent_type: str | None = None
     allow_fallback: bool = False
+    response_mode: str | None = None
 
 
 class ChatFinalizeRequest(BaseModel):
@@ -354,6 +359,7 @@ async def _run_finalize_job(
     language: str | None,
     agent_type: str | None,
     allow_fallback: bool,
+    response_mode: str,
     partial_response: str,
 ) -> None:
     try:
@@ -410,6 +416,13 @@ async def _run_finalize_job(
 
         if isinstance(result, dict):
             result["ui_redirect_tag"] = _infer_ui_redirect_tag(message, result)
+            result = await _enhance_chat_result(
+                user_id=user_id,
+                session_id=session_id,
+                message=message,
+                response_mode=response_mode,
+                result=result,
+            )
         final_text = str((result or {}).get("response") or "").strip()
         merged = _merge_partial_and_final(partial_response, final_text)
 
@@ -431,6 +444,7 @@ async def _run_finalize_job(
                     "response": merged,
                     "source_provenance": merged_provenance,
                     "stage": "merged",
+                    "suggestions": (result or {}).get("suggestions") if isinstance(result, dict) else [],
                 }
                 job["updated_at"] = time.time()
     except Exception as exc:  # noqa: BLE001
@@ -459,9 +473,315 @@ def _infer_ui_redirect_tag(message: str, result: dict) -> str:
     return "home"
 
 
+def _normalize_response_mode(mode: str | None) -> str:
+    value = str(mode or "").strip().lower().replace("_", "-")
+    if value in {"brief", "detailed", "step-by-step", "voice-friendly"}:
+        return value
+    if value in {"step", "steps"}:
+        return "step-by-step"
+    if value in {"voice", "voicefriendly"}:
+        return "voice-friendly"
+    return "detailed"
+
+
+def _topic_signals(message: str) -> set[str]:
+    msg = (message or "").lower()
+    topics = set()
+    if re.search(r"price|rate|mandi|market|sell|bhav|daam", msg):
+        topics.add("market")
+    if re.search(r"weather|rain|forecast|temperature|humidity", msg):
+        topics.add("weather")
+    if re.search(r"scheme|subsidy|kcc|pm-kisan|pmfby|eligibility", msg):
+        topics.add("scheme")
+    if re.search(r"equipment|tractor|harvester|sprayer|rental", msg):
+        topics.add("equipment")
+    if re.search(r"soil|moisture|ph|nitrogen", msg):
+        topics.add("soil")
+    if re.search(r"calendar|event|schedule|task|reminder|undo", msg):
+        topics.add("calendar")
+    if re.search(r"crop|sowing|harvest|pest|disease", msg):
+        topics.add("crop")
+    return topics
+
+
+async def _load_user_chat_preferences(user_id: str) -> dict:
+    uid = str(user_id or "").strip()
+    if not uid:
+        return {}
+    db = get_async_db()
+    doc = await db.collection(MongoCollections.CHAT_USER_PREFERENCES).document(uid).get()
+    if not doc.exists:
+        return {}
+    data = doc.to_dict() or {}
+    return data if isinstance(data, dict) else {}
+
+
+async def _save_user_chat_preferences(user_id: str, patch: dict) -> None:
+    uid = str(user_id or "").strip()
+    if not uid or not isinstance(patch, dict):
+        return
+    db = get_async_db()
+    payload = dict(patch)
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.collection(MongoCollections.CHAT_USER_PREFERENCES).document(uid).set(payload, merge=True)
+
+
+async def _maybe_handle_preference_command(user_id: str, message: str) -> dict | None:
+    txt = str(message or "").strip()
+    lower = txt.lower()
+
+    mode_match = re.match(r"^set\s+(?:chat\s+)?mode\s+(brief|detailed|step\-by\-step|voice\-friendly|step|voice)$", lower)
+    if mode_match:
+        mode = _normalize_response_mode(mode_match.group(1))
+        await _save_user_chat_preferences(user_id, {"response_mode": mode})
+        return {
+            "session_id": str(uuid4()),
+            "response": f"Preference saved: response mode is now '{mode}'.",
+            "agent_used": "preferences",
+            "suggestions": ["Set mode brief", "Set mode detailed", "Always answer in Hinglish"],
+            "source_provenance": [],
+            "ui_redirect_tag": "home",
+        }
+
+    lang_match = re.match(r"^always\s+answer\s+in\s+(english|hindi|hinglish)$", lower)
+    if lang_match:
+        lang = lang_match.group(1)
+        await _save_user_chat_preferences(user_id, {"preferred_language": lang})
+        return {
+            "session_id": str(uuid4()),
+            "response": f"Preference saved: preferred language is now '{lang}'.",
+            "agent_used": "preferences",
+            "suggestions": ["Set mode step-by-step", "Set mode voice-friendly", "Ask weather update"],
+            "source_provenance": [],
+            "ui_redirect_tag": "home",
+        }
+
+    short_match = re.match(r"^set\s+response\s+(short|detailed)$", lower)
+    if short_match:
+        mode = "brief" if short_match.group(1) == "short" else "detailed"
+        await _save_user_chat_preferences(user_id, {"response_mode": mode})
+        return {
+            "session_id": str(uuid4()),
+            "response": f"Preference saved: response mode is now '{mode}'.",
+            "agent_used": "preferences",
+            "suggestions": ["Always answer in Hindi", "Set mode brief", "Ask crop plan"],
+            "source_provenance": [],
+            "ui_redirect_tag": "home",
+        }
+
+    return None
+
+
+def _apply_response_mode(text: str, response_mode: str) -> str:
+    content = str(text or "").strip()
+    mode = _normalize_response_mode(response_mode)
+    if not content:
+        return content
+    if mode == "brief":
+        lines = [ln.strip() for ln in content.splitlines() if ln.strip()]
+        if len(lines) > 8:
+            lines = lines[:8]
+        return "\n".join(lines)[:950]
+    if mode == "step-by-step":
+        if "Step-by-step" in content:
+            return content
+        return "Step-by-step:\n1. Data now\n2. Action now\n3. Risk and profit tip\n\n" + content
+    if mode == "voice-friendly":
+        simplified = re.sub(r"\s+", " ", content).strip()
+        chunks = re.split(r"(?<=[.!?])\s+", simplified)
+        return "\n".join(chunks[:8])
+    return content
+
+
+def _build_confidence_and_sources(source_provenance: list | None) -> str:
+    items = source_provenance if isinstance(source_provenance, list) else []
+    ok_count = sum(1 for x in items if isinstance(x, dict) and str(x.get("status") or "").lower() == "ok")
+    total = len(items)
+    if total == 0:
+        confidence = "Medium Confidence"
+    else:
+        ratio = ok_count / max(1, total)
+        confidence = "High Confidence" if ratio >= 0.8 else ("Medium Confidence" if ratio >= 0.45 else "Needs Verification")
+
+    lines = [f"\n\nConfidence: {confidence}"]
+    if items:
+        lines.append("Source snippets:")
+        for item in items[:4]:
+            if not isinstance(item, dict):
+                continue
+            tool = str(item.get("tool") or "tool")
+            source = str(item.get("source") or "source")
+            status = str(item.get("status") or "unknown")
+            freshness = str(item.get("freshness") or item.get("updated_at") or "")
+            snippet = f"- {tool} | {source} | {status}"
+            if freshness:
+                snippet += f" | {freshness}"
+            lines.append(snippet)
+    return "\n".join(lines)
+
+
+def _build_action_plan(message: str) -> str:
+    topics = _topic_signals(message)
+    actions = ["- Now: execute one highest-impact action from this answer."]
+    if "market" in topics:
+        actions.append("- Today: compare nearest mandi rates before selling.")
+    if "weather" in topics:
+        actions.append("- Today: align spray/irrigation with forecast window.")
+    if "scheme" in topics:
+        actions.append("- This week: prepare documents for top eligible scheme.")
+    if "calendar" in topics:
+        actions.append("- This week: confirm reminders and resolve time conflicts.")
+    if len(actions) < 3:
+        actions.append("- This week: track result and update next action.")
+    return "\n\nAction Plan:\n" + "\n".join(actions[:4])
+
+
+def _build_why_rationale(message: str) -> str:
+    topics = _topic_signals(message)
+    reasons = []
+    if "weather" in topics:
+        reasons.append("- Weather timing affects spray and irrigation outcomes.")
+    if "market" in topics:
+        reasons.append("- Mandi spread directly impacts net profit realization.")
+    if "soil" in topics:
+        reasons.append("- Soil status changes input timing and yield risk.")
+    if "scheme" in topics:
+        reasons.append("- Scheme fit can reduce cost and improve ROI.")
+    if "calendar" in topics:
+        reasons.append("- Scheduled reminders improve execution consistency.")
+    if not reasons:
+        reasons.append("- Guidance is based on your intent and verified tool data.")
+    return "\n\nWhy this recommendation:\n" + "\n".join(reasons[:4])
+
+
+async def _build_change_summary(user_id: str, session_id: str, message: str) -> str:
+    topics = _topic_signals(message)
+    if not topics.intersection({"market", "weather", "scheme", "soil"}):
+        return ""
+
+    db = get_async_db()
+    docs = await (
+        db.collection(MongoCollections.AGENT_SESSION_MESSAGES)
+        .where(filter=FieldFilter("session_id", "==", session_id))
+        .where(filter=FieldFilter("user_id", "==", user_id))
+        .where(filter=FieldFilter("role", "==", "assistant"))
+        .limit(12)
+        .get()
+    )
+    if not docs:
+        return ""
+
+    ts_val = ""
+    for d in docs:
+        item = d.to_dict() or {}
+        val = str(item.get("timestamp") or "")
+        if val:
+            ts_val = val
+            break
+    if not ts_val:
+        return ""
+
+    try:
+        dt = datetime.fromisoformat(ts_val.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+
+    now = datetime.now(timezone.utc)
+    if now - dt > timedelta(days=1, hours=12):
+        return ""
+
+    return f"\n\nWhat changed since yesterday: refreshed this topic using latest available records since {dt.strftime('%Y-%m-%d %H:%M UTC')}."
+
+
+def _build_clarification_if_needed(message: str) -> str:
+    topics = _topic_signals(message)
+    if len(topics) < 4:
+        return ""
+    return "\n\nClarification for next turn: should I prioritize profit, risk reduction, or eligibility/document readiness first?"
+
+
+def _build_followup_suggestions(message: str, result: dict) -> list[str]:
+    topics = _topic_signals(message)
+    suggestions: list[str] = []
+    if "calendar" in topics:
+        suggestions.extend(["View calendar events", "Undo last calendar action", "Reschedule with alternate slot"])
+    if "market" in topics:
+        suggestions.append("Show nearest mandi rates")
+    if "scheme" in topics:
+        suggestions.append("Compare top eligible schemes")
+    if "weather" in topics:
+        suggestions.append("Give 3-day weather risk")
+    if not suggestions:
+        redirect = str((result or {}).get("ui_redirect_tag") or "")
+        if redirect == "weather":
+            suggestions.append("Open weather dashboard")
+        elif redirect == "market":
+            suggestions.append("Open marketplace")
+        else:
+            suggestions.append("Ask step-by-step plan")
+    suggestions.append("Set mode brief")
+
+    seen = set()
+    out: list[str] = []
+    for s in suggestions:
+        key = s.lower().strip()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(s)
+    return out[:6]
+
+
+async def _enhance_chat_result(
+    *,
+    user_id: str,
+    session_id: str,
+    message: str,
+    response_mode: str,
+    result: dict,
+) -> dict:
+    if not isinstance(result, dict):
+        return result
+
+    response_text = str(result.get("response") or "").strip()
+    if not response_text:
+        return result
+
+    enriched = _apply_response_mode(response_text, response_mode)
+    if "Action Plan:" not in enriched:
+        enriched += _build_action_plan(message)
+    if "Why this recommendation:" not in enriched:
+        enriched += _build_why_rationale(message)
+    if "Confidence:" not in enriched:
+        enriched += _build_confidence_and_sources(result.get("source_provenance"))
+    enriched += await _build_change_summary(user_id=user_id, session_id=session_id, message=message)
+    enriched += _build_clarification_if_needed(message)
+    if "Follow-up check:" not in enriched:
+        enriched += "\n\nFollow-up check: reply 'done' after one action and I will optimize your next step."
+
+    result["response"] = enriched
+    result["response_mode"] = _normalize_response_mode(response_mode)
+    result["suggestions"] = _build_followup_suggestions(message, result)
+    return result
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request, user=Depends(get_current_user)):
     session_id = body.session_id or str(uuid4())
+    pref_result = await _maybe_handle_preference_command(user_id=user["id"], message=body.message)
+    if pref_result is not None:
+        return pref_result
+
+    prefs = await _load_user_chat_preferences(user_id=user["id"])
+    effective_mode = _normalize_response_mode(body.response_mode or prefs.get("response_mode"))
+    effective_language = body.language or str(prefs.get("preferred_language") or "").strip() or None
+    msg_text = str(body.message or "")
+    if effective_language is None:
+        has_devanagari = bool(re.search(r"[\u0900-\u097F]", msg_text))
+        has_latin = bool(re.search(r"[A-Za-z]", msg_text))
+        if has_devanagari and has_latin:
+            effective_language = "hinglish"
+
     embedding_service = request.app.state.embedding_service
     warmup_wait_s = max(0.5, float(os.getenv("EMBEDDING_WARMUP_WAIT_SECONDS", "2.5")))
     await embedding_service.ensure_warm(timeout_seconds=warmup_wait_s)
@@ -474,8 +794,8 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
                     _run_chat_with_allocator(
                         user_id=user["id"],
                         session_id=session_id,
-                        message=body.message,
-                        language=body.language,
+                        message=msg_text,
+                        language=effective_language,
                         agent_type=body.agent_type,
                         allow_fallback=True,
                     ),
@@ -493,8 +813,8 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
                                 _chat_service.process_message_with_groq_fallback(
                                     user_id=user["id"],
                                     session_id=session_id,
-                                    message=body.message,
-                                    language=body.language,
+                                    message=msg_text,
+                                    language=effective_language,
                                     agent_type=body.agent_type,
                                 ),
                                 timeout=_CHAT_FALLBACK_TIMEOUT_SECONDS,
@@ -509,8 +829,8 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
                                     _chat_service.build_partial_response(
                                         user_id=user["id"],
                                         session_id=session_id,
-                                        message=body.message,
-                                        language=body.language or "hi",
+                                        message=msg_text,
+                                        language=effective_language or "hi",
                                         agent_type=body.agent_type,
                                     ),
                                     timeout=_CHAT_DEGRADED_PARTIAL_TIMEOUT_SECONDS,
@@ -536,6 +856,7 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
                                 "source_provenance": partial.get("source_provenance") or [],
                                 "agent_used": "degraded_partial",
                                 "degraded_response": True,
+                                "suggestions": ["Retry in 30 seconds", "Set mode brief", "Ask one focused question"],
                             }
                     else:
                         result = await asyncio.wait_for(
@@ -564,14 +885,21 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
             result = await _run_chat_with_allocator(
                 user_id=user["id"],
                 session_id=session_id,
-                message=body.message,
-                language=body.language,
+                message=msg_text,
+                language=effective_language,
                 agent_type=body.agent_type,
                 allow_fallback=False,
             )
 
         if isinstance(result, dict):
-            result["ui_redirect_tag"] = _infer_ui_redirect_tag(body.message, result)
+            result["ui_redirect_tag"] = _infer_ui_redirect_tag(msg_text, result)
+            result = await _enhance_chat_result(
+                user_id=user["id"],
+                session_id=session_id,
+                message=msg_text,
+                response_mode=effective_mode,
+                result=result,
+            )
         return result
     except _ChatCapacityError:
         from fastapi.responses import JSONResponse
@@ -590,6 +918,65 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
     await _cleanup_expired_jobs()
     session_id = body.session_id or str(uuid4())
 
+    pref_result = await _maybe_handle_preference_command(user_id=user["id"], message=body.message)
+    if pref_result is not None:
+        request_id = uuid4().hex
+        async with _CHAT_JOBS_LOCK:
+            _CHAT_JOBS[request_id] = {
+                "request_id": request_id,
+                "status": "completed",
+                "user_id": user["id"],
+                "session_id": session_id,
+                "message": body.message,
+                "language": body.language,
+                "agent_type": body.agent_type,
+                "allow_fallback": False,
+                "response_mode": "detailed",
+                "partial_response": pref_result.get("response") or "",
+                "partial_payload": pref_result,
+                "requires_live_fetch": False,
+                "source_provenance": pref_result.get("source_provenance") or [],
+                "created_at": time.time(),
+                "updated_at": time.time(),
+                "live_payload": pref_result,
+                "final_response": pref_result.get("response") or "",
+                "merged_response": pref_result.get("response") or "",
+                "merged_payload": pref_result,
+                "error": None,
+            }
+
+        return {
+            "request_id": request_id,
+            "session_id": session_id,
+            "status": "completed",
+            "live_fetch_status": "completed",
+            "partial_response": pref_result.get("response") or "",
+            "source_provenance": pref_result.get("source_provenance") or [],
+            "language": pref_result.get("language") or body.language,
+            "response_mode": "detailed",
+            "suggestions": pref_result.get("suggestions") or [],
+            "sources": [],
+            "requires_live_fetch": False,
+            "agentic_primary_agent": None,
+            "agentic_trace": {"parallel_tools": [], "sequential_tools": []},
+            "request_state": {
+                "status": "completed",
+                "partial_payload": pref_result,
+                "live_payload": pref_result,
+                "merged_payload": pref_result,
+            },
+        }
+
+    prefs = await _load_user_chat_preferences(user_id=user["id"])
+    effective_mode = _normalize_response_mode(body.response_mode or prefs.get("response_mode"))
+    effective_language = body.language or str(prefs.get("preferred_language") or "").strip() or None
+    msg_text = str(body.message or "")
+    if effective_language is None:
+        has_devanagari = bool(re.search(r"[\u0900-\u097F]", msg_text))
+        has_latin = bool(re.search(r"[A-Za-z]", msg_text))
+        if has_devanagari and has_latin:
+            effective_language = "hinglish"
+
     embedding_service = request.app.state.embedding_service
     warmup_wait_s = max(0.5, float(os.getenv("EMBEDDING_WARMUP_WAIT_SECONDS", "2.5")))
     await embedding_service.ensure_warm(timeout_seconds=warmup_wait_s)
@@ -597,8 +984,8 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
     partial = await _chat_service.build_partial_response(
         user_id=user["id"],
         session_id=session_id,
-        message=body.message,
-        language=body.language or "hi",
+        message=msg_text,
+        language=effective_language or "hi",
         agent_type=body.agent_type,
     )
 
@@ -613,10 +1000,11 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
             "status": "pending",
             "user_id": user["id"],
             "session_id": session_id,
-            "message": body.message,
-            "language": body.language,
+            "message": msg_text,
+            "language": effective_language,
             "agent_type": body.agent_type,
             "allow_fallback": allow_fallback,
+            "response_mode": effective_mode,
             "partial_response": partial_response,
             "partial_payload": partial,
             "requires_live_fetch": requires_live_fetch,
@@ -635,10 +1023,11 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
             request_id=request_id,
             user_id=user["id"],
             session_id=session_id,
-            message=body.message,
-            language=body.language,
+            message=msg_text,
+            language=effective_language,
             agent_type=body.agent_type,
             allow_fallback=allow_fallback,
+            response_mode=effective_mode,
             partial_response=partial_response,
         )
     )
@@ -650,7 +1039,9 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
         "live_fetch_status": "fetching_live_data",
         "partial_response": partial_response,
         "source_provenance": partial.get("source_provenance") or [],
-        "language": partial.get("language") or body.language,
+        "language": partial.get("language") or effective_language,
+        "response_mode": effective_mode,
+        "suggestions": _build_followup_suggestions(msg_text, {"ui_redirect_tag": "home"}),
         "sources": partial.get("sources") or [],
         "requires_live_fetch": requires_live_fetch,
         "agentic_primary_agent": partial.get("agentic_primary_agent"),
@@ -689,6 +1080,7 @@ async def chat_finalize(body: ChatFinalizeRequest, user=Depends(get_current_user
                     "partial_response": job.get("partial_response") or "",
                     "final_response": job.get("final_response") or "",
                     "merged_response": job.get("merged_response") or "",
+                    "suggestions": (live_payload or {}).get("suggestions") or [],
                     "source_provenance": job.get("source_provenance") or [],
                     "result": live_payload,
                     "request_state": {

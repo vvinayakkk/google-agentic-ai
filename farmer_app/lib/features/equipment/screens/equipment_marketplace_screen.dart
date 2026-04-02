@@ -13,7 +13,6 @@ import '../../../shared/models/equipment_model.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/personalization_service.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../utils/equipment_utils.dart';
 import '../widgets/equipment_shell.dart';
@@ -30,10 +29,12 @@ class EquipmentMarketplaceScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EquipmentMarketplaceScreen> createState() => _EquipmentMarketplaceScreenState();
+  ConsumerState<EquipmentMarketplaceScreen> createState() =>
+      _EquipmentMarketplaceScreenState();
 }
 
-class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplaceScreen>
+class _EquipmentMarketplaceScreenState
+    extends ConsumerState<EquipmentMarketplaceScreen>
     with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
 
@@ -41,23 +42,24 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
   List<String> _categories = const [];
   List<EquipmentProvider> _providers = const [];
   List<Map<String, dynamic>> _farmerListings = const [];
-    Map<String, dynamic> _profile = const {};
+  Map<String, dynamic> _profile = const {};
 
   String? _selectedState;
   String? _selectedCategory;
   String _sortBy = 'rate_asc';
 
-    bool _aiLoading = false;
-    bool _aiGenerated = false;
-    bool _aiExpanded = false;
-    String _aiSummary =
+  bool _aiLoading = false;
+  bool _aiGenerated = false;
+  bool _aiExpanded = false;
+  String _aiSummary =
       'Generate AI overview for local equipment demand and pricing opportunities.';
-    String _aiDetails =
+  String _aiDetails =
       'Uses marketplace rates, farmer listings, and your active filters. Cached for 24 hours.';
-    DateTime? _aiUpdatedAt;
+  DateTime? _aiUpdatedAt;
 
   bool _loading = true;
   bool _refreshing = false;
+  bool _filtersExpanded = false;
   String? _error;
 
   @override
@@ -78,7 +80,10 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
   }
 
   bool get _hasSnapshot {
-    return _providers.isNotEmpty || _farmerListings.isNotEmpty || _categories.isNotEmpty || _tabController != null;
+    return _providers.isNotEmpty ||
+        _farmerListings.isNotEmpty ||
+        _categories.isNotEmpty ||
+        _tabController != null;
   }
 
   Future<void> _primeData() async {
@@ -103,7 +108,9 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
       final svc = ref.read(equipmentServiceProvider);
       Map<String, dynamic> profile = _profile;
       try {
-        profile = await ref.read(personalizationServiceProvider).getProfileContext();
+        profile = await ref
+            .read(personalizationServiceProvider)
+            .getProfileContext();
       } catch (_) {
         profile = _profile;
       }
@@ -116,7 +123,9 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
       final data = await svc.listRentalRatesFiltered(
         state: _selectedState,
         category: _selectedCategory,
-        search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+        search: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
         limit: 500,
         preferCache: !forceRefresh,
         forceRefresh: forceRefresh,
@@ -128,17 +137,28 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
       );
       if (!mounted) return;
 
-      final rows = (data['rows'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      final parsed = rows.map(EquipmentProvider.fromJson).toList(growable: false);
+      final rows =
+          (data['rows'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+      final parsed = rows
+          .map(EquipmentProvider.fromJson)
+          .toList(growable: false);
       final deduped = _dedupeProviders(parsed);
 
       _tabController?.dispose();
       final tabsLength = categories.length + 2;
       _tabController = TabController(length: tabsLength, vsync: this);
+      _tabController!.addListener(() {
+        if (!mounted) return;
+        if (_tabController!.indexIsChanging) return;
+        setState(() {});
+      });
 
       final categoryIndex = _selectedCategory == null
           ? 0
-          : (categories.indexWhere((e) => e.toLowerCase() == _selectedCategory!.toLowerCase()) + 1);
+          : (categories.indexWhere(
+                  (e) => e.toLowerCase() == _selectedCategory!.toLowerCase(),
+                ) +
+                1);
       if (categoryIndex > 0 && categoryIndex < tabsLength - 1) {
         _tabController!.index = categoryIndex;
       }
@@ -146,7 +166,12 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
       setState(() {
         _categories = categories;
         _providers = deduped;
-        _farmerListings = listings.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'available').toList(growable: false);
+        _farmerListings = listings
+            .where(
+              (e) =>
+                  (e['status'] ?? '').toString().toLowerCase() == 'available',
+            )
+            .toList(growable: false);
         _profile = profile;
         _loading = false;
         _refreshing = false;
@@ -161,7 +186,10 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
         }
       });
       if (hasSnapshot) {
-        context.showSnack('Latest sync failed. Showing recent cached results.', isError: true);
+        context.showSnack(
+          'Latest sync failed. Showing recent cached results.',
+          isError: true,
+        );
       }
     }
   }
@@ -198,7 +226,9 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
         snippets.add('Active state filter: $_selectedState.');
       }
       if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
-        snippets.add('Active category filter: ${categoryDisplay(_selectedCategory)}.');
+        snippets.add(
+          'Active category filter: ${categoryDisplay(_selectedCategory)}.',
+        );
       }
 
       snippets.add('Live providers loaded: ${_providers.length}.');
@@ -214,15 +244,21 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
         final name = (listing['name'] ?? 'equipment').toString();
         final location = (listing['location'] ?? 'unknown').toString();
         final rate = (listing['rate_per_day'] as num?)?.toDouble();
-        final rateText = rate == null ? 'price on request' : 'INR ${rate.toStringAsFixed(0)}/day';
+        final rateText = rate == null
+            ? 'price on request'
+            : 'INR ${rate.toStringAsFixed(0)}/day';
         snippets.add('$name in $location at $rateText.');
       }
 
       if (snippets.isEmpty) {
-        snippets.add('No marketplace rows loaded yet. Generate advice based on general equipment demand.');
+        snippets.add(
+          'No marketplace rows loaded yet. Generate advice based on general equipment demand.',
+        );
       }
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'equipment_marketplace_overview_v1',
             pageName: 'Equipment Marketplace',
             languageCode: context.locale.languageCode,
@@ -257,7 +293,9 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
     final seen = <String>{};
     final out = <EquipmentProvider>[];
     for (final row in items) {
-      final key = '${row.providerId}|${row.equipmentName}|${row.location.district}'.toLowerCase();
+      final key =
+          '${row.providerId}|${row.equipmentName}|${row.location.district}'
+              .toLowerCase();
       if (seen.contains(key)) continue;
       seen.add(key);
       out.add(row);
@@ -268,34 +306,48 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
   List<EquipmentProvider> _providersForCategory(String? category) {
     var rows = _providers;
     if (category != null && category.isNotEmpty) {
-      rows = rows.where((p) => p.category.toLowerCase() == category.toLowerCase()).toList(growable: false);
+      rows = rows
+          .where((p) => p.category.toLowerCase() == category.toLowerCase())
+          .toList(growable: false);
     }
 
     final search = _searchController.text.trim().toLowerCase();
     if (search.isNotEmpty) {
-      rows = rows.where((p) {
-        return p.equipmentName.toLowerCase().contains(search) ||
-            p.provider.name.toLowerCase().contains(search) ||
-            p.location.display.toLowerCase().contains(search);
-      }).toList(growable: false);
+      rows = rows
+          .where((p) {
+            return p.equipmentName.toLowerCase().contains(search) ||
+                p.provider.name.toLowerCase().contains(search) ||
+                p.location.display.toLowerCase().contains(search);
+          })
+          .toList(growable: false);
     }
 
     if (_selectedState != null && _selectedState!.isNotEmpty) {
-      rows = rows.where((p) => p.location.state.toLowerCase() == _selectedState!.toLowerCase()).toList(growable: false);
+      rows = rows
+          .where(
+            (p) =>
+                p.location.state.toLowerCase() == _selectedState!.toLowerCase(),
+          )
+          .toList(growable: false);
     }
 
     if (_sortBy == 'rate_desc') {
-      rows = [...rows]..sort((a, b) => (b.rates.daily ?? 0).compareTo(a.rates.daily ?? 0));
+      rows = [...rows]
+        ..sort((a, b) => (b.rates.daily ?? 0).compareTo(a.rates.daily ?? 0));
     } else if (_sortBy == 'availability') {
-      rows = [...rows]..sort((a, b) => a.availability.compareTo(b.availability));
+      rows = [...rows]
+        ..sort((a, b) => a.availability.compareTo(b.availability));
     } else {
-      rows = [...rows]..sort((a, b) => (a.rates.daily ?? 0).compareTo(b.rates.daily ?? 0));
+      rows = [...rows]
+        ..sort((a, b) => (a.rates.daily ?? 0).compareTo(b.rates.daily ?? 0));
     }
 
     return rows;
   }
 
-  Map<String, List<EquipmentProvider>> _groupByEquipmentName(List<EquipmentProvider> rows) {
+  Map<String, List<EquipmentProvider>> _groupByEquipmentName(
+    List<EquipmentProvider> rows,
+  ) {
     final map = <String, List<EquipmentProvider>>{};
     for (final row in rows) {
       final key = row.equipmentName.trim().toLowerCase();
@@ -305,240 +357,233 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
     return map;
   }
 
-  Future<void> _openFilterSheet() async {
-    String? tempState = _selectedState;
-    String? tempCategory = _selectedCategory;
-    String tempSort = _sortBy;
-    String stateSearch = '';
+  @override
+  Widget build(BuildContext context) {
+    final tabs = [
+      'All',
+      ..._categories.map(categoryDisplay),
+      'Farmer Listings',
+    ];
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            final states = indianStates
-                .where((e) => e.toLowerCase().contains(stateSearch.toLowerCase()))
-                .toList(growable: false);
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: AppSpacing.lg,
-                  right: AppSpacing.lg,
-                  top: AppSpacing.lg,
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+    return Scaffold(
+      body: EquipmentPageBackground(
+        child: SafeArea(
+          bottom: false,
+          child: _loading && !_hasSnapshot
+              ? const EquipmentContentSkeleton(cardCount: 8)
+              : _error != null && !_hasSnapshot
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _loadData(forceRefresh: true),
+                )
+              : _tabController == null
+              ? const SizedBox.shrink()
+              : Column(
+                  children: [
+                    _marketplaceHeader(tabs),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: List.generate(tabs.length, (index) {
+                          if (index == tabs.length - 1) {
+                            return _farmerListingsTab();
+                          }
+
+                          final rawCategory = index == 0
+                              ? null
+                              : _categories[index - 1];
+                          final rows = _providersForCategory(rawCategory);
+                          return _providerTab(rows);
+                        }),
+                      ),
+                    ),
+                  ],
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('equipment_marketplace.filters'.tr(), style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
-                        decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search state'),
-                        onChanged: (v) => setLocal(() => stateSearch = v),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      SizedBox(
-                        height: 180,
-                        child: ListView.builder(
-                          itemCount: states.length,
-                          itemBuilder: (_, i) {
-                            final s = states[i];
-                            return RadioListTile<String>(
-                              title: Text(s),
-                              value: s,
-                              groupValue: tempState,
-                              onChanged: (v) => setLocal(() => tempState = v),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: _categories
-                            .map((e) => ChoiceChip(
-                                  label: Text(categoryDisplay(e)),
-                                  selected: tempCategory == e,
-                                  onSelected: (_) => setLocal(() => tempCategory = e),
-                                ))
-                            .toList(growable: false),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      DropdownButtonFormField<String>(
-                        value: tempSort,
-                        items: const [
-                          DropdownMenuItem(value: 'rate_asc', child: Text('Daily rate ascending')),
-                          DropdownMenuItem(value: 'rate_desc', child: Text('Daily rate descending')),
-                          DropdownMenuItem(value: 'availability', child: Text('By availability')),
-                        ],
-                        onChanged: (v) => setLocal(() => tempSort = v ?? 'rate_asc'),
-                        decoration: const InputDecoration(labelText: 'Sort'),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                setState(() {
-                                  _selectedState = null;
-                                  _selectedCategory = null;
-                                  _sortBy = 'rate_asc';
-                                });
-                                Navigator.pop(ctx);
-                                _loadData(forceRefresh: true);
-                              },
-                              child: Text('common.reset'.tr()),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                setState(() {
-                                  _selectedState = tempState;
-                                  _selectedCategory = tempCategory;
-                                  _sortBy = tempSort;
-                                });
-                                Navigator.pop(ctx);
-                                _loadData(forceRefresh: true);
-                              },
-                              child: Text('common.apply'.tr()),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+        ),
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final tabs = ['All', ..._categories.map(categoryDisplay), 'Farmer Listings'];
+  Widget _marketplaceHeader(List<String> tabs) {
+    final activeIndex = _tabController?.index ?? 0;
+    final activeTab = (activeIndex >= 0 && activeIndex < tabs.length)
+        ? tabs[activeIndex]
+        : 'All';
+    final subtitle = activeTab == 'Farmer Listings'
+        ? 'Farmer listings and local ownership offers'
+        : 'Live rental rates with smart regional filters';
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(right: AppSpacing.sm),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'equipment_marketplace.search'.tr(),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.full)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              prefixIcon: const Icon(Icons.search),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _headerActionButton(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: () => Navigator.of(context).maybePop(),
+                  ),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Equipment Marketplace',
+                      textAlign: TextAlign.center,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: context.colors.onSurface,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.appColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _headerActionButton(
+                    icon: Icons.refresh_rounded,
+                    onTap: () => _loadData(forceRefresh: true),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _openFilterSheet,
-            icon: const Icon(Icons.tune),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.6),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+              border: Border.all(color: context.appColors.border),
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'equipment_marketplace.search'.tr(),
+                hintStyle: context.textTheme.bodyMedium?.copyWith(
+                  color: context.appColors.textSecondary,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+            ),
           ),
-          IconButton(
-            onPressed: () => _loadData(forceRefresh: true),
-            icon: const Icon(Icons.refresh_rounded),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.55),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+              border: Border.all(color: context.appColors.border),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              dividerColor: Colors.transparent,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.full),
+                color: Colors.white.withValues(alpha: context.isDark ? 0.16 : 0.9),
+              ),
+              labelStyle: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              labelColor: context.colors.onSurface,
+              unselectedLabelColor: context.appColors.textSecondary,
+              tabs: tabs.map((e) => Tab(text: e)).toList(growable: false),
+            ),
           ),
         ],
-        bottom: _tabController == null
-            ? null
-            : TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabs: tabs.map((e) => Tab(text: e)).toList(growable: false),
-              ),
       ),
-      body: EquipmentPageBackground(
-        child: _loading && !_hasSnapshot
-            ? const EquipmentContentSkeleton(cardCount: 8)
-            : _error != null && !_hasSnapshot
-                ? ErrorView(message: _error!, onRetry: () => _loadData(forceRefresh: true))
-                : _tabController == null
-                    ? const SizedBox.shrink()
-                    : Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                EquipmentHeaderCard(
-                                  title: 'Equipment Explorer',
-                                  subtitle: 'Live rental rates, nearby providers, and farmer-owned listings in one place.',
-                                  icon: Icons.travel_explore,
-                                  centerContent: true,
-                                  badges: [
-                                    EquipmentInfoBadge(label: '${_providers.length} offers'),
-                                    EquipmentInfoBadge(label: '${_farmerListings.length} farmer listings'),
-                                    const EquipmentInfoBadge(label: 'Redesigned'),
-                                  ],
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                EquipmentRefreshStrip(
-                                  refreshing: _refreshing,
-                                  label: 'Refreshing latest rental offers...',
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                _aiOverviewSection(),
-                                const SizedBox(height: AppSpacing.sm),
-                                if (_error != null && _hasSnapshot) ...[
-                                  Container(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                                    padding: const EdgeInsets.all(AppSpacing.sm),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                    ),
-                                    child: Text(
-                                      'Showing cached results. Pull down to try syncing again.',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: AppColors.warning,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                _activeFiltersRow(),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabController,
-                              children: List.generate(tabs.length, (index) {
-                                if (index == tabs.length - 1) {
-                                  return _farmerListingsTab();
-                                }
+    );
+  }
 
-                                final rawCategory = index == 0 ? null : _categories[index - 1];
-                                final rows = _providersForCategory(rawCategory);
-                                return _providerTab(rows);
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
+  Widget _headerActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.72),
+          shape: BoxShape.circle,
+          border: Border.all(color: context.appColors.border),
+        ),
+        child: Icon(icon, size: 20, color: context.colors.onSurface),
+      ),
+    );
+  }
+
+  Widget _marketplaceTopSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EquipmentRefreshStrip(
+            refreshing: _refreshing,
+            label: 'Refreshing latest rental offers...',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _aiOverviewSection(),
+          const SizedBox(height: AppSpacing.sm),
+          if (_error != null && _hasSnapshot) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Text(
+                'Showing cached results. Pull down to try syncing again.',
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+          _activeFiltersRow(),
+        ],
       ),
     );
   }
@@ -588,20 +633,267 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
       );
     }
 
-    if (chips.isEmpty) {
-      return Text(
-        'Use filter and search to quickly narrow by state, category, and budget.',
-        style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
-      );
-    }
-
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: chips.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (_, i) => chips[i],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded, color: context.appColors.info, size: 18),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      chips.isEmpty
+                          ? 'Filters'
+                          : 'Filters (${chips.length} active)',
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.onSurface,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _filtersExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: context.appColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                0,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() {
+                            _selectedState = value == '__all__' ? null : value;
+                          });
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem<String>(
+                            value: '__all__',
+                            child: Text('All states'),
+                          ),
+                          ...indianStates.map(
+                            (state) => PopupMenuItem<String>(
+                              value: state,
+                              child: Text(state),
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: context.appColors.border),
+                            color: Colors.white.withValues(
+                              alpha: context.isDark ? 0.08 : 0.7,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 16),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                _selectedState == null
+                                    ? 'All states'
+                                    : _selectedState!,
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colors.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              const Icon(Icons.expand_more_rounded, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() {
+                            _selectedCategory = value == '__all__' ? null : value;
+                          });
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem<String>(
+                            value: '__all__',
+                            child: Text('All categories'),
+                          ),
+                          ..._categories.map(
+                            (category) => PopupMenuItem<String>(
+                              value: category,
+                              child: Text(categoryDisplay(category)),
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: context.appColors.border),
+                            color: Colors.white.withValues(
+                              alpha: context.isDark ? 0.08 : 0.7,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.category_outlined, size: 16),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                _selectedCategory == null
+                                    ? 'All categories'
+                                    : categoryDisplay(_selectedCategory),
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colors.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              const Icon(Icons.expand_more_rounded, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() => _sortBy = value);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem<String>(
+                            value: 'rate_asc',
+                            child: Text('Sort: Low to High'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'rate_desc',
+                            child: Text('Sort: High to Low'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'availability',
+                            child: Text('Sort: Availability'),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: context.appColors.border),
+                            color: Colors.white.withValues(
+                              alpha: context.isDark ? 0.08 : 0.7,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.sort_rounded, size: 16),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                _sortBy == 'rate_desc'
+                                    ? 'High to Low'
+                                    : _sortBy == 'availability'
+                                    ? 'Availability'
+                                    : 'Low to High',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colors.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              const Icon(Icons.expand_more_rounded, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (chips.isNotEmpty)
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: chips,
+                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _selectedState = null;
+                            _selectedCategory = null;
+                            _sortBy = 'rate_asc';
+                            _searchController.clear();
+                          });
+                          _loadData(forceRefresh: true);
+                        },
+                        icon: const Icon(Icons.clear_all_rounded),
+                        label: const Text('Clear'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            _loadData(forceRefresh: true);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.colors.onSurface,
+                            side: BorderSide(color: context.appColors.border),
+                          ),
+                          icon: const Icon(Icons.check_circle_outline_rounded),
+                          label: const Text('Apply Filters'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            crossFadeState: _filtersExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+          ),
+        ],
       ),
     );
   }
@@ -614,10 +906,7 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.auto_awesome,
-                color: AppColors.primary,
-              ),
+              const Icon(Icons.auto_awesome, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 'AI Overview',
@@ -643,9 +932,7 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
                 const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 10),
                 Text(
@@ -669,16 +956,10 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
                   onPressed: _aiLoading
                       ? null
                       : () => _generateAiOverview(forceRefresh: true),
-                  icon: Icon(
-                    _aiGenerated ? Icons.refresh : Icons.auto_awesome,
-                  ),
+                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
                   label: Text(
-                    _aiGenerated
-                        ? 'Generate Fresh'
-                        : 'Generate AI Overview',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withValues(alpha: 0.85),
@@ -710,28 +991,40 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
 
   Widget _providerTab(List<EquipmentProvider> rows) {
     if (rows.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: () => _loadData(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            EmptyView(
-              icon: Icons.search_off_rounded,
-              title: 'equipment_marketplace.empty_title'.tr(),
-              subtitle: 'equipment_marketplace.empty_subtitle'.tr(),
+            _marketplaceTopSection(),
+            const SizedBox(height: AppSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  EmptyView(
+                    icon: Icons.search_off_rounded,
+                    title: 'equipment_marketplace.empty_title'.tr(),
+                    subtitle: 'equipment_marketplace.empty_subtitle'.tr(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedState = null;
+                        _selectedCategory = null;
+                        _sortBy = 'rate_asc';
+                      });
+                      _searchController.clear();
+                      _loadData(forceRefresh: true);
+                    },
+                    child: const Text('Clear Filters'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton(
-              onPressed: () {
-                setState(() {
-                  _selectedState = null;
-                  _selectedCategory = null;
-                  _sortBy = 'rate_asc';
-                });
-                _searchController.clear();
-                _loadData(forceRefresh: true);
-              },
-              child: const Text('Clear Filters'),
-            ),
+            const SizedBox(height: AppSpacing.xl),
           ],
         ),
       );
@@ -744,10 +1037,14 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
       child: ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: groups.length,
+        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+        itemCount: groups.length + 1,
         itemBuilder: (_, i) {
-          final entry = groups[i];
+          if (i == 0) {
+            return _marketplaceTopSection();
+          }
+
+          final entry = groups[i - 1];
           final providers = [...entry.value]
             ..sort((a, b) {
               final aRate = a.rates.daily ?? a.rates.hourly ?? 0;
@@ -756,165 +1053,131 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
             });
           final sample = providers.first;
           final preview = providers.take(3).toList(growable: false);
-
           final rates = providers
               .map((e) => e.rates.daily ?? e.rates.hourly)
               .whereType<double>()
               .where((e) => e > 0)
               .toList(growable: false);
-          final minRate = rates.isEmpty ? 0 : rates.reduce((a, b) => a < b ? a : b);
-          final maxRate = rates.isEmpty ? 0 : rates.reduce((a, b) => a > b ? a : b);
-
+          final minRate = rates.isEmpty
+              ? 0
+              : rates.reduce((a, b) => a < b ? a : b);
+          final maxRate = rates.isEmpty
+              ? 0
+              : rates.reduce((a, b) => a > b ? a : b);
           final accent = categoryColor(sample.category);
-          final encoded = Uri.encodeComponent(sample.equipmentName);
-          final cat = Uri.encodeComponent(sample.category);
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: _choiceStyleCard(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                final encoded = Uri.encodeComponent(sample.equipmentName);
+                final cat = Uri.encodeComponent(sample.category);
+                context.push(
+                  '${RoutePaths.rentalRateDetail}?name=$encoded&category=$cat',
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: accent.withValues(alpha: 0.08),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(categoryIcon(sample.category), color: accent),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            sample.equipmentName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              color: context.colors.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                        child: Icon(categoryIcon(sample.category), color: accent),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              sample.equipmentName,
-                              style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              providers.length == 1
-                                  ? '1 provider available nearby'
-                                  : '${providers.length} providers available nearby',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.appColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              minRate > 0
-                                  ? '₹${minRate.toStringAsFixed(0)}-${maxRate.toStringAsFixed(0)} per day'
-                                  : 'Contact providers for live pricing',
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      availabilityBadge(sample.availability),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  ...preview.map((p) {
-                    return InkWell(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        final equipment = Uri.encodeComponent(p.equipmentName);
-                        final category = Uri.encodeComponent(p.category);
-                        context.push('${RoutePaths.rentalRateDetail}?name=$equipment&category=$category');
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          color: context.appColors.card.withValues(alpha: 0.7),
-                          border: Border.all(color: context.appColors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    p.provider.name,
-                                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    '${p.location.district}, ${p.location.state}',
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      color: context.appColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(AppRadius.full),
-                              ),
-                              child: Text(
-                                rateDisplay(p.rates),
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-                  if (providers.length > preview.length)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Text(
-                        '+${providers.length - preview.length} more providers in this cluster',
-                        style: context.textTheme.bodySmall?.copyWith(
+                        Icon(
+                          Icons.chevron_right_rounded,
                           color: context.appColors.textSecondary,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'EXPLORE',
+                      style: context.textTheme.titleSmall?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            context.push('${RoutePaths.rentalRateDetail}?name=$encoded&category=$cat');
-                          },
-                          icon: const Icon(Icons.table_chart_outlined),
-                          label: const Text('Compare Rates'),
-                        ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      minRate > 0
+                          ? '${providers.length} providers • ₹${minRate.toStringAsFixed(0)} - ₹${maxRate.toStringAsFixed(0)} per day'
+                          : '${providers.length} providers • Contact for live pricing',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colors.onSurface,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            context.push('${RoutePaths.rentalRateDetail}?name=$encoded&category=$cat');
-                          },
-                          icon: const Icon(Icons.flash_on_outlined),
-                          label: const Text('Request Now'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: preview
+                          .map((p) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(
+                                  alpha: context.isDark ? 0.08 : 0.66,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.full,
+                                ),
+                                border: Border.all(
+                                  color: Colors.white.withValues(
+                                    alpha: context.isDark ? 0.2 : 0.8,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                '${p.provider.name} • ${rateDisplay(p.rates)}',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colors.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          })
+                          .toList(growable: false),
+                    ),
+                    if (providers.length > preview.length) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '+${providers.length - preview.length} more providers',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.appColors.textSecondary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -925,18 +1188,32 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
 
   Widget _farmerListingsTab() {
     final search = _searchController.text.trim().toLowerCase();
-    final rows = _farmerListings.where((e) {
-      if (search.isEmpty) return true;
-      return (e['name'] ?? '').toString().toLowerCase().contains(search) ||
-          (e['location'] ?? '').toString().toLowerCase().contains(search);
-    }).toList(growable: false);
+    final rows = _farmerListings
+        .where((e) {
+          if (search.isEmpty) return true;
+          return (e['name'] ?? '').toString().toLowerCase().contains(search) ||
+              (e['location'] ?? '').toString().toLowerCase().contains(search);
+        })
+        .toList(growable: false);
 
     if (rows.isEmpty) {
-      return Center(
-        child: EmptyView(
-          icon: Icons.agriculture_outlined,
-          title: 'No farmer listings available',
-          subtitle: 'Try clearing filters to see more equipment.',
+      return RefreshIndicator(
+        onRefresh: () => _loadData(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _marketplaceTopSection(),
+            const SizedBox(height: AppSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: EmptyView(
+                icon: Icons.agriculture_outlined,
+                title: 'No farmer listings available',
+                subtitle: 'Try clearing filters to see more equipment.',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
         ),
       );
     }
@@ -944,63 +1221,76 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
       child: ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: rows.length,
+        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+        itemCount: rows.length + 1,
         itemBuilder: (_, i) {
-          final row = rows[i];
+          if (i == 0) {
+            return _marketplaceTopSection();
+          }
+
+          final row = rows[i - 1];
           final type = (row['type'] ?? '').toString();
           final rate = (row['rate_per_day'] as num?)?.toDouble() ?? 0;
+          final accent = categoryColor(type);
+
           return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: AppCard(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: _choiceStyleCard(
               onTap: () {
                 HapticFeedback.lightImpact();
                 final id = Uri.encodeComponent((row['id'] ?? '').toString());
                 context.push('${RoutePaths.listingDetails}?id=$id');
               },
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: categoryColor(type).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(categoryIcon(type), color: categoryColor(type)),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: accent.withValues(alpha: 0.08),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text((row['name'] ?? '').toString(), style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                        Text((row['location'] ?? '').toString(), style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
+                        Icon(categoryIcon(type), color: accent),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            (row['name'] ?? '').toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.onSurface,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: Text('₹${rate.toStringAsFixed(0)}/day', style: context.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'MANAGE',
+                      style: context.textTheme.titleSmall?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: AppColors.info.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: Text('Farmer Listed', style: context.textTheme.bodySmall?.copyWith(color: AppColors.info, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '${(row['location'] ?? '').toString()} • ₹${rate.toStringAsFixed(0)}/day',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colors.onSurface,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -1009,4 +1299,35 @@ class _EquipmentMarketplaceScreenState extends ConsumerState<EquipmentMarketplac
     );
   }
 
+  Widget _choiceStyleCard({required Widget child, VoidCallback? onTap}) {
+    final cardColor = context.isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.56);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(10), child: child),
+        ),
+      ),
+    );
+  }
 }

@@ -66,6 +66,10 @@ LIVESTOCK_INTENT_MARKERS = {
     "livestock", "cattle", "cow", "buffalo", "goat", "poultry", "dairy", "mastitis",
 }
 
+CALENDAR_INTENT_MARKERS = {
+    "calendar", "event", "events", "schedule", "scheduled", "reminder", "reminders", "task", "tasks",
+}
+
 CROP_TERMS = [
     "wheat",
     "rice",
@@ -141,6 +145,26 @@ class ChatService:
         return any(m in txt for m in markers) or bool(tokens.intersection(markers))
 
     @staticmethod
+    def _is_calendar_write_intent(user_message: str) -> bool:
+        txt = (user_message or "").lower()
+        write_markers = {
+            "create",
+            "add",
+            "schedule",
+            "set",
+            "update",
+            "edit",
+            "reschedule",
+            "move",
+            "delete",
+            "remove",
+            "complete",
+            "mark done",
+            "undo",
+        }
+        return any(m in txt for m in write_markers) and any(k in txt for k in CALENDAR_INTENT_MARKERS)
+
+    @staticmethod
     def _extract_primary_crop(user_message: str, farmer_facts: list[str]) -> str:
         txt = (user_message or "").lower()
         for crop in CROP_TERMS:
@@ -211,11 +235,13 @@ class ChatService:
 
     async def _execute_agentic_tool_plan(
         self,
+        user_id: str,
         user_message: str,
         farmer_facts: list[str],
         profile_geo: dict | None,
         explicit_agent_type: str | None,
     ) -> dict:
+        from tools.calendar_tools import apply_calendar_action_from_request, list_calendar_events
         from tools.crop_tools import get_crop_calendar, search_crop_knowledge
         from tools.general_tools import get_livestock_advice, search_farming_knowledge
         from tools.market_tools import get_live_mandi_prices, get_live_mandis, get_price_trends
@@ -245,8 +271,9 @@ class ChatService:
         is_scheme = self._is_scheme_intent(user_message)
         is_equipment = self._is_equipment_intent(user_message)
         is_livestock = self._intent_has_any(user_message, LIVESTOCK_INTENT_MARKERS)
+        is_calendar = self._intent_has_any(user_message, CALENDAR_INTENT_MARKERS)
 
-        if not any([is_market, is_weather, is_crop, is_scheme, is_equipment, is_livestock]):
+        if not any([is_market, is_weather, is_crop, is_scheme, is_equipment, is_livestock, is_calendar]):
             is_market = True
             is_weather = True
 
@@ -384,6 +411,26 @@ class ChatService:
                 get_livestock_advice,
                 animal_type=self._extract_primary_animal(user_message),
                 topic="health and management",
+            )
+            tool_outputs[name] = payload
+
+        if is_calendar:
+            if self._is_calendar_write_intent(user_message):
+                sequential_tools.append("calendar.apply_calendar_action_from_request")
+                name, payload = await self._run_tool_async(
+                    "calendar.apply_calendar_action_from_request",
+                    apply_calendar_action_from_request,
+                    user_id=user_id,
+                    request_text=user_message,
+                )
+                tool_outputs[name] = payload
+
+            sequential_tools.append("calendar.list_calendar_events")
+            name, payload = await self._run_tool_async(
+                "calendar.list_calendar_events",
+                list_calendar_events,
+                user_id=user_id,
+                limit=10,
             )
             tool_outputs[name] = payload
 
@@ -637,6 +684,22 @@ class ChatService:
         if not isinstance(profile_geo, dict):
             return []
         facts: list[str] = []
+
+        def _format_fact_value(value: object) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            if isinstance(value, (int, float)):
+                return f"{value:g}"
+            if isinstance(value, list):
+                items = [str(x).strip() for x in value if str(x).strip()]
+                if not items:
+                    return ""
+                return ", ".join(items[:4])
+            text = " ".join(str(value).split()).strip()
+            return text[:120]
+
         state = str(profile_geo.get("state") or "").strip()
         district = str(profile_geo.get("district") or "").strip()
         village = str(profile_geo.get("village") or "").strip()
@@ -649,6 +712,31 @@ class ChatService:
             facts.append(f"profile_village={village}")
         if pin_code:
             facts.append(f"profile_pin_code={pin_code}")
+
+        profile_field_candidates: list[tuple[str, list[str]]] = [
+            ("land_size_acres", ["land_size_acres", "land_acres"]),
+            ("soil_type", ["soil_type"]),
+            ("irrigation_type", ["irrigation_type"]),
+            ("language", ["language"]),
+            ("farming_type", ["farming_type", "farm_type"]),
+            ("major_crop_pattern", ["major_crop_pattern", "primary_crop", "primary_crops", "crops_grown"]),
+            ("farming_experience_years", ["farming_experience_years", "experience_years"]),
+            ("farm_mechanization_level", ["farm_mechanization_level"]),
+            ("livestock", ["livestock", "livestock_type"]),
+            ("pm_kisan_status", ["pm_kisan_status"]),
+            ("kcc_status", ["kcc_status", "has_kcc"]),
+        ]
+
+        for fact_key, keys in profile_field_candidates:
+            raw_value = None
+            for candidate in keys:
+                if candidate in profile_geo and profile_geo.get(candidate) is not None:
+                    raw_value = profile_geo.get(candidate)
+                    break
+            formatted = _format_fact_value(raw_value)
+            if formatted:
+                facts.append(f"profile_{fact_key}={formatted}")
+
         return facts
 
     async def _load_profile_geo_context(self, db, user_id: str) -> dict:
@@ -659,6 +747,17 @@ class ChatService:
                 "district": str(profile.get("district") or "").strip(),
                 "village": str(profile.get("village") or "").strip(),
                 "pin_code": str(profile.get("pin_code") or profile.get("pincode") or "").strip(),
+                "land_size_acres": profile.get("land_size_acres") if profile.get("land_size_acres") is not None else profile.get("land_acres"),
+                "soil_type": str(profile.get("soil_type") or "").strip(),
+                "irrigation_type": str(profile.get("irrigation_type") or "").strip(),
+                "language": str(profile.get("language") or "").strip(),
+                "farming_type": str(profile.get("farming_type") or profile.get("farm_type") or "").strip(),
+                "major_crop_pattern": profile.get("major_crop_pattern") or profile.get("primary_crop") or profile.get("primary_crops") or profile.get("crops_grown"),
+                "farming_experience_years": profile.get("farming_experience_years") if profile.get("farming_experience_years") is not None else profile.get("experience_years"),
+                "farm_mechanization_level": str(profile.get("farm_mechanization_level") or "").strip(),
+                "livestock": profile.get("livestock") or profile.get("livestock_type"),
+                "pm_kisan_status": str(profile.get("pm_kisan_status") or "").strip(),
+                "kcc_status": profile.get("kcc_status") if profile.get("kcc_status") is not None else profile.get("has_kcc"),
             }
 
         try:
@@ -672,7 +771,7 @@ class ChatService:
             )
             if docs:
                 geo = _extract_geo(docs[0].to_dict())
-                if geo.get("state") or geo.get("district"):
+                if any(v not in (None, "", []) for v in geo.values()):
                     return geo
 
             docs = await (
@@ -683,13 +782,13 @@ class ChatService:
             )
             if docs:
                 geo = _extract_geo(docs[0].to_dict())
-                if geo.get("state") or geo.get("district"):
+                if any(v not in (None, "", []) for v in geo.values()):
                     return geo
 
             doc = await profiles.document(user_id).get()
             if doc.exists:
                 geo = _extract_geo(doc.to_dict())
-                if geo.get("state") or geo.get("district"):
+                if any(v not in (None, "", []) for v in geo.values()):
                     return geo
 
             return {}
@@ -951,6 +1050,90 @@ class ChatService:
         else:
             suffix = f"\n\nआपके पहले साझा किए गए संदर्भ ({fact_hint}) के आधार पर यह सलाह आपके खेत की स्थिति के अनुसार है।"
         return response_text + suffix
+
+    def _append_calendar_verification_block(self, response_text: str, agentic_plan: dict, language: str) -> str:
+        outputs = (agentic_plan or {}).get("tool_outputs") if isinstance(agentic_plan, dict) else {}
+        if not isinstance(outputs, dict):
+            return response_text
+
+        payload = outputs.get("calendar.apply_calendar_action_from_request")
+        if not isinstance(payload, dict) or not payload.get("ok"):
+            return response_text
+
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        action = str(data.get("action") or "calendar_action").strip() or "calendar_action"
+
+        lines: list[str] = []
+        if "event" in data and isinstance(data.get("event"), dict):
+            event = data.get("event") or {}
+            lines.append(
+                f"- {event.get('id', '')} | {event.get('event_date', '')} {event.get('event_time', '')} | {event.get('status', 'planned')} | verified from DB"
+            )
+
+        for key in ["created_events", "reused_events"]:
+            batch = data.get(key)
+            if isinstance(batch, list):
+                for item in batch[:10]:
+                    if not isinstance(item, dict):
+                        continue
+                    lines.append(
+                        f"- {item.get('id', '')} | {item.get('event_date', '')} {item.get('event_time', '')} | {item.get('status', 'planned')} | verified from DB"
+                    )
+
+        if not lines:
+            return response_text
+
+        if str(language or "").lower().startswith("hi"):
+            header = f"\n\nकैलेंडर सत्यापन ({action}):"
+        elif str(language or "").lower().startswith("hinglish"):
+            header = f"\n\nCalendar verification ({action}):"
+        else:
+            header = f"\n\nCalendar verification ({action}):"
+
+        unique_lines = []
+        seen = set()
+        for line in lines:
+            if line in seen:
+                continue
+            seen.add(line)
+            unique_lines.append(line)
+        return response_text + header + "\n" + "\n".join(unique_lines[:10])
+
+    def _append_topic_checklist(self, response_text: str, user_message: str, language: str) -> str:
+        txt = (response_text or "").lower()
+        msg = (user_message or "").lower()
+        topic_rules = [
+            ("tomato|price|rate|daam|bhav", "Price"),
+            ("mandi|apmc|near", "Mandi"),
+            ("scheme|subsidy|pm-kisan|kcc|pmfby", "Schemes"),
+            ("equipment|rental|tractor|harvester|sprayer", "Equipment"),
+            ("crop|sowing|harvest|variety", "Crop"),
+            ("weather|rain|forecast|temperature", "Weather"),
+            ("soil|moisture", "Soil"),
+            ("calendar|event|schedule|task|reminder", "Calendar"),
+        ]
+        requested = [label for pattern, label in topic_rules if re.search(pattern, msg)]
+        if len(requested) < 3:
+            return response_text
+
+        covered = []
+        missing = []
+        for label in requested:
+            if label.lower() in txt:
+                covered.append(label)
+            else:
+                missing.append(label)
+
+        if not missing:
+            return response_text
+
+        if str(language or "").lower().startswith("hi"):
+            suffix = "\n\nकवरेज चेकलिस्ट: "
+        elif str(language or "").lower().startswith("hinglish"):
+            suffix = "\n\nCoverage checklist: "
+        else:
+            suffix = "\n\nCoverage checklist: "
+        return response_text + suffix + f"covered={', '.join(covered)}; pending_followup={', '.join(missing)}"
 
     async def _translate_with_runner_to_english(self, response_text: str) -> str:
         runtime_session_id = f"translate-{uuid.uuid4().hex[:8]}"
@@ -1594,6 +1777,7 @@ class ChatService:
         agentic_plan = {}
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
+                user_id=user_id,
                 user_message=message,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -1609,6 +1793,34 @@ class ChatService:
             )
             if direct.strip():
                 direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
+                direct = self._enforce_source_freshness_note(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
+                direct = self._enforce_memory_reference(
+                    response_text=direct,
+                    user_message=message,
+                    farmer_facts=effective_farmer_facts,
+                    language=turn_language,
+                )
+                direct = self._ensure_location_grounding(
+                    response_text=direct,
+                    user_message=message,
+                    profile_geo=profile_geo,
+                    language=turn_language,
+                )
+                direct = self._append_calendar_verification_block(
+                    response_text=direct,
+                    agentic_plan=agentic_plan,
+                    language=turn_language,
+                )
+                direct = self._append_topic_checklist(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -1648,6 +1860,34 @@ class ChatService:
             )
             if direct.strip():
                 direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
+                direct = self._enforce_source_freshness_note(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
+                direct = self._enforce_memory_reference(
+                    response_text=direct,
+                    user_message=message,
+                    farmer_facts=effective_farmer_facts,
+                    language=turn_language,
+                )
+                direct = self._ensure_location_grounding(
+                    response_text=direct,
+                    user_message=message,
+                    profile_geo=profile_geo,
+                    language=turn_language,
+                )
+                direct = self._append_calendar_verification_block(
+                    response_text=direct,
+                    agentic_plan=agentic_plan,
+                    language=turn_language,
+                )
+                direct = self._append_topic_checklist(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -1763,6 +2003,16 @@ class ChatService:
             response_text=response_text,
             user_message=message,
             profile_geo=profile_geo,
+            language=turn_language,
+        )
+        response_text = self._append_calendar_verification_block(
+            response_text=response_text,
+            agentic_plan=agentic_plan,
+            language=turn_language,
+        )
+        response_text = self._append_topic_checklist(
+            response_text=response_text,
+            user_message=message,
             language=turn_language,
         )
 
@@ -1937,6 +2187,7 @@ class ChatService:
         agentic_plan = {}
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
+                user_id=user_id,
                 user_message=message,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2097,6 +2348,16 @@ class ChatService:
             response_text=response_text,
             user_message=message,
             profile_geo=profile_geo,
+            language=turn_language,
+        )
+        response_text = self._append_calendar_verification_block(
+            response_text=response_text,
+            agentic_plan=agentic_plan,
+            language=turn_language,
+        )
+        response_text = self._append_topic_checklist(
+            response_text=response_text,
+            user_message=message,
             language=turn_language,
         )
 

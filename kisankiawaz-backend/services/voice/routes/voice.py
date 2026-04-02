@@ -539,6 +539,7 @@ async def _query_agent_fast(token: str, transcript: str, chat_lang: str, session
         "language": chat_lang,
         "session_id": session_id,
         "allow_fallback": True,
+        "response_mode": "brief",
     }
     headers = {"Authorization": f"Bearer {token}"}
 

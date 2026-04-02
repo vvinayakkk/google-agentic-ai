@@ -22,6 +22,7 @@ Route queries to the appropriate specialist:
 - Market prices, mandis, selling, live mandi data -> MarketAgent
 - Weather forecasts, climate -> WeatherAgent
 - Government schemes, subsidies, loans, document builder, equipment rentals -> SchemeAgent
+- Calendar events, reminders, task scheduling and verification -> GeneralAgent
 - General farming, livestock, other -> GeneralAgent
 
 SchemeAgent now handles:

@@ -16,8 +16,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/models/equipment_model.dart';
+import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../weather/widgets/glass_widgets.dart';
@@ -41,10 +41,12 @@ class RentalRateDetailScreen extends ConsumerStatefulWidget {
 class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen> {
   bool _loading = true;
   bool _refreshing = false;
+  bool _filtersExpanded = false;
   String? _error;
   List<EquipmentProvider> _providers = const [];
   RateSummary _rateSummary = const RateSummary();
   String? _selectedState;
+  String _providerSortBy = 'rate_asc';
 
   final Set<int> _expandedProviders = <int>{};
   List<Map<String, dynamic>> _rateHistory = const [];
@@ -55,11 +57,22 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   String _subsidyCategory = 'general';
 
   bool _chcExpanded = false;
+  bool _comparisonExpanded = false;
   Map<String, dynamic> _chcInfo = const {};
+
+  bool _aiLoading = false;
+  bool _aiGenerated = false;
+  bool _aiExpanded = false;
+  String _aiSummary =
+      'Generate AI insights to identify the best window to rent this equipment.';
+  String _aiDetails =
+      'Uses provider pricing, location filter, and trend history to highlight practical booking strategy.';
+  DateTime? _aiUpdatedAt;
 
   @override
   void initState() {
     super.initState();
+    _loadCachedAiOverview();
     _primeData();
   }
 
@@ -70,6 +83,27 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   }
 
   bool get _hasSnapshot => _providers.isNotEmpty || _rateHistory.isNotEmpty;
+
+  String get _aiCacheKey {
+    final slug = widget.equipmentName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    return 'rental_rate_detail_overview_$slug';
+  }
+
+  List<EquipmentProvider> get _sortedProviders {
+    final rows = [..._providers];
+    if (_providerSortBy == 'rate_desc') {
+      rows.sort((a, b) => (b.rates.daily ?? 0).compareTo(a.rates.daily ?? 0));
+    } else if (_providerSortBy == 'availability') {
+      rows.sort((a, b) => a.availability.compareTo(b.availability));
+    } else {
+      rows.sort((a, b) => (a.rates.daily ?? 0).compareTo(b.rates.daily ?? 0));
+    }
+    return rows;
+  }
 
   Future<void> _primeData() async {
     await _loadData();
@@ -145,65 +179,108 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     }
   }
 
+  Future<void> _loadCachedAiOverview() async {
+    final cached = await ref.read(aiOverviewServiceProvider).getCached(_aiCacheKey);
+    if (!mounted || cached == null) return;
+    setState(() {
+      _aiSummary = cached.summary;
+      _aiDetails = cached.details;
+      _aiUpdatedAt = cached.updatedAt;
+      _aiGenerated = true;
+    });
+  }
+
+  Future<void> _generateAiOverview({bool forceRefresh = true}) async {
+    if (_aiLoading) return;
+    setState(() => _aiLoading = true);
+
+    try {
+      final snippets = <String>[
+        'Equipment: ${widget.equipmentName}.',
+        'Loaded providers: ${_providers.length}.',
+      ];
+
+      if (_selectedState != null && _selectedState!.isNotEmpty) {
+        snippets.add('Active state filter: $_selectedState.');
+      }
+
+      final minDaily = _rateSummary.dailyMin;
+      final maxDaily = _rateSummary.dailyMax;
+      if (minDaily != null && maxDaily != null) {
+        snippets.add(
+          'Daily price band: INR ${minDaily.toStringAsFixed(0)} to INR ${maxDaily.toStringAsFixed(0)}.',
+        );
+      }
+
+      for (final p in _sortedProviders.take(6)) {
+        snippets.add(
+          '${p.provider.name} in ${p.location.district}, ${p.location.state} at ${rateDisplay(p.rates)} with availability ${p.availability}.',
+        );
+      }
+
+      for (final row in _rateHistory.take(6)) {
+        final period = (row['period'] ?? '').toString();
+        final rate = (row['rate_daily'] as num?)?.toDouble();
+        if (period.isEmpty || rate == null) continue;
+        snippets.add('Trend point: $period daily rate INR ${rate.toStringAsFixed(0)}.');
+      }
+
+      final result = await ref.read(aiOverviewServiceProvider).generate(
+            key: _aiCacheKey,
+            pageName: 'Rental Rate Detail',
+            languageCode: context.locale.languageCode,
+            nearbyData: snippets,
+            forceRefresh: forceRefresh,
+          );
+
+      if (!mounted) return;
+      setState(() {
+        _aiSummary = result.summary;
+        _aiDetails = result.details;
+        _aiUpdatedAt = result.updatedAt;
+        _aiGenerated = true;
+        _aiLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _aiLoading = false);
+      context.showSnack('Failed to generate AI overview: $e', isError: true);
+    }
+  }
+
+  String _aiUpdatedLabel() {
+    final dt = _aiUpdatedAt;
+    if (dt == null) return 'Not generated yet';
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return 'Updated at $hh:$mm';
+  }
+
   List<Map<String, dynamic>> _simulatedHistory(double baseDaily) {
     final now = DateTime.now();
     final safeBase = baseDaily <= 0 ? 2000 : baseDaily;
     final rows = <Map<String, dynamic>>[];
     final name = widget.equipmentName.toLowerCase();
-    final peakMonth = name.contains('irrigation') || name.contains('pump') ? 6 : 11;
+    final seed = name.codeUnits.fold<int>(0, (acc, e) => (acc * 31 + e) % 9973);
+    final basePeakMonth = name.contains('irrigation') || name.contains('pump') ? 6 : 11;
+    final peakMonth = ((basePeakMonth + (seed % 4) - 2) % 12) + 1;
 
-    for (int i = 11; i >= 0; i--) {
+    for (int i = 23; i >= 0; i--) {
       final d = DateTime(now.year, now.month - i, 1);
       final monthDist = (d.month - peakMonth).abs();
       final seasonal = math.sin((12 - monthDist) / 12 * math.pi);
-      final value = safeBase * (0.88 + (0.2 * seasonal));
+      final secondaryWave = math.sin(((i + (seed % 9)) / 6) * math.pi);
+      final monthNoise = (((seed + (i * 37)) % 21) - 10) / 100;
+      final multiplier = (0.82 + (0.2 * seasonal) + (0.06 * secondaryWave) + monthNoise)
+          .clamp(0.62, 1.25)
+          .toDouble();
+      final value = safeBase * multiplier;
       rows.add({
         'period': DateFormat('yyyy-MM').format(d),
         'rate_daily': value.roundToDouble(),
       });
     }
     return rows;
-  }
-
-  Future<void> _pickState() async {
-    String? selected = _selectedState;
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) {
-        return SafeArea(
-          child: ListView.builder(
-            itemCount: indianStates.length + 1,
-            itemBuilder: (_, i) {
-              if (i == 0) {
-                return RadioListTile<String?>(
-                  title: const Text('All States'),
-                  value: null,
-                  groupValue: selected,
-                  onChanged: (v) {
-                    selected = v;
-                    Navigator.pop(ctx);
-                  },
-                );
-              }
-              final state = indianStates[i - 1];
-              return RadioListTile<String?>(
-                title: Text(state),
-                value: state,
-                groupValue: selected,
-                onChanged: (v) {
-                  selected = v;
-                  Navigator.pop(ctx);
-                },
-              );
-            },
-          ),
-        );
-      },
-    );
-
-    if (!mounted) return;
-    setState(() => _selectedState = selected);
-    await _loadData(forceRefresh: true);
   }
 
   Future<void> _openCall(String phone) async {
@@ -232,7 +309,35 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   Future<void> _showRentalRequestSheet() async {
     DateTime? startDate;
     DateTime? endDate;
-    final messageController = TextEditingController();
+    String messageText = '';
+    final providerOptions = _sortedProviders;
+    final stateOptions = providerOptions
+        .map((p) => p.location.state.trim())
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList(growable: false)
+      ..sort();
+    String? selectedState = stateOptions.isNotEmpty ? stateOptions.first : null;
+    List<String> districtOptionsForState(String? state) {
+      final rows = providerOptions.where((p) {
+        if (state == null || state.isEmpty) return true;
+        return p.location.state.trim() == state;
+      });
+      final districts = rows
+          .map((p) => p.location.district.trim())
+          .where((d) => d.isNotEmpty)
+          .toSet()
+          .toList(growable: false)
+        ..sort();
+      return districts;
+    }
+
+    String? selectedDistrict = districtOptionsForState(selectedState).isNotEmpty
+        ? districtOptionsForState(selectedState).first
+        : null;
+    String? selectedProviderId = providerOptions.isNotEmpty
+        ? providerOptions.first.id.trim()
+        : null;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -247,89 +352,218 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                 top: AppSpacing.lg,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Request Rental', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(widget.equipmentName, style: context.textTheme.bodyLarge),
-                  const SizedBox(height: AppSpacing.sm),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(startDate == null ? 'Select start date' : DateFormat('dd MMM yyyy').format(startDate!)),
-                    trailing: const Icon(Icons.calendar_today_outlined),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        initialDate: DateTime.now(),
-                      );
-                      if (picked != null) setLocal(() => startDate = picked);
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(endDate == null ? 'Select end date' : DateFormat('dd MMM yyyy').format(endDate!)),
-                    trailing: const Icon(Icons.calendar_today_outlined),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        firstDate: startDate ?? DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        initialDate: startDate ?? DateTime.now(),
-                      );
-                      if (picked != null) setLocal(() => endDate = picked);
-                    },
-                  ),
-                  AppTextField(
-                    label: 'Message',
-                    hint: 'Add a request note',
-                    maxLines: 3,
-                    controller: messageController,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (startDate == null || endDate == null) return;
-                        if (_providers.isEmpty) return;
-
-                        try {
-                          final equipmentId = _providers.first.id;
-                          final created = await ref.read(equipmentServiceProvider).createRental({
-                            'equipment_id': equipmentId,
-                            'start_date': startDate!.toIso8601String(),
-                            'end_date': endDate!.toIso8601String(),
-                            'message': messageController.text.trim(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Request Rental', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(widget.equipmentName, style: context.textTheme.bodyLarge),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (providerOptions.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        value: selectedState,
+                        decoration: const InputDecoration(
+                          labelText: 'Select State',
+                          hintText: 'Choose state',
+                        ),
+                        isExpanded: true,
+                        items: stateOptions
+                            .map(
+                              (s) => DropdownMenuItem<String>(
+                                value: s,
+                                child: Text(s),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (v) {
+                          setLocal(() {
+                            selectedState = v;
+                            final districtOptions = districtOptionsForState(selectedState);
+                            selectedDistrict = districtOptions.isNotEmpty ? districtOptions.first : null;
+                            final filtered = providerOptions.where((p) {
+                              final stateOk = selectedState == null || selectedState!.isEmpty
+                                  ? true
+                                  : p.location.state.trim() == selectedState;
+                              final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
+                                  ? true
+                                  : p.location.district.trim() == selectedDistrict;
+                              return stateOk && districtOk;
+                            }).toList(growable: false);
+                            selectedProviderId = filtered.isNotEmpty ? filtered.first.id.trim() : null;
                           });
-                          if (!ctx.mounted) return;
-                          Navigator.pop(ctx);
-                          if (!mounted) return;
-                          context.showSnack('Rental request submitted');
-                          final rentalId = (created['id'] ?? created['rental_id'] ?? '').toString();
-                          if (rentalId.isNotEmpty) {
-                            context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}');
-                          }
-                        } catch (e) {
-                          if (!ctx.mounted) return;
-                          context.showSnack(e.toString(), isError: true);
-                        }
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Builder(
+                        builder: (_) {
+                          final districtOptions = districtOptionsForState(selectedState);
+                          return DropdownButtonFormField<String>(
+                            value: selectedDistrict,
+                            decoration: const InputDecoration(
+                              labelText: 'Select District / Mandi Area',
+                              hintText: 'Choose district',
+                            ),
+                            isExpanded: true,
+                            items: districtOptions
+                                .map(
+                                  (d) => DropdownMenuItem<String>(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (v) {
+                              setLocal(() {
+                                selectedDistrict = v;
+                                final filtered = providerOptions.where((p) {
+                                  final stateOk = selectedState == null || selectedState!.isEmpty
+                                      ? true
+                                      : p.location.state.trim() == selectedState;
+                                  final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
+                                      ? true
+                                      : p.location.district.trim() == selectedDistrict;
+                                  return stateOk && districtOk;
+                                }).toList(growable: false);
+                                selectedProviderId = filtered.isNotEmpty ? filtered.first.id.trim() : null;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Builder(
+                        builder: (_) {
+                          final scopedProviders = providerOptions.where((p) {
+                            final stateOk = selectedState == null || selectedState!.isEmpty
+                                ? true
+                                : p.location.state.trim() == selectedState;
+                            final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
+                                ? true
+                                : p.location.district.trim() == selectedDistrict;
+                            return stateOk && districtOk;
+                          }).toList(growable: false);
+
+                          return DropdownButtonFormField<String>(
+                            value: selectedProviderId,
+                            decoration: const InputDecoration(
+                              labelText: 'Select Provider / Mandi',
+                              hintText: 'Choose where you want to rent from',
+                            ),
+                            isExpanded: true,
+                            items: scopedProviders.map((p) {
+                              final daily = p.rates.daily;
+                              final rateText = daily == null
+                                  ? 'Rate on call'
+                                  : 'Rs ${daily.toStringAsFixed(0)}/day';
+                              final label = '${p.provider.name} - ${p.location.district}, ${p.location.state} - $rateText';
+                              return DropdownMenuItem<String>(
+                                value: p.id.trim(),
+                                child: Text(
+                                  label,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(growable: false),
+                            onChanged: (v) => setLocal(() => selectedProviderId = v),
+                          );
+                        },
+                      ),
+                    ]
+                    else
+                      Text(
+                        'No providers available right now.',
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: context.appColors.textSecondary,
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(startDate == null ? 'Select start date' : DateFormat('dd MMM yyyy').format(startDate!)),
+                      trailing: const Icon(Icons.calendar_today_outlined),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          initialDate: DateTime.now(),
+                        );
+                        if (picked != null) setLocal(() => startDate = picked);
                       },
-                      child: const Text('Submit Request'),
                     ),
-                  ),
-                ],
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(endDate == null ? 'Select end date' : DateFormat('dd MMM yyyy').format(endDate!)),
+                      trailing: const Icon(Icons.calendar_today_outlined),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          firstDate: startDate ?? DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          initialDate: startDate ?? DateTime.now(),
+                        );
+                        if (picked != null) setLocal(() => endDate = picked);
+                      },
+                    ),
+                    AppTextField(
+                      label: 'Message',
+                      hint: 'Add a request note',
+                      maxLines: 3,
+                      onChanged: (v) => messageText = v,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          if (startDate == null || endDate == null) {
+                            context.showSnack('Select start and end dates', isError: true);
+                            return;
+                          }
+                          final equipmentId = (selectedProviderId ?? '').trim();
+                          if (equipmentId.isEmpty) {
+                            context.showSnack('Select a provider/mandi first', isError: true);
+                            return;
+                          }
+
+                          try {
+                            final created = await ref.read(equipmentServiceProvider).createRental({
+                              'equipment_id': equipmentId,
+                              'start_date': startDate!.toIso8601String(),
+                              'end_date': endDate!.toIso8601String(),
+                              'message': messageText.trim(),
+                            });
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            if (!mounted) return;
+                            context.showSnack('Rental request submitted');
+                            final rentalId = (created['id'] ?? created['rental_id'] ?? '').toString();
+                            if (rentalId.isNotEmpty) {
+                              context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}');
+                            }
+                          } catch (e) {
+                            if (!ctx.mounted) return;
+                            context.showSnack(e.toString(), isError: true);
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.colors.onSurface,
+                          side: BorderSide(color: context.appColors.border),
+                        ),
+                        child: const Text('Submit Request'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
         );
       },
     );
-
-    messageController.dispose();
   }
 
   double get _subsidyPercent => _subsidyCategory == 'scst' ? 0.5 : 0.4;
@@ -338,185 +572,623 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   Widget build(BuildContext context) {
     final minDaily = _rateSummary.dailyMin?.toStringAsFixed(0) ?? '--';
     final maxDaily = _rateSummary.dailyMax?.toStringAsFixed(0) ?? '--';
+    final sortedProviders = _sortedProviders;
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: Text(widget.equipmentName),
-        actions: [
-          IconButton(onPressed: _share, icon: const Icon(Icons.share_outlined)),
-        ],
-      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: ElevatedButton(
-            onPressed: _showRentalRequestSheet,
-            child: const Text('Request Rental'),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _showRentalRequestSheet,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.onSurface,
+                  side: const BorderSide(color: Colors.black, width: 1.2),
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.assignment_rounded, size: 18),
+                label: const Text('Request Rental'),
+              ),
+            ],
           ),
         ),
       ),
       body: EquipmentPageBackground(
-        child: _loading && !_hasSnapshot
-            ? const EquipmentContentSkeleton(cardCount: 8)
-            : _error != null && !_hasSnapshot
-                ? ErrorView(message: _error!, onRetry: () => _loadData(forceRefresh: true))
-                : RefreshIndicator(
-                    onRefresh: () => _loadData(forceRefresh: true),
-                    child: ListView(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      children: [
-                        EquipmentHeaderCard(
-                          title: widget.equipmentName,
-                          subtitle: 'Compare providers, evaluate trends, and book at the right time.',
-                          icon: categoryIcon(widget.category),
-                          badges: [
-                            EquipmentInfoBadge(label: '${_providers.length} providers'),
-                            EquipmentInfoBadge(label: '₹$minDaily-₹$maxDaily per day'),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        EquipmentRefreshStrip(
-                          refreshing: _refreshing,
-                          label: 'Refreshing prices, history, and provider availability...',
-                        ),
-                        if (_error != null && _hasSnapshot)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                            child: Text(
-                              'Showing cached rate intelligence while network reconnects.',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
+        child: SafeArea(
+          bottom: false,
+          child: _loading && !_hasSnapshot
+              ? const EquipmentContentSkeleton(cardCount: 8)
+              : _error != null && !_hasSnapshot
+                  ? ErrorView(message: _error!, onRetry: () => _loadData(forceRefresh: true))
+                  : RefreshIndicator(
+                      onRefresh: () => _loadData(forceRefresh: true),
+                      child: ListView(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        children: [
+                          _detailHeader(minDaily: minDaily, maxDaily: maxDaily),
+                          const SizedBox(height: AppSpacing.sm),
+                          EquipmentRefreshStrip(
+                            refreshing: _refreshing,
+                            label: 'Refreshing prices, history, and provider availability...',
+                          ),
+                          if (_error != null && _hasSnapshot)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: Text(
+                                'Showing cached rate intelligence while network reconnects.',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
+                          _activeFiltersRow(),
+                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(
+                            height: 110,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                _summaryCard('Min Daily', _rateSummary.dailyMin, '/day'),
+                                const SizedBox(width: AppSpacing.sm),
+                                _summaryCard('Max Daily', _rateSummary.dailyMax, '/day'),
+                                const SizedBox(width: AppSpacing.sm),
+                                _summaryCard('Avg Hourly', _avgHourly(), '/hr'),
+                              ],
+                            ),
                           ),
-                        ActionChip(
-                          onPressed: _pickState,
-                          avatar: const Icon(Icons.place_outlined, size: 16),
-                          label: Text(_selectedState ?? 'All States'),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        SizedBox(
-                          height: 110,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              _summaryCard('Min Daily', _rateSummary.dailyMin, '/day'),
-                              const SizedBox(width: AppSpacing.sm),
-                              _summaryCard('Max Daily', _rateSummary.dailyMax, '/day'),
-                              const SizedBox(width: AppSpacing.sm),
-                              _summaryCard('Avg Hourly', _avgHourly(), '/hr'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        GlassCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _hasRealHistory
-                                    ? 'Price Trend (Real Data)'
-                                    : 'Price Trend (Estimated - simulated from current rates)',
-                                style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              SizedBox(height: 240, child: _trendChart()),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AppCard(child: _comparisonTable()),
-                        const SizedBox(height: AppSpacing.md),
-                        ...List.generate(_providers.length, (i) => _providerCard(i, _providers[i])),
-                        const SizedBox(height: AppSpacing.md),
-                        GlassCard(
-                          child: Column(
-                            children: [
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text('SMAM Subsidy Calculator', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                                trailing: Icon(_subsidyExpanded ? Icons.expand_less : Icons.expand_more),
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  setState(() => _subsidyExpanded = !_subsidyExpanded);
-                                },
-                              ),
-                              if (_subsidyExpanded) ...[
-                                AppTextField(
-                                  label: 'Equipment Purchase Price',
-                                  hint: 'Enter amount',
-                                  keyboardType: TextInputType.number,
-                                  controller: _equipCostController,
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                SegmentedButton<String>(
-                                  segments: const [
-                                    ButtonSegment(value: 'general', label: Text('General Farmer')),
-                                    ButtonSegment(value: 'scst', label: Text('SC/ST or Small-Marginal')),
-                                  ],
-                                  selected: {_subsidyCategory},
-                                  onSelectionChanged: (s) => setState(() => _subsidyCategory = s.first),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                _subsidyResult(),
-                                const SizedBox(height: AppSpacing.sm),
+                          const SizedBox(height: AppSpacing.md),
+                          _aiOverviewSection(),
+                          const SizedBox(height: AppSpacing.md),
+                          GlassCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  'SMAM caps: ₹1L max (SC/ST individual), ₹50K max (general), ₹25L max (CHC project).',
-                                  style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+                                  _hasRealHistory
+                                      ? 'Demand & Price Trend (Real Data)'
+                                      : 'Demand & Price Trend (Estimated from current rates)',
+                                  style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                OutlinedButton(
-                                  onPressed: () => launchUrl(Uri.parse('https://agrimachinery.nic.in'), mode: LaunchMode.externalApplication),
-                                  child: const Text('Apply for SMAM Subsidy Online'),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  _historyCoverageLabel(),
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.appColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                SizedBox(height: 250, child: _trendChart()),
+                                const SizedBox(height: AppSpacing.xs),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Y-axis: Daily Rate (INR)',
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.appColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'X-axis: Month-Year',
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.appColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        GlassCard(
-                          child: Column(
-                            children: [
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text('What is a Custom Hiring Centre?'),
-                                trailing: Icon(_chcExpanded ? Icons.expand_less : Icons.expand_more),
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  setState(() => _chcExpanded = !_chcExpanded);
-                                },
-                              ),
-                              if (_chcExpanded) ...[
-                                Text((_chcInfo['description'] ?? '').toString()),
-                                const SizedBox(height: AppSpacing.sm),
-                                ...(((_chcInfo['how_to_find'] as List?)?.map((e) => e.toString()) ?? const [])
-                                    .map((e) => Padding(
-                                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.check_circle_outline, size: 16, color: AppColors.primary),
-                                              const SizedBox(width: AppSpacing.xs),
-                                              Expanded(child: Text(e)),
-                                            ],
-                                          ),
-                                        ))),
+                          const SizedBox(height: AppSpacing.md),
+                          GlassCard(child: _comparisonTable()),
+                          const SizedBox(height: AppSpacing.md),
+                          ...List.generate(
+                            sortedProviders.length,
+                            (i) => _providerCard(i, sortedProviders[i]),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          GlassCard(
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text('SMAM Subsidy Calculator', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                  trailing: Icon(_subsidyExpanded ? Icons.expand_less : Icons.expand_more),
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _subsidyExpanded = !_subsidyExpanded);
+                                  },
+                                ),
+                                if (_subsidyExpanded) ...[
+                                  AppTextField(
+                                    label: 'Equipment Purchase Price',
+                                    hint: 'Enter amount',
+                                    keyboardType: TextInputType.number,
+                                    controller: _equipCostController,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  SegmentedButton<String>(
+                                    segments: const [
+                                      ButtonSegment(value: 'general', label: Text('General Farmer')),
+                                      ButtonSegment(value: 'scst', label: Text('SC/ST or Small-Marginal')),
+                                    ],
+                                    selected: {_subsidyCategory},
+                                    onSelectionChanged: (s) => setState(() => _subsidyCategory = s.first),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  _subsidyResult(),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'SMAM caps: ₹1L max (SC/ST individual), ₹50K max (general), ₹25L max (CHC project).',
+                                    style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  OutlinedButton(
+                                    onPressed: () => launchUrl(Uri.parse('https://agrimachinery.nic.in'), mode: LaunchMode.externalApplication),
+                                    child: const Text('Apply for SMAM Subsidy Online'),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.md),
+                          GlassCard(
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('What is a Custom Hiring Centre?'),
+                                  trailing: Icon(_chcExpanded ? Icons.expand_less : Icons.expand_more),
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _chcExpanded = !_chcExpanded);
+                                  },
+                                ),
+                                if (_chcExpanded) ...[
+                                  Text((_chcInfo['description'] ?? '').toString()),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ...(((_chcInfo['how_to_find'] as List?)?.map((e) => e.toString()) ?? const [])
+                                      .map((e) => Padding(
+                                            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.check_circle_outline, size: 16, color: AppColors.primary),
+                                                const SizedBox(width: AppSpacing.xs),
+                                                Expanded(child: Text(e)),
+                                              ],
+                                            ),
+                                          ))),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailHeader({required String minDaily, required String maxDaily}) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 48,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _headerActionButton(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.equipmentName,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
+                  Text(
+                    'Rental intelligence and booking guidance',
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.appColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _headerActionButton(
+                  icon: Icons.share_outlined,
+                  onTap: _share,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _headerBadge('${_providers.length} providers'),
+            _headerBadge('₹$minDaily-₹$maxDaily/day'),
+            _headerBadge(_selectedState ?? 'All states'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _headerBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Text(
+        label,
+        style: context.textTheme.bodySmall?.copyWith(
+          color: context.colors.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _headerActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.72),
+          shape: BoxShape.circle,
+          border: Border.all(color: context.appColors.border),
+        ),
+        child: Icon(icon, size: 20, color: context.colors.onSurface),
+      ),
+    );
+  }
+
+  Widget _activeFiltersRow() {
+    final chips = <Widget>[];
+
+    if (_selectedState != null && _selectedState!.trim().isNotEmpty) {
+      chips.add(
+        InputChip(
+          label: Text(_selectedState!),
+          onDeleted: () {
+            setState(() => _selectedState = null);
+            _loadData(forceRefresh: true);
+          },
+        ),
+      );
+    }
+
+    if (_providerSortBy != 'rate_asc') {
+      chips.add(
+        InputChip(
+          label: Text(
+            _providerSortBy == 'rate_desc' ? 'High to Low' : 'Availability',
+          ),
+          onDeleted: () => setState(() => _providerSortBy = 'rate_asc'),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded, color: context.appColors.info, size: 18),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      chips.isEmpty ? 'Filters' : 'Filters (${chips.length} active)',
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.onSurface,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _filtersExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: context.appColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                0,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() {
+                            _selectedState = value == '__all__' ? null : value;
+                          });
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem<String>(
+                            value: '__all__',
+                            child: Text('All states'),
+                          ),
+                          ...indianStates.map(
+                            (state) => PopupMenuItem<String>(
+                              value: state,
+                              child: Text(state),
+                            ),
+                          ),
+                        ],
+                        child: _popupFilterChip(
+                          icon: Icons.location_on_outlined,
+                          text: _selectedState ?? 'All states',
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() => _providerSortBy = value);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem<String>(
+                            value: 'rate_asc',
+                            child: Text('Sort: Low to High'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'rate_desc',
+                            child: Text('Sort: High to Low'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'availability',
+                            child: Text('Sort: Availability'),
+                          ),
+                        ],
+                        child: _popupFilterChip(
+                          icon: Icons.sort_rounded,
+                          text: _providerSortBy == 'rate_desc'
+                              ? 'High to Low'
+                              : _providerSortBy == 'availability'
+                                  ? 'Availability'
+                                  : 'Low to High',
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: chips,
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _selectedState = null;
+                            _providerSortBy = 'rate_asc';
+                          });
+                          _loadData(forceRefresh: true);
+                        },
+                        icon: const Icon(Icons.clear_all_rounded),
+                        label: const Text('Clear'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            _loadData(forceRefresh: true);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.colors.onSurface,
+                            side: BorderSide(color: context.appColors.border),
+                          ),
+                          icon: const Icon(Icons.check_circle_outline_rounded),
+                          label: const Text('Apply Filters'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            crossFadeState:
+                _filtersExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _popupFilterChip({required IconData icon, required String text}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: context.appColors.border),
+        color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            text,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colors.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          const Icon(Icons.expand_more_rounded, size: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _aiOverviewSection() {
+    return GlassCard(
+      featured: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                'AI Overview',
+                style: context.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _aiExpanded ? _aiDetails : _aiSummary,
+            style: context.textTheme.bodyMedium?.copyWith(height: 1.45),
+            maxLines: _aiExpanded ? null : 4,
+            overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_aiLoading)
+            Row(
+              children: [
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Generating recommendations...',
+                  style: context.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _aiUpdatedLabel(),
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.appColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _aiLoading
+                      ? null
+                      : () => _generateAiOverview(forceRefresh: true),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.colors.onSurface,
+                    side: BorderSide(color: context.appColors.border),
+                  ),
+                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
+                  label: Text(
+                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              OutlinedButton(
+                onPressed: () {
+                  setState(() => _aiExpanded = !_aiExpanded);
+                },
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+                child: Text(_aiExpanded ? 'Less' : 'More'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -530,7 +1202,7 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
           children: [
             Text(label, style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
             const SizedBox(height: AppSpacing.xs),
-            Text(value == null ? '--' : '${value.inr}$unit', style: context.textTheme.titleMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w800)),
+            Text(value == null ? '--' : '${value.inr}$unit', style: context.textTheme.titleMedium?.copyWith(color: AppColors.info, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -548,63 +1220,146 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
       return const Center(child: Text('No data'));
     }
 
-    final spots = <FlSpot>[];
-    for (int i = 0; i < _rateHistory.length; i++) {
-      final y = (_rateHistory[i]['rate_daily'] as num?)?.toDouble() ?? 0;
-      spots.add(FlSpot(i.toDouble(), y));
+    final cleaned = _rateHistory
+        .where((row) => (row['rate_daily'] as num?)?.toDouble() != null)
+        .toList(growable: false);
+    if (cleaned.isEmpty) {
+      return const Center(child: Text('No chartable history'));
     }
 
-    return LineChart(
-      LineChartData(
-        gridData: const FlGridData(show: true),
-        lineTouchData: const LineTouchData(enabled: true),
+    const maxPoints = 10;
+    final stride = cleaned.length <= maxPoints ? 1 : (cleaned.length / maxPoints).ceil();
+    final sampled = <Map<String, dynamic>>[];
+    for (int i = 0; i < cleaned.length; i += stride) {
+      sampled.add(cleaned[i]);
+    }
+    if (!identical(sampled.isNotEmpty ? sampled.last : null, cleaned.last)) {
+      sampled.add(cleaned.last);
+    }
+
+    final values = sampled
+        .map((row) => (row['rate_daily'] as num?)?.toDouble() ?? 0)
+        .where((v) => v > 0)
+        .toList(growable: false);
+    if (values.isEmpty) {
+      return const Center(child: Text('No chartable history'));
+    }
+
+    final minValue = values.reduce((a, b) => a < b ? a : b);
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final paddedMin = (minValue * 0.88).floorToDouble();
+    final paddedMax = (maxValue * 1.12).ceilToDouble();
+    final yRange = (paddedMax - paddedMin).abs().toDouble();
+    final yStep = (yRange <= 0 ? 1000.0 : yRange / 3).toDouble();
+
+    return BarChart(
+      BarChartData(
+        minY: paddedMin,
+        maxY: paddedMax,
+        alignment: BarChartAlignment.spaceAround,
+        groupsSpace: 10,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: yStep,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: context.appColors.border.withValues(alpha: 0.55),
+            strokeWidth: 1,
+          ),
+        ),
         borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: (_rateHistory.length - 1).toDouble(),
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => context.colors.surface,
+            getTooltipItem: (group, _, rod, __) {
+              final idx = group.x.toInt();
+              if (idx < 0 || idx >= sampled.length) return null;
+              final period = (sampled[idx]['period'] ?? '').toString();
+              String shortPeriod = period;
+              try {
+                shortPeriod = DateFormat('MMM yy').format(DateFormat('yyyy-MM').parse(period));
+              } catch (_) {}
+              return BarTooltipItem(
+                '$shortPeriod\n₹${rod.toY.toStringAsFixed(0)}',
+                TextStyle(
+                  color: context.colors.onSurface,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              );
+            },
+          ),
+        ),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 42,
-              getTitlesWidget: (v, _) => Text('₹${v.toInt()}', style: const TextStyle(fontSize: 10)),
+              reservedSize: 40,
+              interval: yStep,
+              getTitlesWidget: (value, _) {
+                if (value < paddedMin - 1 || value > paddedMax + 1) {
+                  return const SizedBox.shrink();
+                }
+                final k = value / 1000;
+                return Text(
+                  '₹${k.toStringAsFixed(k >= 10 ? 0 : 1)}k',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: context.appColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
             ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              getTitlesWidget: (v, _) {
-                final idx = v.toInt();
-                if (idx < 0 || idx >= _rateHistory.length) return const SizedBox.shrink();
-                final period = (_rateHistory[idx]['period'] ?? '').toString();
-                DateTime? d;
+              reservedSize: 24,
+              getTitlesWidget: (value, _) {
+                final idx = value.toInt();
+                if (idx < 0 || idx >= sampled.length) return const SizedBox.shrink();
+                final period = (sampled[idx]['period'] ?? '').toString();
+                DateTime? date;
                 try {
-                  d = DateFormat('yyyy-MM').parse(period);
+                  date = DateFormat('yyyy-MM').parse(period);
                 } catch (_) {}
-                final label = d == null ? period : DateFormat('MMM').format(d);
-                return Text(label, style: const TextStyle(fontSize: 10));
+                final label = date == null ? period : DateFormat('MMM').format(date);
+                return Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(label, style: const TextStyle(fontSize: 9)),
+                );
               },
             ),
           ),
         ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            barWidth: 3,
-            color: AppColors.primary,
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [AppColors.primary.withValues(alpha: 0.24), AppColors.primary.withValues(alpha: 0.04)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+        barGroups: List.generate(sampled.length, (i) {
+          final daily = (sampled[i]['rate_daily'] as num?)?.toDouble() ?? 0;
+          final isLatest = i == sampled.length - 1;
+          return BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: daily,
+                width: 14,
+                borderRadius: BorderRadius.circular(4),
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: isLatest
+                      ? [AppColors.primary, AppColors.info]
+                      : [
+                          AppColors.info.withValues(alpha: 0.75),
+                          AppColors.primary.withValues(alpha: 0.6),
+                        ],
+                ),
               ),
-            ),
-            dotData: const FlDotData(show: false),
-          ),
-        ],
+            ],
+          );
+        }),
       ),
     );
   }
@@ -620,38 +1375,75 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Rate Comparison', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: AppSpacing.sm),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Provider')),
-              DataColumn(label: Text('Daily Rate')),
-              DataColumn(label: Text('Operator')),
-              DataColumn(label: Text('Fuel')),
-              DataColumn(label: Text('Availability')),
-            ],
-            rows: rows.map((p) {
-              final rate = p.rates.daily ?? 0;
-              Color tint = AppColors.warning.withValues(alpha: 0.15);
-              if (rate == minRate) tint = AppColors.success.withValues(alpha: 0.15);
-              if (rate == maxRate) tint = AppColors.danger.withValues(alpha: 0.12);
-              return DataRow(
-                cells: [
-                  DataCell(Text(p.provider.name)),
-                  DataCell(Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                    decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppRadius.sm)),
-                    child: Text(rate == 0 ? '--' : '₹${rate.toStringAsFixed(0)}'),
-                  )),
-                  DataCell(Text(p.operatorIncluded ? 'Yes' : 'No')),
-                  DataCell(Text(p.fuelExtra ? 'Extra' : 'Included')),
-                  DataCell(availabilityBadge(p.availability)),
-                ],
-              );
-            }).toList(growable: false),
+        InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            setState(() => _comparisonExpanded = !_comparisonExpanded);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              children: [
+                const Icon(Icons.table_chart_rounded, size: 18, color: AppColors.info),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Provider Rate Matrix',
+                    style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                Icon(
+                  _comparisonExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: context.appColors.textSecondary,
+                ),
+              ],
+            ),
           ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Provider')),
+                    DataColumn(label: Text('Daily Rate')),
+                    DataColumn(label: Text('Operator')),
+                    DataColumn(label: Text('Fuel')),
+                    DataColumn(label: Text('Availability')),
+                  ],
+                  rows: rows.map((p) {
+                    final rate = p.rates.daily ?? 0;
+                    Color tint = AppColors.warning.withValues(alpha: 0.15);
+                    if (rate == minRate) tint = AppColors.success.withValues(alpha: 0.15);
+                    if (rate == maxRate) tint = AppColors.danger.withValues(alpha: 0.12);
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(p.provider.name)),
+                        DataCell(Container(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                          decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                          child: Text(rate == 0 ? '--' : '₹${rate.toStringAsFixed(0)}'),
+                        )),
+                        DataCell(Text(p.operatorIncluded ? 'Yes' : 'No')),
+                        DataCell(Text(p.fuelExtra ? 'Extra' : 'Included')),
+                        DataCell(availabilityBadge(p.availability)),
+                      ],
+                    );
+                  }).toList(growable: false),
+                ),
+              ),
+            ],
+          ),
+          crossFadeState:
+              _comparisonExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
         ),
       ],
     );
@@ -659,99 +1451,186 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
 
   Widget _providerCard(int index, EquipmentProvider provider) {
     final expanded = _expandedProviders.contains(index);
+    final accent = categoryColor(provider.category);
+    final verdict = (provider.availability.toLowerCase().contains('available'))
+        ? 'AVAILABLE'
+        : 'CHECK';
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: AppCard(
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() {
-                  if (expanded) {
-                    _expandedProviders.remove(index);
-                  } else {
-                    _expandedProviders.add(index);
-                  }
-                });
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(provider.provider.name, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                        Text(provider.location.display, style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(rateDisplay(provider.rates), style: context.textTheme.bodyMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: AppSpacing.xs),
-                        Wrap(
-                          spacing: AppSpacing.xs,
-                          runSpacing: AppSpacing.xs,
-                          children: [
-                            if (provider.operatorIncluded) _tag('Operator Included'),
-                            if (provider.fuelExtra) _tag('Fuel Extra'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  availabilityBadge(provider.availability),
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(expanded ? Icons.expand_less : Icons.expand_more),
-                ],
-              ),
+      child: _hubStyleCard(
+        cardColor: context.isDark
+            ? AppColors.darkCard.withValues(alpha: 0.72)
+            : Colors.white.withValues(alpha: 0.74),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            setState(() {
+              if (expanded) {
+                _expandedProviders.remove(index);
+              } else {
+                _expandedProviders.add(index);
+              }
+            });
+          },
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: accent.withValues(alpha: 0.08),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (provider.provider.phone.isNotEmpty)
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _openCall(provider.provider.phone),
-                      child: const Text('Call'),
+                Row(
+                  children: [
+                    Icon(categoryIcon(provider.category), color: accent),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        provider.provider.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: context.colors.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                if (provider.provider.phone.isNotEmpty && provider.provider.whatsapp.isNotEmpty)
-                  const SizedBox(width: AppSpacing.sm),
-                if (provider.provider.whatsapp.isNotEmpty)
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _openWhatsApp(provider.provider.whatsapp),
-                      child: const Text('WhatsApp'),
+                    Icon(
+                      expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                      color: context.appColors.textSecondary,
                     ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  verdict,
+                  style: context.textTheme.titleSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${provider.location.display} • ${rateDisplay(provider.rates)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    availabilityBadge(provider.availability),
+                    if (provider.operatorIncluded) _tag('Operator Included'),
+                    if (provider.fuelExtra) _tag('Fuel Extra'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    if (provider.provider.phone.isNotEmpty)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _openCall(provider.provider.phone),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.colors.onSurface,
+                            side: BorderSide(color: context.appColors.border),
+                          ),
+                          child: const Text('Call'),
+                        ),
+                      ),
+                    if (provider.provider.phone.isNotEmpty && provider.provider.whatsapp.isNotEmpty)
+                      const SizedBox(width: AppSpacing.sm),
+                    if (provider.provider.whatsapp.isNotEmpty)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _openWhatsApp(provider.provider.whatsapp),
+                          child: const Text('WhatsApp'),
+                        ),
+                      ),
+                  ],
+                ),
+                if (expanded) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _line('Contact', provider.provider.contactPerson),
+                  _line('Phone', provider.provider.phone),
+                  _line('WhatsApp', provider.provider.whatsapp),
+                  _line('Working Hours', provider.provider.workingHours),
+                  _line('Address', provider.location.address),
+                  _line('Service Radius', provider.location.serviceRadiusKm == null ? '' : '${provider.location.serviceRadiusKm} km'),
+                  if (provider.eligibility.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: provider.eligibility.map((e) => _tag(e)).toList(growable: false),
+                    ),
+                  ],
+                  if (provider.documentsRequired.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: provider.documentsRequired.map((e) => _tag(e)).toList(growable: false),
+                    ),
+                  ],
+                ],
               ],
             ),
-            if (expanded) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _line('Contact', provider.provider.contactPerson),
-              _line('Phone', provider.provider.phone),
-              _line('WhatsApp', provider.provider.whatsapp),
-              _line('Working Hours', provider.provider.workingHours),
-              _line('Address', provider.location.address),
-              _line('Service Radius', provider.location.serviceRadiusKm == null ? '' : '${provider.location.serviceRadiusKm} km'),
-              if (provider.eligibility.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: provider.eligibility.map((e) => _tag(e)).toList(growable: false),
-                ),
-              ],
-              if (provider.documentsRequired.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: provider.documentsRequired.map((e) => _tag(e)).toList(growable: false),
-                ),
-              ],
-            ],
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  String _historyCoverageLabel() {
+    if (!_hasRealHistory || _rateHistory.isEmpty) {
+      return 'Source: Estimated monthly pattern from current market rates.';
+    }
+
+    String periodToLabel(String period) {
+      try {
+        final d = DateFormat('yyyy-MM').parse(period);
+        return DateFormat('MMM yyyy').format(d);
+      } catch (_) {
+        return period;
+      }
+    }
+
+    final firstPeriod = (_rateHistory.first['period'] ?? '').toString();
+    final lastPeriod = (_rateHistory.last['period'] ?? '').toString();
+    if (firstPeriod.isEmpty || lastPeriod.isEmpty) {
+      return 'Source: Live historical rates from rental rate history API.';
+    }
+
+    return 'Source: Live historical rates from ${periodToLabel(firstPeriod)} to ${periodToLabel(lastPeriod)}.';
+  }
+
+  Widget _hubStyleCard({required Color cardColor, required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: child,
       ),
     );
   }

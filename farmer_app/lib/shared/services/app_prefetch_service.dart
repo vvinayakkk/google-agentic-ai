@@ -56,7 +56,9 @@ class AppPrefetchService {
     ) async {
       final watch = Stopwatch()..start();
       try {
-        await Future.wait<void>(tasks.map((task) => guard(task))).timeout(maxStepDuration);
+        await Future.wait<void>(
+          tasks.map((task) => guard(task)),
+        ).timeout(maxStepDuration);
       } catch (_) {
         // Step exceeded time budget, continue with next phase.
       }
@@ -97,10 +99,10 @@ class AppPrefetchService {
         () => weather.getSoilComposition(),
       if (state.isNotEmpty)
         () => weather.getSoilMoisture(
-              state: state,
-              district: district.isEmpty ? null : district,
-              limit: 1,
-            ),
+          state: state,
+          district: district.isEmpty ? null : district,
+          limit: 1,
+        ),
     ]);
 
     await runStep(2, [
@@ -108,12 +110,12 @@ class AppPrefetchService {
       () => market.listMandis(perPage: 100),
       () => market.listSchemes(perPage: 100),
       () => market.listSchemes(
-            state: state.isEmpty ? null : state,
-            isActive: true,
-            perPage: 80,
-            preferCache: true,
-            forceRefresh: false,
-          ),
+        state: state.isEmpty ? null : state,
+        isActive: true,
+        perPage: 80,
+        preferCache: true,
+        forceRefresh: false,
+      ),
       () => liveMarket.getLivePrices(limit: 120),
       () => liveMarket.getLiveMandis(limit: 200),
     ]);
@@ -127,19 +129,16 @@ class AppPrefetchService {
     await runStep(4, [
       () => equipment.listEquipment(),
       () => equipment.browseAllEquipment(),
-      () => equipment.listRentalRates(),
-      () => equipment.listRentalRatesFiltered(limit: 10),
-      () => equipment.listRentalRatesFiltered(limit: 500),
-      if (state.isNotEmpty)
-        () => equipment.listRentalRatesFiltered(
-              state: state,
-              limit: 500,
-            ),
+      () => equipment.listRentalRatesFiltered(
+        state: state.isEmpty ? null : state,
+        district: district.isEmpty ? null : district,
+        limit: 10,
+      ),
+      if (state.isEmpty) () => equipment.listRentalRatesFiltered(limit: 50),
       () => equipment.listRentalCategories(),
       () => equipment.getChcInfo(),
       () => equipment.getMechanizationStats(),
-      if (state.isNotEmpty)
-        () => equipment.getMechanizationStats(state: state),
+      if (state.isNotEmpty) () => equipment.getMechanizationStats(state: state),
       () => docBuilder.listSchemes(preferCache: true, forceRefresh: false),
       () => docBuilder.listSchemeDocs(),
     ]);
@@ -151,10 +150,9 @@ class AppPrefetchService {
       final candidates = docSchemes.take(3).toList(growable: false);
       await Future.wait(
         candidates.map((scheme) {
-          final schemeId =
-              (scheme['id'] ?? scheme['scheme_id'] ?? scheme['short_name'] ?? scheme['name'] ?? '')
-                  .toString()
-                  .trim();
+          final schemeId = (scheme['id'] ?? scheme['scheme_id'] ?? '')
+              .toString()
+              .trim();
           if (schemeId.isEmpty) return Future<void>.value();
           return guard(
             () => docBuilder.getSchemeForm(

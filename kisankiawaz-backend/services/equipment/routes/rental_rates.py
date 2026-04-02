@@ -1,5 +1,6 @@
 ﻿"""Equipment rental rate routes with provider-level details from DB."""
 
+import re
 import hashlib
 from urllib.parse import quote_plus
 from typing import Optional, Any
@@ -48,6 +49,10 @@ def _hash_seed(*parts: Any) -> int:
     raw = "|".join(str(p or "") for p in parts)
     digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()
     return int(digest[:8], 16)
+
+
+def _normalize_equipment_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").strip().lower()).strip()
 
 
 def _default_stock(availability: Any) -> int:
@@ -184,6 +189,8 @@ async def _load_provider_rows(
 def _provider_view(row: dict[str, Any]) -> dict[str, Any]:
     metrics = _derived_metrics(row)
     return {
+        "id": row.get("rental_id") or row.get("id"),
+        "rental_id": row.get("rental_id") or row.get("id"),
         "equipment": row.get("name"),
         "category": row.get("category"),
         "rates": {
@@ -414,32 +421,96 @@ async def get_rate_history(
     docs = [d async for d in db.collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY).stream()]
 
     equipment_q = equipment_name.strip().lower()
+    equipment_norm = _normalize_equipment_key(equipment_name)
     state_q = (state or "").strip().lower()
-    rows: list[dict[str, Any]] = []
+    matched_exact: list[dict[str, Any]] = []
+    matched_partial: list[dict[str, Any]] = []
+
     for doc in docs:
         item = doc.to_dict() or {}
         item_name = str(item.get("equipment_name") or "").strip().lower()
+        item_name_norm = _normalize_equipment_key(item_name)
         item_state = str(item.get("state") or "").strip().lower()
-        if equipment_q not in item_name:
-            continue
         if state_q and item_state != state_q:
             continue
+
+        row = {
+            "id": doc.id,
+            "equipment_name": item.get("equipment_name"),
+            "category": item.get("category"),
+            "state": item.get("state"),
+            "period": item.get("period"),
+            "rate_daily": item.get("rate_daily"),
+            "rate_hourly": item.get("rate_hourly"),
+            "rate_per_acre": item.get("rate_per_acre"),
+            "source_note": item.get("source_note"),
+            "created_at": item.get("created_at"),
+        }
+
+        if equipment_norm and item_name_norm == equipment_norm:
+            matched_exact.append(row)
+        elif equipment_q and equipment_q in item_name:
+            matched_partial.append(row)
+
+    source_rows = matched_exact if matched_exact else matched_partial
+
+    buckets: dict[str, dict[str, Any]] = {}
+    for row in source_rows:
+        period = str(row.get("period") or "").strip()
+        if not period:
+            continue
+        bucket = buckets.setdefault(
+            period,
+            {
+                "equipment_name": row.get("equipment_name") or equipment_name,
+                "category": row.get("category"),
+                "state": state if state else "All states",
+                "period": period,
+                "rate_daily_sum": 0.0,
+                "rate_daily_count": 0,
+                "rate_hourly_sum": 0.0,
+                "rate_hourly_count": 0,
+                "rate_per_acre_sum": 0.0,
+                "rate_per_acre_count": 0,
+                "sample_size": 0,
+            },
+        )
+
+        bucket["sample_size"] += 1
+
+        daily = _to_float(row.get("rate_daily"))
+        if daily > 0:
+            bucket["rate_daily_sum"] += daily
+            bucket["rate_daily_count"] += 1
+
+        hourly = _to_float(row.get("rate_hourly"))
+        if hourly > 0:
+            bucket["rate_hourly_sum"] += hourly
+            bucket["rate_hourly_count"] += 1
+
+        per_acre = _to_float(row.get("rate_per_acre"))
+        if per_acre > 0:
+            bucket["rate_per_acre_sum"] += per_acre
+            bucket["rate_per_acre_count"] += 1
+
+    rows: list[dict[str, Any]] = []
+    for period in sorted(buckets.keys()):
+        b = buckets[period]
         rows.append(
             {
-                "id": doc.id,
-                "equipment_name": item.get("equipment_name"),
-                "category": item.get("category"),
-                "state": item.get("state"),
-                "period": item.get("period"),
-                "rate_daily": item.get("rate_daily"),
-                "rate_hourly": item.get("rate_hourly"),
-                "rate_per_acre": item.get("rate_per_acre"),
-                "source_note": item.get("source_note"),
-                "created_at": item.get("created_at"),
+                "equipment_name": b["equipment_name"],
+                "category": b["category"],
+                "state": b["state"],
+                "period": b["period"],
+                "rate_daily": round(b["rate_daily_sum"] / b["rate_daily_count"], 2) if b["rate_daily_count"] else None,
+                "rate_hourly": round(b["rate_hourly_sum"] / b["rate_hourly_count"], 2) if b["rate_hourly_count"] else None,
+                "rate_per_acre": round(b["rate_per_acre_sum"] / b["rate_per_acre_count"], 2) if b["rate_per_acre_count"] else None,
+                "source_note": "Monthly aggregated from seeded provider-level history",
+                "created_at": None,
+                "sample_size": b["sample_size"],
             }
         )
 
-    rows.sort(key=lambda x: str(x.get("period") or ""))
     return {
         "has_real_data": bool(rows),
         "history": rows,
