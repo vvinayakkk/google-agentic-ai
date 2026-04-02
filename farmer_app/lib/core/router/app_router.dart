@@ -36,7 +36,6 @@ import '../../features/weather/screens/weather_screen.dart';
 import '../../features/weather/screens/soil_moisture_screen.dart';
 import '../../features/cattle/screens/cattle_screen.dart';
 import '../../features/calendar/screens/calendar_screen.dart';
-import '../../features/voice/screens/speech_to_text_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/upi/screens/upi_screen.dart';
 import '../../features/documents/screens/document_builder_screen.dart';
@@ -84,7 +83,6 @@ abstract final class RoutePaths {
   static const soilMoisture = '/soil-moisture';
   static const cattle = '/cattle';
   static const calendar = '/calendar';
-  static const speechToText = '/speech-to-text';
   static const notifications = '/notifications';
   static const upi = '/upi';
   static const documents = '/documents';
@@ -109,7 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   // GoRouter (resetting to initialLocation) on every auth-state change.
   // Instead, listen and poke the ChangeNotifier so GoRouter re-runs redirect.
   final notifier = _RouterChangeNotifier();
-  ref.listen<AsyncValue>(authStateProvider, (_, __) => notifier.notify());
+  ref.listen<AsyncValue>(authStateProvider, (previous, next) => notifier.notify());
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
@@ -140,7 +138,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Auth ─────────────────────────────────────────
       GoRoute(
         path: RoutePaths.splash,
-        builder: (_, __) => const SplashScreen(),
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: RoutePaths.languageSelect,
@@ -182,10 +180,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.chatHistory,
         builder: (_, _) => const ChatHistoryScreen(),
-      ),
-      GoRoute(
-        path: RoutePaths.speechToText,
-        builder: (_, _) => const SpeechToTextScreen(),
       ),
 
       // ── Profile ──────────────────────────────────────

@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -28,15 +30,30 @@ class LiveVoiceScreen extends ConsumerStatefulWidget {
 
 enum _VoiceState { idle, recording, processing, playing }
 
+class _VoiceTurn {
+  final String transcript;
+  final String response;
+  final DateTime at;
+
+  const _VoiceTurn({
+    required this.transcript,
+    required this.response,
+    required this.at,
+  });
+}
+
 class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
-    with SingleTickerProviderStateMixin {
+  with TickerProviderStateMixin {
   _VoiceState _state = _VoiceState.idle;
   String _transcript = '';
   String _response = '';
   String? _sessionId;
   String? _lastAudioBase64;
+  bool _isPlaybackPaused = false;
+  final List<_VoiceTurn> _recentTurns = <_VoiceTurn>[];
 
   late final AnimationController _pulseController;
+  late final AnimationController _waveController;
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
@@ -48,9 +65,27 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1700),
+    )..repeat();
+
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
-        setState(() => _state = _VoiceState.idle);
+        setState(() {
+          _state = _VoiceState.idle;
+          _isPlaybackPaused = false;
+        });
+      }
+    });
+
+    _audioPlayer.onPlayerStateChanged.listen((playerState) {
+      if (!mounted) return;
+      if (playerState == PlayerState.paused && _state == _VoiceState.playing) {
+        setState(() => _isPlaybackPaused = true);
+      } else if (playerState == PlayerState.playing) {
+        setState(() => _isPlaybackPaused = false);
       }
     });
   }
@@ -58,6 +93,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _waveController.dispose();
     _recorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -95,13 +131,14 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       path: _recordingPath!,
     );
 
-    setState(() => _state = _VoiceState.recording);
+    setState(() {
+      _state = _VoiceState.recording;
+      _isPlaybackPaused = false;
+    });
     _pulseController.repeat(reverse: true);
   }
 
   Future<void> _stopAndProcess() async {
-    final languageCode = context.locale.languageCode;
-
     _pulseController.stop();
     final path = await _recorder.stop();
 
@@ -113,10 +150,15 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return;
     }
 
+    await _processVoiceFile(path);
+  }
+
+  Future<void> _processVoiceFile(String path, {String? sourcePrompt}) async {
+    final languageCode = context.locale.languageCode;
+
     setState(() {
       _state = _VoiceState.processing;
-      _transcript = '';
-      _response = '';
+      _isPlaybackPaused = false;
       _lastAudioBase64 = null;
     });
 
@@ -130,8 +172,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
       if (!mounted) return;
 
-      final transcript = data['transcript'] as String? ?? '';
-      final response = data['response'] as String? ?? '';
+      final transcript =
+          (data['transcript'] as String? ?? sourcePrompt ?? '').trim();
+      final response = _cleanDisplayText(data['response'] as String? ?? '');
       final audioBase64 = data['audio_base64'] as String? ?? '';
       _sessionId = data['session_id'] as String? ?? _sessionId;
 
@@ -139,6 +182,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         _transcript = transcript;
         _response = response;
         _lastAudioBase64 = audioBase64.isEmpty ? null : audioBase64;
+        if (transcript.isNotEmpty || response.isNotEmpty) {
+          _recentTurns.insert(
+            0,
+            _VoiceTurn(
+              transcript: transcript,
+              response: response,
+              at: DateTime.now(),
+            ),
+          );
+          if (_recentTurns.length > 4) {
+            _recentTurns.removeRange(4, _recentTurns.length);
+          }
+        }
       });
 
       // Play audio response
@@ -157,10 +213,51 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     }
   }
 
+  Future<void> _runPromptThroughVoice(String prompt) async {
+    if (prompt.trim().isEmpty || _state == _VoiceState.recording) return;
+
+    final voice = ref.read(voiceServiceProvider);
+    String? tempPath;
+    try {
+      final generated = await voice.ttsBase64(
+        text: prompt,
+        language: context.locale.languageCode,
+      );
+      if (!mounted) return;
+      final audioBase64 = (generated['audio_base64'] as String? ?? '').trim();
+      if (audioBase64.isEmpty) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+        return;
+      }
+
+      final audioDir = await getTemporaryDirectory();
+      final audioFile = File(
+        '${audioDir.path}/voice_prompt_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+      await audioFile.writeAsBytes(base64Decode(audioBase64));
+      tempPath = audioFile.path;
+
+      await _processVoiceFile(tempPath, sourcePrompt: prompt);
+    } catch (_) {
+      if (mounted) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+      }
+    } finally {
+      if (tempPath != null) {
+        try {
+          await File(tempPath).delete();
+        } catch (_) {}
+      }
+    }
+  }
+
   Future<void> _playAudioBase64(String base64Audio) async {
     if (base64Audio.isEmpty) return;
 
-    setState(() => _state = _VoiceState.playing);
+    setState(() {
+      _state = _VoiceState.playing;
+      _isPlaybackPaused = false;
+    });
     final bytes = base64Decode(base64Audio);
     final audioDir = await getTemporaryDirectory();
     final audioFile = File(
@@ -187,6 +284,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         text: _response,
         language: context.locale.languageCode,
       );
+      if (!mounted) return;
       final generatedBase64 = generated['audio_base64'] as String? ?? '';
       if (generatedBase64.isEmpty) {
         context.showSnack('voice_assistant.error'.tr(), isError: true);
@@ -201,19 +299,72 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     }
   }
 
-  void _openTranscriptInChat() {
-    final query = _transcript.isNotEmpty ? _transcript : _response;
-    if (query.isEmpty) {
-      context.showSnack('Speak first to open this in chat.', isError: true);
-      return;
+  Future<void> _togglePauseResume() async {
+    if (_state != _VoiceState.playing) return;
+    if (_isPlaybackPaused) {
+      await _audioPlayer.resume();
+      if (mounted) {
+        setState(() => _isPlaybackPaused = false);
+      }
+    } else {
+      await _audioPlayer.pause();
+      if (mounted) {
+        setState(() => _isPlaybackPaused = true);
+      }
     }
-
-    final encoded = Uri.encodeQueryComponent(query);
-    context.push('${RoutePaths.chat}?agent=general&q=$encoded');
   }
 
-  void _openSpeechToText() {
-    context.push(RoutePaths.speechToText);
+  void _openChatDirect() {
+    context.push('${RoutePaths.chat}?agent=general');
+  }
+
+  String get _primarySuggestion {
+    final source = ('$_transcript $_response').toLowerCase();
+    if (source.contains('price') || source.contains('mandi')) {
+      return 'Try this: Compare tomato prices in my nearest 3 mandis.';
+    }
+    if (source.contains('rain') || source.contains('weather')) {
+      return 'Try this: Give me weather risk and farm action for next 3 days.';
+    }
+    if (source.contains('profile')) {
+      return 'Try this: Based on my profile, what should I do first today?';
+    }
+    return 'Try this: What is my best farm action today based on market and weather?';
+  }
+
+  String get _heroText {
+    if (_response.isNotEmpty) {
+      return _previewText(_response, maxChars: 220);
+    }
+    if (_transcript.isNotEmpty) {
+      return _transcript;
+    }
+    return _primarySuggestion;
+  }
+
+  String _previewText(String text, {int maxChars = 220}) {
+    final clean = text.trim();
+    if (clean.length <= maxChars) return clean;
+    return '${clean.substring(0, maxChars).trim()}...';
+  }
+
+  String _cleanDisplayText(String text) {
+    var out = text.trim();
+    if (out.isEmpty) return out;
+
+    out = out.replaceAll('**', '');
+    out = out.replaceAll('*', '');
+    out = out.replaceAll('_', ' ');
+
+    out = out.replaceAll(RegExp(r'\(\s*source\s*:[^)]+\)', caseSensitive: false), '');
+    out = out.replaceAll(RegExp(r'\(\s*timestamp\s*:[^)]+\)', caseSensitive: false), '');
+    out = out.replaceAll(RegExp(r'\b(ref|profile)\s*[\-_][a-z0-9\-_]+\b', caseSensitive: false), '');
+    out = out.replaceAll(RegExp(r'\b\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}[^\s,;)]*', caseSensitive: false), '');
+    out = out.replaceAll(RegExp(r'\bdata\s*now\b\s*[:\-]?', caseSensitive: false), '');
+    out = out.replaceAll(RegExp(r'\b(last\s+available\s+date|updated\s+at|as\s+of)\b\s*[:\-]?\s*[^.\n]*', caseSensitive: false), '');
+
+    out = out.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+    return out;
   }
 
   @override
@@ -221,191 +372,277 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final isActive = _state == _VoiceState.recording;
     final isProcessing = _state == _VoiceState.processing;
     final isPlaying = _state == _VoiceState.playing;
+    final bool isBusy = isProcessing || isPlaying;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Kisaan ki Awaaz'),
-      ),
+      backgroundColor: context.isDark ? AppColors.darkBackground : const Color(0xFFF2F7F6),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: context.isDark
-                ? [AppColors.darkBackground, AppColors.darkSurface]
-                : [AppColors.lightBackground, AppColors.lightSurface],
+                ? const [Color(0xFF111414), Color(0xFF1D2524)]
+                : const [Color(0xFFF8FAFA), Color(0xFFEAF4F2)],
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: AppSpacing.allXl,
-            child: Column(
+          child: Stack(
             children: [
-              SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight - 16),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                isActive ? 'Listening...' : 'Ready to Listen',
-                style: context.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? AppColors.danger : AppColors.primary,
+              Positioned(
+                top: -80,
+                right: -60,
+                child: _GlowOrb(
+                  size: 220,
+                  color: AppColors.primary.withValues(alpha: 0.16),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Voice assistant activated',
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.appColors.textSecondary,
+              Positioned(
+                left: -40,
+                bottom: 80,
+                child: _GlowOrb(
+                  size: 170,
+                  color: AppColors.info.withValues(alpha: 0.12),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  24,
-                  (i) => _WaveBar(
-                    index: i,
-                    isActive: isActive || isProcessing || isPlaying,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (_, child) {
-                  final scale =
-                      isActive ? 1.0 + _pulseController.value * 0.2 : 1.0;
-                  return Transform.scale(scale: scale, child: child);
-                },
-                child: _MicButton(
-                  isListening: isActive,
-                  isProcessing: isProcessing,
-                  isPlaying: isPlaying,
-                  onTap: _onMicTap,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                _statusLabel,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              if (_transcript.isNotEmpty) ...[
-                Text(
-                  'voice_assistant.you_said'.tr(),
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.appColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  _transcript,
-                  textAlign: TextAlign.center,
-                  style: context.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-              ],
-              if (_response.isNotEmpty)
-                Flexible(
-                  child: AppCard(
-                    padding: AppSpacing.allLg,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+              Padding(
+                padding: AppSpacing.allLg,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          onPressed: () => context.pop(),
+                        ),
+                        Text(
+                          'Krishi Voice',
+                          style: GoogleFonts.manrope(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: context.colors.onSurface,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              const Icon(Icons.smart_toy,
-                                  size: 18, color: AppColors.primary),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                'voice_assistant.assistant'.tr(),
-                                style:
-                                    context.textTheme.labelMedium?.copyWith(
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
                                   color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                              if (_state == _VoiceState.playing) ...[
-                                const Spacer(),
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary,
-                                  ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'CONNECTED',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryDark,
+                                  letterSpacing: 0.6,
                                 ),
-                              ],
+                              ),
                             ],
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            _response,
-                            style: context.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'VOICE PILOT ASSISTANT',
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2,
+                                color: context.appColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 350),
+                              child: Text(
+                                _heroText,
+                                key: ValueKey(_heroText),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.sora(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                  color: context.colors.onSurface,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Text(
+                              _statusLabel,
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                color: isActive
+                                    ? AppColors.primaryDark
+                                    : context.appColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _ReactiveWaveform(
+                              controller: _waveController,
+                              isActive: isActive || isBusy,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            if (_response.isEmpty && _transcript.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(18),
+                                  onTap: isBusy ? null : () => _runPromptThroughVoice(_primarySuggestion),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                    decoration: BoxDecoration(
+                                      color: context.isDark
+                                          ? Colors.white.withValues(alpha: 0.06)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: AppColors.primary.withValues(alpha: 0.28),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.bolt_rounded,
+                                            color: AppColors.primary, size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            _primarySuggestion,
+                                            style: context.textTheme.titleSmall?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (_recentTurns.isNotEmpty)
+                              AppCard(
+                                padding: AppSpacing.allMd,
+                                child: Column(
+                                  children: [
+                                    for (final turn in _recentTurns.reversed) ...[
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Container(
+                                          margin: const EdgeInsets.only(bottom: 8, left: 32),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.14),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Text(
+                                            turn.transcript,
+                                            style: context.textTheme.bodyMedium,
+                                          ),
+                                        ),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          margin: const EdgeInsets.only(bottom: 12, right: 32),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: context.isDark
+                                                ? Colors.white.withValues(alpha: 0.06)
+                                                : const Color(0xFFF4F6F8),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Text(
+                                            _previewText(turn.response, maxChars: 260),
+                                            style: context.textTheme.bodyMedium,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: context.isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.white.withValues(alpha: 0.82),
+                        borderRadius: AppRadius.xlAll,
+                        border: Border.all(
+                          color: context.isDark
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _BigControlButton(
+                            icon: isPlaying && !_isPlaybackPaused
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            label: isPlaying ? 'Pause' : 'Replay',
+                            onTap: isPlaying ? _togglePauseResume : _replayLastResponse,
+                          ),
+                          AnimatedBuilder(
+                            animation: _pulseController,
+                            builder: (_, child) {
+                              final scale = isActive
+                                  ? 1.0 + _pulseController.value * 0.12
+                                  : 1.0;
+                              return Transform.scale(scale: scale, child: child);
+                            },
+                            child: _BigControlButton(
+                              icon: isActive ? Icons.stop_rounded : Icons.mic_rounded,
+                              label: isActive ? 'Stop' : 'Speak',
+                              isPrimary: true,
+                              onTap: isBusy ? () {} : _onMicTap,
+                            ),
+                          ),
+                          _BigControlButton(
+                            icon: Icons.chat_rounded,
+                            label: 'Chat Mode',
+                            onTap: _openChatDirect,
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              Container(
-                padding: AppSpacing.allMd,
-                decoration: BoxDecoration(
-                  color: context.isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.5),
-                  borderRadius: AppRadius.lgAll,
-                  border: Border.all(
-                    color: context.isDark
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _ControlIcon(
-                      icon: Icons.keyboard_rounded,
-                      onTap: _openTranscriptInChat,
-                    ),
-                    _ControlIcon(
-                      icon: Icons.smart_toy_outlined,
-                      onTap: _openTranscriptInChat,
-                    ),
-                    _ControlIcon(
-                      icon: isActive ? Icons.stop_rounded : Icons.mic_rounded,
-                      onTap: _onMicTap,
-                      isPrimary: true,
-                    ),
-                    _ControlIcon(
-                      icon: Icons.volume_up_rounded,
-                      onTap: _replayLastResponse,
-                    ),
-                    _ControlIcon(
-                      icon: Icons.settings_voice_rounded,
-                      onTap: _openSpeechToText,
                     ),
                   ],
                 ),
               ),
             ],
-            ),
           ),
         ),
       ),
@@ -421,135 +658,124 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       case _VoiceState.processing:
         return 'voice_assistant.processing'.tr();
       case _VoiceState.playing:
-        return 'voice_assistant.playing'.tr();
+        return _isPlaybackPaused ? 'Playback paused' : 'voice_assistant.playing'.tr();
     }
   }
 }
 
-class _WaveBar extends StatelessWidget {
-  final int index;
+class _ReactiveWaveform extends StatelessWidget {
+  final Animation<double> controller;
   final bool isActive;
+  final Color color;
 
-  const _WaveBar({required this.index, required this.isActive});
+  const _ReactiveWaveform({
+    required this.controller,
+    required this.isActive,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final heights = [8.0, 16.0, 24.0, 14.0, 20.0, 10.0];
-    final h = isActive ? heights[index % heights.length] : 10.0;
-    return Container(
-      width: 4,
-      height: h,
-      margin: const EdgeInsets.symmetric(horizontal: 1.6),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: isActive ? 0.9 : 0.35),
-        borderRadius: BorderRadius.circular(4),
+    return SizedBox(
+      height: 110,
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, child) {
+          final t = controller.value * math.pi * 2;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(22, (i) {
+              final wave = math.sin(t + (i * 0.35)).abs();
+              final base = isActive ? 16.0 : 10.0;
+              final amp = isActive ? 62.0 : 22.0;
+              final h = base + (amp * wave);
+              return Container(
+                width: 7,
+                height: h,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(
+                    alpha: isActive ? 0.95 - ((i % 4) * 0.12) : 0.36,
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          );
+        },
       ),
     );
   }
 }
 
-class _ControlIcon extends StatelessWidget {
+class _BigControlButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool isPrimary;
+  final String label;
 
-  const _ControlIcon({
+  const _BigControlButton({
     required this.icon,
     required this.onTap,
     this.isPrimary = false,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color effective = AppColors.primary;
     final background = isPrimary
-        ? AppColors.primary.withValues(alpha: 0.15)
-        : Colors.transparent;
-    final iconColor = isPrimary ? AppColors.primary : context.colors.onSurface;
+        ? effective.withValues(alpha: 0.2)
+        : effective.withValues(alpha: 0.08);
+    final iconColor = isPrimary ? effective : context.colors.onSurface.withValues(alpha: 0.9);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(36),
       onTap: onTap,
       child: Container(
-        width: isPrimary ? 46 : 40,
-        height: isPrimary ? 46 : 40,
+        width: isPrimary ? 92 : 84,
+        height: isPrimary ? 92 : 84,
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(36),
         ),
-        child: Icon(icon, color: iconColor, size: isPrimary ? 24 : 22),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: isPrimary ? 34 : 30),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: context.textTheme.labelSmall?.copyWith(
+                color: isPrimary ? effective : context.appColors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Large mic button ─────────────────────────────────────
+class _GlowOrb extends StatelessWidget {
+  final double size;
+  final Color color;
 
-class _MicButton extends StatelessWidget {
-  final bool isListening;
-  final bool isProcessing;
-  final bool isPlaying;
-  final VoidCallback onTap;
-
-  const _MicButton({
-    required this.isListening,
-    required this.isProcessing,
-    this.isPlaying = false,
-    required this.onTap,
-  });
+  const _GlowOrb({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = context.isDark;
-    final Color baseColor;
-    final Color iconColor;
-    final IconData icon;
-
-    if (isPlaying) {
-      baseColor = isDark ? Colors.white : Colors.black;
-      iconColor = isDark ? Colors.black : Colors.white;
-      icon = Icons.volume_up;
-    } else if (isProcessing) {
-      baseColor = isDark ? Colors.white : Colors.black;
-      iconColor = isDark ? Colors.black : Colors.white;
-      icon = Icons.mic;
-    } else if (isListening) {
-      baseColor = isDark ? Colors.white : Colors.black;
-      iconColor = isDark ? Colors.black : Colors.white;
-      icon = Icons.stop;
-    } else {
-      baseColor = isDark ? Colors.white : Colors.black;
-      iconColor = isDark ? Colors.black : Colors.white;
-      icon = Icons.mic;
-    }
-
-    return GestureDetector(
-      onTap: (isProcessing || isPlaying) ? null : onTap,
+    return IgnorePointer(
       child: Container(
-        width: 120,
-        height: 120,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: baseColor,
-          boxShadow: [
-            BoxShadow(
-              color: baseColor.withValues(alpha: 0.4),
-              blurRadius: 24,
-              spreadRadius: 4,
-            ),
-          ],
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0.0)],
+          ),
         ),
-        child: isProcessing
-            ? Center(
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    color: iconColor,
-                    strokeWidth: 3,
-                  ),
-                ),
-              )
-            : Icon(icon, color: iconColor, size: 48),
       ),
     );
   }

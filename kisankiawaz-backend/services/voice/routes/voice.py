@@ -25,9 +25,9 @@ VOICE_AGENT_TIMEOUT_SECONDS = max(6.0, float(os.getenv("VOICE_AGENT_TIMEOUT_SECO
 VOICE_AGENT_MAX_RETRIES = max(1, int(os.getenv("VOICE_AGENT_MAX_RETRIES", "3")))
 VOICE_AGENT_RETRY_BACKOFF_SECONDS = max(0.2, float(os.getenv("VOICE_AGENT_RETRY_BACKOFF_SECONDS", "0.8")))
 VOICE_MARKET_TIMEOUT_SECONDS = max(0.5, float(os.getenv("VOICE_MARKET_TIMEOUT_SECONDS", "1.8")))
-VOICE_TTS_TIMEOUT_SECONDS = max(0.8, float(os.getenv("VOICE_TTS_TIMEOUT_SECONDS", "2.0")))
-VOICE_MAX_TTS_CHARS = max(80, int(os.getenv("VOICE_MAX_TTS_CHARS", "220")))
-VOICE_SERVICE_TIMEOUT_SECONDS = max(0.6, float(os.getenv("VOICE_SERVICE_TIMEOUT_SECONDS", "1.6")))
+VOICE_TTS_TIMEOUT_SECONDS = max(6.0, float(os.getenv("VOICE_TTS_TIMEOUT_SECONDS", "25.0")))
+VOICE_MAX_TTS_CHARS = max(140, int(os.getenv("VOICE_MAX_TTS_CHARS", "420")))
+VOICE_SERVICE_TIMEOUT_SECONDS = max(2.0, float(os.getenv("VOICE_SERVICE_TIMEOUT_SECONDS", "8.0")))
 
 
 HINDI_ROMAN_MARKERS = {
@@ -84,6 +84,25 @@ def _resolve_chat_language(language_code: str, transcript: str) -> str:
     if lang.startswith("en"):
         return "en"
     return "en"
+
+
+def _normalize_user_language(user: dict | None) -> str | None:
+    if not isinstance(user, dict):
+        return None
+    raw = str(
+        user.get("language")
+        or user.get("preferred_language")
+        or ""
+    ).strip().lower()
+    if not raw:
+        return None
+    if raw in {"hi", "hindi", "hi-in", "hin"}:
+        return "hi"
+    if raw in {"hinglish", "hi-en", "mix", "mixed"}:
+        return "hinglish"
+    if raw in {"en", "english", "en-in"}:
+        return "en"
+    return None
 
 
 def _extract_crop(transcript: str) -> str:
@@ -157,13 +176,98 @@ def _sanitize_voice_response(text: str, language: str) -> str:
         filtered_lines.append(line)
     body = "\n".join(filtered_lines).strip()
 
+    if body:
+        return body
+
     if str(language).lower().startswith("hi"):
-        prefix = "सटीक रिकॉर्ड सीमित थे, इसलिए अभी उपलब्ध सत्यापित डेटा के आधार पर व्यावहारिक सलाह दे रहा हूँ।"
-    elif str(language).lower().startswith("hinglish"):
-        prefix = "Exact records limited the, isliye abhi available verified data ke basis par practical advice de raha hoon."
+        return "अभी के सत्यापित डेटा के आधार पर फसल के लिए व्यावहारिक सलाह दे रहा हूँ।"
+    if str(language).lower().startswith("hinglish"):
+        return "Abhi ke verified data ke basis par practical farming advice de raha hoon."
+    return "Using currently verified data to provide practical farm guidance."
+
+
+def _remove_voice_noise(text: str) -> str:
+    raw = (text or "").strip()
+    if not raw:
+        return raw
+
+    # Remove markdown emphasis and common formatting artifacts.
+    out = re.sub(r"\*{1,3}", "", raw)
+    out = re.sub(r"`{1,3}", "", out)
+
+    # Drop metadata-heavy sections that should not be spoken.
+    blocked_patterns = [
+        r"^\s*(source|sources|स्रोत)\s*:\s*.*$",
+        r"^\s*(timestamp|time\s*stamp|updated_at|as_of|as of)\s*[:=].*$",
+        r"^\s*(action\s*plan|why\s*this\s*recommendation|confidence|source\s*snippets|what\s*changed\s*since\s*yesterday|follow-up\s*check|clarification\s*for\s*next\s*turn)\s*:\s*.*$",
+        r"^\s*(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\s*.*$",
+    ]
+
+    filtered_lines = []
+    for line in out.splitlines():
+        line_s = line.strip()
+        if not line_s:
+            continue
+        if any(re.match(p, line_s, flags=re.IGNORECASE) for p in blocked_patterns):
+            continue
+        # Remove explicit inline source/timestamp fragments.
+        line_s = re.sub(r"\(\s*source\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\(\s*timestamp\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\b", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}[^\s,;)]*", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b(last\s+available\s+date|updated\s+at|as\s+of)\b\s*[:\-]?\s*[^.\n]*", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\s{2,}", " ", line_s).strip(" -|,;")
+        if line_s:
+            filtered_lines.append(line_s)
+
+    out = " ".join(filtered_lines)
+    out = re.sub(r"\s+", " ", out).strip()
+    return out
+
+
+def _tts_humanize_text(text: str, language: str) -> str:
+    out = _remove_voice_noise(text)
+    if not out:
+        return out
+
+    # Keep spoken flow natural and less robotic.
+    out = out.replace("_", " ")
+    out = re.sub(r"\s*\|\s*", ". ", out)
+    out = re.sub(r"\s*;\s*", ". ", out)
+    out = re.sub(r"\s*,\s*,+", ", ", out)
+    out = re.sub(r"\s*:\s*", ", ", out)
+
+    # Avoid heading-like staccato phrases in TTS.
+    out = re.sub(r"\bData\s*now\b\s*[:\-]?\s*", "", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bNow\s*:\s*", "", out, flags=re.IGNORECASE)
+
+    if str(language).lower().startswith("hi"):
+        out = re.sub(r"\bN/A\b", "उपलब्ध नहीं", out)
     else:
-        prefix = "Exact records were limited, so I am sharing practical advice from currently verified data."
-    return f"{prefix}\n\n{body}" if body else prefix
+        out = re.sub(r"\bN/A\b", "not available", out)
+
+    # Keep natural pause cues for TTS prosody.
+    out = re.sub(r"\s*,\s*", ", ", out)
+    out = re.sub(r"\s*([.!?])\s*", r"\1 ", out)
+    return re.sub(r"\s+", " ", out).strip()
+
+
+def _personalize_voice_text(text: str, user: dict, language: str) -> str:
+    out = (text or "").strip()
+    if not out or not isinstance(user, dict):
+        return out
+
+    name = str(user.get("name") or user.get("full_name") or user.get("first_name") or "").strip()
+    if not name:
+        return out
+
+    # Avoid repeating name if already present.
+    if name.lower() in out.lower():
+        return out
+
+    if str(language).lower().startswith("hi"):
+        return f"{name}, {out}"
+    return f"{name}, {out}"
 
 
 def _needs_source_note(text: str) -> bool:
@@ -369,8 +473,30 @@ def _trim_voice_text(text: str) -> str:
     clean = " ".join((text or "").split())
     if len(clean) <= VOICE_MAX_TTS_CHARS:
         return clean
-    trimmed = clean[: VOICE_MAX_TTS_CHARS - 3].rstrip()
-    return trimmed + "..."
+    clipped = clean[:VOICE_MAX_TTS_CHARS].rstrip()
+    last_end = max(clipped.rfind("."), clipped.rfind("!"), clipped.rfind("?"))
+    if last_end >= int(VOICE_MAX_TTS_CHARS * 0.6):
+        return clipped[: last_end + 1].strip()
+    return clipped
+
+
+def _force_voice_brief(text: str) -> str:
+    """Keep voice response concise even if upstream chat response grows."""
+    raw = (text or "").strip()
+    if not raw:
+        return raw
+
+    # Prefer first few meaningful lines and cap aggressively for TTS clarity.
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    if lines:
+        raw = " ".join(lines[:5])
+
+    # Then clip by sentence boundary before final char-limit trim.
+    parts = re.split(r"(?<=[.!?])\s+", raw)
+    if len(parts) > 4:
+        raw = " ".join(parts[:4]).strip()
+
+    return _trim_voice_text(raw)
 
 
 def _infer_ui_redirect_tag(transcript: str, agent_data: dict) -> str:
@@ -395,13 +521,10 @@ async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
 
     async def _all_india_fallback() -> dict:
         try:
-            broad = await asyncio.wait_for(
-                market_client.get(
-                    "/api/v1/market/live-market/prices/all-india",
-                    headers={"Authorization": f"Bearer {token}"},
-                    params={"commodity": crop, "limit": 5, "refresh": "false"},
-                ),
-                timeout=max(1.0, VOICE_MARKET_TIMEOUT_SECONDS * 0.75),
+            broad = await market_client.get(
+                "/api/v1/market/live-market/prices/all-india",
+                headers={"Authorization": f"Bearer {token}"},
+                params={"commodity": crop, "limit": 5, "refresh": "false"},
             )
             payload = _as_mapping(broad)
             prices = payload.get("prices", []) if isinstance(payload, dict) else []
@@ -421,17 +544,14 @@ async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
             }
 
     try:
-        market_resp = await asyncio.wait_for(
-            market_client.get(
-                "/api/v1/market/live-market/prices",
-                headers={"Authorization": f"Bearer {token}"},
-                params={
-                    "commodity": crop,
-                    "limit": 5,
-                    "refresh": "false",
-                },
-            ),
-            timeout=VOICE_MARKET_TIMEOUT_SECONDS,
+        market_resp = await market_client.get(
+            "/api/v1/market/live-market/prices",
+            headers={"Authorization": f"Bearer {token}"},
+            params={
+                "commodity": crop,
+                "limit": 5,
+                "refresh": "false",
+            },
         )
         payload = _as_mapping(market_resp)
         prices = payload.get("prices", []) if isinstance(payload, dict) else []
@@ -447,12 +567,9 @@ async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
 
 async def _fetch_weather_snapshot(token: str, transcript: str) -> dict:
     try:
-        resp = await asyncio.wait_for(
-            market_client.get(
-                "/api/v1/market/weather/full",
-                headers={"Authorization": f"Bearer {token}"},
-            ),
-            timeout=VOICE_SERVICE_TIMEOUT_SECONDS,
+        resp = await market_client.get(
+            "/api/v1/market/weather/full",
+            headers={"Authorization": f"Bearer {token}"},
         )
         return _as_mapping(resp)
     except Exception as exc:  # noqa: BLE001
@@ -460,13 +577,10 @@ async def _fetch_weather_snapshot(token: str, transcript: str) -> dict:
 
     city = _extract_city(transcript)
     try:
-        resp = await asyncio.wait_for(
-            market_client.get(
-                "/api/v1/market/weather/city",
-                headers={"Authorization": f"Bearer {token}"},
-                params={"city": city},
-            ),
-            timeout=VOICE_SERVICE_TIMEOUT_SECONDS,
+        resp = await market_client.get(
+            "/api/v1/market/weather/city",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"city": city},
         )
         return _as_mapping(resp)
     except Exception as exc:  # noqa: BLE001
@@ -476,13 +590,10 @@ async def _fetch_weather_snapshot(token: str, transcript: str) -> dict:
 
 async def _fetch_scheme_snapshot(token: str, transcript: str) -> dict:
     try:
-        resp = await asyncio.wait_for(
-            schemes_client.post(
-                "/api/v1/schemes/search",
-                headers={"Authorization": f"Bearer {token}"},
-                json={"query": transcript, "limit": 5},
-            ),
-            timeout=VOICE_SERVICE_TIMEOUT_SECONDS,
+        resp = await schemes_client.post(
+            "/api/v1/schemes/search",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": transcript, "limit": 5},
         )
         return _as_mapping(resp)
     except Exception as exc:  # noqa: BLE001
@@ -498,13 +609,10 @@ async def _fetch_equipment_snapshot(token: str, transcript: str) -> dict:
     elif "harvester" in txt:
         query = "harvester"
     try:
-        resp = await asyncio.wait_for(
-            equipment_client.get(
-                "/api/v1/equipment/rental-rates/search",
-                headers={"Authorization": f"Bearer {token}"},
-                params={"q": query},
-            ),
-            timeout=VOICE_SERVICE_TIMEOUT_SECONDS,
+        resp = await equipment_client.get(
+            "/api/v1/equipment/rental-rates/search",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"q": query},
         )
         return _as_mapping(resp)
     except Exception as exc:  # noqa: BLE001
@@ -539,7 +647,7 @@ async def _query_agent_fast(token: str, transcript: str, chat_lang: str, session
         "language": chat_lang,
         "session_id": session_id,
         "allow_fallback": True,
-        "response_mode": "brief",
+        "response_mode": "voice-friendly",
     }
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -564,6 +672,37 @@ async def _query_agent_resilient(token: str, transcript: str, chat_lang: str, se
     return {}
 
 
+def _is_probably_silent_wav(audio: bytes) -> bool:
+    if not audio or len(audio) < 100:
+        return True
+    payload = audio[44:] if len(audio) > 44 else audio
+    non_zero = sum(1 for b in payload if b != 0)
+    return non_zero <= 16
+
+
+async def _synthesize_voice_audio(text: str, language: str) -> bytes:
+    """Best-effort TTS synthesis with retries and voice fallback to avoid silent playback."""
+    voice_plan = [
+        (language, "anushka"),
+        (language, "meera"),
+        ("hi-IN", "anushka"),
+        ("en-IN", "anushka"),
+    ]
+    last_exc: Exception | None = None
+    for idx, (lang_code, speaker) in enumerate(voice_plan):
+        try:
+            audio = await TTSService.synthesize(text, lang_code, speaker=speaker)
+            if _is_probably_silent_wav(audio):
+                raise RuntimeError("empty_or_silent_audio")
+            return audio
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.warning(f"Voice TTS attempt {idx + 1}/{len(voice_plan)} failed ({lang_code}, {speaker}): {exc}")
+            await asyncio.sleep(0.2)
+    logger.warning(f"Voice TTS failed after all retries; returning silence: {last_exc}")
+    return TTSService._silent_wav_bytes()
+
+
 @router.post("")
 async def voice_command(
     file: UploadFile = File(...),
@@ -582,6 +721,9 @@ async def voice_command(
 
     transcript = stt_result["transcript"]
     chat_lang = _resolve_chat_language(stt_result.get("language_code", language), transcript)
+    user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
+    if chat_lang == "en" and user_pref_lang in {"hi", "hinglish"}:
+        chat_lang = user_pref_lang
     logger.info(f"STT result: {transcript}")
     
     # Step 2: Send text to agent service
@@ -604,9 +746,9 @@ async def voice_command(
     if not agent_text.strip():
         agent_text = "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
 
-    agent_text = _append_source_note(agent_text, chat_lang, {})
     agent_text = _sanitize_voice_response(agent_text, chat_lang)
-    agent_text = _trim_voice_text(agent_text)
+    agent_text = _tts_humanize_text(agent_text, chat_lang)
+    agent_text = _personalize_voice_text(agent_text, user, chat_lang)
     response_origin = "agent"
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
     tool_evidence = _build_tool_evidence({})
@@ -614,14 +756,7 @@ async def voice_command(
     
     # Step 3: Convert agent response to speech
     t0_tts = time.perf_counter()
-    try:
-        tts_audio = await asyncio.wait_for(
-            TTSService.synthesize(agent_text, language),
-            timeout=VOICE_TTS_TIMEOUT_SECONDS,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Voice TTS failed; returning silence: {exc}")
-        tts_audio = TTSService._silent_wav_bytes()
+    tts_audio = await _synthesize_voice_audio(agent_text, language)
     tts_ms = int((time.perf_counter() - t0_tts) * 1000)
     total_ms = int((time.perf_counter() - t0_total) * 1000)
     
@@ -664,6 +799,9 @@ async def voice_command_text(
 
     transcript = stt_result["transcript"]
     chat_lang = _resolve_chat_language(stt_result.get("language_code", language), transcript)
+    user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
+    if chat_lang == "en" and user_pref_lang in {"hi", "hinglish"}:
+        chat_lang = user_pref_lang
     
     t0_agent = time.perf_counter()
     token = user.get("_token", "") if isinstance(user, dict) else getattr(user, "_token", "")
@@ -684,22 +822,15 @@ async def voice_command_text(
     if not agent_text.strip():
         agent_text = "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
 
-    agent_text = _append_source_note(agent_text, chat_lang, {})
     agent_text = _sanitize_voice_response(agent_text, chat_lang)
-    agent_text = _trim_voice_text(agent_text)
+    agent_text = _tts_humanize_text(agent_text, chat_lang)
+    agent_text = _personalize_voice_text(agent_text, user, chat_lang)
     response_origin = "agent"
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
     tool_evidence = _build_tool_evidence({})
     
     t0_tts = time.perf_counter()
-    try:
-        tts_audio = await asyncio.wait_for(
-            TTSService.synthesize(agent_text, language),
-            timeout=VOICE_TTS_TIMEOUT_SECONDS,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Voice text TTS failed; returning silence: {exc}")
-        tts_audio = TTSService._silent_wav_bytes()
+    tts_audio = await _synthesize_voice_audio(agent_text, language)
     tts_ms = int((time.perf_counter() - t0_tts) * 1000)
 
     audio_b64 = base64.b64encode(tts_audio).decode()

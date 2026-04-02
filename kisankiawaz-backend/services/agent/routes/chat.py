@@ -105,6 +105,28 @@ class _ChatCapacityError(Exception):
     """Signals exhausted model capacity after retries."""
 
 
+def _resolve_effective_language(
+    *,
+    message: str,
+    requested_language: str | None,
+    preferred_language: str | None,
+) -> str | None:
+    requested = str(requested_language or "").strip() or None
+    preferred = str(preferred_language or "").strip() or None
+
+    detected = _chat_service._detect_turn_language(
+        user_message=message,
+        requested_language=requested,
+        previous_language=preferred,
+    )
+    detected = str(detected or "").strip().lower() or None
+
+    # If this turn clearly looks Hindi/Hinglish, prefer that over app locale.
+    if detected in {"hi", "hinglish"}:
+        return detected
+    return requested or preferred or detected
+
+
 def _is_fallback_allowed(request_allow_fallback: bool) -> bool:
     return bool(request_allow_fallback) and _CHAT_SERVER_ENABLE_FALLBACK
 
@@ -747,7 +769,15 @@ async def _enhance_chat_result(
     if not response_text:
         return result
 
-    enriched = _apply_response_mode(response_text, response_mode)
+    mode = _normalize_response_mode(response_mode)
+    enriched = _apply_response_mode(response_text, mode)
+
+    if mode == "voice-friendly":
+        result["response"] = enriched
+        result["response_mode"] = mode
+        result["suggestions"] = []
+        return result
+
     if "Action Plan:" not in enriched:
         enriched += _build_action_plan(message)
     if "Why this recommendation:" not in enriched:
@@ -760,7 +790,7 @@ async def _enhance_chat_result(
         enriched += "\n\nFollow-up check: reply 'done' after one action and I will optimize your next step."
 
     result["response"] = enriched
-    result["response_mode"] = _normalize_response_mode(response_mode)
+    result["response_mode"] = mode
     result["suggestions"] = _build_followup_suggestions(message, result)
     return result
 
@@ -774,13 +804,12 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
 
     prefs = await _load_user_chat_preferences(user_id=user["id"])
     effective_mode = _normalize_response_mode(body.response_mode or prefs.get("response_mode"))
-    effective_language = body.language or str(prefs.get("preferred_language") or "").strip() or None
     msg_text = str(body.message or "")
-    if effective_language is None:
-        has_devanagari = bool(re.search(r"[\u0900-\u097F]", msg_text))
-        has_latin = bool(re.search(r"[A-Za-z]", msg_text))
-        if has_devanagari and has_latin:
-            effective_language = "hinglish"
+    effective_language = _resolve_effective_language(
+        message=msg_text,
+        requested_language=body.language,
+        preferred_language=str(prefs.get("preferred_language") or "").strip() or None,
+    )
 
     embedding_service = request.app.state.embedding_service
     warmup_wait_s = max(0.5, float(os.getenv("EMBEDDING_WARMUP_WAIT_SECONDS", "2.5")))
@@ -969,13 +998,12 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
 
     prefs = await _load_user_chat_preferences(user_id=user["id"])
     effective_mode = _normalize_response_mode(body.response_mode or prefs.get("response_mode"))
-    effective_language = body.language or str(prefs.get("preferred_language") or "").strip() or None
     msg_text = str(body.message or "")
-    if effective_language is None:
-        has_devanagari = bool(re.search(r"[\u0900-\u097F]", msg_text))
-        has_latin = bool(re.search(r"[A-Za-z]", msg_text))
-        if has_devanagari and has_latin:
-            effective_language = "hinglish"
+    effective_language = _resolve_effective_language(
+        message=msg_text,
+        requested_language=body.language,
+        preferred_language=str(prefs.get("preferred_language") or "").strip() or None,
+    )
 
     embedding_service = request.app.state.embedding_service
     warmup_wait_s = max(0.5, float(os.getenv("EMBEDDING_WARMUP_WAIT_SECONDS", "2.5")))

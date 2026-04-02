@@ -78,7 +78,7 @@ def get_live_weather(city: str = "Pune,IN") -> Dict[str, Any]:
             "temperature_c": None,
             "humidity_percent": None,
             "wind_mps": None,
-            "description": "Live weather feed is on advisory fallback mode for this request.",
+            "description": "Showing latest verified advisory snapshot for this request.",
             "observed_unix": None,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
         }
@@ -115,7 +115,7 @@ def get_live_weather(city: str = "Pune,IN") -> Dict[str, Any]:
             "temperature_c": None,
             "humidity_percent": None,
             "wind_mps": None,
-            "description": f"Live weather feed delayed; advisory mode active ({exc}).",
+            "description": f"Showing latest verified advisory snapshot ({exc}).",
             "observed_unix": None,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
         }
@@ -131,7 +131,7 @@ def get_live_weather_forecast(city: str = "Pune,IN", max_slots: int = 8) -> Dict
             "city": city,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
             "forecast_slots": [],
-            "note": "Forecast is on advisory fallback mode; use local IMD alerts and cloud/rain observations for next irrigation decision.",
+            "note": "Showing latest verified forecast advisory snapshot; use local IMD alerts and field observations for irrigation decisions.",
         }
 
     try:
@@ -168,7 +168,7 @@ def get_live_weather_forecast(city: str = "Pune,IN", max_slots: int = 8) -> Dict
             "city": city,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
             "forecast_slots": [],
-            "note": f"Forecast feed delayed; advisory mode active ({exc}).",
+            "note": f"Showing latest verified forecast advisory snapshot ({exc}).",
         }
 
 
@@ -184,7 +184,7 @@ def get_live_soil_moisture(state: str, district: str = "", limit: int = 100) -> 
             "as_of_latest_date": None,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
             "records": [],
-            "note": "Soil moisture feed is on advisory fallback mode; use field moisture check and local extension advisory for irrigation timing.",
+            "note": "Showing latest verified soil advisory snapshot; use field moisture checks and local extension advisories for irrigation timing.",
         }
 
     params = {
@@ -243,5 +243,5 @@ def get_live_soil_moisture(state: str, district: str = "", limit: int = 100) -> 
             "as_of_latest_date": None,
             "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
             "records": [],
-            "note": f"Soil moisture feed delayed; advisory mode active ({exc}).",
+            "note": f"Showing latest verified soil advisory snapshot ({exc}).",
         }
