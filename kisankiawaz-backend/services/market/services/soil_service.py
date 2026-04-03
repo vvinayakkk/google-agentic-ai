@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from datetime import datetime
@@ -12,6 +13,7 @@ import httpx
 
 SOIL_RESOURCE_ID = "4554a3c8-74e3-4f93-8727-8fd92161e345"
 DATA_GOV_BASE_URL = "https://api.data.gov.in/resource"
+logger = logging.getLogger(__name__)
 
 
 def _parse_date(value: str) -> datetime:
@@ -81,17 +83,39 @@ async def get_soil_moisture_data(
     month: Optional[str] = None,
     limit: int = 1000,
 ) -> Dict[str, Any]:
+    def _empty_response(note: str) -> Dict[str, Any]:
+        return {
+            "source": "data.gov.in",
+            "resource_id": SOIL_RESOURCE_ID,
+            "total_records": 0,
+            "latest_records": [],
+            "count": 0,
+            "note": note,
+        }
+
+    async def _fetch(params: Dict[str, str]) -> Dict[str, Any]:
+        url = f"{DATA_GOV_BASE_URL}/{SOIL_RESOURCE_ID}"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            payload_local = response.json()
+        if str(payload_local.get("status", "")).lower() == "error":
+            raise ValueError(payload_local.get("message", "data.gov.in returned error"))
+        return payload_local
+
     api_key = (os.getenv("DATA_GOV_API_KEY") or "").strip()
     if not api_key:
-        raise ValueError("DATA_GOV_API_KEY is not configured")
+        return _empty_response("DATA_GOV_API_KEY is not configured")
 
-    params = {
+    params_base = {
         "api-key": api_key,
         "format": "json",
         "offset": "0",
         "limit": str(min(max(limit, 1), 1000)),
         "filters[State]": state.strip(),
     }
+
+    params = dict(params_base)
     if district and district.strip():
         params["filters[District]"] = district.strip()
     if year and year.strip():
@@ -99,16 +123,58 @@ async def get_soil_moisture_data(
     if month and month.strip():
         params["filters[Month]"] = month.strip().capitalize()
 
-    url = f"{DATA_GOV_BASE_URL}/{SOIL_RESOURCE_ID}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(url, params=params)
-        response.raise_for_status()
-        payload = response.json()
-
-    if str(payload.get("status", "")).lower() == "error":
-        raise ValueError(payload.get("message", "data.gov.in returned error"))
+    # First try: state + district (if provided). On bad-request / API errors,
+    # gracefully retry with state-only instead of failing the whole flow.
+    try:
+        payload = await _fetch(params)
+    except Exception as exc:  # noqa: BLE001
+        if district and district.strip():
+            try:
+                logger.warning(
+                    "Soil moisture fetch failed for state=%s district=%s; retrying state-only. error=%r",
+                    state,
+                    district,
+                    exc,
+                )
+                fallback_params = dict(params_base)
+                if year and year.strip():
+                    fallback_params["filters[Year]"] = year.strip()
+                if month and month.strip():
+                    fallback_params["filters[Month]"] = month.strip().capitalize()
+                payload = await _fetch(fallback_params)
+            except Exception as fallback_exc:  # noqa: BLE001
+                logger.error(
+                    "Soil moisture fallback failed for state=%s. error=%r",
+                    state,
+                    fallback_exc,
+                )
+                return _empty_response(
+                    f"Unable to fetch soil moisture for district '{district}'."
+                )
+        else:
+            logger.error("Soil moisture fetch failed for state=%s. error=%r", state, exc)
+            return _empty_response("Unable to fetch soil moisture right now")
 
     raw_records = payload.get("records", []) or []
+
+    # If a district was provided but returned no rows, retry state-level once.
+    if not raw_records and district and district.strip():
+        try:
+            fallback_params = dict(params_base)
+            if year and year.strip():
+                fallback_params["filters[Year]"] = year.strip()
+            if month and month.strip():
+                fallback_params["filters[Month]"] = month.strip().capitalize()
+            payload = await _fetch(fallback_params)
+            raw_records = payload.get("records", []) or []
+        except Exception as fallback_exc:  # noqa: BLE001
+            logger.warning(
+                "Soil moisture state-level fallback after empty district result failed. state=%s district=%s error=%r",
+                state,
+                district,
+                fallback_exc,
+            )
+
     latest_by_region: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     for record in raw_records:

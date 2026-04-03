@@ -6,6 +6,7 @@ class ChatMessage {
   final String? agentType;
   final String? sessionId;
   final String? stage;
+  final String? language;
   final bool isPartial;
   final DateTime timestamp;
   final bool isLoading;
@@ -19,6 +20,7 @@ class ChatMessage {
     this.agentType,
     this.sessionId,
     this.stage,
+    this.language,
     this.isPartial = false,
     required this.timestamp,
     this.isLoading = false,
@@ -43,6 +45,7 @@ class ChatMessage {
       agentType: json['agent_type'] as String?,
       sessionId: json['session_id'] as String?,
       stage: json['stage'] as String? ?? json['response_stage'] as String?,
+      language: json['language'] as String?,
       isPartial: json['is_partial'] as bool? ?? false,
       timestamp: json['timestamp'] != null
           ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()

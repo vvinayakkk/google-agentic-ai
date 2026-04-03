@@ -47,13 +47,20 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   _VoiceState _state = _VoiceState.idle;
   String _transcript = '';
   String _response = '';
+  String _activeQuestion = '';
+  String? _fadingQuestion;
   String? _sessionId;
   String? _lastAudioBase64;
   bool _isPlaybackPaused = false;
+  Duration _playbackPosition = Duration.zero;
+  Duration _playbackDuration = Duration.zero;
+  int _lastPlaybackUiMs = -1;
   final List<_VoiceTurn> _recentTurns = <_VoiceTurn>[];
 
   late final AnimationController _pulseController;
+  late final AnimationController _flickerController;
   late final AnimationController _waveController;
+  late final AnimationController _questionFadeController;
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
@@ -65,19 +72,48 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+    _flickerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
 
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1700),
-    )..repeat();
+    );
+    _questionFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 980),
+    );
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
         setState(() {
           _state = _VoiceState.idle;
           _isPlaybackPaused = false;
+          _playbackPosition = Duration.zero;
+          _playbackDuration = Duration.zero;
+          _lastPlaybackUiMs = -1;
         });
       }
+    });
+
+    _audioPlayer.onDurationChanged.listen((duration) {
+      if (!mounted) return;
+      setState(() => _playbackDuration = duration);
+    });
+
+    _audioPlayer.onPositionChanged.listen((position) {
+      if (!mounted) return;
+      final atMs = position.inMilliseconds;
+      if (_playbackDuration > Duration.zero) {
+        final shouldPaint = _lastPlaybackUiMs < 0 ||
+            (atMs - _lastPlaybackUiMs) >= 140 ||
+            atMs >= (_playbackDuration.inMilliseconds - 80);
+        if (!shouldPaint) return;
+      }
+      setState(() => _playbackPosition = position);
+      _lastPlaybackUiMs = atMs;
     });
 
     _audioPlayer.onPlayerStateChanged.listen((playerState) {
@@ -93,22 +129,35 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _flickerController.dispose();
     _waveController.dispose();
+    _questionFadeController.dispose();
     _recorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _onMicTap() {
+  Future<void> _onMicTap() async {
     switch (_state) {
       case _VoiceState.idle:
-        _startRecording();
+        await _startRecording();
         break;
       case _VoiceState.recording:
-        _stopAndProcess();
+        await _stopAndProcess();
         break;
       case _VoiceState.processing:
+        break;
       case _VoiceState.playing:
+        await _audioPlayer.stop();
+        if (!mounted) return;
+        setState(() {
+          _state = _VoiceState.idle;
+          _isPlaybackPaused = false;
+          _playbackPosition = Duration.zero;
+          _playbackDuration = Duration.zero;
+          _lastPlaybackUiMs = -1;
+        });
+        await _startRecording();
         break;
     }
   }
@@ -136,10 +185,15 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _isPlaybackPaused = false;
     });
     _pulseController.repeat(reverse: true);
+    _flickerController.repeat(reverse: true);
+    _waveController.repeat();
   }
 
   Future<void> _stopAndProcess() async {
     _pulseController.stop();
+    _flickerController.stop();
+    _flickerController.value = 0;
+    _waveController.stop();
     final path = await _recorder.stop();
 
     if (path == null || path.isEmpty) {
@@ -155,11 +209,13 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   Future<void> _processVoiceFile(String path, {String? sourcePrompt}) async {
     final languageCode = context.locale.languageCode;
+    final hintedQuestion = (sourcePrompt ?? '').trim();
 
     setState(() {
       _state = _VoiceState.processing;
       _isPlaybackPaused = false;
       _lastAudioBase64 = null;
+      _response = '';
     });
 
     try {
@@ -172,16 +228,30 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
       if (!mounted) return;
 
-      final transcript =
+        final transcript =
           (data['transcript'] as String? ?? sourcePrompt ?? '').trim();
+        final transcriptDisplay =
+          (data['transcript_display'] as String? ?? transcript).trim();
       final response = _cleanDisplayText(data['response'] as String? ?? '');
       final audioBase64 = data['audio_base64'] as String? ?? '';
       _sessionId = data['session_id'] as String? ?? _sessionId;
 
+      final visibleQuestion = transcriptDisplay.isNotEmpty
+          ? transcriptDisplay
+          : (transcript.isNotEmpty ? transcript : hintedQuestion);
+      final previousQuestion = _activeQuestion;
+
       setState(() {
         _transcript = transcript;
         _response = response;
+        _activeQuestion = visibleQuestion;
         _lastAudioBase64 = audioBase64.isEmpty ? null : audioBase64;
+
+        if (response.isNotEmpty && previousQuestion.isNotEmpty && previousQuestion != visibleQuestion) {
+          _fadingQuestion = previousQuestion;
+          _questionFadeController.forward(from: 0);
+        }
+
         if (transcript.isNotEmpty || response.isNotEmpty) {
           _recentTurns.insert(
             0,
@@ -197,6 +267,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         }
       });
 
+      if (response.isNotEmpty && previousQuestion.isNotEmpty && previousQuestion != visibleQuestion) {
+        _questionFadeController.addStatusListener(_clearQuestionStatusListener);
+      }
+
       // Play audio response
       if (audioBase64.isNotEmpty) {
         await _playAudioBase64(audioBase64);
@@ -211,6 +285,13 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       });
       context.showSnack('voice_assistant.error'.tr(), isError: true);
     }
+  }
+
+  void _clearQuestionStatusListener(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _questionFadeController.removeStatusListener(_clearQuestionStatusListener);
+    if (!mounted) return;
+    setState(() => _fadingQuestion = null);
   }
 
   Future<void> _runPromptThroughVoice(String prompt) async {
@@ -257,6 +338,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     setState(() {
       _state = _VoiceState.playing;
       _isPlaybackPaused = false;
+      _playbackPosition = Duration.zero;
+      _playbackDuration = Duration.zero;
+      _lastPlaybackUiMs = -1;
     });
     final bytes = base64Decode(base64Audio);
     final audioDir = await getTemporaryDirectory();
@@ -334,10 +418,13 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   String get _heroText {
     if (_response.isNotEmpty) {
+      if (_state == _VoiceState.playing && _playbackDuration > Duration.zero) {
+        return _readingWindowText(_response);
+      }
       return _previewText(_response, maxChars: 220);
     }
-    if (_transcript.isNotEmpty) {
-      return _transcript;
+    if (_activeQuestion.isNotEmpty) {
+      return _activeQuestion;
     }
     return _primarySuggestion;
   }
@@ -367,23 +454,52 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
+  String _readingWindowText(String text) {
+    final clean = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (clean.length <= 132) return clean;
+
+    final totalMs = _playbackDuration.inMilliseconds;
+    final atMs = _playbackPosition.inMilliseconds;
+    if (totalMs <= 0) return _previewText(clean, maxChars: 180);
+
+    final progress = (atMs / totalMs).clamp(0.0, 1.0);
+    const int windowChars = 132;
+    final maxStart = math.max(0, clean.length - windowChars);
+    var start = (maxStart * progress).floor();
+    if (start > 0) {
+      final spaceAt = clean.lastIndexOf(' ', start);
+      if (spaceAt > start - 14) {
+        start = spaceAt + 1;
+      }
+    }
+
+    var end = math.min(clean.length, start + windowChars);
+    if (end < clean.length) {
+      final nextSpace = clean.indexOf(' ', end);
+      if (nextSpace != -1 && (nextSpace - end) <= 14) {
+        end = nextSpace;
+      }
+    }
+    return clean.substring(start, end).trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isActive = _state == _VoiceState.recording;
     final isProcessing = _state == _VoiceState.processing;
     final isPlaying = _state == _VoiceState.playing;
-    final bool isBusy = isProcessing || isPlaying;
+    final choiceCardColor = Colors.white.withValues(alpha: context.isDark ? 0.16 : 0.56);
 
     return Scaffold(
-      backgroundColor: context.isDark ? AppColors.darkBackground : const Color(0xFFF2F7F6),
+      backgroundColor: Colors.transparent,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: context.isDark
-                ? const [Color(0xFF111414), Color(0xFF1D2524)]
-                : const [Color(0xFFF8FAFA), Color(0xFFEAF4F2)],
+                ? [AppColors.darkBackground, AppColors.darkSurface]
+                : [AppColors.lightBackground, AppColors.lightSurface],
           ),
         ),
         child: SafeArea(
@@ -431,10 +547,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
+                            color: choiceCardColor,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.25),
+                              color: Colors.white.withValues(alpha: 0.8),
                             ),
                           ),
                           child: Row(
@@ -453,7 +569,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                                 style: GoogleFonts.manrope(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryDark,
+                                  color: context.colors.onSurface,
                                   letterSpacing: 0.6,
                                 ),
                               ),
@@ -477,18 +593,56 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                               ),
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 350),
-                              child: Text(
-                                _heroText,
-                                key: ValueKey(_heroText),
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.sora(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.2,
-                                  color: context.colors.onSurface,
-                                ),
+                            SizedBox(
+                              height: 220,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 260),
+                                    curve: Curves.easeOut,
+                                    opacity: isProcessing ? 0.84 : 1,
+                                    child: Text(
+                                      _heroText,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.sora(
+                                        fontSize: 34,
+                                        fontWeight: FontWeight.w400,
+                                        height: 1.18,
+                                        color: context.colors.onSurface.withValues(alpha: 0.96),
+                                      ),
+                                      maxLines: 4,
+                                      overflow: TextOverflow.fade,
+                                    ),
+                                  ),
+                                  if (_fadingQuestion != null)
+                                    AnimatedBuilder(
+                                      animation: _questionFadeController,
+                                      builder: (context, _) {
+                                        final t = _questionFadeController.value;
+                                        return Positioned(
+                                          top: 2 - (26 * t),
+                                          left: 0,
+                                          right: 0,
+                                          child: Opacity(
+                                            opacity: (0.9 - t).clamp(0, 1),
+                                            child: Text(
+                                              _fadingQuestion!,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.fade,
+                                              style: GoogleFonts.sora(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w300,
+                                                height: 1.15,
+                                                color: context.colors.onSurface.withValues(alpha: 0.28),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: AppSpacing.lg),
@@ -504,49 +658,30 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                             const SizedBox(height: AppSpacing.lg),
                             _ReactiveWaveform(
                               controller: _waveController,
-                              isActive: isActive || isBusy,
+                              isActive: isActive,
                               color: AppColors.primary,
                             ),
                             const SizedBox(height: AppSpacing.lg),
-                            if (_response.isEmpty && _transcript.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(18),
-                                  onTap: isBusy ? null : () => _runPromptThroughVoice(_primarySuggestion),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                    decoration: BoxDecoration(
-                                      color: context.isDark
-                                          ? Colors.white.withValues(alpha: 0.06)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: AppColors.primary.withValues(alpha: 0.28),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.bolt_rounded,
-                                            color: AppColors.primary, size: 20),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            _primarySuggestion,
-                                            style: context.textTheme.titleSmall?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
                             if (_recentTurns.isNotEmpty)
-                              AppCard(
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.44),
+                            if (_recentTurns.isNotEmpty)
+                              Container(
                                 padding: AppSpacing.allMd,
+                                decoration: BoxDecoration(
+                                  color: choiceCardColor,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryDark.withValues(alpha: 0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
                                 child: Column(
                                   children: [
                                     for (final turn in _recentTurns.reversed) ...[
@@ -572,8 +707,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                           decoration: BoxDecoration(
                                             color: context.isDark
-                                                ? Colors.white.withValues(alpha: 0.06)
-                                                : const Color(0xFFF4F6F8),
+                                                ? Colors.white.withValues(alpha: 0.08)
+                                                : Colors.white.withValues(alpha: 0.65),
                                             borderRadius: BorderRadius.circular(14),
                                           ),
                                           child: Text(
@@ -594,47 +729,104 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      height: 170,
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                       decoration: BoxDecoration(
-                        color: context.isDark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.white.withValues(alpha: 0.82),
+                        color: choiceCardColor,
                         borderRadius: AppRadius.xlAll,
                         border: Border.all(
-                          color: context.isDark
-                              ? Colors.white.withValues(alpha: 0.18)
-                              : Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withValues(alpha: 0.8),
+                          width: 1.2,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _BigControlButton(
-                            icon: isPlaying && !_isPlaybackPaused
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            label: isPlaying ? 'Pause' : 'Replay',
-                            onTap: isPlaying ? _togglePauseResume : _replayLastResponse,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryDark.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                          AnimatedBuilder(
-                            animation: _pulseController,
-                            builder: (_, child) {
-                              final scale = isActive
-                                  ? 1.0 + _pulseController.value * 0.12
-                                  : 1.0;
-                              return Transform.scale(scale: scale, child: child);
-                            },
-                            child: _BigControlButton(
-                              icon: isActive ? Icons.stop_rounded : Icons.mic_rounded,
-                              label: isActive ? 'Stop' : 'Speak',
-                              isPrimary: true,
-                              onTap: isBusy ? () {} : _onMicTap,
+                        ],
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: -34,
+                            top: -30,
+                            child: IgnorePointer(
+                              child: AnimatedBuilder(
+                                animation: _flickerController,
+                                builder: (context, _) {
+                                  final flick = isActive
+                                      ? (0.45 + (_flickerController.value * 0.5))
+                                      : 0.2;
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: List.generate(20, (i) {
+                                      final base = 102 + ((i * 27) % 156).toDouble();
+                                      final extra = isActive
+                                          ? ((i % 6) * 15.0 * _flickerController.value)
+                                          : 0.0;
+                                      final alpha = (flick - ((i % 4) * 0.07)).clamp(0.08, 0.92);
+                                      return Container(
+                                        width: 3.3,
+                                        height: base + extra,
+                                        margin: const EdgeInsets.symmetric(horizontal: 1.2),
+                                        color: AppColors.primary.withValues(alpha: alpha),
+                                      );
+                                    }),
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                          _BigControlButton(
-                            icon: Icons.chat_rounded,
-                            label: 'Chat Mode',
-                            onTap: _openChatDirect,
+                          Positioned(
+                            left: 6,
+                            right: 6,
+                            bottom: 0,
+                            child: SizedBox(
+                              height: 142,
+                              child: Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Positioned(
+                                    left: 14,
+                                    bottom: 12,
+                                    child: _BigControlButton(
+                                      icon: isPlaying && !_isPlaybackPaused
+                                          ? Icons.pause_rounded
+                                          : Icons.more_horiz_rounded,
+                                      label: isPlaying ? 'Pause' : 'More',
+                                      compact: true,
+                                      onTap: isPlaying
+                                          ? _togglePauseResume
+                                          : _replayLastResponse,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 14,
+                                    bottom: 12,
+                                    child: _BigControlButton(
+                                      icon: Icons.chat_rounded,
+                                      label: 'Chat',
+                                      compact: true,
+                                      onTap: _openChatDirect,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 20,
+                                    child: _BigControlButton(
+                                      icon: isActive ? Icons.stop_rounded : Icons.mic_rounded,
+                                      label: isActive ? 'Listening' : 'Tap to Speak',
+                                      isPrimary: true,
+                                      onTap: () => _onMicTap(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -712,45 +904,69 @@ class _BigControlButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool isPrimary;
+  final bool compact;
   final String label;
 
   const _BigControlButton({
     required this.icon,
     required this.onTap,
     this.isPrimary = false,
+    this.compact = false,
     required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color effective = AppColors.primary;
     final background = isPrimary
-        ? effective.withValues(alpha: 0.2)
-        : effective.withValues(alpha: 0.08);
-    final iconColor = isPrimary ? effective : context.colors.onSurface.withValues(alpha: 0.9);
+      ? AppColors.primary.withValues(alpha: 0.26)
+        : (context.isDark
+            ? Colors.black.withValues(alpha: 0.38)
+            : Colors.white.withValues(alpha: 0.95));
+    final iconColor = isPrimary
+      ? AppColors.primary
+        : context.colors.onSurface.withValues(alpha: 0.9);
+
+    final width = compact ? 58.0 : (isPrimary ? 100.0 : 84.0);
+    final height = compact ? 58.0 : (isPrimary ? 100.0 : 84.0);
+    final radius = compact ? 29.0 : 36.0;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(36),
+      borderRadius: BorderRadius.circular(radius),
       onTap: onTap,
       child: Container(
-        width: isPrimary ? 92 : 84,
-        height: isPrimary ? 92 : 84,
+        width: width,
+        height: height,
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(36),
+          border: Border.all(
+            color: isPrimary
+                ? AppColors.primary.withValues(alpha: 0.55)
+                : AppColors.primary.withValues(alpha: 0.18),
+          ),
+          borderRadius: BorderRadius.circular(radius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: iconColor, size: isPrimary ? 34 : 30),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: context.textTheme.labelSmall?.copyWith(
-                color: isPrimary ? effective : context.appColors.textSecondary,
-                fontWeight: FontWeight.w700,
+            Icon(icon, color: iconColor, size: compact ? 24 : (isPrimary ? 36 : 30)),
+            if (!compact) ...[
+              const SizedBox(height: 4),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: isPrimary ? AppColors.primary : context.appColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -89,15 +89,6 @@ CROP_TERMS = [
     "moong",
 ]
 
-_AGENT_TOOL_TIMEOUT_SECONDS = max(
-    2.0, float(os.getenv("AGENT_TOOL_TIMEOUT_SECONDS", "12"))
-)
-_GROUNDED_CONTEXT_TIMEOUT_SECONDS = max(
-    3.0, float(os.getenv("AGENT_GROUNDED_CONTEXT_TIMEOUT_SECONDS", "14"))
-)
-_GROQ_REPLY_TIMEOUT_SECONDS = max(
-    3.0, float(os.getenv("AGENT_GROQ_REPLY_TIMEOUT_SECONDS", "16"))
-)
 _ENABLE_RUNNER_TRANSLATION = str(
     os.getenv("AGENT_ENABLE_RUNNER_TRANSLATION", "0")
 ).strip().lower() in {"1", "true", "yes"}
@@ -199,19 +190,8 @@ class ChatService:
 
     async def _run_tool_async(self, tool_name: str, fn, *args, **kwargs) -> tuple[str, dict]:
         try:
-            data = await asyncio.wait_for(
-                asyncio.to_thread(fn, *args, **kwargs),
-                timeout=_AGENT_TOOL_TIMEOUT_SECONDS,
-            )
+            data = await asyncio.to_thread(fn, *args, **kwargs)
             return tool_name, {"ok": True, "data": data}
-        except asyncio.TimeoutError:
-            logger.warning(
-                f"Agentic tool {tool_name} timed out after {_AGENT_TOOL_TIMEOUT_SECONDS}s"
-            )
-            return tool_name, {
-                "ok": False,
-                "error": f"timeout_after_{_AGENT_TOOL_TIMEOUT_SECONDS}s",
-            }
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Agentic tool {tool_name} failed: {exc}")
             return tool_name, {"ok": False, "error": str(exc)}
@@ -1931,21 +1911,12 @@ class ChatService:
             farmer_facts=effective_farmer_facts,
         )
 
-        try:
-            grounded_context = await asyncio.wait_for(
-                asyncio.to_thread(
-                    self._build_grounded_fallback_context,
-                    user_message=message,
-                    farmer_facts=effective_farmer_facts,
-                    profile_geo=profile_geo,
-                ),
-                timeout=_GROUNDED_CONTEXT_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                f"Grounded fallback context timed out after {_GROUNDED_CONTEXT_TIMEOUT_SECONDS}s"
-            )
-            grounded_context = "NO_DOMAIN_TOOL_DATA=grounded_context_timeout"
+        grounded_context = await asyncio.to_thread(
+            self._build_grounded_fallback_context,
+            user_message=message,
+            farmer_facts=effective_farmer_facts,
+            profile_geo=profile_geo,
+        )
         agentic_context_block = self._render_agentic_context_block(agentic_plan)
 
         augmented_message = (
@@ -1963,20 +1934,11 @@ class ChatService:
             "Output must be in the REQUIRED output language above."
         )
 
-        try:
-            fallback = await asyncio.wait_for(
-                asyncio.to_thread(
-                    generate_groq_reply,
-                    message=augmented_message,
-                    language=turn_language,
-                ),
-                timeout=_GROQ_REPLY_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                f"Groq fallback generation timed out after {_GROQ_REPLY_TIMEOUT_SECONDS}s"
-            )
-            fallback = {"response": "", "provider": "groq", "model": "timeout"}
+        fallback = await asyncio.to_thread(
+            generate_groq_reply,
+            message=augmented_message,
+            language=turn_language,
+        )
         response_text = (fallback.get("response", "") or "").strip()
         if not response_text:
             if turn_language.startswith("en"):

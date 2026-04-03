@@ -201,11 +201,32 @@ class MandiDataFetcher:
             
             return normalized
         
+        except httpx.HTTPStatusError as e:
+            resp_text = (e.response.text or "")[:300] if e.response is not None else ""
+            status = e.response.status_code if e.response is not None else "unknown"
+            req_url = str(e.request.url) if e.request is not None else url
+            logger.error(
+                "data.gov.in API status error (%s) status=%s url=%s body=%r",
+                e.__class__.__name__,
+                status,
+                req_url,
+                resp_text,
+            )
+            return []
+        except httpx.RequestError as e:
+            req_url = str(e.request.url) if e.request is not None else url
+            logger.error(
+                "data.gov.in API request error (%s) url=%s details=%r",
+                e.__class__.__name__,
+                req_url,
+                e,
+            )
+            return []
         except httpx.HTTPError as e:
-            logger.error(f"data.gov.in API error: {e}")
+            logger.error("data.gov.in API error (%s): %r", e.__class__.__name__, e)
             return []
         except Exception as e:
-            logger.error(f"Unexpected error fetching prices: {e}")
+            logger.error("Unexpected error fetching prices (%s): %r", e.__class__.__name__, e)
             return []
 
     async def fetch_bulk_prices(self, states: List[str] = None, limit_per_state: int = 200) -> List[Dict]:

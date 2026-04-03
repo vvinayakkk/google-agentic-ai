@@ -253,6 +253,10 @@ class VoiceService {
     final res = await _client.upload(
       ApiEndpoints.voiceCommandText,
       formData: formData,
+      options: Options(
+        receiveTimeout: const Duration(seconds: 75),
+        sendTimeout: const Duration(seconds: 75),
+      ),
     );
     return res.data as Map<String, dynamic>;
   }

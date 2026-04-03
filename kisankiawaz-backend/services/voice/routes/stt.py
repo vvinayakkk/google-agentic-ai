@@ -11,12 +11,22 @@ ALLOWED_TYPES = {"audio/wav", "audio/wave", "audio/x-wav", "audio/mpeg", "audio/
 @router.post("")
 async def speech_to_text(
     file: UploadFile = File(...),
-    language: str = Form(default="hi-IN"),
+    language: str = Form(default="auto"),
     user: dict = Depends(get_current_user),
 ):
     if file.content_type and file.content_type not in ALLOWED_TYPES:
         raise bad_request(f"Unsupported audio format: {file.content_type}. Supported: {', '.join(ALLOWED_TYPES)}")
     
     audio_bytes = await file.read()
-    result = await STTService.transcribe(audio_bytes, language, file.filename or "audio.wav")
-    return {"transcript": result["transcript"], "language_code": result["language_code"]}
+    auto_detect = str(language or "").strip().lower() in {"", "auto", "unknown", "detect"}
+    result = await STTService.transcribe(
+        audio_bytes,
+        language=language,
+        filename=file.filename or "audio.wav",
+        auto_detect=auto_detect,
+    )
+    return {
+        "transcript": result["transcript"],
+        "language_code": result["language_code"],
+        "language_probability": result.get("language_probability"),
+    }

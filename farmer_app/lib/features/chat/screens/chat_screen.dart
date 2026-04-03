@@ -53,6 +53,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isMicRecording = false;
   bool _isMicProcessing = false;
   String _responseMode = 'detailed';
+  String? _turnLanguageHint;
   int _micWavePhase = 0;
   int _loadingHintIndex = 0;
   String _loadingHint = 'Searching...';
@@ -320,9 +321,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     AgentService agent,
     String outboundPrompt,
   ) async {
+    final turnLanguage = _turnLanguageHint ?? context.locale.languageCode;
     final data = await agent.chat(
       message: outboundPrompt,
-      language: context.locale.languageCode,
+      language: turnLanguage,
       sessionId: _sessionId,
       agentType: widget.agentType,
       responseMode: _responseMode,
@@ -433,9 +435,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
         });
       } else {
+        final turnLanguage = _turnLanguageHint ?? context.locale.languageCode;
         final prepare = await agent.prepareChat(
           message: outboundPrompt,
-          language: context.locale.languageCode,
+          language: turnLanguage,
           sessionId: _sessionId,
           agentType: widget.agentType,
           allowFallback: true,
@@ -492,6 +495,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _messages.removeAt(0);
         }
         _isLoading = false;
+        _turnLanguageHint = null;
       });
       _stopLoadingHints();
       _loadResumableSessionFromDb();
@@ -510,6 +514,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         );
         _isLoading = false;
+        _turnLanguageHint = null;
       });
       _stopLoadingHints();
       _loadResumableSessionFromDb();
@@ -530,9 +535,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final voice = ref.read(voiceServiceProvider);
+      final ttsLanguage =
+          message.language ?? _turnLanguageHint ?? context.locale.languageCode;
       final data = await voice.ttsBase64(
         text: message.content,
-        language: context.locale.languageCode,
+        language: ttsLanguage,
       );
 
       final audioBase64 = data['audio_base64'] as String? ?? '';
@@ -639,11 +646,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (!mounted) return;
 
       final transcript = (data['transcript'] as String? ?? '').trim();
+      final detectedLanguage = (data['language_code'] as String? ?? '').trim();
       if (transcript.isNotEmpty) {
         _controller.text = transcript;
         _controller.selection = TextSelection.fromPosition(
           TextPosition(offset: _controller.text.length),
         );
+        if (detectedLanguage.isNotEmpty) {
+          _turnLanguageHint = detectedLanguage;
+        }
       } else {
         context.showSnack('speech_to_text.no_result'.tr(), isError: true);
       }

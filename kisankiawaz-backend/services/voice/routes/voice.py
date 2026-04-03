@@ -17,6 +17,10 @@ agent_client = ServiceClient(
     "http://agent-service:8006",
     timeout=max(20.0, float(os.getenv("VOICE_AGENT_CLIENT_TIMEOUT_SECONDS", "35.0"))),
 )
+farmer_client = ServiceClient(
+    "http://farmer-service:8002",
+    timeout=max(2.0, float(os.getenv("VOICE_FARMER_CLIENT_TIMEOUT_SECONDS", "4.0"))),
+)
 market_client = ServiceClient("http://market-service:8004")
 schemes_client = ServiceClient("http://schemes-service:8009")
 equipment_client = ServiceClient("http://equipment-service:8005")
@@ -24,10 +28,19 @@ equipment_client = ServiceClient("http://equipment-service:8005")
 VOICE_AGENT_TIMEOUT_SECONDS = max(6.0, float(os.getenv("VOICE_AGENT_TIMEOUT_SECONDS", "20.0")))
 VOICE_AGENT_MAX_RETRIES = max(1, int(os.getenv("VOICE_AGENT_MAX_RETRIES", "3")))
 VOICE_AGENT_RETRY_BACKOFF_SECONDS = max(0.2, float(os.getenv("VOICE_AGENT_RETRY_BACKOFF_SECONDS", "0.8")))
+VOICE_TEXT_AGENT_TIMEOUT_SECONDS = max(
+    4.0,
+    float(os.getenv("VOICE_TEXT_AGENT_TIMEOUT_SECONDS", "9.0")),
+)
+VOICE_TEXT_AGENT_MAX_RETRIES = max(1, int(os.getenv("VOICE_TEXT_AGENT_MAX_RETRIES", "1")))
 VOICE_MARKET_TIMEOUT_SECONDS = max(0.5, float(os.getenv("VOICE_MARKET_TIMEOUT_SECONDS", "1.8")))
 VOICE_TTS_TIMEOUT_SECONDS = max(6.0, float(os.getenv("VOICE_TTS_TIMEOUT_SECONDS", "25.0")))
 VOICE_MAX_TTS_CHARS = max(140, int(os.getenv("VOICE_MAX_TTS_CHARS", "420")))
 VOICE_SERVICE_TIMEOUT_SECONDS = max(2.0, float(os.getenv("VOICE_SERVICE_TIMEOUT_SECONDS", "8.0")))
+VOICE_STT_LOW_CONFIDENCE_THRESHOLD = max(
+    0.0,
+    min(1.0, float(os.getenv("VOICE_STT_LOW_CONFIDENCE_THRESHOLD", "0.55"))),
+)
 
 
 HINDI_ROMAN_MARKERS = {
@@ -63,10 +76,74 @@ INDIAN_STATES = [
 ]
 
 
-def _resolve_chat_language(language_code: str, transcript: str) -> str:
+LANG_TO_BCP47 = {
+    "en": "en-IN",
+    "english": "en-IN",
+    "hi": "hi-IN",
+    "hindi": "hi-IN",
+    "hinglish": "hi-IN",
+    "mr": "mr-IN",
+    "marathi": "mr-IN",
+    "bn": "bn-IN",
+    "bengali": "bn-IN",
+    "gu": "gu-IN",
+    "gujarati": "gu-IN",
+    "kn": "kn-IN",
+    "kannada": "kn-IN",
+    "ml": "ml-IN",
+    "malayalam": "ml-IN",
+    "od": "od-IN",
+    "or": "od-IN",
+    "odia": "od-IN",
+    "pa": "pa-IN",
+    "punjabi": "pa-IN",
+    "ta": "ta-IN",
+    "tamil": "ta-IN",
+    "te": "te-IN",
+    "telugu": "te-IN",
+}
+
+
+def _language_primary(lang_code: str | None) -> str:
+    raw = str(lang_code or "").strip().lower().replace("_", "-")
+    if not raw:
+        return ""
+    if raw in {"hinglish", "hi-en", "mix", "mixed"}:
+        return "hinglish"
+    if "-" in raw:
+        return raw.split("-", 1)[0]
+    return raw
+
+
+def _normalize_tts_language_code(lang_code: str | None, fallback: str = "hi-IN") -> str:
+    raw = str(lang_code or "").strip().lower().replace("_", "-")
+    if not raw:
+        return fallback
+
+    if raw in LANG_TO_BCP47:
+        return LANG_TO_BCP47[raw]
+
+    primary = _language_primary(raw)
+    if primary in LANG_TO_BCP47:
+        return LANG_TO_BCP47[primary]
+
+    if re.match(r"^[a-z]{2,3}-[a-z]{2,3}$", raw):
+        return raw.split("-")[0] + "-" + raw.split("-")[1].upper()
+
+    return fallback
+
+
+def _resolve_chat_language(
+    language_code: str,
+    transcript: str,
+    requested_language: str | None = None,
+    user_preferred_language: str | None = None,
+) -> str:
     txt = (transcript or "").strip()
     txt_l = txt.lower()
-    lang = (language_code or "").lower()
+    stt_lang = _language_primary(language_code)
+    req_lang = _language_primary(requested_language)
+    pref_lang = _language_primary(user_preferred_language)
     tokens = [t for t in re.split(r"[^a-zA-Z]+", txt_l) if t]
     hindi_hits = sum(1 for t in tokens if t in HINDI_ROMAN_MARKERS)
     en_hits = sum(1 for t in tokens if t in {"the", "and", "price", "market", "weather", "sell", "farm", "profit"})
@@ -77,12 +154,12 @@ def _resolve_chat_language(language_code: str, transcript: str) -> str:
         return "hinglish"
     if hindi_hits >= 2:
         return "hi"
-    if lang.startswith("hi"):
-        return "hi"
-    if lang.startswith("mr"):
-        return "hinglish"
-    if lang.startswith("en"):
-        return "en"
+
+    # Prefer STT-detected language, then explicit user preference, then request hint.
+    for candidate in (stt_lang, pref_lang, req_lang):
+        if candidate:
+            return candidate
+
     return "en"
 
 
@@ -102,7 +179,53 @@ def _normalize_user_language(user: dict | None) -> str | None:
         return "hinglish"
     if raw in {"en", "english", "en-in"}:
         return "en"
-    return None
+    primary = _language_primary(raw)
+    return primary or None
+
+
+def _resolve_tts_language_code(
+    *,
+    stt_language_code: str | None,
+    requested_language: str | None,
+    chat_language: str | None,
+    user_preferred_language: str | None,
+) -> str:
+    for candidate in (stt_language_code, chat_language, user_preferred_language, requested_language):
+        normalized = _normalize_tts_language_code(candidate, fallback="")
+        if normalized:
+            return normalized
+    return "hi-IN"
+
+
+def _localized_retry_prompt(language: str) -> str:
+    lang = str(language or "").lower()
+    if lang.startswith("hi"):
+        return "अभी उत्तर पूरा नहीं हो पाया। कृपया फसल, स्थान और लक्ष्य के साथ सवाल दोबारा पूछें।"
+    if lang.startswith("hinglish"):
+        return "Abhi answer complete nahi ho paya. Please crop, location aur goal ke saath sawaal dobara pucho."
+    return "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
+
+
+def _localized_language_clarification_prompt(language: str) -> str:
+    lang = str(language or "").lower()
+    if lang.startswith("hi"):
+        return "आवाज साफ़ नहीं आई। कृपया वही सवाल फिर से थोड़ा धीरे और साफ़ बोलें।"
+    if lang.startswith("hinglish"):
+        return "Awaz clear nahi aayi. Please wahi sawaal phir se thoda dheere aur clear bolo."
+    return "I could not catch that clearly. Please repeat your question slowly and clearly."
+
+
+def _is_low_confidence_stt(stt_result: dict | None) -> bool:
+    if not isinstance(stt_result, dict):
+        return False
+    confidence = stt_result.get("language_probability")
+    try:
+        confidence = float(confidence) if confidence is not None else None
+    except Exception:  # noqa: BLE001
+        confidence = None
+    if confidence is None:
+        return False
+    return confidence < VOICE_STT_LOW_CONFIDENCE_THRESHOLD
 
 
 def _extract_crop(transcript: str) -> str:
@@ -160,6 +283,85 @@ def _detect_intents(transcript: str) -> set[str]:
     return intents
 
 
+def _is_profile_intent(transcript: str) -> bool:
+    txt = (transcript or "").lower()
+    markers = (
+        "profile", "my profile", "meri profile", "mera profile",
+        "mere profile", "mere baare", "mere bare", "meri jankari",
+        "मेरी प्रोफाइल", "मेरे प्रोफाइल", "मेरे बारे", "प्रोफाइल",
+    )
+    return any(marker in txt for marker in markers)
+
+
+async def _fetch_profile_snapshot(token: str) -> dict:
+    if not token:
+        return {}
+    try:
+        resp = await farmer_client.get(
+            "/api/v1/farmers/me/profile",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        return _as_mapping(resp)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Voice profile snapshot failed: {exc}")
+        return {}
+
+
+def _build_profile_voice_response(profile: dict, language: str) -> str:
+    if not isinstance(profile, dict) or not profile:
+        return _localized_retry_prompt(language)
+
+    profile_exists = bool(profile.get("profile_exists"))
+    village = str(profile.get("village") or "").strip()
+    district = str(profile.get("district") or "").strip()
+    state = str(profile.get("state") or "").strip()
+    land = profile.get("land_size_acres")
+
+    place_parts = [p for p in [village, district, state] if p]
+    place = ", ".join(place_parts)
+
+    lang = str(language or "").lower()
+    if lang.startswith("hi"):
+        if not profile_exists:
+            return "आपकी प्रोफाइल अभी पूरी नहीं है। कृपया गांव, जिला, राज्य और जमीन का आकार अपडेट करें, फिर मैं बेहतर सलाह दूँगा।"
+        place_line = f"आपका स्थान {place} है।" if place else "आपका स्थान अभी प्रोफाइल में पूरा नहीं है।"
+        land_line = f"आपके पास लगभग {land} एकड़ जमीन दर्ज है।" if land not in (None, "") else "जमीन का आकार अभी दर्ज नहीं है।"
+        return f"आपकी प्रोफाइल के अनुसार: {place_line} {land_line}".strip()
+
+    if lang.startswith("hinglish"):
+        if not profile_exists:
+            return "Aapki profile abhi complete nahi hai. Village, district, state aur land size update karo, phir main better advice dunga."
+        place_line = f"Aapka location {place} hai." if place else "Aapka location profile me complete nahi hai."
+        land_line = f"Aapke profile me lagbhag {land} acre land saved hai." if land not in (None, "") else "Land size abhi profile me saved nahi hai."
+        return f"Aapki profile ke hisaab se: {place_line} {land_line}".strip()
+
+    if not profile_exists:
+        return "Your profile is not complete yet. Please update village, district, state, and land size so I can give better advice."
+    place_line = f"Your location is {place}." if place else "Your location details are incomplete in your profile."
+    land_line = (
+        f"Your profile shows about {land} acres of land."
+        if land not in (None, "")
+        else "Your land size is not saved yet."
+    )
+    return f"From your profile: {place_line} {land_line}".strip()
+
+
+def _ui_transcript_display(transcript: str, stt_language: str | None, requested_language: str | None) -> str:
+    txt = str(transcript or "").strip()
+    if not txt:
+        return txt
+
+    target_lang = _language_primary(stt_language) or _language_primary(requested_language)
+    is_indic_target = target_lang in {"hi", "mr", "bn", "gu", "kn", "ml", "od", "pa", "ta", "te"}
+    has_indic_script = bool(re.search(r"[\u0900-\u0D7F]", txt))
+    has_latin = bool(re.search(r"[A-Za-z]", txt))
+
+    # Avoid showing romanized text as the spoken transcript when user language is Indic.
+    if is_indic_target and has_latin and not has_indic_script:
+        return ""
+    return txt
+
+
 def _sanitize_voice_response(text: str, language: str) -> str:
     raw = (text or "").strip()
     if not raw:
@@ -200,6 +402,7 @@ def _remove_voice_noise(text: str) -> str:
         r"^\s*(source|sources|स्रोत)\s*:\s*.*$",
         r"^\s*(timestamp|time\s*stamp|updated_at|as_of|as of)\s*[:=].*$",
         r"^\s*(action\s*plan|why\s*this\s*recommendation|confidence|source\s*snippets|what\s*changed\s*since\s*yesterday|follow-up\s*check|clarification\s*for\s*next\s*turn)\s*:\s*.*$",
+        r"^\s*(action\s*now|next\s*steps|bulletins?|summary|overview|key\s*points?)\s*:\s*.*$",
         r"^\s*(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\s*.*$",
     ]
 
@@ -208,12 +411,20 @@ def _remove_voice_noise(text: str) -> str:
         line_s = line.strip()
         if not line_s:
             continue
+
+        # Remove list markers so TTS avoids reading bullets/numbers awkwardly.
+        line_s = re.sub(r"^\s*[-*•]+\s*", "", line_s)
+        line_s = re.sub(r"^\s*\d+[\.)]\s*", "", line_s)
+
         if any(re.match(p, line_s, flags=re.IGNORECASE) for p in blocked_patterns):
             continue
         # Remove explicit inline source/timestamp fragments.
         line_s = re.sub(r"\(\s*source\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\(\s*timestamp\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\bsource\b\s*:\s*[^.;,\n]*", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\b(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\b", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b(seed\s+farmer\s*\d*|farmer\s*\d*)\b\s*,?\s*", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b(action\s*now|bulletins?|system\s*keywords?|section\s*headers?)\b\s*[:\-]?", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\b\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}[^\s,;)]*", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\b(last\s+available\s+date|updated\s+at|as\s+of)\b\s*[:\-]?\s*[^.\n]*", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\s{2,}", " ", line_s).strip(" -|,;")
@@ -240,6 +451,7 @@ def _tts_humanize_text(text: str, language: str) -> str:
     # Avoid heading-like staccato phrases in TTS.
     out = re.sub(r"\bData\s*now\b\s*[:\-]?\s*", "", out, flags=re.IGNORECASE)
     out = re.sub(r"\bNow\s*:\s*", "", out, flags=re.IGNORECASE)
+    out = re.sub(r"\b(action\s*now|bulletins?|system\s*keywords?|next\s*steps|summary)\b\s*[:\-]?", "", out, flags=re.IGNORECASE)
 
     if str(language).lower().startswith("hi"):
         out = re.sub(r"\bN/A\b", "उपलब्ध नहीं", out)
@@ -249,25 +461,23 @@ def _tts_humanize_text(text: str, language: str) -> str:
     # Keep natural pause cues for TTS prosody.
     out = re.sub(r"\s*,\s*", ", ", out)
     out = re.sub(r"\s*([.!?])\s*", r"\1 ", out)
+    out = re.sub(r"\s{2,}", " ", out).strip()
+
+    # Nudge into conversational paragraph flow if no sentence boundary exists.
+    if len(out) > 140 and "." not in out:
+        midpoint = max(60, len(out) // 2)
+        split_at = out.find(",", midpoint)
+        if split_at == -1:
+            split_at = out.find(" ", midpoint)
+        if split_at != -1:
+            out = out[:split_at].rstrip(", ") + ". " + out[split_at + 1 :].lstrip()
+
     return re.sub(r"\s+", " ", out).strip()
 
 
 def _personalize_voice_text(text: str, user: dict, language: str) -> str:
-    out = (text or "").strip()
-    if not out or not isinstance(user, dict):
-        return out
-
-    name = str(user.get("name") or user.get("full_name") or user.get("first_name") or "").strip()
-    if not name:
-        return out
-
-    # Avoid repeating name if already present.
-    if name.lower() in out.lower():
-        return out
-
-    if str(language).lower().startswith("hi"):
-        return f"{name}, {out}"
-    return f"{name}, {out}"
+    # Voice mode should not force a name prefix in every reply.
+    return (text or "").strip()
 
 
 def _needs_source_note(text: str) -> bool:
@@ -406,8 +616,23 @@ def _build_fallback_voice_reply(transcript: str, language: str, tool_data: dict)
 
     if "weather" in intents and isinstance(tool_data.get("weather"), dict):
         weather = tool_data.get("weather", {})
+        current = weather.get("current", {}) if isinstance(weather.get("current"), dict) else {}
+        location = weather.get("location", {}) if isinstance(weather.get("location"), dict) else {}
         temp = weather.get("temperature_c")
-        city = weather.get("city") or _extract_city(transcript)
+        if temp is None:
+            temp = current.get("temp")
+        soil_m = current.get("soil_moisture_3_9cm")
+        moisture_text = ""
+        try:
+            if soil_m is not None:
+                moisture_value = float(soil_m)
+                if moisture_value <= 1.0:
+                    moisture_value *= 100.0
+                moisture_text = f" Soil moisture around {moisture_value:.0f}% in top layer."
+        except Exception:  # noqa: BLE001
+            moisture_text = ""
+
+        city = weather.get("city") or location.get("label") or _extract_city(transcript)
         source = weather.get("source") or "weather_service"
         if str(language).lower().startswith("hi"):
             return (
@@ -417,11 +642,11 @@ def _build_fallback_voice_reply(transcript: str, language: str, tool_data: dict)
         if str(language).lower().startswith("hinglish"):
             return (
                 f"Weather advice: {city} ke liye temperature {temp if temp is not None else 'N/A'}°C hai. "
-                f"Source: {source}. Irrigation subah-shaam karo aur rain/wind se pehle spray avoid karo."
+                f"Source: {source}.{moisture_text} Irrigation subah-shaam karo aur rain/wind se pehle spray avoid karo."
             )
         return (
             f"Weather advice: current temperature around {city} is {temp if temp is not None else 'N/A'}°C. "
-            f"Source: {source}. Keep irrigation in early morning/evening and avoid spraying before rain or strong wind."
+            f"Source: {source}.{moisture_text} Keep irrigation in early morning/evening and avoid spraying before rain or strong wind."
         )
 
     market_payload = tool_data.get("market", {}) if isinstance(tool_data, dict) else {}
@@ -655,21 +880,39 @@ async def _query_agent_fast(token: str, transcript: str, chat_lang: str, session
     return _as_mapping(regular_response)
 
 
-async def _query_agent_resilient(token: str, transcript: str, chat_lang: str, session_id: str | None) -> dict:
+async def _query_agent_resilient(
+    token: str,
+    transcript: str,
+    chat_lang: str,
+    session_id: str | None,
+    *,
+    timeout_seconds: float | None = None,
+    max_retries: int | None = None,
+) -> dict:
+    timeout_budget = timeout_seconds if timeout_seconds is not None else VOICE_AGENT_TIMEOUT_SECONDS
+    retries = max_retries if max_retries is not None else VOICE_AGENT_MAX_RETRIES
     last_exc: Exception | None = None
-    for attempt in range(VOICE_AGENT_MAX_RETRIES):
+    for attempt in range(retries):
         try:
             return await asyncio.wait_for(
                 _query_agent_fast(token=token, transcript=transcript, chat_lang=chat_lang, session_id=session_id),
-                timeout=VOICE_AGENT_TIMEOUT_SECONDS,
+                timeout=timeout_budget,
             )
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
-            if attempt + 1 < VOICE_AGENT_MAX_RETRIES:
+            if attempt + 1 < retries:
                 await asyncio.sleep(VOICE_AGENT_RETRY_BACKOFF_SECONDS * (attempt + 1))
 
     logger.warning(f"Voice agent unavailable after retries: {last_exc}")
     return {}
+
+
+def _needs_tool_fallback(text: str) -> bool:
+    raw = str(text or "").strip()
+    if not raw:
+        return True
+    low = raw.lower()
+    return any(marker in low for marker in NEGATIVE_MARKERS)
 
 
 def _is_probably_silent_wav(audio: bytes) -> bool:
@@ -682,14 +925,26 @@ def _is_probably_silent_wav(audio: bytes) -> bool:
 
 async def _synthesize_voice_audio(text: str, language: str) -> bytes:
     """Best-effort TTS synthesis with retries and voice fallback to avoid silent playback."""
+    primary_lang = _normalize_tts_language_code(language)
     voice_plan = [
-        (language, "anushka"),
-        (language, "meera"),
-        ("hi-IN", "anushka"),
-        ("en-IN", "anushka"),
+        (primary_lang, "anushka"),
+        (primary_lang, "meera"),
     ]
+    if primary_lang != "hi-IN":
+        voice_plan.append(("hi-IN", "anushka"))
+    if primary_lang != "en-IN":
+        voice_plan.append(("en-IN", "anushka"))
+
+    # Deduplicate retries while preserving order.
+    deduped: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for plan_item in voice_plan:
+        if plan_item not in seen:
+            deduped.append(plan_item)
+            seen.add(plan_item)
+
     last_exc: Exception | None = None
-    for idx, (lang_code, speaker) in enumerate(voice_plan):
+    for idx, (lang_code, speaker) in enumerate(deduped):
         try:
             audio = await TTSService.synthesize(text, lang_code, speaker=speaker)
             if _is_probably_silent_wav(audio):
@@ -697,7 +952,7 @@ async def _synthesize_voice_audio(text: str, language: str) -> bytes:
             return audio
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
-            logger.warning(f"Voice TTS attempt {idx + 1}/{len(voice_plan)} failed ({lang_code}, {speaker}): {exc}")
+            logger.warning(f"Voice TTS attempt {idx + 1}/{len(deduped)} failed ({lang_code}, {speaker}): {exc}")
             await asyncio.sleep(0.2)
     logger.warning(f"Voice TTS failed after all retries; returning silence: {last_exc}")
     return TTSService._silent_wav_bytes()
@@ -706,7 +961,7 @@ async def _synthesize_voice_audio(text: str, language: str) -> bytes:
 @router.post("")
 async def voice_command(
     file: UploadFile = File(...),
-    language: str = Form(default="hi-IN"),
+    language: str = Form(default="auto"),
     session_id: str = Form(default=None),
     user: dict = Depends(get_current_user),
 ):
@@ -716,47 +971,71 @@ async def voice_command(
     # Step 1: Transcribe audio to text
     t0_stt = time.perf_counter()
     audio_bytes = await file.read()
-    stt_result = await STTService.transcribe(audio_bytes, language, file.filename or "audio.wav")
+    auto_detect = str(language or "").strip().lower() in {"", "auto", "unknown", "detect"}
+    stt_result = await STTService.transcribe(
+        audio_bytes,
+        language=language,
+        filename=file.filename or "audio.wav",
+        auto_detect=auto_detect,
+    )
     stt_ms = int((time.perf_counter() - t0_stt) * 1000)
 
     transcript = stt_result["transcript"]
-    chat_lang = _resolve_chat_language(stt_result.get("language_code", language), transcript)
     user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
-    if chat_lang == "en" and user_pref_lang in {"hi", "hinglish"}:
-        chat_lang = user_pref_lang
+    chat_lang = _resolve_chat_language(
+        stt_result.get("language_code", language),
+        transcript,
+        requested_language=language,
+        user_preferred_language=user_pref_lang,
+    )
+    tts_lang = _resolve_tts_language_code(
+        stt_language_code=stt_result.get("language_code"),
+        requested_language=language,
+        chat_language=chat_lang,
+        user_preferred_language=user_pref_lang,
+    )
     logger.info(f"STT result: {transcript}")
     
-    # Step 2: Send text to agent service
+    # Step 2: Send text to agent service (or ask for clarification when STT confidence is low)
     t0_agent = time.perf_counter()
     token = user.get("_token", "") if isinstance(user, dict) else getattr(user, "_token", "")
     agent_text = ""
     agent_session = session_id
     agent_data = {}
-    agent_data = await _query_agent_resilient(
-        token=token,
-        transcript=transcript,
-        chat_lang=chat_lang,
-        session_id=session_id,
-    )
-    agent_text = agent_data.get("response", "")
-    agent_session = agent_data.get("session_id", session_id)
+    stt_low_confidence = _is_low_confidence_stt(stt_result)
+    if stt_low_confidence:
+        agent_text = _localized_language_clarification_prompt(chat_lang)
+        response_origin = "clarification"
+    else:
+        agent_data = await _query_agent_resilient(
+            token=token,
+            transcript=transcript,
+            chat_lang=chat_lang,
+            session_id=session_id,
+            timeout_seconds=VOICE_TEXT_AGENT_TIMEOUT_SECONDS,
+            max_retries=VOICE_TEXT_AGENT_MAX_RETRIES,
+        )
+        agent_text = agent_data.get("response", "")
+        agent_session = agent_data.get("session_id", session_id)
+        response_origin = "agent"
 
     agent_ms = int((time.perf_counter() - t0_agent) * 1000)
 
     if not agent_text.strip():
-        agent_text = "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
+        agent_text = _localized_retry_prompt(chat_lang)
 
     agent_text = _sanitize_voice_response(agent_text, chat_lang)
+    fallback_used = False
+    tool_data = {}
     agent_text = _tts_humanize_text(agent_text, chat_lang)
     agent_text = _personalize_voice_text(agent_text, user, chat_lang)
-    response_origin = "agent"
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
-    tool_evidence = _build_tool_evidence({})
+    tool_evidence = _build_tool_evidence(tool_data)
     logger.info(f"Agent response: {agent_text[:100]}")
     
     # Step 3: Convert agent response to speech
     t0_tts = time.perf_counter()
-    tts_audio = await _synthesize_voice_audio(agent_text, language)
+    tts_audio = await _synthesize_voice_audio(agent_text, tts_lang)
     tts_ms = int((time.perf_counter() - t0_tts) * 1000)
     total_ms = int((time.perf_counter() - t0_total) * 1000)
     
@@ -774,6 +1053,11 @@ async def voice_command(
             "X-Latency-Tts-Ms": str(tts_ms),
             "X-Fallback-Used": "0",
             "X-Response-Origin": response_origin,
+            "X-Response-Language": chat_lang,
+            "X-TTS-Language": tts_lang,
+            "X-STT-Language": str(stt_result.get("language_code") or ""),
+            "X-STT-Language-Probability": str(stt_result.get("language_probability") or ""),
+            "X-STT-Auto-Detect": "1" if stt_result.get("used_auto_detect") else "0",
             "X-Agent-Used": str(agent_data.get("agent_used", ""))[:80],
             "X-Ui-Redirect-Tag": ui_redirect_tag,
         },
@@ -784,7 +1068,7 @@ async def voice_command(
 @router.post("/text")
 async def voice_command_text(
     file: UploadFile = File(...),
-    language: str = Form(default="hi-IN"),
+    language: str = Form(default="auto"),
     session_id: str = Form(default=None),
     user: dict = Depends(get_current_user),
 ):
@@ -794,43 +1078,77 @@ async def voice_command_text(
     
     t0_stt = time.perf_counter()
     audio_bytes = await file.read()
-    stt_result = await STTService.transcribe(audio_bytes, language, file.filename or "audio.wav")
+    auto_detect = str(language or "").strip().lower() in {"", "auto", "unknown", "detect"}
+    stt_result = await STTService.transcribe(
+        audio_bytes,
+        language=language,
+        filename=file.filename or "audio.wav",
+        auto_detect=auto_detect,
+    )
     stt_ms = int((time.perf_counter() - t0_stt) * 1000)
 
     transcript = stt_result["transcript"]
-    chat_lang = _resolve_chat_language(stt_result.get("language_code", language), transcript)
+    transcript_display = _ui_transcript_display(
+        transcript,
+        stt_language=stt_result.get("language_code"),
+        requested_language=language,
+    )
     user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
-    if chat_lang == "en" and user_pref_lang in {"hi", "hinglish"}:
-        chat_lang = user_pref_lang
+    chat_lang = _resolve_chat_language(
+        stt_result.get("language_code", language),
+        transcript,
+        requested_language=language,
+        user_preferred_language=user_pref_lang,
+    )
+    tts_lang = _resolve_tts_language_code(
+        stt_language_code=stt_result.get("language_code"),
+        requested_language=language,
+        chat_language=chat_lang,
+        user_preferred_language=user_pref_lang,
+    )
     
     t0_agent = time.perf_counter()
     token = user.get("_token", "") if isinstance(user, dict) else getattr(user, "_token", "")
     agent_text = ""
     agent_session = session_id
     agent_data = {}
-    agent_data = await _query_agent_resilient(
-        token=token,
-        transcript=transcript,
-        chat_lang=chat_lang,
-        session_id=session_id,
-    )
-    agent_text = agent_data.get("response", "")
-    agent_session = agent_data.get("session_id", session_id)
+    stt_low_confidence = _is_low_confidence_stt(stt_result)
+    if stt_low_confidence:
+        agent_text = _localized_language_clarification_prompt(chat_lang)
+        response_origin = "clarification"
+    else:
+        if _is_profile_intent(transcript):
+            profile = await _fetch_profile_snapshot(token)
+            agent_text = _build_profile_voice_response(profile, chat_lang)
+            agent_data = {"agent_used": "profile_snapshot", "provider": "voice-service", "model": "profile"}
+            response_origin = "profile_snapshot"
+        else:
+            agent_data = await _query_agent_resilient(
+                token=token,
+                transcript=transcript,
+                chat_lang=chat_lang,
+                session_id=session_id,
+                timeout_seconds=VOICE_TEXT_AGENT_TIMEOUT_SECONDS,
+                max_retries=VOICE_TEXT_AGENT_MAX_RETRIES,
+            )
+            agent_text = agent_data.get("response", "")
+            agent_session = agent_data.get("session_id", session_id)
+            response_origin = "agent"
 
     agent_ms = int((time.perf_counter() - t0_agent) * 1000)
 
     if not agent_text.strip():
-        agent_text = "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
+        agent_text = _localized_retry_prompt(chat_lang)
 
     agent_text = _sanitize_voice_response(agent_text, chat_lang)
+    fallback_used = False
     agent_text = _tts_humanize_text(agent_text, chat_lang)
     agent_text = _personalize_voice_text(agent_text, user, chat_lang)
-    response_origin = "agent"
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
     tool_evidence = _build_tool_evidence({})
     
     t0_tts = time.perf_counter()
-    tts_audio = await _synthesize_voice_audio(agent_text, language)
+    tts_audio = await _synthesize_voice_audio(agent_text, tts_lang)
     tts_ms = int((time.perf_counter() - t0_tts) * 1000)
 
     audio_b64 = base64.b64encode(tts_audio).decode()
@@ -838,17 +1156,22 @@ async def voice_command_text(
     
     return {
         "transcript": transcript,
+        "transcript_display": transcript_display,
         "response": agent_text,
         "audio_base64": audio_b64,
         "session_id": agent_session,
         "language": chat_lang,
+        "stt_language": stt_result.get("language_code"),
+        "stt_language_probability": stt_result.get("language_probability"),
+        "stt_low_confidence": stt_low_confidence,
+        "tts_language": tts_lang,
         "latency_ms": {
             "total": total_ms,
             "stt": stt_ms,
             "agent": agent_ms,
             "tts": tts_ms,
         },
-        "fallback_used": False,
+        "fallback_used": fallback_used,
         "response_origin": response_origin,
         "agent_metadata": {
             "agent_used": agent_data.get("agent_used"),
