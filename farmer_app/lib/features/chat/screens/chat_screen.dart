@@ -273,6 +273,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     '')
                 .toString()
                 .trim();
+        final uiRedirectTag =
+            (finalResult['ui_redirect_tag'] ?? payload['ui_redirect_tag'] ?? '')
+                .toString()
+                .trim();
         var transientRemoved = 0;
 
         setState(() {
@@ -294,6 +298,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 timestamp: DateTime.now(),
                 stage: 'final',
                 suggestions: suggestions,
+                uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
               ),
             );
           }
@@ -470,6 +475,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _loadingHint = _loadingHints.last;
           completed = await _pollFinalizeAndRender(agent, requestId);
         } else if (prepareStatus == 'completed' && partialText.isNotEmpty) {
+          final uiRedirectTag = (prepare['ui_redirect_tag'] ?? '')
+              .toString()
+              .trim();
           setState(() {
             if (_messages.isNotEmpty && _messages.first.isLoading) {
               _messages.removeAt(0);
@@ -481,6 +489,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 content: partialText,
                 timestamp: DateTime.now(),
                 stage: 'final',
+                uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
               ),
             );
           });
@@ -746,7 +755,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       selected: selected,
       onSelected: (_) {
         setState(() => _responseMode = value);
-        context.showSnack('Mode set to $label');
       },
     );
   }
@@ -1044,6 +1052,64 @@ class _ChatBubble extends StatelessWidget {
     this.onSuggestionTap,
   });
 
+  ({String label, IconData icon, String route})? _contextAction() {
+    final tag = (message.uiRedirectTag ?? '').trim().toLowerCase();
+    final text = message.content.toLowerCase();
+
+    if (tag == 'weather' ||
+        RegExp(
+          r'weather|rain|forecast|temperature|humidity|clima|lluvia|temperatura|ಹವಾಮಾನ|ಮಳೆ',
+        ).hasMatch(text)) {
+      return (
+        label: 'Open Weather',
+        icon: Icons.cloud_outlined,
+        route: RoutePaths.weather,
+      );
+    }
+    if (tag == 'market' ||
+        tag == 'marketplace' ||
+        RegExp(
+          r'mandi|market|price|rate|bhav|daam|mercado|precio|venta|ಬೆಲೆ|ಮಾರುಕಟ್ಟೆ',
+        ).hasMatch(text)) {
+      return (
+        label: 'Open Marketplace',
+        icon: Icons.storefront_outlined,
+        route: RoutePaths.marketplace,
+      );
+    }
+    if (tag == 'schemes' ||
+        RegExp(
+          r'scheme|subsidy|pm-kisan|kcc|pmfby|subsidio|esquema|ಯೋಜನೆ',
+        ).hasMatch(text)) {
+      return (
+        label: 'Open Schemes',
+        icon: Icons.account_balance_wallet_outlined,
+        route: '${RoutePaths.marketplace}?section=schemes',
+      );
+    }
+    if (tag == 'equipment' ||
+        RegExp(
+          r'equipment|rental|tractor|harvester|sprayer|equipo|alquiler|maquinaria',
+        ).hasMatch(text)) {
+      return (
+        label: 'Open Equipment',
+        icon: Icons.agriculture_outlined,
+        route: RoutePaths.equipmentMarketplace,
+      );
+    }
+    if (tag == 'calendar' ||
+        RegExp(
+          r'calendar|schedule|task|reminder|calendario|recordatorio',
+        ).hasMatch(text)) {
+      return (
+        label: 'Open Calendar',
+        icon: Icons.calendar_month_outlined,
+        route: RoutePaths.calendar,
+      );
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (message.isLoading) return _TypingIndicator(text: loadingText);
@@ -1175,6 +1241,15 @@ class _ChatBubble extends StatelessWidget {
                 if ((message.stage == 'final' || !(message.isPartial)) &&
                     !message.isLoading) ...[
                   const SizedBox(height: 8),
+                  if (_contextAction() case final action?)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: ActionChip(
+                        label: Text(action.label),
+                        avatar: Icon(action.icon, size: 16),
+                        onPressed: () => context.push(action.route),
+                      ),
+                    ),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -1190,43 +1265,6 @@ class _ChatBubble extends StatelessWidget {
                                   : () => onSuggestionTap!(s),
                             ),
                           )),
-                      ActionChip(
-                        label: const Text('View Calendar'),
-                        avatar: const Icon(
-                          Icons.calendar_month_outlined,
-                          size: 16,
-                        ),
-                        onPressed: () => context.push(RoutePaths.calendar),
-                      ),
-                      ActionChip(
-                        label: const Text('Undo Last Action'),
-                        avatar: const Icon(Icons.undo, size: 16),
-                        onPressed: () {
-                          Clipboard.setData(
-                            const ClipboardData(
-                              text: 'Undo my last calendar action and verify.',
-                            ),
-                          );
-                          context.showSnack(
-                            'Undo command copied. Paste and send.',
-                          );
-                        },
-                      ),
-                      ActionChip(
-                        label: const Text('Schedule Follow-up'),
-                        avatar: const Icon(Icons.add_task_outlined, size: 16),
-                        onPressed: () {
-                          Clipboard.setData(
-                            const ClipboardData(
-                              text:
-                                  'Schedule a follow-up task tomorrow 08:00 and verify it from DB.',
-                            ),
-                          );
-                          context.showSnack(
-                            'Follow-up command copied. Paste and send.',
-                          );
-                        },
-                      ),
                     ],
                   ),
                 ],

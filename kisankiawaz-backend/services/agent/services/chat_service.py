@@ -32,6 +32,15 @@ EN_COMMON = {
     "the", "and", "for", "with", "your", "price", "market", "weather", "scheme", "profit",
     "today", "week", "farm", "farmer", "sell", "buy", "plan", "risk", "best", "help",
 }
+GENERIC_GREETING_MARKERS = {
+    "hi", "hello", "hey", "hola", "namaste", "good morning", "good evening",
+    "how are you", "what can you do", "help", "who are you",
+}
+SPANISH_MARKERS = {
+    "hola", "gracias", "por", "favor", "como", "puedes", "precio", "mercado",
+    "clima", "subsidio", "agricultor", "cultivo", "hoy", "mañana", "que", "qué",
+    "explica", "detalle", "detalles", "ayuda", "agricultura",
+}
 STATE_NAMES = {
     "maharashtra", "karnataka", "uttar pradesh", "madhya pradesh", "punjab", "haryana",
     "rajasthan", "bihar", "west bengal", "gujarat", "odisha", "chhattisgarh", "telangana",
@@ -628,10 +637,81 @@ class ChatService:
         return deduped
 
     def _detect_turn_language(self, user_message: str, requested_language: str | None, previous_language: str | None) -> str:
-        req = self._normalize_language_label(requested_language)
-        if req != "auto":
-            return req
+        text = (user_message or "").strip()
+        lower = text.lower()
+
+        if self._contains_script(text, "kannada"):
+            return "kn"
+        if self._contains_script(text, "telugu"):
+            return "te"
+        if self._contains_script(text, "tamil"):
+            return "ta"
+        if self._contains_script(text, "malayalam"):
+            return "ml"
+        if self._contains_script(text, "gujarati"):
+            return "gu"
+        if self._contains_script(text, "gurmukhi"):
+            return "pa"
+        if self._contains_script(text, "bengali"):
+            return "bn"
+        if self._contains_script(text, "odia"):
+            return "od"
+        if self._contains_script(text, "devanagari"):
+            return "hi"
+
+        tokens = [t for t in re.split(r"[^a-zA-Z\u00c0-\u024f]+", lower) if t]
+        if tokens:
+            spanish_stopwords = {
+                "de", "la", "el", "que", "en", "un", "una", "los", "las", "para", "como",
+                "explica", "detalle", "detalles", "agricultura", "agricultor",
+            }
+            spanish_hits = sum(1 for t in tokens if t in spanish_stopwords)
+            if any(t in SPANISH_MARKERS for t in tokens) or any(ch in text for ch in "ñÑáéíóúÁÉÍÓÚ¿¡"):
+                return "es"
+            if spanish_hits >= 2:
+                return "es"
+            if any(t in HINDI_MARKERS or t in HINGLISH_MARKERS for t in tokens):
+                return "auto-latin"
+            if any(t in EN_COMMON for t in tokens):
+                return "en"
+            # Default Latin-script fallback is English unless strong Hindi/Hinglish cues exist.
+            return "en"
+
         return self._infer_script_mode(user_message)
+
+    @staticmethod
+    def _is_generic_query(user_message: str) -> bool:
+        txt = (user_message or "").strip().lower()
+        if not txt:
+            return False
+        compact = re.sub(r"\s+", " ", txt)
+        if compact in {"hi", "hello", "hey", "hola", "namaste"}:
+            return True
+        return any(marker in compact for marker in GENERIC_GREETING_MARKERS)
+
+    async def _build_generic_response(self, user_message: str, language: str) -> str:
+        prompt = (
+            "User sent a greeting or generic capability question. "
+            "Reply in the SAME language and SAME script as the user message. "
+            "Keep it short, friendly, and practical. "
+            "Explain what you can do for farmers: crop advisory, market prices, weather risk, schemes, equipment, livestock, and calendar planning. "
+            "Do not use rigid templates or internal technical terms.\n\n"
+            f"User message:\n{user_message}"
+        )
+        try:
+            raw = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language=language or "auto").get("response", "")
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Generic response generation failed: {exc}")
+            raw = "Hi. I can help with crop advice, mandi prices, weather risk, schemes, equipment rentals, livestock care, and farming task planning."
+
+        enforced = await self._enforce_language(
+            response_text=str(raw or "").strip(),
+            language=language,
+            user_message=user_message,
+        )
+        return self._strip_timestamp_details(self._sanitize_internal_source_labels(enforced))
 
     def _extract_geo_hints(
         self,
@@ -1238,12 +1318,12 @@ class ChatService:
 
     async def _build_out_of_scope_response(self, user_message: str, language: str) -> str:
         prompt = (
-            "User asked a generic or non-farming question. "
+            "User asked a question outside agriculture/farming scope (example: physics formula or unrelated domain). "
             "Reply in same language and script as user message. "
             "Do not mix with another language. If user wrote English, reply in English only. "
-            "Do NOT refuse. Map the user question to practical farmer context and explain how it affects farm decisions, cost, risk, or planning. "
-            "Use real farmer-oriented guidance tied to available domain knowledge (crop, mandi, weather, schemes, equipment, livestock, calendar) as relevant. "
-            "Keep it concise and natural. Avoid rigid templates and avoid clickable option lists. "
+            "Politely say this is out of your scope. "
+            "Then offer help on farming topics: crop advisory, mandi prices, weather, schemes, equipment, livestock, and calendar planning. "
+            "Keep it concise and natural. Avoid rigid templates and clickable option lists. "
             "Do not mention internal systems or technical details.\n\n"
             f"User message:\n{user_message}"
         )
@@ -1254,7 +1334,7 @@ class ChatService:
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Out-of-domain response generation failed: {exc}")
             raw = (
-                "Here is the farmer-context version: connect this question with crop planning, market timing, and weather-aware risk control so decisions stay practical and profitable."
+                "Sorry, this is outside my farming support scope. I can help with crop advice, mandi prices, weather risk, schemes, equipment rentals, livestock, and farm planning."
             )
 
         lang = str(language or "").lower()
@@ -1262,7 +1342,7 @@ class ChatService:
             detected = await self._infer_latin_script_language(user_message)
             if detected == "english":
                 raw = (
-                    "Here is a farmer-focused take: apply this to crop planning, mandi timing, weather risk, and input-cost decisions so it becomes useful on the farm."
+                    "Sorry, this question is outside my farming support scope. I can help with crop advice, mandi prices, weather risk, schemes, equipment rentals, livestock, and farm planning."
                 )
 
         enforced = await self._enforce_language(
@@ -1275,6 +1355,56 @@ class ChatService:
     async def _enforce_language(self, response_text: str, language: str, user_message: str = "") -> str:
         # Language is controlled by prompt instructions that mirror the current user turn.
         lang = str(language or "").lower().strip()
+        normalized_lang = self._normalize_language_label(language)
+
+        if normalized_lang == "en" and (self._contains_devanagari(response_text) or self._has_roman_hindi_cues(response_text)):
+            try:
+                rewritten = await asyncio.to_thread(
+                    lambda: generate_groq_reply(
+                        message=(
+                            "Rewrite the answer in clear English only. "
+                            "Do not use Hindi or Hinglish words. Preserve facts exactly.\n\n"
+                            f"Answer:\n{response_text}"
+                        ),
+                        language="en",
+                    ).get("response", "")
+                )
+                if rewritten.strip():
+                    response_text = rewritten.strip()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"English enforcement failed: {exc}")
+
+        if normalized_lang == "kn" and not self._contains_script(response_text, "kannada"):
+            try:
+                rewritten = await asyncio.to_thread(
+                    lambda: generate_groq_reply(
+                        message=(
+                            "Rewrite the answer in Kannada script. Preserve all facts exactly.\n\n"
+                            f"Answer:\n{response_text}"
+                        ),
+                        language="kn",
+                    ).get("response", "")
+                )
+                if rewritten.strip():
+                    response_text = rewritten.strip()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"Kannada enforcement failed: {exc}")
+
+        if normalized_lang == "es" and (self._contains_devanagari(response_text) or self._has_roman_hindi_cues(response_text)):
+            try:
+                rewritten = await asyncio.to_thread(
+                    lambda: generate_groq_reply(
+                        message=(
+                            "Rewrite the answer in Spanish. Preserve all facts exactly.\n\n"
+                            f"Answer:\n{response_text}"
+                        ),
+                        language="es",
+                    ).get("response", "")
+                )
+                if rewritten.strip():
+                    response_text = rewritten.strip()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"Spanish enforcement failed: {exc}")
         if lang.startswith("auto-latin") and self._contains_devanagari(response_text):
             try:
                 transliterated = generate_groq_reply(
@@ -1426,7 +1556,7 @@ class ChatService:
             f"- REQUIRED output language: {lang_name}.",
             "- Mirror the current user message language and script naturally; switch only if the user switches.",
             "- Keep script consistent with user input: if user writes in Latin script, answer in Latin script only; if user writes in Devanagari, answer in Devanagari.",
-            "- If the user writes Indian colloquial phrasing in Roman script (e.g., Hindi words in Latin letters), answer in natural Hinglish (Roman Hindi + English), not formal-only English.",
+            "- Reply in the exact language and script of the current user message; do not switch language based on profile/history.",
             "- Avoid fixed answer templates; adapt the response format to user intent.",
             "- Keep response intuitive for farmers: plain language, practical guidance, and direct money-impact clarity.",
             "- Never return empty/unknown-only output; always provide best available verified snapshot.",
@@ -1744,6 +1874,22 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
+        if self._is_generic_query(message):
+            generic = await self._build_generic_response(message, turn_language)
+            return {
+                "session_id": session_id,
+                "partial_response": generic,
+                "language": turn_language,
+                "sources": ["generic_guard"],
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "requires_live_fetch": False,
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
+
         if not await self._is_farming_domain_query(message):
             guarded = await self._build_out_of_scope_response(message, turn_language)
             return {
@@ -1989,6 +2135,33 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
+        if self._is_generic_query(message):
+            generic = await self._build_generic_response(message, turn_language)
+            await self._persist_turn(
+                db=db,
+                user_id=user_id,
+                session_id=session_id,
+                language=turn_language,
+                agent_type=agent_type,
+                user_message=message,
+                assistant_message=generic,
+                agent_used="generic_guard",
+                previous_summary=rolling_summary,
+                previous_facts=effective_farmer_facts,
+            )
+            return {
+                "session_id": session_id,
+                "response": generic,
+                "language": turn_language,
+                "agent_used": "generic_guard",
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
+
         if not await self._is_farming_domain_query(message):
             guarded = await self._build_out_of_scope_response(message, turn_language)
             await self._persist_turn(
@@ -2213,7 +2386,7 @@ class ChatService:
             "If exact district market data is unavailable, clearly say the answer uses nearest regional verified records. "
             "Never expose internal source identifiers in user-visible output. "
             "Mention source when it exists in grounded data. "
-            "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
+            "Reply in the exact language and script of the current user message. "
             "Avoid rigid templates; choose concise paragraphs or bullets based on what best fits this query. "
             "Output must be in the REQUIRED output language above."
         )
@@ -2445,6 +2618,60 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
+        if self._is_generic_query(message):
+            generic = await self._build_generic_response(message, turn_language)
+            await self._persist_turn(
+                db=db,
+                user_id=user_id,
+                session_id=session_id,
+                language=turn_language,
+                agent_type=agent_type,
+                user_message=message,
+                assistant_message=generic,
+                agent_used="generic_guard",
+                previous_summary=rolling_summary,
+                previous_facts=effective_farmer_facts,
+            )
+            return {
+                "session_id": session_id,
+                "response": generic,
+                "language": turn_language,
+                "agent_used": "generic_guard",
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
+
+        if not await self._is_farming_domain_query(message):
+            guarded = await self._build_out_of_scope_response(message, turn_language)
+            await self._persist_turn(
+                db=db,
+                user_id=user_id,
+                session_id=session_id,
+                language=turn_language,
+                agent_type=agent_type,
+                user_message=message,
+                assistant_message=guarded,
+                agent_used="domain_guard",
+                previous_summary=rolling_summary,
+                previous_facts=effective_farmer_facts,
+            )
+            return {
+                "session_id": session_id,
+                "response": guarded,
+                "language": turn_language,
+                "agent_used": "domain_guard",
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
+
         agentic_plan = {}
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
@@ -2571,7 +2798,7 @@ class ChatService:
             "Never use refusal-style wording (cannot, unavailable, not found). "
             "If exact local data is limited, show nearest verified alternatives with clear labeling. "
             "Never expose internal source identifiers in user-visible output. "
-            "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
+            "Reply in the exact language and script of the current user message. "
             "Avoid rigid templates; choose concise paragraphs or bullets based on what best fits this query. "
             "Output must be in the REQUIRED output language above."
         )

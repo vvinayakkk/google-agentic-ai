@@ -11,6 +11,7 @@ class ChatMessage {
   final DateTime timestamp;
   final bool isLoading;
   final List<String>? suggestions;
+  final String? uiRedirectTag;
 
   const ChatMessage({
     this.messageId,
@@ -25,6 +26,7 @@ class ChatMessage {
     required this.timestamp,
     this.isLoading = false,
     this.suggestions,
+    this.uiRedirectTag,
   });
 
   bool get isUser => role == 'user';
@@ -33,9 +35,9 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     List<String>? sugg;
     if (json['suggestions'] is List) {
-      sugg = (json['suggestions'] as List)
-          .whereType<String>()
-          .toList(growable: false);
+      sugg = (json['suggestions'] as List).whereType<String>().toList(
+        growable: false,
+      );
     }
     return ChatMessage(
       messageId: json['message_id'] as String?,
@@ -51,23 +53,25 @@ class ChatMessage {
           ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
           : DateTime.now(),
       suggestions: sugg,
+      uiRedirectTag: json['ui_redirect_tag'] as String?,
     );
   }
 
-      factory ChatMessage.user(String content, {String? replyToSnippet}) => ChatMessage(
+  factory ChatMessage.user(String content, {String? replyToSnippet}) =>
+      ChatMessage(
         role: 'user',
         content: content,
         replyToSnippet: replyToSnippet,
         timestamp: DateTime.now(),
       );
 
-      factory ChatMessage.loading({String? stage}) => ChatMessage(
-        role: 'assistant',
-        content: '',
-        stage: stage,
-        timestamp: DateTime.now(),
-        isLoading: true,
-      );
+  factory ChatMessage.loading({String? stage}) => ChatMessage(
+    role: 'assistant',
+    content: '',
+    stage: stage,
+    timestamp: DateTime.now(),
+    isLoading: true,
+  );
 }
 
 class ChatSession {
@@ -88,15 +92,15 @@ class ChatSession {
   });
 
   factory ChatSession.fromJson(Map<String, dynamic> json) => ChatSession(
-        sessionId: json['session_id'] as String? ?? '',
-        farmerId: json['farmer_id'] as String? ?? '',
-        agentType: json['agent_type'] as String?,
-        messageCount: json['message_count'] as int? ?? 0,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'] as String)
-            : null,
-        lastActivity: json['last_activity'] != null
-            ? DateTime.tryParse(json['last_activity'] as String)
-            : null,
-      );
+    sessionId: json['session_id'] as String? ?? '',
+    farmerId: json['farmer_id'] as String? ?? '',
+    agentType: json['agent_type'] as String?,
+    messageCount: json['message_count'] as int? ?? 0,
+    createdAt: json['created_at'] != null
+        ? DateTime.tryParse(json['created_at'] as String)
+        : null,
+    lastActivity: json['last_activity'] != null
+        ? DateTime.tryParse(json['last_activity'] as String)
+        : null,
+  );
 }

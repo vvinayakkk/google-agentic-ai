@@ -111,18 +111,13 @@ def _resolve_effective_language(
     requested_language: str | None,
     preferred_language: str | None,
 ) -> str | None:
-    requested = str(requested_language or "").strip() or None
-    preferred = str(preferred_language or "").strip() or None
-
+    # Ignore profile/request hints and always infer from current message.
     detected = _chat_service._detect_turn_language(
         user_message=message,
-        requested_language=requested,
-        previous_language=preferred,
+        requested_language=None,
+        previous_language=None,
     )
     detected = str(detected or "").strip().lower() or None
-
-    if requested:
-        return requested
     if detected and detected != "auto":
         return detected
     return None
@@ -483,16 +478,30 @@ def _infer_ui_redirect_tag(message: str, result: dict) -> str:
     msg = (message or "").lower()
     agent_used = str((result or {}).get("agent_used") or "").lower()
 
-    if any(k in msg for k in ["equipment", "rental", "tractor", "harvester", "sprayer", "drone", "weeder", "rotavator"]):
+    if any(k in msg for k in [
+        "equipment", "rental", "tractor", "harvester", "sprayer", "drone", "weeder", "rotavator",
+        "equipo", "alquiler", "maquinaria",
+    ]):
         return "equipment"
-    if "weather" in agent_used or any(k in msg for k in ["weather", "rain", "forecast", "temperature", "soil"]):
+    if "weather" in agent_used or any(k in msg for k in [
+        "weather", "rain", "forecast", "temperature", "soil",
+        "clima", "lluvia", "temperatura", "ಹವಾಮಾನ", "ಮಳೆ",
+    ]):
         return "weather"
-    if "market" in agent_used or any(k in msg for k in ["mandi", "price", "rate", "market", "sell", "bhav", "daam"]):
+    if "market" in agent_used or any(k in msg for k in [
+        "mandi", "price", "rate", "market", "sell", "bhav", "daam",
+        "precio", "mercado", "venta", "ಬೆಲೆ", "ಮಾರುಕಟ್ಟೆ",
+    ]):
         return "market"
-    if "scheme" in agent_used or any(k in msg for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "eligibility", "document"]):
+    if "scheme" in agent_used or any(k in msg for k in [
+        "scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "eligibility", "document",
+        "subsidio", "esquema", "ಯೋಜನೆ",
+    ]):
         return "schemes"
     if any(k in msg for k in ["livestock", "dairy", "cattle", "goat", "poultry"]):
         return "livestock"
+    if any(k in msg for k in ["calendar", "schedule", "task", "reminder", "calendario", "recordatorio"]):
+        return "calendar"
     return "home"
 
 
