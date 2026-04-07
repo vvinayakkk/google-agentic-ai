@@ -56,6 +56,11 @@ class _VoiceActionCard {
 
 class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     with TickerProviderStateMixin {
+  static const int _maxActionCards = 8;
+  static const Duration _cardsStaggerStep = Duration(milliseconds: 420);
+  static const Duration _heroTextTransition = Duration(milliseconds: 760);
+  static const Duration _cardPopDuration = Duration(milliseconds: 560);
+
   _VoiceState _state = _VoiceState.idle;
   String _transcript = '';
   String _response = '';
@@ -71,8 +76,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   int _thinkingElapsedSeconds = 0;
   bool _thinkingExpanded = true;
   Timer? _thinkingTimer;
+  Timer? _cardsStaggerTimer;
   final List<_VoiceTurn> _recentTurns = <_VoiceTurn>[];
   List<_VoiceActionCard> _actionCards = <_VoiceActionCard>[];
+  int _visibleCardCount = 0;
+  double _liveVoiceLevel = 0;
+  StreamSubscription<Amplitude>? _amplitudeSub;
 
   late final AnimationController _pulseController;
   late final AnimationController _flickerController;
@@ -111,6 +120,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         _playbackDuration = Duration.zero;
         _lastPlaybackUiMs = -1;
       });
+      _startCardsStagger();
     });
 
     _audioPlayer.onDurationChanged.listen((duration) {
@@ -145,6 +155,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   @override
   void dispose() {
     _thinkingTimer?.cancel();
+    _cardsStaggerTimer?.cancel();
+    _amplitudeSub?.cancel();
     _pulseController.dispose();
     _flickerController.dispose();
     _waveController.dispose();
@@ -201,6 +213,25 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       path: _recordingPath!,
     );
 
+    _amplitudeSub?.cancel();
+    _amplitudeSub = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 70))
+        .listen((amp) {
+          if (!mounted || _state != _VoiceState.recording) return;
+          final db = amp.current;
+          double normalized;
+          if (!db.isFinite) {
+            normalized = 0;
+          } else if (db <= 0) {
+            normalized = ((db + 60) / 60).clamp(0.0, 1.0);
+          } else {
+            normalized = (db / 160).clamp(0.0, 1.0);
+          }
+          final nextLevel = math.pow(normalized, 1.25).toDouble();
+          if ((_liveVoiceLevel - nextLevel).abs() < 0.02) return;
+          setState(() => _liveVoiceLevel = nextLevel);
+        });
+
     setState(() {
       _state = _VoiceState.recording;
       _isPlaybackPaused = false;
@@ -209,8 +240,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _activeQuestion = '';
       _fadingQuestion = null;
       _actionCards = <_VoiceActionCard>[];
+      _visibleCardCount = 0;
+      _liveVoiceLevel = 0;
       _recentTurns.clear();
     });
+    _cardsStaggerTimer?.cancel();
     Haptics.light();
     _pulseController.repeat(reverse: true);
     _flickerController.repeat(reverse: true);
@@ -223,10 +257,15 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _flickerController.stop();
     _flickerController.value = 0;
     _waveController.stop();
+    _amplitudeSub?.cancel();
+    _amplitudeSub = null;
     final path = await _recorder.stop();
 
     if (path == null || path.isEmpty) {
-      setState(() => _state = _VoiceState.idle);
+      setState(() {
+        _state = _VoiceState.idle;
+        _liveVoiceLevel = 0;
+      });
       if (mounted) {
         context.showSnack('voice_assistant.no_speech'.tr(), isError: true);
       }
@@ -252,6 +291,33 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _thinkingTimer = null;
   }
 
+  void _startCardsStagger() {
+    _cardsStaggerTimer?.cancel();
+    if (!mounted || _actionCards.isEmpty || _state != _VoiceState.idle) {
+      if (mounted) {
+        setState(() => _visibleCardCount = 0);
+      }
+      return;
+    }
+
+    setState(() => _visibleCardCount = 0);
+    _cardsStaggerTimer = Timer.periodic(_cardsStaggerStep, (timer) {
+      if (!mounted || _state != _VoiceState.idle) {
+        timer.cancel();
+        return;
+      }
+      final next = _visibleCardCount + 1;
+      if (next > _actionCards.length) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _visibleCardCount = next);
+      if (next >= _actionCards.length) {
+        timer.cancel();
+      }
+    });
+  }
+
   Future<void> _processVoiceFile(String path, {String? sourcePrompt}) async {
     final languageCode = context.locale.languageCode;
     final hintedQuestion = (sourcePrompt ?? '').trim();
@@ -265,7 +331,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingElapsedSeconds = 0;
       _thinkingExpanded = true;
       _actionCards = <_VoiceActionCard>[];
+      _visibleCardCount = 0;
+      _liveVoiceLevel = 0;
     });
+    _cardsStaggerTimer?.cancel();
     _startThinkingTicker();
     _waveController.repeat();
 
@@ -391,14 +460,17 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       } else {
         _lastAudioBase64 = null;
         setState(() => _state = _VoiceState.idle);
+        _startCardsStagger();
       }
     } catch (_) {
       _stopThinkingTicker();
       _waveController.stop();
+      _cardsStaggerTimer?.cancel();
       if (!mounted) return;
       setState(() {
         _response = 'voice_assistant.error'.tr();
         _state = _VoiceState.idle;
+        _visibleCardCount = 0;
       });
       context.showSnack('voice_assistant.error'.tr(), isError: true);
     }
@@ -777,7 +849,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (seenRoutes.add(action.route)) {
         out.add(action);
       }
-      if (out.length >= 4) break;
+      if (out.length >= _maxActionCards) break;
     }
     return out;
   }
@@ -842,7 +914,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (seen.add(card.route)) {
         out.add(card);
       }
-      if (out.length >= 4) break;
+      if (out.length >= _maxActionCards) break;
     }
     return out;
   }
@@ -852,70 +924,87 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final isActive = _state == _VoiceState.recording;
     final isProcessing = _state == _VoiceState.processing;
     final isPlaying = _state == _VoiceState.playing;
+    final isDark = context.isDark;
+    final bgTop = context.theme.scaffoldBackgroundColor;
+    final bgBottom = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final mutedText = context.appColors.textSecondary;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(context),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.06),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _buildStateContent(
-                  context,
-                  isActive: isActive,
-                  isProcessing: isProcessing,
-                  isPlaying: isPlaying,
+      backgroundColor: bgTop,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [bgTop, bgBottom],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(context, isDark: isDark),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 620),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.06),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildStateContent(
+                    context,
+                    isActive: isActive,
+                    isProcessing: isProcessing,
+                    isPlaying: isPlaying,
+                    isDark: isDark,
+                  ),
                 ),
               ),
-            ),
-            _buildActionChips(context),
-            _buildMicButton(context),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24, top: 6),
-              child: Text(
-                _statusLabel,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: Colors.white38,
-                  fontSize: 12,
+              _buildActionDeck(context, isDark: isDark),
+              _buildMicButton(context, isDark: isDark),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24, top: 6),
+                child: Text(
+                  _statusLabel,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: mutedText.withValues(alpha: isDark ? 0.78 : 0.88),
+                    fontSize: 12,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, {required bool isDark}) {
+    final iconColor = (isDark ? Colors.white : AppColors.lightText).withValues(
+      alpha: 0.78,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white70),
+            icon: Icon(Icons.close_rounded, color: iconColor),
             onPressed: () => context.pop(),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.chat_bubble_outline_rounded,
-              color: Colors.white54,
+              color: iconColor.withValues(alpha: 0.84),
             ),
             onPressed: _openChatDirect,
           ),
@@ -929,45 +1018,136 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     required bool isActive,
     required bool isProcessing,
     required bool isPlaying,
+    required bool isDark,
   }) {
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final softText = context.appColors.textSecondary;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.88)
+        : Colors.white.withValues(alpha: 0.92);
+    final borderColor = context.appColors.border.withValues(
+      alpha: isDark ? 0.55 : 0.8,
+    );
+
     if (isProcessing) {
       final showQuestion = _thinkingExpanded && _activeQuestion.isNotEmpty;
       return Center(
         key: const ValueKey('voice-processing'),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
-                  strokeWidth: 1.5,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 460),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: borderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (showQuestion)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: Text(
-                    _activeQuestion,
-                    key: ValueKey(_activeQuestion),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 17,
-                      height: 1.4,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    setState(() => _thinkingExpanded = !_thinkingExpanded);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                            strokeWidth: 1.8,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Thinking${'.' * ((_thinkingPulse % 3) + 1)}',
+                          style: context.textTheme.titleSmall?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${_thinkingElapsedSeconds}s',
+                          style: context.textTheme.labelMedium?.copyWith(
+                            color: softText,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          _thinkingExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: softText,
+                          size: 20,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Text(
-                'Thinking${'.' * ((_thinkingPulse % 3) + 1)}  ${_thinkingElapsedSeconds}s',
-                style: const TextStyle(color: AppColors.primary, fontSize: 13),
-              ),
-            ],
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 320),
+                  crossFadeState: _thinkingExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      children: [
+                        if (showQuestion)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(
+                                alpha: isDark ? 0.14 : 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              _activeQuestion,
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                color: textColor,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        if (showQuestion) const SizedBox(height: 12),
+                        _ReactiveWaveform(
+                          controller: _waveController,
+                          isActive: true,
+                          color: AppColors.primary,
+                          inputLevel: 0.55,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -981,10 +1161,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Listening...',
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: softText,
                   fontSize: 13,
                   letterSpacing: 1.2,
                 ),
@@ -994,6 +1174,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                 controller: _waveController,
                 isActive: true,
                 color: AppColors.primary,
+                inputLevel: _liveVoiceLevel,
               ),
             ],
           ),
@@ -1016,37 +1197,107 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white24, fontSize: 12),
+                  style: TextStyle(
+                    color: softText.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
                 ),
               if (_fadingQuestion != null) const SizedBox(height: 8),
               if (_activeQuestion.isNotEmpty)
-                Text(
-                  _activeQuestion,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white38,
-                    fontSize: 14,
-                    height: 1.3,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(
+                      alpha: isDark ? 0.1 : 0.08,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    _activeQuestion,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: softText,
+                      fontSize: 14,
+                      height: 1.3,
+                    ),
                   ),
                 ),
               const SizedBox(height: 20),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 160),
-                transitionBuilder: (child, animation) =>
-                    FadeTransition(opacity: animation, child: child),
-                child: Text(
-                  _heroText,
-                  key: ValueKey(_heroText.hashCode),
-                  textAlign: TextAlign.center,
-                  maxLines: 5,
-                  overflow: TextOverflow.fade,
-                  style: GoogleFonts.sora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    height: 1.45,
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 500),
+                height: 210,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: borderColor),
+                ),
+                child: ClipRect(
+                  child: Builder(
+                    builder: (context) {
+                      final currentHeroKey = ValueKey(_heroText.hashCode);
+                      return AnimatedSwitcher(
+                        duration: _heroTextTransition,
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        layoutBuilder: (currentChild, previousChildren) {
+                          return Stack(
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              ...previousChildren,
+                              ...[currentChild].whereType<Widget>(),
+                            ],
+                          );
+                        },
+                        transitionBuilder: (child, animation) {
+                          final isIncoming = child.key == currentHeroKey;
+                          final curve = CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeInOutCubic,
+                          );
+                          final slideTween = Tween<Offset>(
+                            begin: isIncoming
+                                ? const Offset(0, 0.4)
+                                : Offset.zero,
+                            end: isIncoming
+                                ? Offset.zero
+                                : const Offset(0, -0.4),
+                          );
+                          return FadeTransition(
+                            opacity: curve,
+                            child: SlideTransition(
+                              position: slideTween.animate(curve),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Align(
+                          key: currentHeroKey,
+                          alignment: Alignment.bottomCenter,
+                          child: Text(
+                            _heroText,
+                            textAlign: TextAlign.center,
+                            maxLines: 5,
+                            overflow: TextOverflow.fade,
+                            style: GoogleFonts.sora(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w400,
+                              color: textColor,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -1075,81 +1326,75 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                 gradient: RadialGradient(
                   colors: [
                     AppColors.primary.withValues(alpha: 0.18),
-                    AppColors.primary.withValues(alpha: 0),
+                    AppColors.primary.withValues(alpha: 0.01),
                   ],
                 ),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Tap the mic to speak',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: softText, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionChips(BuildContext context) {
-    final hasCards = _actionCards.isNotEmpty;
+  double _cardsDeckHeight(int count) {
+    if (count <= 0) return 0;
+    if (count == 1) return 140;
+    if (count == 2) return 182;
+    final rows = _cardPatternRowCount(count);
+    final estimated = 74 + (rows * 114.0);
+    return estimated.clamp(182.0, 520.0);
+  }
+
+  int _cardPatternRowCount(int count) {
+    if (count <= 0) return 0;
+    if (count == 1 || count == 2) return 1;
+
+    var rows = 1; // first row is square + square
+    var remaining = count - 2;
+    var placeWide = true;
+
+    while (remaining > 0) {
+      rows += 1;
+      if (placeWide) {
+        remaining -= 1;
+      } else {
+        remaining -= math.min(2, remaining);
+      }
+      placeWide = !placeWide;
+    }
+    return rows;
+  }
+
+  Widget _buildActionDeck(BuildContext context, {required bool isDark}) {
+    final visibleCards = _actionCards.take(_visibleCardCount).toList();
+    final shouldShow =
+        _state == _VoiceState.idle &&
+        _response.trim().isNotEmpty &&
+        visibleCards.isNotEmpty;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
-      height: hasCards ? 86 : 0,
+      height: shouldShow ? _cardsDeckHeight(visibleCards.length) : 0,
       child: ClipRect(
         child: AnimatedSlide(
-          offset: hasCards ? Offset.zero : const Offset(0, 1),
+          offset: shouldShow ? Offset.zero : const Offset(0, 1),
           duration: const Duration(milliseconds: 380),
           curve: Curves.easeOutCubic,
           child: AnimatedOpacity(
-            opacity: hasCards ? 1 : 0,
+            opacity: shouldShow ? 1 : 0,
             duration: const Duration(milliseconds: 300),
-            child: SizedBox(
-              height: 70,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _actionCards.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 10),
-                itemBuilder: (context, i) {
-                  final card = _actionCards[i];
-                  return InkWell(
-                    onTap: () {
-                      Haptics.selection();
-                      context.push(card.route);
-                    },
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(card.icon, color: AppColors.primary, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            card.label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: _buildCardPattern(context, visibleCards, isDark: isDark),
               ),
             ),
           ),
@@ -1158,7 +1403,210 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     );
   }
 
-  Widget _buildMicButton(BuildContext context) {
+  Widget _buildCardPattern(
+    BuildContext context,
+    List<_VoiceActionCard> cards, {
+    required bool isDark,
+  }) {
+    final entries = cards.asMap().entries.toList();
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    final rows = <Widget>[];
+
+    if (entries.length == 1) {
+      rows.add(
+        _buildActionTile(
+          context,
+          entry: entries[0],
+          isWide: true,
+          isDark: isDark,
+        ),
+      );
+    } else {
+      rows.add(_buildSquarePairRow(context, entries[0], entries[1], isDark));
+      var i = 2;
+      var placeWide = true;
+      while (i < entries.length) {
+        rows.add(const SizedBox(height: 12));
+        if (placeWide) {
+          rows.add(
+            _buildActionTile(
+              context,
+              entry: entries[i],
+              isWide: true,
+              isDark: isDark,
+            ),
+          );
+          i += 1;
+        } else {
+          final hasPair = i + 1 < entries.length;
+          if (hasPair) {
+            rows.add(
+              _buildSquarePairRow(context, entries[i], entries[i + 1], isDark),
+            );
+            i += 2;
+          } else {
+            rows.add(_buildCenteredSquareRow(context, entries[i], isDark));
+            i += 1;
+          }
+        }
+        placeWide = !placeWide;
+      }
+    }
+
+    return Column(children: rows);
+  }
+
+  Widget _buildSquarePairRow(
+    BuildContext context,
+    MapEntry<int, _VoiceActionCard> left,
+    MapEntry<int, _VoiceActionCard> right,
+    bool isDark,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionTile(
+            context,
+            entry: left,
+            isWide: false,
+            isDark: isDark,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionTile(
+            context,
+            entry: right,
+            isWide: false,
+            isDark: isDark,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCenteredSquareRow(
+    BuildContext context,
+    MapEntry<int, _VoiceActionCard> entry,
+    bool isDark,
+  ) {
+    return Row(
+      children: [
+        const Spacer(),
+        Expanded(
+          flex: 2,
+          child: _buildActionTile(
+            context,
+            entry: entry,
+            isWide: false,
+            isDark: isDark,
+          ),
+        ),
+        const Spacer(),
+      ],
+    );
+  }
+
+  Widget _buildActionTile(
+    BuildContext context, {
+    required MapEntry<int, _VoiceActionCard> entry,
+    required bool isWide,
+    required bool isDark,
+  }) {
+    final card = entry.value;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subText = context.appColors.textSecondary;
+    final surface = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.94)
+        : Colors.white.withValues(alpha: 0.97);
+    final borderColor = context.appColors.border.withValues(
+      alpha: isDark ? 0.62 : 0.78,
+    );
+
+    final tile = Material(
+      color: surface,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          Haptics.selection();
+          context.push(card.route);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: isWide ? 44 : 40,
+                height: isWide ? 44 : 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(card.icon, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      card.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.titleSmall?.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Open now',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: subText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: subText, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final shapedTile = isWide
+        ? SizedBox(height: 96, child: tile)
+        : AspectRatio(aspectRatio: 1.15, child: tile);
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('voice-card-${card.route}'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: _cardPopDuration,
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 20),
+            child: Transform.scale(scale: 0.92 + (value * 0.08), child: child),
+          ),
+        );
+      },
+      child: shapedTile,
+    );
+  }
+
+  Widget _buildMicButton(BuildContext context, {required bool isDark}) {
+    final softText = context.appColors.textSecondary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 32, top: 12),
       child: Center(
@@ -1225,18 +1673,24 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                       color: isRecording
                           ? AppColors.primary
                           : (isProcessing
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.white.withValues(alpha: 0.12)),
+                                ? context.colors.surface.withValues(alpha: 0.88)
+                                : (isDark
+                                      ? Colors.white.withValues(alpha: 0.12)
+                                      : Colors.black.withValues(alpha: 0.08))),
                       border: Border.all(
                         color: isRecording
                             ? AppColors.primaryLight
-                            : Colors.white.withValues(alpha: 0.25),
+                            : context.appColors.border.withValues(
+                                alpha: isDark ? 0.52 : 0.78,
+                              ),
                         width: 1.5,
                       ),
                     ),
                     child: Icon(
                       isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                      color: isRecording ? Colors.white : Colors.white70,
+                      color: isRecording
+                          ? Colors.white
+                          : softText.withValues(alpha: isDark ? 0.95 : 0.9),
                       size: 32,
                     ),
                   ),
@@ -1269,11 +1723,13 @@ class _ReactiveWaveform extends StatelessWidget {
   final Animation<double> controller;
   final bool isActive;
   final Color color;
+  final double inputLevel;
 
   const _ReactiveWaveform({
     required this.controller,
     required this.isActive,
     required this.color,
+    this.inputLevel = 0,
   });
 
   @override
@@ -1284,14 +1740,17 @@ class _ReactiveWaveform extends StatelessWidget {
         animation: controller,
         builder: (context, _) {
           final t = controller.value * math.pi * 2;
+          final level = inputLevel.clamp(0.0, 1.0);
+          final energy = isActive ? (0.08 + (level * 0.92)) : 0.15;
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(28, (i) {
               final wave = math.sin(t + (i * 0.28)).abs();
+              final flutter = math.sin((t * 2.1) + (i * 0.18)).abs();
               final base = isActive ? 6.0 : 3.0;
-              final amp = isActive ? 32.0 : 10.0;
-              final h = base + (amp * wave);
+              final amp = isActive ? 36.0 : 10.0;
+              final h = base + (amp * wave * energy) + (8 * flutter * energy);
               final alpha = isActive
                   ? (0.9 - (i % 3) * 0.15).clamp(0.3, 0.9)
                   : 0.2;
