@@ -88,23 +88,12 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
         lease = allocator.acquire("groq")
         attempt_count += 1
         try:
-            lang = (language or "hi").strip().lower()
-            if lang.startswith("en"):
-                system_prompt = (
-                    "You are KisanMitra assistant for Indian farmers. "
-                    "Respond with practical, accurate, concise guidance in English only."
-                )
-            elif lang.startswith("hinglish"):
-                system_prompt = (
-                    "You are KisanMitra assistant for Indian farmers. "
-                    "Respond with practical, accurate, concise guidance in Hinglish (Roman Hindi + English mix)."
-                )
-            else:
-                system_prompt = (
-                    "You are KisanMitra assistant for Indian farmers. "
-                    "Respond with practical, accurate, concise guidance. "
-                    "Prefer Hindi unless user asked another language."
-                )
+            system_prompt = (
+                "You are KisanMitra assistant for Indian farmers. "
+                "Respond with practical, accurate, concise guidance. "
+                "Mirror the language and script of the user's latest message unless the user explicitly requests another language. "
+                "If the user writes Roman Hindi/Hinglish, reply in natural Hinglish in Roman script, not formal-only English."
+            )
 
             with httpx.Client(timeout=45.0) as client:
                 response = client.post(
@@ -123,7 +112,7 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
                             },
                             {
                                 "role": "user",
-                                "content": f"Language={language}. Query: {message}",
+                                "content": f"Preferred language hint={language or 'auto'}. Query: {message}",
                             },
                         ],
                     },

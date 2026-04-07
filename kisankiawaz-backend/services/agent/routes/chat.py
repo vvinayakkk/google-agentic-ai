@@ -121,10 +121,11 @@ def _resolve_effective_language(
     )
     detected = str(detected or "").strip().lower() or None
 
-    # If this turn clearly looks Hindi/Hinglish, prefer that over app locale.
-    if detected in {"hi", "hinglish"}:
+    if requested:
+        return requested
+    if detected and detected != "auto":
         return detected
-    return requested or preferred or detected
+    return None
 
 
 def _is_fallback_allowed(request_allow_fallback: bool) -> bool:
@@ -634,10 +635,7 @@ def _build_confidence_and_sources(source_provenance: list | None) -> str:
             tool = str(item.get("tool") or "tool")
             source = str(item.get("source") or "source")
             status = str(item.get("status") or "unknown")
-            freshness = str(item.get("freshness") or item.get("updated_at") or "")
             snippet = f"- {tool} | {source} | {status}"
-            if freshness:
-                snippet += f" | {freshness}"
             lines.append(snippet)
     return "\n".join(lines)
 
@@ -693,26 +691,7 @@ async def _build_change_summary(user_id: str, session_id: str, message: str) -> 
     if not docs:
         return ""
 
-    ts_val = ""
-    for d in docs:
-        item = d.to_dict() or {}
-        val = str(item.get("timestamp") or "")
-        if val:
-            ts_val = val
-            break
-    if not ts_val:
-        return ""
-
-    try:
-        dt = datetime.fromisoformat(ts_val.replace("Z", "+00:00"))
-    except ValueError:
-        return ""
-
-    now = datetime.now(timezone.utc)
-    if now - dt > timedelta(days=1, hours=12):
-        return ""
-
-    return f"\n\nWhat changed since yesterday: refreshed this topic using latest available records since {dt.strftime('%Y-%m-%d %H:%M UTC')}."
+    return "\n\nWhat changed since yesterday: refreshed this topic using latest available records."
 
 
 def _build_clarification_if_needed(message: str) -> str:
@@ -772,6 +751,19 @@ async def _enhance_chat_result(
     mode = _normalize_response_mode(response_mode)
     enriched = _apply_response_mode(response_text, mode)
 
+    if str(result.get("agent_used") or "").strip().lower() == "domain_guard":
+        result["response"] = enriched
+        result["response_mode"] = mode
+        result["suggestions"] = [
+            "Crop advisory",
+            "Mandi prices",
+            "Weather forecast",
+            "Schemes and subsidy",
+            "Equipment rental",
+            "Livestock care",
+        ]
+        return result
+
     if mode == "voice-friendly":
         result["response"] = enriched
         result["response_mode"] = mode
@@ -782,8 +774,6 @@ async def _enhance_chat_result(
         enriched += _build_action_plan(message)
     if "Why this recommendation:" not in enriched:
         enriched += _build_why_rationale(message)
-    if "Confidence:" not in enriched:
-        enriched += _build_confidence_and_sources(result.get("source_provenance"))
     enriched += await _build_change_summary(user_id=user_id, session_id=session_id, message=message)
     enriched += _build_clarification_if_needed(message)
     if "Follow-up check:" not in enriched:

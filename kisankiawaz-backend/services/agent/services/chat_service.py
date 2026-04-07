@@ -26,6 +26,7 @@ HINDI_MARKERS = {
 HINGLISH_MARKERS = {
     "bhai", "behen", "aap", "aapka", "aapke", "karo", "karna", "karni", "hoga",
     "hogi", "honge", "chahiye", "jaldi", "sahi", "kitne", "kyunki", "abhi", "thoda",
+    "gehu", "gehun", "kheti", "becho", "bechna", "samjhao", "batao", "kya", "kaise",
 }
 EN_COMMON = {
     "the", "and", "for", "with", "your", "price", "market", "weather", "scheme", "profit",
@@ -120,14 +121,68 @@ class ChatService:
         return clean[: max_chars - 3].rstrip() + "..."
 
     def _normalize_language_label(self, language: str | None) -> str:
-        lang = str(language or "").strip().lower()
-        if lang in {"en", "english"}:
+        lang = str(language or "").strip().lower().replace("_", "-")
+        if not lang or lang in {"auto", "default"}:
+            return "auto"
+        if lang.startswith("auto-"):
+            return lang
+        if "-" in lang:
+            lang = lang.split("-", 1)[0]
+        if lang in {"english"}:
             return "en"
-        if lang in {"hi", "hindi"}:
+        if lang in {"hindi"}:
             return "hi"
-        if lang in {"hinglish", "hi-en", "hi_en", "mix"}:
-            return "hinglish"
-        return lang or "auto"
+        return lang
+
+    @staticmethod
+    def _infer_script_mode(text: str) -> str:
+        s = text or ""
+        def _has_rng(a: str, b: str) -> bool:
+            return any(a <= ch <= b for ch in s)
+
+        has_latin = any(ch.isalpha() and ord(ch) < 128 for ch in s)
+        script_map = {
+            "devanagari": _has_rng("\u0900", "\u097f"),
+            "gujarati": _has_rng("\u0a80", "\u0aff"),
+            "gurmukhi": _has_rng("\u0a00", "\u0a7f"),
+            "bengali": _has_rng("\u0980", "\u09ff"),
+            "tamil": _has_rng("\u0b80", "\u0bff"),
+            "telugu": _has_rng("\u0c00", "\u0c7f"),
+            "kannada": _has_rng("\u0c80", "\u0cff"),
+            "malayalam": _has_rng("\u0d00", "\u0d7f"),
+            "odia": _has_rng("\u0b00", "\u0b7f"),
+        }
+        active = [k for k, v in script_map.items() if v]
+        if len(active) == 1 and not has_latin:
+            return f"auto-{active[0]}"
+        if has_latin and not active:
+            return "auto-latin"
+        if has_latin and active:
+            return "auto-mixed"
+        if len(active) > 1:
+            return "auto-mixed"
+        return "auto"
+
+    @staticmethod
+    def _contains_script(text: str, script_name: str) -> bool:
+        t = text or ""
+        ranges = {
+            "devanagari": ("\u0900", "\u097f"),
+            "gujarati": ("\u0a80", "\u0aff"),
+            "gurmukhi": ("\u0a00", "\u0a7f"),
+            "bengali": ("\u0980", "\u09ff"),
+            "tamil": ("\u0b80", "\u0bff"),
+            "telugu": ("\u0c00", "\u0c7f"),
+            "kannada": ("\u0c80", "\u0cff"),
+            "malayalam": ("\u0d00", "\u0d7f"),
+            "odia": ("\u0b00", "\u0b7f"),
+        }
+        if script_name == "latin":
+            return any(ch.isalpha() and ord(ch) < 128 for ch in t)
+        if script_name not in ranges:
+            return False
+        lo, hi = ranges[script_name]
+        return any(lo <= ch <= hi for ch in t)
 
     @staticmethod
     def _intent_has_any(user_message: str, markers: set[str]) -> bool:
@@ -573,38 +628,10 @@ class ChatService:
         return deduped
 
     def _detect_turn_language(self, user_message: str, requested_language: str | None, previous_language: str | None) -> str:
-        text = " ".join((user_message or "").split())
-        text_l = text.lower()
         req = self._normalize_language_label(requested_language)
-        prev = self._normalize_language_label(previous_language)
-
-        has_devanagari = self._contains_devanagari(text)
-        tokens = [t for t in re.split(r"[^a-zA-Z]+", text_l) if t]
-        hindi_hits = sum(1 for t in tokens if t in HINDI_MARKERS)
-        hinglish_hits = sum(1 for t in tokens if t in HINGLISH_MARKERS)
-        en_hits = sum(1 for t in tokens if t in EN_COMMON)
-        generic_roman_hits = sum(1 for t in tokens if len(t) >= 4 and t not in HINDI_MARKERS)
-
-        if has_devanagari:
-            return "hi"
-        if (hindi_hits + hinglish_hits) >= 2 and (en_hits >= 1 or generic_roman_hits >= 1):
-            return "hinglish"
-        if (hindi_hits + hinglish_hits) >= 2 and en_hits < 2:
-            return "hi"
-        if en_hits >= 2 and hindi_hits == 0:
-            return "en"
-
-        # Strongly prioritize current-turn text style over stale language preference.
-        if self._has_hindi_transliterated_markers(text):
-            if en_hits >= 1:
-                return "hinglish"
-            return "hi"
-
-        if req in {"en", "hi", "hinglish"}:
+        if req != "auto":
             return req
-        if prev in {"en", "hi", "hinglish"}:
-            return prev
-        return "en"
+        return self._infer_script_mode(user_message)
 
     def _extract_geo_hints(
         self,
@@ -997,6 +1024,16 @@ class ChatService:
         return any(re.search(rf"\b{re.escape(m)}\b", txt) for m in markers)
 
     @staticmethod
+    def _has_roman_hindi_cues(text: str) -> bool:
+        txt = (text or "").lower()
+        tokens = {t for t in re.split(r"[^a-zA-Z]+", txt) if t}
+        if not tokens:
+            return False
+        if any(t in HINDI_MARKERS or t in HINGLISH_MARKERS for t in tokens):
+            return True
+        return ChatService._has_hindi_transliterated_markers(txt)
+
+    @staticmethod
     def _normalize_english_openers(text: str) -> str:
         cleaned = text or ""
         cleaned = re.sub(r"^\s*namaste[!,.\s-]*", "Hello! ", cleaned, flags=re.IGNORECASE)
@@ -1143,76 +1180,297 @@ class ChatService:
                         translated += part_text
         return translated.strip()
 
-    async def _enforce_language(self, response_text: str, language: str) -> str:
+    async def _infer_latin_script_language(self, user_message: str) -> str:
+        text = " ".join((user_message or "").split())
+        if not text:
+            return "unknown"
+        if self._contains_devanagari(text):
+            return "hindi"
+        if not any(ch.isalpha() and ord(ch) < 128 for ch in text):
+            return "unknown"
+
+        tokens = [t for t in re.split(r"[^a-zA-Z]+", text.lower()) if t]
+        if tokens:
+            en_like = {
+                "what", "when", "where", "who", "why", "how", "tell", "latest", "date", "launch",
+                "phone", "iphone", "weather", "price", "help", "please", "can", "should",
+            }
+            roman_indic_hints = HINDI_MARKERS | HINGLISH_MARKERS | {"mane", "shu", "tame", "che", "nathi", "majha", "kay"}
+            if any(t in en_like for t in tokens) and not any(t in roman_indic_hints for t in tokens):
+                return "english"
+
+        prompt = (
+            "Identify the most likely natural language of this user message written in Latin script. "
+            "Return exactly one lowercase label from this set only: "
+            "english, hindi, gujarati, marathi, punjabi, bengali, tamil, telugu, kannada, malayalam, odia, assamese, urdu, unknown. "
+            "Pick the base language even if some English words are mixed in. "
+            "Examples: 'schemes ke baare batao' -> hindi, 'mane shu karvu janavo' -> gujarati. "
+            "Do not add any extra text.\n\n"
+            f"Message: {text}"
+        )
+        try:
+            label = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language="auto-latin").get("response", "")
+            )
+            clean = str(label or "").strip().lower().split()[0] if str(label or "").strip() else "unknown"
+            allowed = {
+                "english", "hindi", "gujarati", "marathi", "punjabi", "bengali",
+                "tamil", "telugu", "kannada", "malayalam", "odia", "assamese", "urdu", "unknown",
+            }
+            return clean if clean in allowed else "unknown"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Latin script language inference failed: {exc}")
+            return "unknown"
+
+    @staticmethod
+    def _sanitize_internal_source_labels(text: str) -> str:
+        out = text or ""
+        out = re.sub(r"\bqdrant_fallback\b", "knowledge base", out, flags=re.IGNORECASE)
+        out = re.sub(r"\badvisory_fallback\b", "advisory data", out, flags=re.IGNORECASE)
+        out = re.sub(r"\bfallback_mode\b", "match mode", out, flags=re.IGNORECASE)
+        out = re.sub(r"\bfallback\b", "nearest verified data", out, flags=re.IGNORECASE)
+        out = re.sub(r"\breference match\b", "nearest verified data", out, flags=re.IGNORECASE)
+        out = re.sub(r"\bnearest verified data mode\b", "nearest verified data", out, flags=re.IGNORECASE)
+        return out
+
+    async def _is_farming_domain_query(self, user_message: str) -> bool:
+        txt = (user_message or "").strip()
+        if not txt:
+            return False
+
+        quick_markers = (
+            HINDI_MARKERS
+            | HINGLISH_MARKERS
+            | MARKET_INTENT_MARKERS
+            | WEATHER_INTENT_MARKERS
+            | SCHEME_INTENT_MARKERS
+            | EQUIPMENT_INTENT_MARKERS
+            | CROP_INTENT_MARKERS
+            | LIVESTOCK_INTENT_MARKERS
+            | CALENDAR_INTENT_MARKERS
+            | set(CROP_TERMS)
+            | {"farmer", "farming", "agri", "agriculture", "kisan", "farm"}
+        )
+        lower = txt.lower()
+        if any(m in lower for m in quick_markers):
+            return True
+
+        try:
+            prompt = (
+                "Classify whether this user query is about agriculture/farming assistance. "
+                "Return exactly one word: in_domain or out_of_domain.\n\n"
+                f"Query: {txt}"
+            )
+            label = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language="en").get("response", "")
+            )
+            return str(label or "").strip().lower().startswith("in_domain")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Domain intent classification failed: {exc}")
+            return True
+
+    async def _build_out_of_scope_response(self, user_message: str, language: str) -> str:
+        prompt = (
+            "User asked something outside farming domain. "
+            "Reply in same language and script as user message. "
+            "Do not mix with another language. If user wrote English, reply in English only. "
+            "Be polite and short: say you are specialized for farmer/agriculture help. "
+            "Then give 6 clickable-style options in bullets. "
+            "Options must cover: crop advisory, mandi prices, weather forecast, schemes/subsidy, equipment rental, livestock care. "
+            "Do not mention internal systems or technical details.\n\n"
+            f"User message:\n{user_message}"
+        )
+        try:
+            raw = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language=language or "auto").get("response", "")
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Out-of-domain response generation failed: {exc}")
+            raw = (
+                "I am focused on farmer-related queries. "
+                "You can ask about crop advisory, mandi prices, weather forecast, schemes, equipment rental, or livestock care."
+            )
+
+        lang = str(language or "").lower()
+        if lang.startswith("auto-latin"):
+            detected = await self._infer_latin_script_language(user_message)
+            if detected == "english":
+                raw = (
+                    "I am specialized in farmer and agriculture support, so I cannot help with that topic.\n\n"
+                    "You can choose one of these instead:\n"
+                    "- Crop advisory\n"
+                    "- Mandi prices\n"
+                    "- Weather forecast\n"
+                    "- Schemes and subsidy\n"
+                    "- Equipment rental\n"
+                    "- Livestock care"
+                )
+
+        enforced = await self._enforce_language(
+            response_text=str(raw or "").strip(),
+            language=language,
+            user_message=user_message,
+        )
+        return self._strip_timestamp_details(self._sanitize_internal_source_labels(enforced))
+
+    async def _enforce_language(self, response_text: str, language: str, user_message: str = "") -> str:
+        # Language is controlled by prompt instructions that mirror the current user turn.
         lang = str(language or "").lower().strip()
-        if lang.startswith("hinglish"):
-            if not self._contains_devanagari(response_text):
-                return response_text
+        if lang.startswith("auto-latin") and self._contains_devanagari(response_text):
             try:
                 transliterated = generate_groq_reply(
                     message=(
-                        "Convert the following answer to Hinglish in Roman script only. "
-                        "Do not use Devanagari. Preserve facts, numbers, and recommendations exactly.\n\n"
+                        "Rewrite the following answer in Latin script only. "
+                        "Do not use Devanagari. Preserve all facts, numbers, and recommendations exactly.\n\n"
                         f"Answer:\n{response_text}"
                     ),
-                    language="hinglish",
+                    language="auto-latin",
                 ).get("response", "")
                 if transliterated.strip() and not self._contains_devanagari(transliterated):
                     return transliterated.strip()
             except Exception as exc:  # noqa: BLE001
-                logger.warning(f"Hinglish romanization failed: {exc}")
-            return response_text
+                logger.warning(f"Latin-script normalization failed: {exc}")
 
-        if not lang.startswith("en"):
-            return response_text
-        contains_non_english_markers = (
-            self._contains_devanagari(response_text)
-            or self._has_hindi_transliterated_markers(response_text)
-        )
-        if not contains_non_english_markers:
-            return self._normalize_english_openers(response_text)
+        if lang.startswith("auto-latin"):
+            detected = await self._infer_latin_script_language(user_message)
+            if detected == "english":
+                try:
+                    english_only = await asyncio.to_thread(
+                        lambda: generate_groq_reply(
+                            message=(
+                                "Rewrite the answer in clear English only. "
+                                "Do not use Hinglish or Hindi words. "
+                                "Preserve all facts, numbers, and recommendations exactly.\n\n"
+                                f"Answer:\n{response_text}"
+                            ),
+                            language="en",
+                        ).get("response", "")
+                    )
+                    if english_only.strip():
+                        response_text = english_only.strip()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"English-only normalization failed: {exc}")
+            if detected not in {"unknown", "english"}:
+                try:
+                    extra_constraints = ""
+                    if detected == "gujarati":
+                        extra_constraints = (
+                            "Write in natural Gujarati using Latin script (Gujarati transliteration). "
+                            "Prefer Gujarati-style words like: che, nathi, tame, tamaru, shu, mate, ane, have. "
+                            "Avoid Hindi-style fillers like: hai, nahi, aap, ka, ke, ki unless they appear in source names. "
+                        )
+                    rewritten = await asyncio.to_thread(
+                        lambda: generate_groq_reply(
+                            message=(
+                                f"Rewrite the following answer in {detected} language using Latin script only. "
+                                "Do not use Devanagari or native script. Keep all facts, numbers, and actions exactly unchanged.\n\n"
+                                "Use natural vocabulary of that language and avoid switching to Hindi unless the user did so explicitly. "
+                                "Keep code-mixing minimal; prefer base-language words over Hindi replacements.\n\n"
+                                f"{extra_constraints}\n\n"
+                                f"Answer:\n{response_text}"
+                            ),
+                            language="auto-latin",
+                        ).get("response", "")
+                    )
+                    if rewritten.strip():
+                        response_text = rewritten.strip()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"Latin-script language rewrite failed: {exc}")
 
-        if _ENABLE_RUNNER_TRANSLATION:
-            try:
-                translated_runner = await self._translate_with_runner_to_english(response_text)
-                if translated_runner and not self._contains_devanagari(translated_runner):
-                    return self._normalize_english_openers(translated_runner)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(f"In-runner English translation failed: {exc}")
+            if user_message.strip() and detected == "unknown":
+                try:
+                    style_matched = await asyncio.to_thread(
+                        lambda: generate_groq_reply(
+                            message=(
+                                "Rewrite the answer so it matches the exact language variety used in the user message, "
+                                "while keeping Latin script only. "
+                                "If user message is Gujarati in Latin script, output Gujarati in Latin script; "
+                                "if Marathi, output Marathi in Latin script; if Hindi/Hinglish, keep that style. "
+                                "Preserve all facts, numbers, and recommendations exactly.\n\n"
+                                f"User message:\n{user_message}\n\n"
+                                f"Answer:\n{response_text}"
+                            ),
+                            language="auto-latin",
+                        ).get("response", "")
+                    )
+                    if style_matched.strip() and not self._contains_devanagari(style_matched):
+                        response_text = style_matched.strip()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"Roman-script style matching failed: {exc}")
 
+        if lang.startswith("auto-") and not lang.startswith("auto-latin"):
+            target_script = lang.replace("auto-", "", 1)
+            if target_script in {
+                "devanagari",
+                "gujarati",
+                "gurmukhi",
+                "bengali",
+                "tamil",
+                "telugu",
+                "kannada",
+                "malayalam",
+                "odia",
+            } and not self._contains_script(response_text, target_script):
+                try:
+                    rewritten_script = await asyncio.to_thread(
+                        lambda: generate_groq_reply(
+                            message=(
+                                "Rewrite the answer to match the exact language and script used in the user message. "
+                                "Preserve all facts, numbers, and recommendations exactly.\n\n"
+                                f"User message:\n{user_message}\n\n"
+                                f"Answer:\n{response_text}"
+                            ),
+                            language="auto",
+                        ).get("response", "")
+                    )
+                    if rewritten_script.strip():
+                        response_text = rewritten_script.strip()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"Non-latin script normalization failed: {exc}")
+
+        return self._sanitize_internal_source_labels(response_text)
+
+    async def _polish_farmer_response(self, response_text: str, user_message: str, language: str) -> str:
+        base = str(response_text or "").strip()
+        if not base:
+            return base
         try:
-            translated = generate_groq_reply(
-                message=(
-                    "Translate the following answer to clear, practical English for an Indian farmer. "
-                    "Preserve all facts, numbers, and recommendations exactly.\n\n"
-                    f"Answer:\n{response_text}"
-                ),
-                language="en",
-            ).get("response", "")
-            if translated.strip():
-                return self._normalize_english_openers(translated.strip())
+            prompt = (
+                "Rewrite this response to be farmer-first, clear, and actionable. "
+                "Keep SAME language and SAME script as user message. "
+                "Preserve all facts, numbers, places, and source references exactly. "
+                "Use this structure with concise bullets: Data now, Action now, Profit/risk tip. "
+                "Avoid repetition and generic fluff. Keep it practical and short.\n\n"
+                f"User message:\n{user_message}\n\n"
+                f"Response:\n{base}"
+            )
+            polished = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language=language or "auto").get("response", "")
+            )
+            if str(polished or "").strip():
+                return str(polished).strip()
         except Exception as exc:  # noqa: BLE001
-            logger.warning(f"English enforcement translation failed: {exc}")
-        return self._normalize_english_openers(response_text)
+            logger.warning(f"Response quality polish failed: {exc}")
+        return base
 
     def _build_context_block(self, summary: str, recent_messages: list[dict], language: str, farmer_facts: list[str]) -> str:
         lang = self._normalize_language_label(language)
-        if lang == "en":
-            lang_name = "English"
-        elif lang == "hinglish":
-            lang_name = "Hinglish (Roman Hindi + English mix)"
+        if lang.startswith("auto"):
+            lang_name = "same language as current user message"
         else:
-            lang_name = "Hindi"
+            lang_name = lang
         lines = [
             "Conversation memory for continuity (compressed, token-bounded):",
             "- Always answer as a practical Indian farming advisor.",
             "- Keep guidance grounded in farmer realities (cost, risk, local mandi/weather/schemes, actionable next steps).",
             "- Never give a refusal-style answer; if exact match is missing, provide nearest verified records and practical alternatives.",
             f"- REQUIRED output language: {lang_name}.",
-            "- Do not switch language unless user explicitly asks.",
-            "- Use this response structure with bullet points: 1) What data says now (with source+time), 2) What farmer should do now, 3) Profit/risk tips.",
+            "- Mirror the current user message language and script naturally; switch only if the user switches.",
+            "- Keep script consistent with user input: if user writes in Latin script, answer in Latin script only; if user writes in Devanagari, answer in Devanagari.",
+            "- If the user writes Indian colloquial phrasing in Roman script (e.g., Hindi words in Latin letters), answer in natural Hinglish (Roman Hindi + English), not formal-only English.",
+            "- Use this response structure with bullet points: 1) What data says now (with source), 2) What farmer should do now, 3) Profit/risk tips.",
             "- Keep response intuitive for farmers: short bullets, plain language, and direct money-impact guidance.",
-            "- Never return empty/unknown-only output; always provide best available verified snapshot with timestamp.",
+            "- Never return empty/unknown-only output; always provide best available verified snapshot.",
         ]
 
         if farmer_facts:
@@ -1345,7 +1603,6 @@ class ChatService:
             links = self._as_text_list(row.get("official_links"))
             where_apply = self._as_text_list(row.get("where_to_apply"))
             contacts = self._as_text_list(row.get("contact_numbers"))
-            last_updated = str(row.get("last_updated") or "")
 
             if not benefits and summary:
                 benefits = [summary]
@@ -1375,8 +1632,6 @@ class ChatService:
             lines.append(f"   Process: {self._compact_text(' -> '.join(process[:5]), 280)}")
             if summary:
                 lines.append(f"   Summary: {summary}")
-            if last_updated:
-                lines.append(f"   Last updated: {last_updated}")
 
         if str(language or "").lower().startswith("hi"):
             header = "किसान के लिए योजना विवरण (सीधे उपयोग योग्य):"
@@ -1485,7 +1740,7 @@ class ChatService:
                 self._compact_text(
                     f"Top price: {top.get('commodity', crop_name)} at {top.get('market', 'market')} ({top.get('district', '')}, {top.get('state', '')}) "
                     f"modal={top.get('modal_price')} min={top.get('min_price')} max={top.get('max_price')} "
-                    f"date={top.get('arrival_date_iso') or top.get('arrival_date')}",
+                    "",
                     280,
                 )
             )
@@ -1529,6 +1784,22 @@ class ChatService:
             farmer_facts,
             self._profile_geo_facts(profile_geo),
         )
+
+        if not await self._is_farming_domain_query(message):
+            guarded = await self._build_out_of_scope_response(message, turn_language)
+            return {
+                "session_id": session_id,
+                "partial_response": guarded,
+                "language": turn_language,
+                "sources": ["domain_guard"],
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "requires_live_fetch": False,
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
 
         state_hint, district_hint, _ = self._extract_geo_hints(
             user_message=message,
@@ -1609,7 +1880,12 @@ class ChatService:
             source_tags.append("context_fallback")
 
         partial_text = "\n\n".join(partial_blocks)
-        partial_text = await self._enforce_language(response_text=partial_text, language=turn_language)
+        partial_text = await self._enforce_language(
+            response_text=partial_text,
+            language=turn_language,
+            user_message=message,
+        )
+        partial_text = self._strip_timestamp_details(partial_text)
 
         return {
             "session_id": session_id,
@@ -1754,6 +2030,33 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
+        if not await self._is_farming_domain_query(message):
+            guarded = await self._build_out_of_scope_response(message, turn_language)
+            await self._persist_turn(
+                db=db,
+                user_id=user_id,
+                session_id=session_id,
+                language=turn_language,
+                agent_type=agent_type,
+                user_message=message,
+                assistant_message=guarded,
+                agent_used="domain_guard",
+                previous_summary=rolling_summary,
+                previous_facts=effective_farmer_facts,
+            )
+            return {
+                "session_id": session_id,
+                "response": guarded,
+                "language": turn_language,
+                "agent_used": "domain_guard",
+                "source_provenance": [],
+                "agentic_primary_agent": "general",
+                "agentic_trace": {
+                    "parallel_tools": [],
+                    "sequential_tools": [],
+                },
+            }
+
         agentic_plan = {}
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
@@ -1772,7 +2075,11 @@ class ChatService:
                 profile_geo=profile_geo,
             )
             if direct.strip():
-                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = await self._enforce_language(
+                    response_text=direct,
+                    language=turn_language,
+                    user_message=message,
+                )
                 direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
                 direct = self._enforce_source_freshness_note(
                     response_text=direct,
@@ -1801,6 +2108,12 @@ class ChatService:
                     user_message=message,
                     language=turn_language,
                 )
+                direct = await self._polish_farmer_response(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
+                direct = self._strip_timestamp_details(direct)
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -1839,7 +2152,11 @@ class ChatService:
                 profile_geo=profile_geo,
             )
             if direct.strip():
-                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = await self._enforce_language(
+                    response_text=direct,
+                    language=turn_language,
+                    user_message=message,
+                )
                 direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
                 direct = self._enforce_source_freshness_note(
                     response_text=direct,
@@ -1868,6 +2185,12 @@ class ChatService:
                     user_message=message,
                     language=turn_language,
                 )
+                direct = await self._polish_farmer_response(
+                    response_text=direct,
+                    user_message=message,
+                    language=turn_language,
+                )
+                direct = self._strip_timestamp_details(direct)
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -1928,8 +2251,10 @@ class ChatService:
             "Never say unavailable/not found/unable. "
             "If exact local match is missing, provide nearest verified records and clearly label them as nearest match. "
             "Do not invent prices, dates, weather values, eligibility rules, or sources. "
-            "If market data includes fallback_mode='relaxed', explicitly tell the user it is an approximate regional fallback and not an exact district match. "
-            "Always mention source and freshness timestamps when they exist in grounded data. "
+            "If exact district market data is unavailable, clearly say the answer uses nearest regional verified records. "
+            "Never expose internal source identifiers in user-visible output. "
+            "Mention source when it exists in grounded data. "
+            "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
             "Answer in farmer-friendly bullet points with: Data now, Action now, Profit/risk tip. "
             "Output must be in the REQUIRED output language above."
         )
@@ -1941,14 +2266,13 @@ class ChatService:
         )
         response_text = (fallback.get("response", "") or "").strip()
         if not response_text:
-            if turn_language.startswith("en"):
-                response_text = "Here is a practical farmer action plan based on the currently available verified data and nearest market references."
-            elif turn_language.startswith("hinglish"):
-                response_text = "Yeh practical farmer action plan current verified data aur nearest market references par based hai."
-            else:
-                response_text = "यह व्यावहारिक किसान कार्ययोजना अभी उपलब्ध सत्यापित डेटा और नज़दीकी मार्केट संदर्भों पर आधारित है।"
+            response_text = "Here is a practical farmer action plan based on currently available verified data and nearest market references."
 
-        response_text = await self._enforce_language(response_text=response_text, language=turn_language)
+        response_text = await self._enforce_language(
+            response_text=response_text,
+            language=turn_language,
+            user_message=message,
+        )
         response_text = self._sanitize_unhelpful_response(response_text=response_text, language=turn_language)
         response_text = self._enforce_source_freshness_note(
             response_text=response_text,
@@ -1977,6 +2301,12 @@ class ChatService:
             user_message=message,
             language=turn_language,
         )
+        response_text = await self._polish_farmer_response(
+            response_text=response_text,
+            user_message=message,
+            language=turn_language,
+        )
+        response_text = self._strip_timestamp_details(response_text)
 
         await self._persist_turn(
             db=db,
@@ -1986,7 +2316,7 @@ class ChatService:
             agent_type=agent_type,
             user_message=message,
             assistant_message=response_text,
-            agent_used="groq_fallback",
+            agent_used="assistant",
             previous_summary=rolling_summary,
             previous_facts=effective_farmer_facts,
         )
@@ -1995,7 +2325,7 @@ class ChatService:
             "session_id": session_id,
             "response": response_text,
             "language": turn_language,
-            "agent_used": "groq_fallback",
+            "agent_used": "assistant",
             "provider": fallback.get("provider", "groq"),
             "model": fallback.get("model", "unknown"),
             "source_provenance": self._build_source_provenance(agentic_plan=agentic_plan),
@@ -2101,25 +2431,35 @@ class ChatService:
         domain_terms = ["price", "mandi", "weather", "soil", "scheme", "rental", "equipment"]
         if not any(t in msg for t in domain_terms):
             return response_text
-        if self._has_source_marker(response_text) and self._has_freshness_marker(response_text):
+        if self._has_source_marker(response_text):
             return response_text
 
-        if str(language or "").lower().startswith("en"):
-            note = (
-                "\n\nSource and freshness note: this answer is grounded in available service data. "
-                "If precise freshness time is missing in a source record, this answer uses the most recent verified snapshot timestamp available."
-            )
-        elif str(language or "").lower().startswith("hinglish"):
-            note = (
-                "\n\nSource aur freshness note: yeh answer available service data par grounded hai. "
-                "Agar exact freshness time missing ho, to latest verified snapshot timestamp use kiya gaya hai."
-            )
+        lang = str(language or "").lower()
+        if lang.startswith("en") or lang.startswith("auto-latin") or lang == "auto":
+            note = "\n\nSource note: this answer is grounded in available service data."
+        elif lang.startswith("hinglish") or lang.startswith("auto-mixed"):
+            note = "\n\nSource note: yeh answer available service data par grounded hai."
         else:
-            note = (
-                "\n\nस्रोत और ताजगी नोट: यह उत्तर उपलब्ध सेवा डेटा पर आधारित है। "
-                "यदि स्रोत रिकॉर्ड में सटीक समय नहीं है, तो उपलब्ध सबसे हालिया सत्यापित स्नैपशॉट समय का उपयोग किया गया है।"
-            )
+            note = "\n\nस्रोत नोट: यह उत्तर उपलब्ध सेवा डेटा पर आधारित है।"
         return response_text + note
+
+    @staticmethod
+    def _strip_timestamp_details(response_text: str) -> str:
+        txt = response_text or ""
+        txt = re.sub(r"\{[^\n\}]{0,220}(retrieved_at|ingested_at|timestamp|freshness|last\s*updated)[^\n\}]{0,220}\}", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"['\"]?(retrieved_at(?:_utc)?|ingested_at|timestamp|last\s*updated|freshness)['\"]?\s*[:=]\s*['\"]?[^,\n\|\}\]]*", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bretrieved_at(?:_utc)?\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bingested_at\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\btimestamp\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bfreshness\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\blast\s*updated\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:[\d:.+-Z]+\b", "", txt)
+        txt = re.sub(r"\bsince\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s*utc\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\b\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s*utc\b", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bwhat changed since yesterday:[^\n]*", "", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\n{3,}", "\n\n", txt)
+        txt = re.sub(r"\s{2,}", " ", txt)
+        return txt.strip()
 
     async def process_message(
         self,
@@ -2164,7 +2504,11 @@ class ChatService:
                 profile_geo=profile_geo,
             )
             if direct.strip():
-                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = await self._enforce_language(
+                    response_text=direct,
+                    language=turn_language,
+                    user_message=message,
+                )
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -2203,7 +2547,11 @@ class ChatService:
                 profile_geo=profile_geo,
             )
             if direct.strip():
-                direct = await self._enforce_language(response_text=direct, language=turn_language)
+                direct = await self._enforce_language(
+                    response_text=direct,
+                    language=turn_language,
+                    user_message=message,
+                )
                 await self._persist_turn(
                     db=db,
                     user_id=user_id,
@@ -2262,7 +2610,9 @@ class ChatService:
             f"Current user message:\n{message}\n\n"
             "Respond with farmer-first practical advice and reference specific data when available. "
             "Never use refusal-style wording (cannot, unavailable, not found). "
-            "If exact local data is limited, show nearest verified alternatives with clear labeling and timestamp. "
+            "If exact local data is limited, show nearest verified alternatives with clear labeling. "
+            "Never expose internal source identifiers in user-visible output. "
+            "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
             "Use bullet points with: Data now, Action now, Profit/risk tip. "
             "Output must be in the REQUIRED output language above."
         )
@@ -2286,14 +2636,13 @@ class ChatService:
                 agent_used = event.author or "coordinator"
 
         if not response_text.strip():
-            if turn_language.startswith("en"):
-                response_text = "Here is a practical farmer action plan from currently available verified records."
-            elif turn_language.startswith("hinglish"):
-                response_text = "Yeh practical farmer action plan current verified records par based hai."
-            else:
-                response_text = "यह व्यावहारिक किसान कार्ययोजना उपलब्ध सत्यापित रिकॉर्ड पर आधारित है।"
+            response_text = "Here is a practical farmer action plan from currently available verified records."
 
-        response_text = await self._enforce_language(response_text=response_text, language=turn_language)
+        response_text = await self._enforce_language(
+            response_text=response_text,
+            language=turn_language,
+            user_message=message,
+        )
         response_text = self._sanitize_unhelpful_response(response_text=response_text, language=turn_language)
         response_text = self._enforce_source_freshness_note(
             response_text=response_text,
@@ -2322,6 +2671,12 @@ class ChatService:
             user_message=message,
             language=turn_language,
         )
+        response_text = await self._polish_farmer_response(
+            response_text=response_text,
+            user_message=message,
+            language=turn_language,
+        )
+        response_text = self._strip_timestamp_details(response_text)
 
         await self._persist_turn(
             db=db,

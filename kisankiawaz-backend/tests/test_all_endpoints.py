@@ -413,13 +413,14 @@ class TestAgentChat:
         print(f"  ✓ semantic search: ok")
 
     def test_07_chat_language_switch_per_turn(self):
-        """Same session should mirror turn language dynamically (English -> Hindi)."""
+        """Same session should mirror turn language dynamically (English -> Hindi -> Hinglish) without timestamp metadata."""
         sid = str(uuid.uuid4())
+        blocked_time_markers = ["retrieved_at", "timestamp", "last updated", "freshness"]
 
         first = _post(
             f"{self.prefix}/chat",
             {
-                "message": "Give me quick wheat mandi selling advice with source and latest timestamp.",
+                "message": "Give me quick wheat mandi selling advice with source.",
                 "session_id": sid,
             },
             timeout=120,
@@ -427,11 +428,14 @@ class TestAgentChat:
         )
         resp_en = str(first.get("response", ""))
         assert len(resp_en) > 20, "Expected meaningful English response"
+        assert not any("\u0900" <= ch <= "\u097f" for ch in resp_en), "Expected English script output"
+        for marker in blocked_time_markers:
+            assert marker not in resp_en.lower(), f"Unexpected time marker in English response: {marker}"
 
         second = _post(
             f"{self.prefix}/chat",
             {
-                "message": "अब गेहूं बेचने के लिए 3 सीधे कदम बताओ और स्रोत व समय भी बताओ",
+                "message": "अब गेहूं बेचने के लिए 3 सीधे कदम बताओ और स्रोत भी बताओ",
                 "session_id": sid,
             },
             timeout=120,
@@ -440,7 +444,24 @@ class TestAgentChat:
         resp_hi = str(second.get("response", ""))
         assert len(resp_hi) > 20, "Expected meaningful Hindi response"
         assert any("\u0900" <= ch <= "\u097f" for ch in resp_hi), "Expected Devanagari output for Hindi turn"
-        print("  ✓ chat language switching: per-turn mirroring works")
+        for marker in blocked_time_markers:
+            assert marker not in resp_hi.lower(), f"Unexpected time marker in Hindi response: {marker}"
+
+        third = _post(
+            f"{self.prefix}/chat",
+            {
+                "message": "bhai gehu bechne ke liye 3 simple steps batao aur source bhi do",
+                "session_id": sid,
+            },
+            timeout=120,
+            retries=2,
+        )
+        resp_hinglish = str(third.get("response", ""))
+        assert len(resp_hinglish) > 20, "Expected meaningful Hinglish response"
+        assert not any("\u0900" <= ch <= "\u097f" for ch in resp_hinglish), "Expected Roman script for Hinglish turn"
+        for marker in blocked_time_markers:
+            assert marker not in resp_hinglish.lower(), f"Unexpected time marker in Hinglish response: {marker}"
+        print("  ✓ chat language switching: per-turn mirroring works across English/Hindi/Hinglish")
 
     def test_08_chat_farmer_friendly_no_refusal(self):
         """Market response should avoid refusal-style language and stay practical."""
