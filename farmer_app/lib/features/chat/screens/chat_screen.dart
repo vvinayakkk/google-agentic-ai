@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -374,7 +374,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-  // ── Load existing session ──────────────────────────────
+  // â”€â”€ Load existing session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _loadSession() async {
     if (_sessionId == null || _sessionId!.trim().isEmpty) return;
     setState(() => _isLoading = true);
@@ -410,7 +410,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  // ── Send message ──────────────────────────────────────
+  // â”€â”€ Send message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
@@ -569,7 +569,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  // ── TTS playback on AI messages ───────────────────────
+  // â”€â”€ TTS playback on AI messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _playTts(ChatMessage message) async {
     final msgId = message.messageId ?? message.content.hashCode.toString();
     if (_playingMessageId == msgId) {
@@ -612,7 +612,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  // ── New chat ──────────────────────────────────────────
+  // â”€â”€ New chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _newChat() {
     setState(() {
       _messages.clear();
@@ -718,7 +718,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  // ── Chip data with icons ──────────────────────────────
+  // â”€â”€ Chip data with icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static const _chipData = <_ChipInfo>[
     _ChipInfo('Marketplace', Icons.storefront_outlined, AppColors.info),
     _ChipInfo('Calendar', Icons.calendar_month_outlined, AppColors.accent),
@@ -796,6 +796,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chipBorder = isDark ? Colors.white60 : Colors.black87;
     final headingColor = isDark ? Colors.white : Colors.black87;
     final hasMessages = _messages.isNotEmpty;
+    String? latestUserPrompt;
+    for (final m in _messages) {
+      if (m.isUser) {
+        latestUserPrompt = m.content;
+        break;
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -854,6 +861,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           key: ValueKey(keySeed),
                           message: msg,
                           loadingText: _loadingHint,
+                          thinkingContext: latestUserPrompt,
                           allowTypingAnimation:
                               i == 0 && msg.isAssistant && !msg.isLoading,
                           isPlaying:
@@ -943,7 +951,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                               ),
                             ],
-                            // ── Heading ──
+                            // â”€â”€ Heading â”€â”€
                             Text(
                               'What can I help with?',
                               style: context.textTheme.headlineSmall?.copyWith(
@@ -952,7 +960,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ),
                             ),
                             const SizedBox(height: AppSpacing.lg),
-                            // ── Chips ──
+                            // â”€â”€ Chips â”€â”€
                             Wrap(
                               alignment: WrapAlignment.center,
                               spacing: 8,
@@ -1030,7 +1038,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
 
-            // ── Input bar ─────────────────────────────────
+            // â”€â”€ Input bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             _ChatInputBar(
               controller: _controller,
               isLoading: _isLoading,
@@ -1056,7 +1064,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
-// ── Chip info ────────────────────────────────────────────
+// â”€â”€ Chip info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ChipInfo {
   final String label;
@@ -1065,11 +1073,12 @@ class _ChipInfo {
   const _ChipInfo(this.label, this.icon, this.color);
 }
 
-// ── Chat bubble ──────────────────────────────────────────
+// â”€â”€ Chat bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ChatBubble extends StatefulWidget {
   final ChatMessage message;
   final String loadingText;
+  final String? thinkingContext;
   final bool allowTypingAnimation;
   final bool isPlaying;
   final VoidCallback? onTts;
@@ -1080,6 +1089,7 @@ class _ChatBubble extends StatefulWidget {
     super.key,
     required this.message,
     this.loadingText = 'Gathering context...',
+    this.thinkingContext,
     this.allowTypingAnimation = true,
     this.isPlaying = false,
     this.onTts,
@@ -1448,8 +1458,9 @@ class _ChatBubble extends StatefulWidget {
     final all = (message.suggestions ?? const <String>[])
         .where((s) => s.trim().isNotEmpty)
         .toList(growable: false);
-    if (all.isEmpty || topic == 'general')
+    if (all.isEmpty || topic == 'general') {
       return all.take(4).toList(growable: false);
+    }
 
     final filtered = all
         .where((s) => _suggestionMatchesTopic(s, topic))
@@ -1494,7 +1505,10 @@ class _ChatBubbleState extends State<_ChatBubble> {
   @override
   Widget build(BuildContext context) {
     if (widget.message.isLoading) {
-      return _TypingIndicator(text: widget.loadingText);
+      return _TypingIndicator(
+        text: widget.loadingText,
+        contextHint: widget.thinkingContext,
+      );
     }
 
     final isUser = widget.message.isUser;
@@ -1779,12 +1793,13 @@ class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
   }
 }
 
-// ── Typing indicator ─────────────────────────────────────
+// â”€â”€ Typing indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _TypingIndicator extends StatefulWidget {
   final String text;
+  final String? contextHint;
 
-  const _TypingIndicator({required this.text});
+  const _TypingIndicator({required this.text, this.contextHint});
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
@@ -1793,6 +1808,108 @@ class _TypingIndicator extends StatefulWidget {
 class _TypingIndicatorState extends State<_TypingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _anim;
+  Timer? _thoughtTimer;
+  Timer? _elapsedTimer;
+  int _elapsedSeconds = 0;
+  final List<String> _thoughtFeed = <String>[];
+  int _thoughtCursor = 0;
+
+  static final RegExp _marketRx = RegExp(
+    r'market|mandi|price|rate|bhav|sell|buyer',
+    caseSensitive: false,
+  );
+  static final RegExp _weatherRx = RegExp(
+    r'weather|rain|forecast|temperature|humidity|wind',
+    caseSensitive: false,
+  );
+  static final RegExp _schemeRx = RegExp(
+    r'scheme|subsidy|eligibility|pm-kisan|kcc|pmfby|document',
+    caseSensitive: false,
+  );
+  static final RegExp _equipmentRx = RegExp(
+    r'equipment|rental|tractor|harvester|sprayer|machine',
+    caseSensitive: false,
+  );
+  static final RegExp _calendarRx = RegExp(
+    r'calendar|schedule|task|event|reminder',
+    caseSensitive: false,
+  );
+
+  List<String> _buildThoughtTemplates() {
+    final phase = widget.text.trim();
+    final hint = (widget.contextHint ?? '').trim();
+    final lines = <String>[
+      'Reading your message carefully',
+      'Detecting language and intent',
+      'Checking your recent chat context',
+      'Planning the best next response',
+    ];
+
+    if (phase.isNotEmpty) {
+      lines.add('Current phase: $phase');
+    }
+
+    if (hint.isNotEmpty) {
+      if (_marketRx.hasMatch(hint)) {
+        lines.add('Looking at market and mandi intent signals');
+      }
+      if (_weatherRx.hasMatch(hint)) {
+        lines.add('Checking weather risk and forecast cues');
+      }
+      if (_schemeRx.hasMatch(hint)) {
+        lines.add('Evaluating scheme and eligibility context');
+      }
+      if (_equipmentRx.hasMatch(hint)) {
+        lines.add('Preparing equipment and rental guidance');
+      }
+      if (_calendarRx.hasMatch(hint)) {
+        lines.add('Checking calendar and reminder intent');
+      }
+    }
+
+    lines.addAll(const <String>[
+      'Validating action suggestions relevance',
+      'Composing response in your detected language',
+      'Final quality check before sending',
+    ]);
+
+    return lines;
+  }
+
+  void _seedThinkingFeed({bool resetElapsed = false}) {
+    _thoughtFeed
+      ..clear()
+      ..addAll(_buildThoughtTemplates().take(2));
+    _thoughtCursor = _thoughtFeed.length;
+    if (resetElapsed) {
+      _elapsedSeconds = 0;
+    }
+  }
+
+  void _startThinkingLoop() {
+    _thoughtTimer?.cancel();
+    _elapsedTimer?.cancel();
+
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _elapsedSeconds += 1;
+      });
+    });
+
+    _thoughtTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
+      if (!mounted) return;
+      final templates = _buildThoughtTemplates();
+      if (_thoughtCursor >= templates.length) return;
+      setState(() {
+        _thoughtFeed.add(templates[_thoughtCursor]);
+        _thoughtCursor += 1;
+        if (_thoughtFeed.length > 4) {
+          _thoughtFeed.removeAt(0);
+        }
+      });
+    });
+  }
 
   @override
   void initState() {
@@ -1801,11 +1918,29 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
+    _seedThinkingFeed(resetElapsed: true);
+    _startThinkingLoop();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TypingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text ||
+        oldWidget.contextHint != widget.contextHint) {
+      setState(() {
+        _thoughtFeed.add('Current phase: ${widget.text}');
+        if (_thoughtFeed.length > 4) {
+          _thoughtFeed.removeAt(0);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _anim.dispose();
+    _thoughtTimer?.cancel();
+    _elapsedTimer?.cancel();
     super.dispose();
   }
 
@@ -1821,42 +1956,80 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           borderRadius: AppRadius.mdAll,
           border: Border.all(color: context.appColors.border, width: 0.5),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Kisan AI is thinking',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 28,
+                  child: AnimatedBuilder(
+                    animation: _anim,
+                    builder: (context, _) {
+                      final t = _anim.value;
+                      final dots = (t * 3).floor() % 3 + 1;
+                      return Text(
+                        '.' * dots,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.appColors.textSecondary,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${_elapsedSeconds}s',
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             Text(
               widget.text,
               style: context.textTheme.bodySmall?.copyWith(
                 color: context.appColors.textSecondary,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            AnimatedBuilder(
-              animation: _anim,
-              builder: (context, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(3, (i) {
-                    final delay = i * 0.33;
-                    final t = ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);
-                    final opacity = 0.3 + 0.7 * (1 - (2 * t - 1).abs());
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
+            const SizedBox(height: 8),
+            ..._thoughtFeed.map(
+              (line) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.appColors.textSecondary,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.appColors.textSecondary,
                         ),
                       ),
-                    );
-                  }),
-                );
-              },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -1864,8 +2037,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     );
   }
 }
-
-// ── ChatGPT-style input bar ──────────────────────────────
 
 class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
