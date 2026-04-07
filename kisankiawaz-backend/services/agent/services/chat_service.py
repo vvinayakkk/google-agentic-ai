@@ -1117,40 +1117,7 @@ class ChatService:
         return response_text + header + "\n" + "\n".join(unique_lines[:10])
 
     def _append_topic_checklist(self, response_text: str, user_message: str, language: str) -> str:
-        txt = (response_text or "").lower()
-        msg = (user_message or "").lower()
-        topic_rules = [
-            ("tomato|price|rate|daam|bhav", "Price"),
-            ("mandi|apmc|near", "Mandi"),
-            ("scheme|subsidy|pm-kisan|kcc|pmfby", "Schemes"),
-            ("equipment|rental|tractor|harvester|sprayer", "Equipment"),
-            ("crop|sowing|harvest|variety", "Crop"),
-            ("weather|rain|forecast|temperature", "Weather"),
-            ("soil|moisture", "Soil"),
-            ("calendar|event|schedule|task|reminder", "Calendar"),
-        ]
-        requested = [label for pattern, label in topic_rules if re.search(pattern, msg)]
-        if len(requested) < 3:
-            return response_text
-
-        covered = []
-        missing = []
-        for label in requested:
-            if label.lower() in txt:
-                covered.append(label)
-            else:
-                missing.append(label)
-
-        if not missing:
-            return response_text
-
-        if str(language or "").lower().startswith("hi"):
-            suffix = "\n\nकवरेज चेकलिस्ट: "
-        elif str(language or "").lower().startswith("hinglish"):
-            suffix = "\n\nCoverage checklist: "
-        else:
-            suffix = "\n\nCoverage checklist: "
-        return response_text + suffix + f"covered={', '.join(covered)}; pending_followup={', '.join(missing)}"
+        return response_text
 
     async def _translate_with_runner_to_english(self, response_text: str) -> str:
         runtime_session_id = f"translate-{uuid.uuid4().hex[:8]}"
@@ -1271,12 +1238,12 @@ class ChatService:
 
     async def _build_out_of_scope_response(self, user_message: str, language: str) -> str:
         prompt = (
-            "User asked something outside farming domain. "
+            "User asked a generic or non-farming question. "
             "Reply in same language and script as user message. "
             "Do not mix with another language. If user wrote English, reply in English only. "
-            "Be polite and short: say you are specialized for farmer/agriculture help. "
-            "Then give 6 clickable-style options in bullets. "
-            "Options must cover: crop advisory, mandi prices, weather forecast, schemes/subsidy, equipment rental, livestock care. "
+            "Do NOT refuse. Map the user question to practical farmer context and explain how it affects farm decisions, cost, risk, or planning. "
+            "Use real farmer-oriented guidance tied to available domain knowledge (crop, mandi, weather, schemes, equipment, livestock, calendar) as relevant. "
+            "Keep it concise and natural. Avoid rigid templates and avoid clickable option lists. "
             "Do not mention internal systems or technical details.\n\n"
             f"User message:\n{user_message}"
         )
@@ -1287,8 +1254,7 @@ class ChatService:
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Out-of-domain response generation failed: {exc}")
             raw = (
-                "I am focused on farmer-related queries. "
-                "You can ask about crop advisory, mandi prices, weather forecast, schemes, equipment rental, or livestock care."
+                "Here is the farmer-context version: connect this question with crop planning, market timing, and weather-aware risk control so decisions stay practical and profitable."
             )
 
         lang = str(language or "").lower()
@@ -1296,14 +1262,7 @@ class ChatService:
             detected = await self._infer_latin_script_language(user_message)
             if detected == "english":
                 raw = (
-                    "I am specialized in farmer and agriculture support, so I cannot help with that topic.\n\n"
-                    "You can choose one of these instead:\n"
-                    "- Crop advisory\n"
-                    "- Mandi prices\n"
-                    "- Weather forecast\n"
-                    "- Schemes and subsidy\n"
-                    "- Equipment rental\n"
-                    "- Livestock care"
+                    "Here is a farmer-focused take: apply this to crop planning, mandi timing, weather risk, and input-cost decisions so it becomes useful on the farm."
                 )
 
         enforced = await self._enforce_language(
@@ -1439,7 +1398,7 @@ class ChatService:
                 "Rewrite this response to be farmer-first, clear, and actionable. "
                 "Keep SAME language and SAME script as user message. "
                 "Preserve all facts, numbers, places, and source references exactly. "
-                "Use this structure with concise bullets: Data now, Action now, Profit/risk tip. "
+                "Choose the best format naturally for the question. Use bullets only when they improve clarity. "
                 "Avoid repetition and generic fluff. Keep it practical and short.\n\n"
                 f"User message:\n{user_message}\n\n"
                 f"Response:\n{base}"
@@ -1468,8 +1427,8 @@ class ChatService:
             "- Mirror the current user message language and script naturally; switch only if the user switches.",
             "- Keep script consistent with user input: if user writes in Latin script, answer in Latin script only; if user writes in Devanagari, answer in Devanagari.",
             "- If the user writes Indian colloquial phrasing in Roman script (e.g., Hindi words in Latin letters), answer in natural Hinglish (Roman Hindi + English), not formal-only English.",
-            "- Use this response structure with bullet points: 1) What data says now (with source), 2) What farmer should do now, 3) Profit/risk tips.",
-            "- Keep response intuitive for farmers: short bullets, plain language, and direct money-impact guidance.",
+            "- Avoid fixed answer templates; adapt the response format to user intent.",
+            "- Keep response intuitive for farmers: plain language, practical guidance, and direct money-impact clarity.",
             "- Never return empty/unknown-only output; always provide best available verified snapshot.",
         ]
 
@@ -2255,7 +2214,7 @@ class ChatService:
             "Never expose internal source identifiers in user-visible output. "
             "Mention source when it exists in grounded data. "
             "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
-            "Answer in farmer-friendly bullet points with: Data now, Action now, Profit/risk tip. "
+            "Avoid rigid templates; choose concise paragraphs or bullets based on what best fits this query. "
             "Output must be in the REQUIRED output language above."
         )
 
@@ -2613,7 +2572,7 @@ class ChatService:
             "If exact local data is limited, show nearest verified alternatives with clear labeling. "
             "Never expose internal source identifiers in user-visible output. "
             "If user message is Roman Hindi/Hinglish, reply in Hinglish in Roman script, not pure English. "
-            "Use bullet points with: Data now, Action now, Profit/risk tip. "
+            "Avoid rigid templates; choose concise paragraphs or bullets based on what best fits this query. "
             "Output must be in the REQUIRED output language above."
         )
 

@@ -606,9 +606,7 @@ def _apply_response_mode(text: str, response_mode: str) -> str:
             lines = lines[:8]
         return "\n".join(lines)[:950]
     if mode == "step-by-step":
-        if "Step-by-step" in content:
-            return content
-        return "Step-by-step:\n1. Data now\n2. Action now\n3. Risk and profit tip\n\n" + content
+        return content
     if mode == "voice-friendly":
         simplified = re.sub(r"\s+", " ", content).strip()
         chunks = re.split(r"(?<=[.!?])\s+", simplified)
@@ -754,30 +752,14 @@ async def _enhance_chat_result(
     if str(result.get("agent_used") or "").strip().lower() == "domain_guard":
         result["response"] = enriched
         result["response_mode"] = mode
-        result["suggestions"] = [
-            "Crop advisory",
-            "Mandi prices",
-            "Weather forecast",
-            "Schemes and subsidy",
-            "Equipment rental",
-            "Livestock care",
-        ]
+        result["suggestions"] = _build_followup_suggestions(message, result)
         return result
 
     if mode == "voice-friendly":
         result["response"] = enriched
         result["response_mode"] = mode
-        result["suggestions"] = []
+        result["suggestions"] = _build_followup_suggestions(message, result)
         return result
-
-    if "Action Plan:" not in enriched:
-        enriched += _build_action_plan(message)
-    if "Why this recommendation:" not in enriched:
-        enriched += _build_why_rationale(message)
-    enriched += await _build_change_summary(user_id=user_id, session_id=session_id, message=message)
-    enriched += _build_clarification_if_needed(message)
-    if "Follow-up check:" not in enriched:
-        enriched += "\n\nFollow-up check: reply 'done' after one action and I will optimize your next step."
 
     result["response"] = enriched
     result["response_mode"] = mode

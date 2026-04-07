@@ -62,12 +62,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatMessage? _replyTarget;
 
   static const List<String> _loadingHints = <String>[
-    'Searching nearby data...',
-    'Retrieving personalized context...',
-    'Checking extra sources...',
-    'Preparing concise answer...',
-    'Validating recommendations...',
-    'Finalizing response...',
+    'Gathering context...',
+    'Fetching response...',
   ];
 
   @override
@@ -156,9 +152,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       final resumable = match.isNotEmpty
           ? match.first.sessionId
-          : (all.where((s) => s.sessionId.trim().isNotEmpty && s.sessionId != _sessionId).isNotEmpty
-              ? all.firstWhere((s) => s.sessionId.trim().isNotEmpty && s.sessionId != _sessionId).sessionId
-              : null);
+          : (all
+                    .where(
+                      (s) =>
+                          s.sessionId.trim().isNotEmpty &&
+                          s.sessionId != _sessionId,
+                    )
+                    .isNotEmpty
+                ? all
+                      .firstWhere(
+                        (s) =>
+                            s.sessionId.trim().isNotEmpty &&
+                            s.sessionId != _sessionId,
+                      )
+                      .sessionId
+                : null);
 
       if (!mounted) return;
       setState(() => _resumableSessionId = resumable);
@@ -243,8 +251,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final status = (payload['status'] ?? '').toString().toLowerCase();
 
       if (status == 'completed') {
-        final finalResult = (payload['result'] as Map<String, dynamic>?) ??
-            <String, dynamic>{};
+        final finalResult =
+            (payload['result'] as Map<String, dynamic>?) ?? <String, dynamic>{};
         List<String>? suggestions;
         if (finalResult['suggestions'] is List) {
           suggestions = (finalResult['suggestions'] as List)
@@ -257,13 +265,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .where((e) => e.trim().isNotEmpty)
               .toList(growable: false);
         }
-        final finalText = (payload['final_response'] ??
-                finalResult['response'] ??
-                payload['merged_response'] ??
-                finalResult['content'] ??
-                '')
-            .toString()
-            .trim();
+        final finalText =
+            (payload['final_response'] ??
+                    finalResult['response'] ??
+                    payload['merged_response'] ??
+                    finalResult['content'] ??
+                    '')
+                .toString()
+                .trim();
         var transientRemoved = 0;
 
         setState(() {
@@ -391,7 +400,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _replyTarget = null;
       _isLoading = true;
     });
-    _loadingHint = 'Fetching quick snapshot...';
+    _loadingHint = _loadingHints.first;
     _startLoadingHints();
     _scrollToLatest();
 
@@ -450,34 +459,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             (prepare['partial_response'] ?? prepare['response'] ?? '')
                 .toString()
                 .trim();
-        if (_messages.isNotEmpty && _messages.first.isLoading) {
+
+        final requestId = (prepare['request_id'] ?? '').toString().trim();
+        final prepareStatus = (prepare['status'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        var completed = false;
+        if (requestId.isNotEmpty) {
+          _loadingHint = _loadingHints.last;
+          completed = await _pollFinalizeAndRender(agent, requestId);
+        } else if (prepareStatus == 'completed' && partialText.isNotEmpty) {
           setState(() {
-            _messages.removeAt(0);
-          });
-        }
-        if (partialText.isNotEmpty) {
-          setState(() {
+            if (_messages.isNotEmpty && _messages.first.isLoading) {
+              _messages.removeAt(0);
+            }
             _messages.insert(
               0,
               ChatMessage(
                 role: 'assistant',
                 content: partialText,
                 timestamp: DateTime.now(),
-                stage: 'partial',
-                isPartial: true,
+                stage: 'final',
               ),
             );
           });
-        }
-
-        final requestId = (prepare['request_id'] ?? '').toString().trim();
-        var completed = false;
-        if (requestId.isNotEmpty) {
-          setState(() {
-            _messages.insert(0, ChatMessage.loading(stage: 'live'));
-          });
-          _loadingHint = 'Fetching live updates...';
-          completed = await _pollFinalizeAndRender(agent, requestId);
+          completed = true;
         }
 
         if (!completed) {
@@ -800,35 +807,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       padding: AppSpacing.allLg,
                       itemCount: _messages.length,
                       itemBuilder: (_, i) {
-                      final msg = _messages[i];
-                      final keySeed = msg.messageId ??
-                        '${msg.timestamp.microsecondsSinceEpoch}-${msg.role}-${msg.content.hashCode}';
-                      return _ChatBubble(
-                        key: ValueKey(keySeed),
-                        message: msg,
-                        loadingText: _loadingHint,
-                        isPlaying:
-                          _playingMessageId ==
-                          (msg.messageId ?? msg.content.hashCode.toString()),
-                        onTts: msg.isAssistant && !msg.isLoading
-                          ? () => _playTts(msg)
-                          : null,
-                        onReply: msg.isLoading
-                          ? null
-                          : () {
-                            setState(() => _replyTarget = msg);
+                        final msg = _messages[i];
+                        final keySeed =
+                            msg.messageId ??
+                            '${msg.timestamp.microsecondsSinceEpoch}-${msg.role}-${msg.content.hashCode}';
+                        return _ChatBubble(
+                          key: ValueKey(keySeed),
+                          message: msg,
+                          loadingText: _loadingHint,
+                          isPlaying:
+                              _playingMessageId ==
+                              (msg.messageId ??
+                                  msg.content.hashCode.toString()),
+                          onTts: msg.isAssistant && !msg.isLoading
+                              ? () => _playTts(msg)
+                              : null,
+                          onReply: msg.isLoading
+                              ? null
+                              : () {
+                                  setState(() => _replyTarget = msg);
                                   context.showSnack('Reply target selected');
+                                },
+                          onSuggestionTap: (suggestion) {
+                            final clean = suggestion.trim();
+                            if (clean.isEmpty) return;
+                            _controller.text = clean;
+                            _controller.selection = TextSelection.fromPosition(
+                              TextPosition(offset: _controller.text.length),
+                            );
+                            _send();
                           },
-                        onSuggestionTap: (suggestion) {
-                          final clean = suggestion.trim();
-                          if (clean.isEmpty) return;
-                          _controller.text = clean;
-                          _controller.selection = TextSelection.fromPosition(
-                            TextPosition(offset: _controller.text.length),
-                          );
-                          _send();
-                        },
-                      );
+                        );
                       },
                     )
                   : Center(
@@ -859,8 +868,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (isDark ? Colors.black : AppColors.primaryDark)
-                                          .withValues(alpha: isDark ? 0.22 : 0.08),
+                                      color:
+                                          (isDark
+                                                  ? Colors.black
+                                                  : AppColors.primaryDark)
+                                              .withValues(
+                                                alpha: isDark ? 0.22 : 0.08,
+                                              ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -1023,7 +1037,7 @@ class _ChatBubble extends StatelessWidget {
   const _ChatBubble({
     super.key,
     required this.message,
-    this.loadingText = 'Searching...',
+    this.loadingText = 'Gathering context...',
     this.isPlaying = false,
     this.onTts,
     this.onReply,
@@ -1082,7 +1096,10 @@ class _ChatBubble extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.08)
@@ -1155,7 +1172,8 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
-                if ((message.stage == 'final' || !(message.isPartial)) && !message.isLoading) ...[
+                if ((message.stage == 'final' || !(message.isPartial)) &&
+                    !message.isLoading) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
@@ -1167,12 +1185,17 @@ class _ChatBubble extends StatelessWidget {
                           .map(
                             (s) => ActionChip(
                               label: Text(s),
-                              onPressed: onSuggestionTap == null ? null : () => onSuggestionTap!(s),
+                              onPressed: onSuggestionTap == null
+                                  ? null
+                                  : () => onSuggestionTap!(s),
                             ),
                           )),
                       ActionChip(
                         label: const Text('View Calendar'),
-                        avatar: const Icon(Icons.calendar_month_outlined, size: 16),
+                        avatar: const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 16,
+                        ),
                         onPressed: () => context.push(RoutePaths.calendar),
                       ),
                       ActionChip(
@@ -1180,9 +1203,13 @@ class _ChatBubble extends StatelessWidget {
                         avatar: const Icon(Icons.undo, size: 16),
                         onPressed: () {
                           Clipboard.setData(
-                            const ClipboardData(text: 'Undo my last calendar action and verify.'),
+                            const ClipboardData(
+                              text: 'Undo my last calendar action and verify.',
+                            ),
                           );
-                          context.showSnack('Undo command copied. Paste and send.');
+                          context.showSnack(
+                            'Undo command copied. Paste and send.',
+                          );
                         },
                       ),
                       ActionChip(
@@ -1195,7 +1222,9 @@ class _ChatBubble extends StatelessWidget {
                                   'Schedule a follow-up task tomorrow 08:00 and verify it from DB.',
                             ),
                           );
-                          context.showSnack('Follow-up command copied. Paste and send.');
+                          context.showSnack(
+                            'Follow-up command copied. Paste and send.',
+                          );
                         },
                       ),
                     ],
@@ -1586,7 +1615,9 @@ class _ChatInputBar extends StatelessWidget {
                         child: Icon(
                           Icons.graphic_eq,
                           size: 20,
-                          color: context.isDark ? Colors.white70 : Colors.black54,
+                          color: context.isDark
+                              ? Colors.white70
+                              : Colors.black54,
                         ),
                       ),
                     ),
