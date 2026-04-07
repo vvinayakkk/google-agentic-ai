@@ -687,6 +687,27 @@ class ChatService:
         compact = re.sub(r"\s+", " ", txt)
         if compact in {"hi", "hello", "hey", "hola", "namaste"}:
             return True
+        capability_patterns = [
+            r"\b(?:suggest|show|give)\s+(?:me\s+)?(?:some\s+)?(?:next\s+)?actions?\b",
+            r"\bwhat\s+(?:can|should)\s+i\s+do(?:\s+next)?\b",
+            r"\bgive\s+me\s+(?:some\s+)?options?\b",
+            r"\bwhat\s+are\s+my\s+options?\b",
+            r"\bhow\s+can\s+you\s+help\s+me\b",
+            r"\bwhat\s+can\s+you\s+help\s+with\b",
+        ]
+        if any(re.search(pattern, compact) for pattern in capability_patterns):
+            farming_markers = (
+                MARKET_INTENT_MARKERS
+                | WEATHER_INTENT_MARKERS
+                | SCHEME_INTENT_MARKERS
+                | EQUIPMENT_INTENT_MARKERS
+                | CROP_INTENT_MARKERS
+                | LIVESTOCK_INTENT_MARKERS
+                | CALENDAR_INTENT_MARKERS
+                | set(CROP_TERMS)
+            )
+            if not any(marker in compact for marker in farming_markers):
+                return True
         return any(marker in compact for marker in GENERIC_GREETING_MARKERS)
 
     async def _build_generic_response(self, user_message: str, language: str) -> str:
@@ -1278,6 +1299,21 @@ class ChatService:
         out = re.sub(r"\bfallback\b", "nearest verified data", out, flags=re.IGNORECASE)
         out = re.sub(r"\breference match\b", "nearest verified data", out, flags=re.IGNORECASE)
         out = re.sub(r"\bnearest verified data mode\b", "nearest verified data", out, flags=re.IGNORECASE)
+        # Remove model-side meta commentary that leaks internal language-hint reasoning.
+        out = re.sub(
+            r"\(\s*note:\s*since the preferred language hint[\s\S]*?\)",
+            "",
+            out,
+            flags=re.IGNORECASE,
+        )
+        out = re.sub(
+            r"^\s*note:\s*since the preferred language hint[^\n]*$",
+            "",
+            out,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+        out = re.sub(r"if the user wants the response in english or any other language,? please let me know\.?", "", out, flags=re.IGNORECASE)
+        out = re.sub(r"\n{3,}", "\n\n", out)
         return out
 
     async def _is_farming_domain_query(self, user_message: str) -> bool:

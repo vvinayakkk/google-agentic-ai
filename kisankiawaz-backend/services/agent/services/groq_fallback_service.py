@@ -92,7 +92,8 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
                 "You are KisanMitra assistant for Indian farmers. "
                 "Respond with practical, accurate, concise guidance. "
                 "Mirror the language and script of the user's latest message unless the user explicitly requests another language. "
-                "If the user writes Roman Hindi/Hinglish, reply in natural Hinglish in Roman script, not formal-only English."
+                "If the user writes Roman Hindi/Hinglish, reply in natural Hinglish in Roman script, not formal-only English. "
+                "If Preferred language hint is a concrete language code (for example en, hi, kn, es), output MUST be only in that language."
             )
 
             with httpx.Client(timeout=45.0) as client:

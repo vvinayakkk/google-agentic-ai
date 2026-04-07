@@ -1,5 +1,6 @@
 from uuid import uuid4
 import asyncio
+import json
 import os
 import time
 import re
@@ -13,6 +14,7 @@ from shared.core.config import get_settings
 from shared.core.constants import QdrantCollections, MongoCollections
 from shared.db.mongodb import FieldFilter, get_async_db
 from services.chat_service import ChatService
+from services.groq_fallback_service import generate_groq_reply
 from shared.services.api_key_allocator import get_api_key_allocator
 from loguru import logger
 
@@ -70,6 +72,311 @@ SAFE_SEARCH_COLLECTIONS = {
     QdrantCollections.MARKET_KNOWLEDGE,
     QdrantCollections.FARMING_GENERAL,
 }
+
+_UI_ACTION_ALLOWED_TAGS = {
+    "home",
+    "featured",
+    "chat",
+    "live_voice",
+    "chat_history",
+    "profile",
+    "crop_cycle",
+    "crop_intelligence",
+    "crop_doctor",
+    "contract_farming",
+    "credit_sources",
+    "crop_insurance",
+    "market_strategy",
+    "power_supply",
+    "soil_health",
+    "marketplace",
+    "market_prices",
+    "add_listing",
+    "rental",
+    "equipment_hub",
+    "equipment_marketplace",
+    "rental_ticket",
+    "rental_rate_detail",
+    "my_equipment",
+    "listing_details",
+    "my_bookings",
+    "earnings",
+    "weather",
+    "soil_moisture",
+    "cattle",
+    "calendar",
+    "notifications",
+    "upi",
+    "documents",
+    "document_builder",
+    "document_build",
+    "document_vault",
+    "document_agent",
+    "equipment_rental_rates",
+    "waste",
+    "mental_health",
+    "farm_viz",
+    "language_select",
+    "login",
+    "fetching_location",
+    "splash",
+}
+
+_UI_ACTION_TAG_ALIASES = {
+    "market": "marketplace",
+    "schemes": "documents",
+    "scheme": "documents",
+    "equipment": "equipment_marketplace",
+    "livestock": "cattle",
+    "livevoice": "live_voice",
+    "live-voice": "live_voice",
+    "chat-history": "chat_history",
+    "marketplace": "marketplace",
+    "soilmoisture": "soil_moisture",
+    "farmviz": "farm_viz",
+    "languageselect": "language_select",
+}
+
+
+def _normalize_ui_action_tag(tag: str | None) -> str:
+    raw = str(tag or "").strip().lower()
+    if not raw:
+        return ""
+    key = raw.replace("-", "_").replace(" ", "_")
+    key = _UI_ACTION_TAG_ALIASES.get(key, key)
+    return key if key in _UI_ACTION_ALLOWED_TAGS else ""
+
+
+def _sanitize_ui_action_cards(cards: list[str] | None, fallback_redirect: str | None = None) -> list[str]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    for item in cards or []:
+        norm = _normalize_ui_action_tag(item)
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        ordered.append(norm)
+        if len(ordered) >= 3:
+            return ordered
+
+    fallback = _normalize_ui_action_tag(fallback_redirect)
+    if fallback and fallback not in seen:
+        ordered.append(fallback)
+
+    return ordered[:3]
+
+
+def _intent_topics_for_actions(message: str) -> set[str]:
+    topics = _topic_signals(message)
+    msg = str(message or "").lower()
+    if re.search(r"livestock|dairy|cattle|goat|poultry|ganado|leche", msg):
+        topics.add("livestock")
+    return topics
+
+
+def _allowed_action_tags_for_message(message: str, fallback_redirect: str | None) -> set[str]:
+    topics = _intent_topics_for_actions(message)
+    allowed: set[str] = set()
+
+    if "calendar" in topics:
+        allowed.update({"calendar", "notifications"})
+    if "market" in topics:
+        allowed.update({"marketplace", "market_prices", "market_strategy", "add_listing"})
+    if "weather" in topics:
+        allowed.update({"weather", "soil_moisture"})
+    if "scheme" in topics:
+        allowed.update(
+            {
+                "documents",
+                "document_builder",
+                "document_build",
+                "document_vault",
+                "document_agent",
+                "crop_insurance",
+                "credit_sources",
+            }
+        )
+    if "equipment" in topics:
+        allowed.update(
+            {
+                "equipment_marketplace",
+                "equipment_hub",
+                "rental",
+                "equipment_rental_rates",
+                "my_equipment",
+                "my_bookings",
+                "earnings",
+                "rental_ticket",
+                "rental_rate_detail",
+                "listing_details",
+            }
+        )
+    if "soil" in topics:
+        allowed.update({"soil_health", "soil_moisture", "crop_intelligence", "farm_viz"})
+    if "crop" in topics:
+        allowed.update({"crop_cycle", "crop_intelligence", "crop_doctor", "contract_farming", "soil_health"})
+    if "livestock" in topics:
+        allowed.update({"cattle"})
+
+    fallback = _normalize_ui_action_tag(fallback_redirect)
+    if fallback:
+        allowed.add(fallback)
+
+    if not allowed:
+        return {fallback} if fallback else {"home"}
+    return allowed
+
+
+def _action_tag_topic(tag: str) -> str:
+    market = {"marketplace", "market_prices", "market_strategy", "add_listing"}
+    weather = {"weather", "soil_moisture"}
+    scheme = {"documents", "document_builder", "document_build", "document_vault", "document_agent", "crop_insurance", "credit_sources"}
+    equipment = {"equipment_marketplace", "equipment_hub", "rental", "equipment_rental_rates", "my_equipment", "my_bookings", "earnings", "rental_ticket", "rental_rate_detail", "listing_details"}
+    crop = {"crop_cycle", "crop_intelligence", "crop_doctor", "contract_farming", "soil_health"}
+    if tag == "calendar":
+        return "calendar"
+    if tag in market:
+        return "market"
+    if tag in weather:
+        return "weather"
+    if tag in scheme:
+        return "scheme"
+    if tag in equipment:
+        return "equipment"
+    if tag == "cattle":
+        return "livestock"
+    if tag in crop:
+        return "crop"
+    return "general"
+
+
+def _default_tag_for_topic(topic: str) -> str:
+    defaults = {
+        "calendar": "calendar",
+        "market": "marketplace",
+        "weather": "weather",
+        "scheme": "documents",
+        "equipment": "equipment_marketplace",
+        "soil": "soil_health",
+        "crop": "crop_cycle",
+        "livestock": "cattle",
+    }
+    return defaults.get(topic, "")
+
+
+def _filter_ui_action_cards_for_intent(
+    cards: list[str],
+    message: str,
+    fallback_redirect: str | None,
+) -> list[str]:
+    sanitized = _sanitize_ui_action_cards(cards, fallback_redirect=None)
+    allowed = _allowed_action_tags_for_message(message, fallback_redirect=fallback_redirect)
+    filtered = [c for c in sanitized if c in allowed]
+
+    topics = _intent_topics_for_actions(message)
+    covered_topics = {_action_tag_topic(c) for c in filtered}
+    for topic in topics:
+        if topic in covered_topics:
+            continue
+        default_tag = _default_tag_for_topic(topic)
+        if default_tag and default_tag in allowed and default_tag not in filtered:
+            filtered.append(default_tag)
+            covered_topics.add(topic)
+        if len(filtered) >= 3:
+            break
+
+    fallback = _normalize_ui_action_tag(fallback_redirect)
+    if not filtered and fallback:
+        filtered = [fallback]
+    if not filtered:
+        filtered = ["home"]
+    return filtered[:3]
+
+
+async def _infer_ui_action_cards_with_llm(message: str, result: dict) -> list[str]:
+    if not isinstance(result, dict):
+        return []
+
+    fallback_redirect = str((result or {}).get("ui_redirect_tag") or "")
+    existing = result.get("ui_action_cards")
+    if isinstance(existing, list):
+        sanitized_existing = _filter_ui_action_cards_for_intent(
+            [str(x) for x in existing],
+            message=message,
+            fallback_redirect=fallback_redirect,
+        )
+        if sanitized_existing:
+            return sanitized_existing
+
+    response_text = str((result or {}).get("response") or "").strip()
+    suggestions = (result or {}).get("suggestions") or []
+    suggestions_text = "\n".join(
+        f"- {str(s).strip()}" for s in suggestions if str(s).strip()
+    )
+
+    prompt = (
+        "Select UI action cards for a farming assistant response. "
+        "Return ONLY JSON array of action tags with max length 3. "
+        "No explanation, no markdown. "
+        "Choose only from this exact allowed list:\n"
+        f"{sorted(_UI_ACTION_ALLOWED_TAGS)}\n\n"
+        "Rules:\n"
+        "- Pick only cards directly relevant to user's current intent.\n"
+        "- Prefer concrete destination screens over generic home.\n"
+        "- If multiple intents exist (e.g., schemes + calendar), include both.\n"
+        "- Never include unrelated cards.\n\n"
+        f"User message:\n{message}\n\n"
+        f"Assistant response:\n{response_text}\n\n"
+        f"Assistant suggestions:\n{suggestions_text}\n\n"
+        f"Fallback redirect tag: {fallback_redirect or 'none'}"
+    )
+
+    try:
+        raw = await asyncio.to_thread(
+            lambda: generate_groq_reply(message=prompt, language="en").get("response", "")
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Action-card LLM selection failed: {exc}")
+        return _filter_ui_action_cards_for_intent(
+            [],
+            message=message,
+            fallback_redirect=fallback_redirect,
+        )
+
+    text = str(raw or "").strip()
+    parsed_cards: list[str] = []
+
+    def _pull_cards(value):
+        if isinstance(value, list):
+            return [str(v) for v in value]
+        if isinstance(value, dict):
+            for key in ("ui_action_cards", "action_cards", "cards", "actions"):
+                arr = value.get(key)
+                if isinstance(arr, list):
+                    return [str(v) for v in arr]
+        return []
+
+    try:
+        obj = json.loads(text)
+        parsed_cards = _pull_cards(obj)
+    except Exception:
+        m = re.search(r"\[[\s\S]*?\]", text)
+        if m:
+            try:
+                obj = json.loads(m.group(0))
+                parsed_cards = _pull_cards(obj)
+            except Exception:
+                parsed_cards = []
+
+    if not parsed_cards:
+        parsed_cards = re.findall(r"[a-zA-Z_\-]{3,}", text)
+
+    return _filter_ui_action_cards_for_intent(
+        parsed_cards,
+        message=message,
+        fallback_redirect=fallback_redirect,
+    )
 
 
 class ChatRequest(BaseModel):
@@ -479,6 +786,13 @@ def _infer_ui_redirect_tag(message: str, result: dict) -> str:
     agent_used = str((result or {}).get("agent_used") or "").lower()
 
     if any(k in msg for k in [
+        "calendar", "schedule", "task", "tasks", "event", "events", "reminder", "undo", "reschedule",
+        "calendario", "recordatorio", "agenda", "calendrier",
+        "ಕ್ಯಾಲೆಂಡರ್", "ಜ್ಞಾಪನೆ", "ಕಾರ್ಯ",
+    ]):
+        return "calendar"
+
+    if any(k in msg for k in [
         "equipment", "rental", "tractor", "harvester", "sprayer", "drone", "weeder", "rotavator",
         "equipo", "alquiler", "maquinaria",
     ]):
@@ -500,8 +814,6 @@ def _infer_ui_redirect_tag(message: str, result: dict) -> str:
         return "schemes"
     if any(k in msg for k in ["livestock", "dairy", "cattle", "goat", "poultry"]):
         return "livestock"
-    if any(k in msg for k in ["calendar", "schedule", "task", "reminder", "calendario", "recordatorio"]):
-        return "calendar"
     return "home"
 
 
@@ -519,19 +831,19 @@ def _normalize_response_mode(mode: str | None) -> str:
 def _topic_signals(message: str) -> set[str]:
     msg = (message or "").lower()
     topics = set()
-    if re.search(r"price|rate|mandi|market|sell|bhav|daam", msg):
+    if re.search(r"price|rate|mandi|market|sell|bhav|daam|precio|mercado|venta|ಬೆಲೆ|ಮಾರುಕಟ್ಟೆ", msg):
         topics.add("market")
-    if re.search(r"weather|rain|forecast|temperature|humidity", msg):
+    if re.search(r"weather|rain|forecast|temperature|humidity|clima|lluvia|temperatura|ಹವಾಮಾನ|ಮಳೆ", msg):
         topics.add("weather")
-    if re.search(r"scheme|subsidy|kcc|pm-kisan|pmfby|eligibility", msg):
+    if re.search(r"scheme|subsidy|kcc|pm-kisan|pmfby|eligibility|subsidio|esquema|ಯೋಜನೆ", msg):
         topics.add("scheme")
-    if re.search(r"equipment|tractor|harvester|sprayer|rental", msg):
+    if re.search(r"equipment|tractor|harvester|sprayer|rental|equipo|alquiler|maquinaria", msg):
         topics.add("equipment")
-    if re.search(r"soil|moisture|ph|nitrogen", msg):
+    if re.search(r"soil|moisture|ph|nitrogen|suelo|humedad|ಮಣ್ಣು", msg):
         topics.add("soil")
-    if re.search(r"calendar|event|schedule|task|reminder|undo", msg):
+    if re.search(r"calendar|event|events|schedule|task|tasks|reminder|undo|reschedule|calendario|recordatorio|agenda|ಕ್ಯಾಲೆಂಡರ್|ಜ್ಞಾಪನೆ|ಕಾರ್ಯ", msg):
         topics.add("calendar")
-    if re.search(r"crop|sowing|harvest|pest|disease", msg):
+    if re.search(r"crop|sowing|harvest|pest|disease|cultivo|siembra|cosecha|ಬೆಳೆ", msg):
         topics.add("crop")
     return topics
 
@@ -762,17 +1074,20 @@ async def _enhance_chat_result(
         result["response"] = enriched
         result["response_mode"] = mode
         result["suggestions"] = _build_followup_suggestions(message, result)
+        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
         return result
 
     if mode == "voice-friendly":
         result["response"] = enriched
         result["response_mode"] = mode
         result["suggestions"] = _build_followup_suggestions(message, result)
+        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
         return result
 
     result["response"] = enriched
     result["response_mode"] = mode
     result["suggestions"] = _build_followup_suggestions(message, result)
+    result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
     return result
 
 
@@ -965,6 +1280,11 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
             "language": pref_result.get("language") or body.language,
             "response_mode": "detailed",
             "suggestions": pref_result.get("suggestions") or [],
+            "ui_redirect_tag": pref_result.get("ui_redirect_tag") or "home",
+            "ui_action_cards": _sanitize_ui_action_cards(
+                pref_result.get("ui_action_cards") if isinstance(pref_result.get("ui_action_cards"), list) else [],
+                fallback_redirect=str(pref_result.get("ui_redirect_tag") or "home"),
+            ),
             "sources": [],
             "requires_live_fetch": False,
             "agentic_primary_agent": None,
@@ -1041,6 +1361,11 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
         )
     )
 
+    prepare_redirect = _infer_ui_redirect_tag(
+        msg_text,
+        {"agent_used": partial.get("agentic_primary_agent")},
+    )
+
     return {
         "request_id": request_id,
         "session_id": session_id,
@@ -1051,6 +1376,8 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
         "language": partial.get("language") or effective_language,
         "response_mode": effective_mode,
         "suggestions": _build_followup_suggestions(msg_text, {"ui_redirect_tag": "home"}),
+        "ui_redirect_tag": prepare_redirect,
+        "ui_action_cards": _sanitize_ui_action_cards([], fallback_redirect=prepare_redirect),
         "sources": partial.get("sources") or [],
         "requires_live_fetch": requires_live_fetch,
         "agentic_primary_agent": partial.get("agentic_primary_agent"),
@@ -1090,6 +1417,8 @@ async def chat_finalize(body: ChatFinalizeRequest, user=Depends(get_current_user
                     "final_response": job.get("final_response") or "",
                     "merged_response": job.get("merged_response") or "",
                     "suggestions": (live_payload or {}).get("suggestions") or [],
+                    "ui_redirect_tag": (live_payload or {}).get("ui_redirect_tag") or "",
+                    "ui_action_cards": (live_payload or {}).get("ui_action_cards") or [],
                     "source_provenance": job.get("source_provenance") or [],
                     "result": live_payload,
                     "request_state": {

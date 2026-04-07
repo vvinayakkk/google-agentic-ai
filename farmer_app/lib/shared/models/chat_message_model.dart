@@ -12,6 +12,7 @@ class ChatMessage {
   final bool isLoading;
   final List<String>? suggestions;
   final String? uiRedirectTag;
+  final List<String>? uiActionCards;
 
   const ChatMessage({
     this.messageId,
@@ -27,6 +28,7 @@ class ChatMessage {
     this.isLoading = false,
     this.suggestions,
     this.uiRedirectTag,
+    this.uiActionCards,
   });
 
   bool get isUser => role == 'user';
@@ -34,10 +36,17 @@ class ChatMessage {
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     List<String>? sugg;
+    List<String>? actionCards;
     if (json['suggestions'] is List) {
       sugg = (json['suggestions'] as List).whereType<String>().toList(
         growable: false,
       );
+    }
+    if (json['ui_action_cards'] is List) {
+      actionCards = (json['ui_action_cards'] as List)
+          .whereType<String>()
+          .where((e) => e.trim().isNotEmpty)
+          .toList(growable: false);
     }
     return ChatMessage(
       messageId: json['message_id'] as String?,
@@ -54,6 +63,7 @@ class ChatMessage {
           : DateTime.now(),
       suggestions: sugg,
       uiRedirectTag: json['ui_redirect_tag'] as String?,
+      uiActionCards: actionCards,
     );
   }
 

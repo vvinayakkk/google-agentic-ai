@@ -56,14 +56,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _turnLanguageHint;
   int _micWavePhase = 0;
   int _loadingHintIndex = 0;
-  String _loadingHint = 'Searching...';
+  String _loadingHint = 'Thinking...';
   Timer? _micWaveTimer;
   Timer? _loadingHintTimer;
   ChatMessage? _replyTarget;
 
   static const List<String> _loadingHints = <String>[
-    'Gathering context...',
-    'Fetching response...',
+    'Understanding your question...',
+    'Detecting language and intent...',
+    'Gathering profile and chat context...',
+    'Planning agent workflow and tool calls...',
+    'Collecting live data from services...',
+    'Reasoning over retrieved evidence...',
+    'Drafting a farmer-friendly answer...',
+    'Verifying suggestions and next actions...',
+    'Finalizing response...',
   ];
 
   @override
@@ -254,6 +261,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final finalResult =
             (payload['result'] as Map<String, dynamic>?) ?? <String, dynamic>{};
         List<String>? suggestions;
+        List<String>? uiActionCards;
         if (finalResult['suggestions'] is List) {
           suggestions = (finalResult['suggestions'] as List)
               .whereType<String>()
@@ -261,6 +269,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .toList(growable: false);
         } else if (payload['suggestions'] is List) {
           suggestions = (payload['suggestions'] as List)
+              .whereType<String>()
+              .where((e) => e.trim().isNotEmpty)
+              .toList(growable: false);
+        }
+        if (finalResult['ui_action_cards'] is List) {
+          uiActionCards = (finalResult['ui_action_cards'] as List)
+              .whereType<String>()
+              .where((e) => e.trim().isNotEmpty)
+              .toList(growable: false);
+        } else if (payload['ui_action_cards'] is List) {
+          uiActionCards = (payload['ui_action_cards'] as List)
               .whereType<String>()
               .where((e) => e.trim().isNotEmpty)
               .toList(growable: false);
@@ -299,6 +318,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 stage: 'final',
                 suggestions: suggestions,
                 uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
+                uiActionCards: uiActionCards,
               ),
             );
           }
@@ -472,12 +492,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             .toLowerCase();
         var completed = false;
         if (requestId.isNotEmpty) {
-          _loadingHint = _loadingHints.last;
+          setState(() {
+            _loadingHintIndex = 4;
+            _loadingHint = _loadingHints[_loadingHintIndex];
+          });
           completed = await _pollFinalizeAndRender(agent, requestId);
         } else if (prepareStatus == 'completed' && partialText.isNotEmpty) {
           final uiRedirectTag = (prepare['ui_redirect_tag'] ?? '')
               .toString()
               .trim();
+          List<String>? uiActionCards;
+          if (prepare['ui_action_cards'] is List) {
+            uiActionCards = (prepare['ui_action_cards'] as List)
+                .whereType<String>()
+                .where((e) => e.trim().isNotEmpty)
+                .toList(growable: false);
+          }
           setState(() {
             if (_messages.isNotEmpty && _messages.first.isLoading) {
               _messages.removeAt(0);
@@ -490,6 +520,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 timestamp: DateTime.now(),
                 stage: 'final',
                 uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
+                uiActionCards: uiActionCards,
               ),
             );
           });
@@ -823,6 +854,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           key: ValueKey(keySeed),
                           message: msg,
                           loadingText: _loadingHint,
+                          allowTypingAnimation:
+                              i == 0 && msg.isAssistant && !msg.isLoading,
                           isPlaying:
                               _playingMessageId ==
                               (msg.messageId ??
@@ -1034,9 +1067,10 @@ class _ChipInfo {
 
 // ── Chat bubble ──────────────────────────────────────────
 
-class _ChatBubble extends StatelessWidget {
+class _ChatBubble extends StatefulWidget {
   final ChatMessage message;
   final String loadingText;
+  final bool allowTypingAnimation;
   final bool isPlaying;
   final VoidCallback? onTts;
   final VoidCallback? onReply;
@@ -1046,75 +1080,424 @@ class _ChatBubble extends StatelessWidget {
     super.key,
     required this.message,
     this.loadingText = 'Gathering context...',
+    this.allowTypingAnimation = true,
     this.isPlaying = false,
     this.onTts,
     this.onReply,
     this.onSuggestionTap,
   });
 
-  ({String label, IconData icon, String route})? _contextAction() {
-    final tag = (message.uiRedirectTag ?? '').trim().toLowerCase();
-    final text = message.content.toLowerCase();
+  @override
+  State<_ChatBubble> createState() => _ChatBubbleState();
 
-    if (tag == 'weather' ||
-        RegExp(
-          r'weather|rain|forecast|temperature|humidity|clima|lluvia|temperatura|ಹವಾಮಾನ|ಮಳೆ',
-        ).hasMatch(text)) {
-      return (
-        label: 'Open Weather',
-        icon: Icons.cloud_outlined,
-        route: RoutePaths.weather,
-      );
+  List<String> _normalizedActionTags() {
+    final alias = <String, String>{
+      'market': 'marketplace',
+      'scheme': 'documents',
+      'schemes': 'documents',
+      'equipment': 'equipment_marketplace',
+      'livestock': 'cattle',
+      'live-voice': 'live_voice',
+      'livevoice': 'live_voice',
+      'chat-history': 'chat_history',
+      'soilmoisture': 'soil_moisture',
+      'farmviz': 'farm_viz',
+      'languageselect': 'language_select',
+    };
+    final out = <String>[];
+    final seen = <String>{};
+
+    void addTag(String? rawTag) {
+      var key = (rawTag ?? '').trim().toLowerCase();
+      if (key.isEmpty) return;
+      key = key.replaceAll('-', '_').replaceAll(' ', '_');
+      key = alias[key] ?? key;
+      if (seen.add(key)) out.add(key);
     }
-    if (tag == 'market' ||
-        tag == 'marketplace' ||
-        RegExp(
-          r'mandi|market|price|rate|bhav|daam|mercado|precio|venta|ಬೆಲೆ|ಮಾರುಕಟ್ಟೆ',
-        ).hasMatch(text)) {
-      return (
-        label: 'Open Marketplace',
-        icon: Icons.storefront_outlined,
-        route: RoutePaths.marketplace,
-      );
+
+    for (final t in message.uiActionCards ?? const <String>[]) {
+      addTag(t);
     }
-    if (tag == 'schemes' ||
-        RegExp(
-          r'scheme|subsidy|pm-kisan|kcc|pmfby|subsidio|esquema|ಯೋಜನೆ',
-        ).hasMatch(text)) {
-      return (
-        label: 'Open Schemes',
-        icon: Icons.account_balance_wallet_outlined,
-        route: '${RoutePaths.marketplace}?section=schemes',
-      );
+
+    if (out.isEmpty) {
+      addTag(message.uiRedirectTag);
     }
-    if (tag == 'equipment' ||
-        RegExp(
-          r'equipment|rental|tractor|harvester|sprayer|equipo|alquiler|maquinaria',
-        ).hasMatch(text)) {
-      return (
-        label: 'Open Equipment',
-        icon: Icons.agriculture_outlined,
-        route: RoutePaths.equipmentMarketplace,
-      );
+
+    return out;
+  }
+
+  List<({String label, IconData icon, String route})> _contextActions() {
+    final actionsByTag =
+        <String, ({String label, IconData icon, String route})>{
+          'home': (
+            label: 'Open Home',
+            icon: Icons.home_outlined,
+            route: RoutePaths.home,
+          ),
+          'featured': (
+            label: 'Open Featured',
+            icon: Icons.star_outline,
+            route: RoutePaths.featured,
+          ),
+          'chat': (
+            label: 'Open Chat',
+            icon: Icons.chat_bubble_outline,
+            route: RoutePaths.chat,
+          ),
+          'live_voice': (
+            label: 'Open Live Voice',
+            icon: Icons.keyboard_voice_outlined,
+            route: RoutePaths.liveVoice,
+          ),
+          'chat_history': (
+            label: 'Open Chat History',
+            icon: Icons.history_outlined,
+            route: RoutePaths.chatHistory,
+          ),
+          'profile': (
+            label: 'Open Profile',
+            icon: Icons.person_outline,
+            route: RoutePaths.profile,
+          ),
+          'crop_cycle': (
+            label: 'Open Crop Cycle',
+            icon: Icons.timeline_outlined,
+            route: RoutePaths.cropCycle,
+          ),
+          'crop_intelligence': (
+            label: 'Open Crop Intelligence',
+            icon: Icons.insights_outlined,
+            route: RoutePaths.cropIntelligence,
+          ),
+          'crop_doctor': (
+            label: 'Open Crop Doctor',
+            icon: Icons.medical_services_outlined,
+            route: RoutePaths.cropDoctor,
+          ),
+          'contract_farming': (
+            label: 'Open Contract Farming',
+            icon: Icons.description_outlined,
+            route: RoutePaths.contractFarming,
+          ),
+          'credit_sources': (
+            label: 'Open Credit Sources',
+            icon: Icons.account_balance_outlined,
+            route: RoutePaths.creditSources,
+          ),
+          'crop_insurance': (
+            label: 'Open Crop Insurance',
+            icon: Icons.shield_outlined,
+            route: RoutePaths.cropInsurance,
+          ),
+          'market_strategy': (
+            label: 'Open Market Strategy',
+            icon: Icons.trending_up_outlined,
+            route: RoutePaths.marketStrategy,
+          ),
+          'power_supply': (
+            label: 'Open Power Supply',
+            icon: Icons.bolt_outlined,
+            route: RoutePaths.powerSupply,
+          ),
+          'soil_health': (
+            label: 'Open Soil Health',
+            icon: Icons.science_outlined,
+            route: RoutePaths.soilHealth,
+          ),
+          'marketplace': (
+            label: 'Open Marketplace',
+            icon: Icons.storefront_outlined,
+            route: RoutePaths.marketplace,
+          ),
+          'market_prices': (
+            label: 'Open Market Prices',
+            icon: Icons.attach_money_outlined,
+            route: RoutePaths.marketPrices,
+          ),
+          'add_listing': (
+            label: 'Open Add Listing',
+            icon: Icons.add_box_outlined,
+            route: RoutePaths.addListing,
+          ),
+          'rental': (
+            label: 'Open Rental Hub',
+            icon: Icons.build_outlined,
+            route: RoutePaths.rental,
+          ),
+          'equipment_hub': (
+            label: 'Open Equipment Hub',
+            icon: Icons.handyman_outlined,
+            route: RoutePaths.equipmentHub,
+          ),
+          'equipment_marketplace': (
+            label: 'Open Equipment',
+            icon: Icons.agriculture_outlined,
+            route: RoutePaths.equipmentMarketplace,
+          ),
+          'rental_ticket': (
+            label: 'Open Rental Ticket',
+            icon: Icons.confirmation_number_outlined,
+            route: RoutePaths.rentalTicket,
+          ),
+          'rental_rate_detail': (
+            label: 'Open Rental Rate Detail',
+            icon: Icons.receipt_long_outlined,
+            route: RoutePaths.rentalRateDetail,
+          ),
+          'my_equipment': (
+            label: 'Open My Equipment',
+            icon: Icons.inventory_2_outlined,
+            route: RoutePaths.myEquipment,
+          ),
+          'listing_details': (
+            label: 'Open Listing Details',
+            icon: Icons.bookmark_outline,
+            route: RoutePaths.listingDetails,
+          ),
+          'my_bookings': (
+            label: 'Open My Bookings',
+            icon: Icons.event_available_outlined,
+            route: RoutePaths.myBookings,
+          ),
+          'earnings': (
+            label: 'Open Earnings',
+            icon: Icons.payments_outlined,
+            route: RoutePaths.earnings,
+          ),
+          'weather': (
+            label: 'Open Weather',
+            icon: Icons.cloud_outlined,
+            route: RoutePaths.weather,
+          ),
+          'soil_moisture': (
+            label: 'Open Soil Moisture',
+            icon: Icons.water_drop_outlined,
+            route: RoutePaths.soilMoisture,
+          ),
+          'cattle': (
+            label: 'Open Cattle',
+            icon: Icons.pets_outlined,
+            route: RoutePaths.cattle,
+          ),
+          'calendar': (
+            label: 'Open Calendar',
+            icon: Icons.calendar_month_outlined,
+            route: RoutePaths.calendar,
+          ),
+          'notifications': (
+            label: 'Open Notifications',
+            icon: Icons.notifications_outlined,
+            route: RoutePaths.notifications,
+          ),
+          'upi': (
+            label: 'Open UPI',
+            icon: Icons.account_balance_wallet_outlined,
+            route: RoutePaths.upi,
+          ),
+          'documents': (
+            label: 'Open Schemes',
+            icon: Icons.account_balance_wallet_outlined,
+            route: RoutePaths.documents,
+          ),
+          'document_builder': (
+            label: 'Open Documents',
+            icon: Icons.description_outlined,
+            route: RoutePaths.documentBuilder,
+          ),
+          'document_build': (
+            label: 'Open Document Build',
+            icon: Icons.description_outlined,
+            route: RoutePaths.documentBuild,
+          ),
+          'document_vault': (
+            label: 'Open Document Vault',
+            icon: Icons.folder_outlined,
+            route: RoutePaths.documentVault,
+          ),
+          'document_agent': (
+            label: 'Open Document Agent',
+            icon: Icons.chat_bubble_outline,
+            route: RoutePaths.documentAgent,
+          ),
+          'equipment_rental_rates': (
+            label: 'Open Equipment Rates',
+            icon: Icons.attach_money_outlined,
+            route: RoutePaths.equipmentRentalRates,
+          ),
+          'waste': (
+            label: 'Open Waste',
+            icon: Icons.recycling_outlined,
+            route: RoutePaths.waste,
+          ),
+          'mental_health': (
+            label: 'Open Mental Health',
+            icon: Icons.self_improvement_outlined,
+            route: RoutePaths.mentalHealth,
+          ),
+          'farm_viz': (
+            label: 'Open Farm Viz',
+            icon: Icons.map_outlined,
+            route: RoutePaths.farmViz,
+          ),
+          'language_select': (
+            label: 'Open Language',
+            icon: Icons.language_outlined,
+            route: RoutePaths.languageSelect,
+          ),
+          'login': (
+            label: 'Open Login',
+            icon: Icons.person_outline,
+            route: RoutePaths.login,
+          ),
+          'fetching_location': (
+            label: 'Open Location Setup',
+            icon: Icons.map_outlined,
+            route: RoutePaths.fetchingLocation,
+          ),
+          'splash': (
+            label: 'Open Splash',
+            icon: Icons.star_outline,
+            route: RoutePaths.splash,
+          ),
+        };
+
+    final out = <({String label, IconData icon, String route})>[];
+    final seen = <String>{};
+    for (final tag in _normalizedActionTags()) {
+      final action = actionsByTag[tag];
+      if (action == null) continue;
+      if (seen.add(action.route)) {
+        out.add(action);
+      }
+      if (out.length >= 4) break;
     }
-    if (tag == 'calendar' ||
-        RegExp(
-          r'calendar|schedule|task|reminder|calendario|recordatorio',
-        ).hasMatch(text)) {
-      return (
-        label: 'Open Calendar',
-        icon: Icons.calendar_month_outlined,
-        route: RoutePaths.calendar,
-      );
+    return out;
+  }
+
+  String _messageTopic() {
+    final tags = _normalizedActionTags().toSet();
+    if (tags.contains('calendar')) {
+      return 'calendar';
     }
-    return null;
+    if (tags.contains('weather') || tags.contains('soil_moisture')) {
+      return 'weather';
+    }
+    if (tags.contains('marketplace') ||
+        tags.contains('market_prices') ||
+        tags.contains('market_strategy') ||
+        tags.contains('add_listing')) {
+      return 'market';
+    }
+    if (tags.contains('equipment_marketplace') ||
+        tags.contains('equipment_hub') ||
+        tags.contains('rental') ||
+        tags.contains('equipment_rental_rates')) {
+      return 'equipment';
+    }
+    if (tags.contains('documents') ||
+        tags.contains('document_builder') ||
+        tags.contains('document_build') ||
+        tags.contains('document_vault') ||
+        tags.contains('document_agent') ||
+        tags.contains('crop_insurance') ||
+        tags.contains('credit_sources')) {
+      return 'schemes';
+    }
+    if (tags.contains('cattle')) {
+      return 'livestock';
+    }
+    if (tags.contains('crop_cycle') ||
+        tags.contains('crop_intelligence') ||
+        tags.contains('crop_doctor') ||
+        tags.contains('soil_health')) {
+      return 'crop';
+    }
+    return 'general';
+  }
+
+  bool _suggestionMatchesTopic(String suggestion, String topic) {
+    final s = suggestion.toLowerCase();
+    switch (topic) {
+      case 'calendar':
+        return RegExp(
+          r'calendar|event|schedule|task|reminder|undo|reschedule',
+        ).hasMatch(s);
+      case 'weather':
+        return RegExp(
+          r'weather|rain|forecast|temperature|humidity|soil',
+        ).hasMatch(s);
+      case 'market':
+        return RegExp(r'market|mandi|price|rate|sell|buyer').hasMatch(s);
+      case 'equipment':
+        return RegExp(
+          r'equipment|rental|tractor|harvester|sprayer',
+        ).hasMatch(s);
+      case 'schemes':
+        return RegExp(
+          r'scheme|subsidy|eligibility|document|pm-kisan|kcc|pmfby',
+        ).hasMatch(s);
+      case 'livestock':
+        return RegExp(r'livestock|dairy|cattle|goat|poultry').hasMatch(s);
+      default:
+        return true;
+    }
+  }
+
+  List<String> _relevantSuggestions() {
+    final topic = _messageTopic();
+    final all = (message.suggestions ?? const <String>[])
+        .where((s) => s.trim().isNotEmpty)
+        .toList(growable: false);
+    if (all.isEmpty || topic == 'general')
+      return all.take(4).toList(growable: false);
+
+    final filtered = all
+        .where((s) => _suggestionMatchesTopic(s, topic))
+        .toList(growable: false);
+
+    if (filtered.isNotEmpty) {
+      return filtered.take(4).toList(growable: false);
+    }
+    return all.take(2).toList(growable: false);
+  }
+}
+
+class _ChatBubbleState extends State<_ChatBubble> {
+  bool _typingComplete = false;
+
+  bool _shouldAnimateTypingFor(ChatMessage msg) {
+    return widget.allowTypingAnimation &&
+        !msg.isUser &&
+        DateTime.now().difference(msg.timestamp).inSeconds <= 15;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _typingComplete = !_shouldAnimateTypingFor(widget.message);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChatBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final messageChanged =
+        oldWidget.message.messageId != widget.message.messageId ||
+        oldWidget.message.content != widget.message.content ||
+        oldWidget.message.timestamp != widget.message.timestamp ||
+        oldWidget.message.isLoading != widget.message.isLoading ||
+        oldWidget.message.stage != widget.message.stage;
+    if (messageChanged) {
+      _typingComplete = !_shouldAnimateTypingFor(widget.message);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (message.isLoading) return _TypingIndicator(text: loadingText);
+    if (widget.message.isLoading) {
+      return _TypingIndicator(text: widget.loadingText);
+    }
 
-    final isUser = message.isUser;
+    final isUser = widget.message.isUser;
     final isDark = context.isDark;
     final userBg = isDark
         ? const Color(0xFF233146).withValues(alpha: 0.86)
@@ -1122,17 +1505,20 @@ class _ChatBubble extends StatelessWidget {
     final assistantBg = isDark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.white.withValues(alpha: 0.42);
-    final replyText = (message.replyToSnippet ?? '').trim();
-    final shouldAnimateTyping =
-        !isUser && DateTime.now().difference(message.timestamp).inSeconds <= 15;
+    final replyText = (widget.message.replyToSnippet ?? '').trim();
+    final shouldAnimateTyping = _shouldAnimateTypingFor(widget.message);
+    final showTailUi = !shouldAnimateTyping || _typingComplete;
+    final contextActions = isUser
+        ? const <({String label, IconData icon, String route})>[]
+        : widget._contextActions();
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onHorizontalDragEnd: (details) {
-          if (onReply == null) return;
+          if (widget.onReply == null) return;
           final vx = details.primaryVelocity ?? 0;
-          if (vx.abs() > 260) onReply!.call();
+          if (vx.abs() > 260) widget.onReply!.call();
         },
         child: Container(
           constraints: BoxConstraints(
@@ -1189,7 +1575,7 @@ class _ChatBubble extends StatelessWidget {
               ],
               if (isUser)
                 Text(
-                  message.content,
+                  widget.message.content,
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: isDark ? Colors.white : const Color(0xFF1C2430),
                     fontWeight: FontWeight.w500,
@@ -1197,22 +1583,26 @@ class _ChatBubble extends StatelessWidget {
                 )
               else
                 _TypewriterMarkdown(
-                  text: message.content,
+                  text: widget.message.content,
                   animate: shouldAnimateTyping,
+                  onCompleted: () {
+                    if (!mounted || _typingComplete) return;
+                    setState(() => _typingComplete = true);
+                  },
                 ),
               if (!isUser) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (onTts != null)
+                    if (widget.onTts != null)
                       InkWell(
-                        onTap: onTts,
+                        onTap: widget.onTts,
                         borderRadius: AppRadius.smAll,
                         child: Padding(
                           padding: const EdgeInsets.all(4),
                           child: Icon(
-                            isPlaying
+                            widget.isPlaying
                                 ? Icons.stop_circle_outlined
                                 : Icons.volume_up_outlined,
                             size: 18,
@@ -1223,7 +1613,9 @@ class _ChatBubble extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     InkWell(
                       onTap: () {
-                        Clipboard.setData(ClipboardData(text: message.content));
+                        Clipboard.setData(
+                          ClipboardData(text: widget.message.content),
+                        );
                         context.showSnack('chat.copied'.tr());
                       },
                       borderRadius: AppRadius.smAll,
@@ -1238,31 +1630,41 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
-                if ((message.stage == 'final' || !(message.isPartial)) &&
-                    !message.isLoading) ...[
+                if ((widget.message.stage == 'final' ||
+                        !(widget.message.isPartial)) &&
+                    !widget.message.isLoading &&
+                    showTailUi) ...[
                   const SizedBox(height: 8),
-                  if (_contextAction() case final action?)
+                  if (contextActions.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
-                      child: ActionChip(
-                        label: Text(action.label),
-                        avatar: Icon(action.icon, size: 16),
-                        onPressed: () => context.push(action.route),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: contextActions
+                            .map(
+                              (action) => ActionChip(
+                                label: Text(action.label),
+                                avatar: Icon(action.icon, size: 16),
+                                onPressed: () => context.push(action.route),
+                              ),
+                            )
+                            .toList(growable: false),
                       ),
                     ),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      ...((message.suggestions ?? const <String>[])
-                          .where((s) => s.trim().isNotEmpty)
+                      ...(widget
+                          ._relevantSuggestions()
                           .take(4)
                           .map(
                             (s) => ActionChip(
                               label: Text(s),
-                              onPressed: onSuggestionTap == null
+                              onPressed: widget.onSuggestionTap == null
                                   ? null
-                                  : () => onSuggestionTap!(s),
+                                  : () => widget.onSuggestionTap!(s),
                             ),
                           )),
                     ],
@@ -1280,8 +1682,13 @@ class _ChatBubble extends StatelessWidget {
 class _TypewriterMarkdown extends StatefulWidget {
   final String text;
   final bool animate;
+  final VoidCallback? onCompleted;
 
-  const _TypewriterMarkdown({required this.text, required this.animate});
+  const _TypewriterMarkdown({
+    required this.text,
+    required this.animate,
+    this.onCompleted,
+  });
 
   @override
   State<_TypewriterMarkdown> createState() => _TypewriterMarkdownState();
@@ -1290,6 +1697,13 @@ class _TypewriterMarkdown extends StatefulWidget {
 class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
   Timer? _timer;
   int _visibleChars = 0;
+  bool _didNotifyCompleted = false;
+
+  void _notifyCompleted() {
+    if (_didNotifyCompleted) return;
+    _didNotifyCompleted = true;
+    widget.onCompleted?.call();
+  }
 
   @override
   void initState() {
@@ -1307,15 +1721,18 @@ class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
 
   void _restartAnimation() {
     _timer?.cancel();
+    _didNotifyCompleted = false;
 
     final text = widget.text;
     if (text.isEmpty) {
       setState(() => _visibleChars = 0);
+      _notifyCompleted();
       return;
     }
 
     if (!widget.animate) {
       setState(() => _visibleChars = text.length);
+      _notifyCompleted();
       return;
     }
 
@@ -1333,6 +1750,7 @@ class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
       if (next >= text.length) {
         setState(() => _visibleChars = text.length);
         timer.cancel();
+        _notifyCompleted();
       } else {
         setState(() => _visibleChars = next);
       }
