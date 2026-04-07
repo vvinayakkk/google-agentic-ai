@@ -1811,6 +1811,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   Timer? _thoughtTimer;
   Timer? _elapsedTimer;
   int _elapsedSeconds = 0;
+  bool _expanded = true;
   final List<String> _thoughtFeed = <String>[];
   int _thoughtCursor = 0;
 
@@ -1946,84 +1947,132 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final shellColor = context.appColors.card.withValues(
+      alpha: isDark ? 0.92 : 0.88,
+    );
+    final borderColor = context.appColors.border.withValues(
+      alpha: isDark ? 0.72 : 0.62,
+    );
+    final bodyColor = context.appColors.textSecondary;
+    final phaseColor = context.colors.onSurface.withValues(alpha: 0.9);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.86,
+        ),
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: context.appColors.card,
+          color: shellColor,
           borderRadius: AppRadius.mdAll,
-          border: Border.all(color: context.appColors.border, width: 0.5),
+          border: Border.all(color: borderColor, width: 0.9),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'Kisan AI is thinking',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 28,
-                  child: AnimatedBuilder(
-                    animation: _anim,
-                    builder: (context, _) {
-                      final t = _anim.value;
-                      final dots = (t * 3).floor() % 3 + 1;
-                      return Text(
-                        '.' * dots,
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.appColors.textSecondary,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${_elapsedSeconds}s',
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.appColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.text,
-              style: context.textTheme.bodySmall?.copyWith(
-                color: context.appColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ..._thoughtFeed.map(
-              (line) => Padding(
-                padding: const EdgeInsets.only(bottom: 3),
+            InkWell(
+              borderRadius: AppRadius.mdAll,
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Icon(
+                      Icons.help_outline_rounded,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
                     Text(
-                      '• ',
+                      'Thinking',
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: context.appColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.onSurface,
                       ),
                     ),
-                    Expanded(
-                      child: Text(
-                        line,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.appColors.textSecondary,
+                    SizedBox(
+                      width: 22,
+                      child: AnimatedBuilder(
+                        animation: _anim,
+                        builder: (context, _) {
+                          final t = _anim.value;
+                          final dots = (t * 3).floor() % 3 + 1;
+                          return Text(
+                            '.' * dots,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: bodyColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_elapsedSeconds}s',
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: bodyColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.0 : -0.5,
+                      duration: const Duration(milliseconds: 180),
+                      child: Icon(
+                        Icons.expand_more,
+                        size: 18,
+                        color: bodyColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_expanded) Divider(height: 1, thickness: 1, color: borderColor),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 220),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.text.trim().isNotEmpty) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          widget.text,
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: phaseColor,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    ..._thoughtFeed.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          line,
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: bodyColor,
+                            height: 1.35,
+                          ),
                         ),
                       ),
                     ),
