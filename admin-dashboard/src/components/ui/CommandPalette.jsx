@@ -82,29 +82,30 @@ const CommandPalette = () => {
   if (!isCommandOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm" onClick={() => setCommandOpen(false)}>
-      <div className="mx-auto mt-20 w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1E1E1E] p-3" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#2A2A2A] px-3 py-2">
-          <Search className="h-4 w-4 text-white/60" />
+    <div className="fixed inset-0 z-[150] backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.45)" }} onClick={() => setCommandOpen(false)}>
+      <div className="mx-auto mt-20 w-full max-w-2xl rounded-2xl p-3" style={{ border: "1px solid var(--soft)", background: "var(--surface)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ border: "1px solid var(--soft)", background: "var(--surface-2)" }}>
+          <Search className="h-4 w-4" style={{ color: "var(--muted)" }} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
             placeholder="Search farmers, schemes, crops..."
-            className="w-full bg-transparent text-sm text-white/90 outline-none"
+            className="w-full bg-transparent text-sm outline-none"
+            style={{ color: "var(--text)" }}
           />
         </div>
         <div className="mt-3 max-h-80 space-y-3 overflow-y-auto text-xs">
           {Object.entries(grouped).map(([group, items]) => (
             <div key={group}>
-              <p className="mb-1 text-[10px] uppercase tracking-wide text-white/45">{group}</p>
+              <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--muted)" }}>{group}</p>
               {items.length === 0 ? (
-                <div className="rounded-lg border border-white/10 px-2 py-2 text-white/30">No results</div>
+                <div className="rounded-lg px-2 py-2" style={{ border: "1px solid var(--soft)", color: "var(--faint)" }}>No results</div>
               ) : (
                 items.map((item) => (
-                  <div key={`${group}-${item.id}`} className="rounded-lg border border-white/10 px-2 py-2 hover:bg-white/5">
-                    <div className="text-white/85">{item.label}</div>
-                    <div className="text-[10px] text-white/40">{item.meta}</div>
+                  <div key={`${group}-${item.id}`} className="rounded-lg px-2 py-2" style={{ border: "1px solid var(--soft)" }}>
+                    <div style={{ color: "var(--text)" }}>{item.label}</div>
+                    <div className="text-[10px]" style={{ color: "var(--muted)" }}>{item.meta}</div>
                   </div>
                 ))
               )}

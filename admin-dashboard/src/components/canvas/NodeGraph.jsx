@@ -130,8 +130,8 @@ const NodeGraph = ({ activeNodes = [] }) => {
                 width="170"
                 height="64"
                 rx="14"
-                fill={hovered ? "rgba(255,255,255,0.07)" : active ? "rgba(255,255,255,0.04)" : "transparent"}
-                stroke={active || hovered ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.32)"}
+                fill={hovered ? "var(--soft-strong)" : active ? "var(--soft)" : "transparent"}
+                stroke={active || hovered ? "var(--text)" : "rgba(255,255,255,0.32)"}
                 strokeWidth={active || hovered ? "1.7" : "1.15"}
               />
               <foreignObject x="10" y="17" width="28" height="28">

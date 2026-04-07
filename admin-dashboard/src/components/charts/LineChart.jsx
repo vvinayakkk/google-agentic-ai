@@ -17,7 +17,7 @@ const LineChart = ({ series = [], labels = [] }) => {
   const max = Math.max(...(allValues.length ? allValues : [100]));
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#1E1E1E] p-4">
+    <div className="rounded-2xl p-4" style={{ border: "1px solid var(--soft)", background: "var(--surface)" }}>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
         {[0, 1, 2, 3].map((i) => (
           <line
@@ -26,7 +26,7 @@ const LineChart = ({ series = [], labels = [] }) => {
             y1={(height / 4) * i}
             x2={width}
             y2={(height / 4) * i}
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--soft)"
             strokeWidth="1"
           />
         ))}
@@ -40,7 +40,7 @@ const LineChart = ({ series = [], labels = [] }) => {
           />
         ))}
       </svg>
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-white/70">
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]" style={{ color: "var(--muted)" }}>
         {series.map((item) => (
           <div key={item.name} className="flex items-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full" style={{ background: item.color || "var(--accent-blue)" }} />
@@ -49,7 +49,7 @@ const LineChart = ({ series = [], labels = [] }) => {
         ))}
       </div>
       {labels.length > 0 && (
-        <div className="mt-2 flex justify-between text-[10px] text-white/35">
+        <div className="mt-2 flex justify-between text-[10px]" style={{ color: "var(--faint)" }}>
           <span>{labels[0]}</span>
           <span>{labels[Math.floor(labels.length / 2)]}</span>
           <span>{labels[labels.length - 1]}</span>

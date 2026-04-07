@@ -135,15 +135,15 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
       {/* controls */}
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 6 }}>
         <button onClick={() => setScale(s => Math.min(2.5, s * 1.2))}
-          style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--muted)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+          style={{ width: 28, height: 28, borderRadius: 6, background: "var(--soft)", border: "1px solid var(--soft-strong)", color: "var(--muted)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
         <button onClick={() => setScale(s => Math.max(0.3, s * 0.85))}
-          style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--muted)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+          style={{ width: 28, height: 28, borderRadius: 6, background: "var(--soft)", border: "1px solid var(--soft-strong)", color: "var(--muted)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
         <button onClick={resetView}
-          style={{ height: 28, padding: "0 10px", borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>Reset</button>
+          style={{ height: 28, padding: "0 10px", borderRadius: 6, background: "var(--soft)", border: "1px solid var(--soft-strong)", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>Reset</button>
       </div>
 
       {/* hint */}
-      <div style={{ position: "absolute", bottom: 10, left: 10, zIndex: 10, fontSize: 10, color: "rgba(255,255,255,0.2)", pointerEvents: "none" }}>
+      <div style={{ position: "absolute", bottom: 10, left: 10, zIndex: 10, fontSize: 10, color: "var(--faint)", pointerEvents: "none" }}>
         Drag to pan · Scroll to zoom · Hover nodes for details
       </div>
 
@@ -152,14 +152,14 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
         onWheel={onWheel}
         style={{ width: "100%", height: 540, overflow: "hidden", borderRadius: 10, cursor: dragging ? "grabbing" : "grab",
-          background: "radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), rgba(255,255,255,0.015)",
-          border: "1px solid rgba(255,255,255,0.07)", position: "relative" }}>
+          background: "radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), var(--soft-subtle)",
+          border: "1px solid var(--soft-strong)", position: "relative" }}>
 
         {/* dot grid */}
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
           <defs>
             <pattern id="dot-grid" x={pan.x % (20 * scale)} y={pan.y % (20 * scale)} width={20 * scale} height={20 * scale} patternUnits="userSpaceOnUse">
-              <circle cx={10 * scale} cy={10 * scale} r={0.8} fill="rgba(255,255,255,0.12)" />
+              <circle cx={10 * scale} cy={10 * scale} r={0.8} fill="var(--soft-strong)" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dot-grid)" />
@@ -169,7 +169,7 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
           <defs>
             <marker id="arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-              <path d="M1 1L9 5L1 9" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M1 1L9 5L1 9" fill="none" stroke="var(--faint)" strokeWidth="1.5" strokeLinecap="round" />
             </marker>
             <marker id="arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
               <path d="M1 1L9 5L1 9" fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth="1.5" strokeLinecap="round" />
@@ -189,7 +189,7 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
                   key={`${a}-${b}`}
                   d={`M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`}
                   fill="none"
-                  stroke={isActive ? "rgba(167,139,250,0.7)" : "rgba(255,255,255,0.12)"}
+                  stroke={isActive ? "rgba(167,139,250,0.7)" : "var(--soft-strong)"}
                   strokeWidth={isActive ? 1.8 : 1.2}
                   strokeDasharray={isActive ? "none" : "5 4"}
                   markerEnd={isActive ? "url(#arrow-active)" : "url(#arrow-head)"}
@@ -201,7 +201,7 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
             {/* nodes */}
             {NODES.map((node) => {
               const Icon = NODE_ICON[node.id] || Bot;
-              const iconColor = NODE_COLOR[node.id] || "#fff";
+              const iconColor = NODE_COLOR[node.id] || "var(--text)";
               const desc = NODE_DESCRIPTIONS[node.id] || {};
               const tc = TYPE_COLORS[desc.type] || TYPE_COLORS.tool;
               const active = activeSet.has(node.id);
@@ -225,8 +225,8 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
 
                   {/* card bg */}
                   <rect width={NODE_W} height={NODE_H} rx={12}
-                    fill={hovered ? "rgba(255,255,255,0.07)" : active ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.025)"}
-                    stroke={hovered ? "rgba(255,255,255,0.5)" : active ? iconColor : "rgba(255,255,255,0.12)"}
+                    fill={hovered ? "var(--soft-strong)" : active ? "rgba(255,255,255,0.045)" : "var(--soft-subtle)"}
+                    stroke={hovered ? "var(--muted)" : active ? iconColor : "var(--soft-strong)"}
                     strokeWidth={hovered || active ? 1.5 : 1}
                     style={{ transition: "all 0.15s" }}
                   />
@@ -246,7 +246,7 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
                   {/* label */}
                   <foreignObject x={48} y={10} width={104} height={24}>
                     <div xmlns="http://www.w3.org/1999/xhtml"
-                      style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.92)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                       {node.label}
                     </div>
                   </foreignObject>
@@ -254,7 +254,7 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
                   {/* sublabel */}
                   <foreignObject x={48} y={36} width={108} height={16}>
                     <div xmlns="http://www.w3.org/1999/xhtml"
-                      style={{ fontSize: 9.5, color: "rgba(255,255,255,0.35)", fontFamily: "monospace", letterSpacing: "0.02em", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                      style={{ fontSize: 9.5, color: "var(--faint)", fontFamily: "monospace", letterSpacing: "0.02em", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                       {node.sublabel}
                     </div>
                   </foreignObject>
@@ -292,17 +292,17 @@ const PannableNodeGraph = ({ activeNodes = [] }) => {
               </div>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>{hoverNode.label}</div>
-                <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>{hoverNode.sublabel}</div>
+                <div style={{ fontSize: 9.5, color: "var(--faint)", fontFamily: "monospace" }}>{hoverNode.sublabel}</div>
               </div>
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", lineHeight: 1.55, marginBottom: 8 }}>{hoverInfo.detail}</div>
+            <div style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.55, marginBottom: 8 }}>{hoverInfo.detail}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               {(() => { const tc = TYPE_COLORS[hoverInfo.type] || TYPE_COLORS.tool; return (
                 <span style={{ fontSize: 8.5, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: tc.bg, border: `1px solid ${tc.border}`, color: tc.text }}>
                   {(hoverInfo.type || "").toUpperCase()}
                 </span>
               ); })()}
-              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>{hoverInfo.service}</span>
+              <span style={{ fontSize: 9, color: "var(--faint)", fontFamily: "monospace" }}>{hoverInfo.service}</span>
             </div>
           </div>
         )}
@@ -320,9 +320,9 @@ const PIPELINE_ROWS = [
 ];
 
 const OUTPUT_COLORS = {
-  JSON_STREAM:  "#fb923c",
-  VECTOR_EMBED: "#a78bfa",
-  TEXT_PLAIN:   "#22c55e",
+  JSON_STREAM:  "var(--muted)",
+  VECTOR_EMBED: "var(--muted)",
+  TEXT_PLAIN:   "var(--text)",
 };
 
 /* ─── main ────────────────────────────────────────────────────────── */
@@ -401,8 +401,8 @@ const AgentSystem = () => {
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 14 }}>
 
         {/* sessions list */}
-        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Sessions</span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {loading && <RefreshCw size={11} color="var(--muted)" style={{ animation: "spin 1s linear infinite" }} />}
@@ -424,21 +424,21 @@ const AgentSystem = () => {
               return (
                 <button key={id} onClick={() => setSelected(s)} style={{
                   width: "100%", textAlign: "left", padding: "10px 10px", borderRadius: 8, cursor: "pointer",
-                  background: isActive ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${isActive ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)"}`,
+                  background: isActive ? "var(--soft-strong)" : "var(--soft-subtle)",
+                  border: `1px solid ${isActive ? "var(--faint)" : "var(--soft)"}`,
                   transition: "all 0.15s",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "#22c55e" : "rgba(255,255,255,0.6)", fontFamily: "monospace" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "var(--text)" : "var(--muted)", fontFamily: "monospace" }}>
                       SES-{shortId}
                     </span>
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>
+                    <span style={{ fontSize: 9, color: "var(--faint)", fontFamily: "monospace" }}>
                       {s.language || "hi"} · {s.message_count || 0} msgs
                     </span>
                   </div>
-                  {farmerName && <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: 1 }}>{farmerName}</div>}
-                  {farmerId && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>ID: {farmerId}</div>}
-                  {s.updated_at && <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.2)", marginTop: 3, fontFamily: "monospace" }}>{new Date(s.updated_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</div>}
+                  {farmerName && <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 1 }}>{farmerName}</div>}
+                  {farmerId && <div style={{ fontSize: 10, color: "var(--faint)" }}>ID: {farmerId}</div>}
+                  {s.updated_at && <div style={{ fontSize: 9.5, color: "var(--faint)", marginTop: 3, fontFamily: "monospace" }}>{new Date(s.updated_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</div>}
                 </button>
               );
             })}
@@ -446,20 +446,20 @@ const AgentSystem = () => {
         </div>
 
         {/* session detail */}
-        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {/* detail header - stats bar */}
           {detail && (
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--soft)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
               {[
-                { label: "STATUS",  value: detail.status || "Active",     accent: "#22c55e", dot: true },
+                { label: "STATUS",  value: detail.status || "Active",     accent: "var(--text)", dot: true },
                 { label: "MODEL",   value: detail.model || "GPT-4-AGRI-V2", accent: "var(--text)" },
                 { label: "LATENCY", value: detail.avg_latency_ms ? `${detail.avg_latency_ms}ms` : (detail.messages?.[0]?.latency_ms ? `${detail.messages[0].latency_ms}ms` : "—"), accent: "var(--text)" },
                 { label: "TOKENS",  value: detail.total_tokens ?? detail.token_count ?? "—", accent: "var(--text)" },
               ].map(({ label, value, accent, dot }) => (
                 <div key={label}>
-                  <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 9.5, color: "var(--faint)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {dot && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
+                    {dot && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--text)", boxShadow: "0 0 6px var(--text)" }} />}
                     <span style={{ fontSize: 14, fontWeight: 700, color: accent }}>{String(value)}</span>
                   </div>
                 </div>
@@ -467,7 +467,7 @@ const AgentSystem = () => {
             </div>
           )}
 
-          <div style={{ padding: "12px 14px 6px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "12px 14px 6px", borderBottom: "1px solid var(--soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Messages</span>
             {loadingDetail && <RefreshCw size={11} color="var(--muted)" style={{ animation: "spin 1s linear infinite" }} />}
           </div>
@@ -482,18 +482,18 @@ const AgentSystem = () => {
                 <div key={idx} style={{
                   alignSelf: isAssistant ? "flex-start" : "flex-end",
                   maxWidth: "85%", padding: "10px 14px", borderRadius: isAssistant ? "4px 12px 12px 12px" : "12px 4px 12px 12px",
-                  background: isAssistant ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.05)",
-                  border: `1px solid ${isAssistant ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.08)"}`,
+                  background: isAssistant ? "rgba(99,102,241,0.1)" : "var(--soft)",
+                  border: `1px solid ${isAssistant ? "rgba(99,102,241,0.2)" : "var(--soft-strong)"}`,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, gap: 10 }}>
                     <span style={{ fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-                      background: isAssistant ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.08)",
-                      color: isAssistant ? "#818cf8" : "rgba(255,255,255,0.5)",
-                      border: isAssistant ? "1px solid rgba(99,102,241,0.3)" : "1px solid rgba(255,255,255,0.1)",
+                      background: isAssistant ? "rgba(99,102,241,0.2)" : "var(--soft-strong)",
+                      color: isAssistant ? "#818cf8" : "var(--muted)",
+                      border: isAssistant ? "1px solid rgba(99,102,241,0.3)" : "1px solid var(--soft-strong)",
                       textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       {m.role || "message"}
                     </span>
-                    {m.latency_ms && <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>{m.latency_ms}ms</span>}
+                    {m.latency_ms && <span style={{ fontSize: 9.5, color: "var(--faint)", fontFamily: "monospace" }}>{m.latency_ms}ms</span>}
                   </div>
                   <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.88)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                     {m.content || m.message || ""}
@@ -501,7 +501,7 @@ const AgentSystem = () => {
                   {(m.tools_called || []).length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
                       {m.tools_called.map(t => (
-                        <span key={t} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", color: "#a78bfa", fontFamily: "monospace" }}>{t}</span>
+                        <span key={t} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: "var(--soft-subtle)", border: "1px solid rgba(167,139,250,0.25)", color: "var(--muted)", fontFamily: "monospace" }}>{t}</span>
                       ))}
                     </div>
                   )}
@@ -516,8 +516,8 @@ const AgentSystem = () => {
       </div>
 
       {/* ── node graph canvas ── */}
-      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Node Flow</span>
             <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 10 }}>Multi-agent pipeline architecture</span>
@@ -534,14 +534,14 @@ const AgentSystem = () => {
       </div>
 
       {/* ── pipeline architecture table ── */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--soft)" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Pipeline Architecture</span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <tr style={{ borderBottom: "1px solid var(--soft)" }}>
                 {["NODE","SERVICE","ROLE","OUTPUT TYPE","HEALTH"].map(h => (
                   <th key={h} style={{ padding: "9px 16px", textAlign: "left", fontSize: 10, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>{h}</th>
                 ))}
@@ -549,15 +549,15 @@ const AgentSystem = () => {
             </thead>
             <tbody>
               {PIPELINE_ROWS.map((row, i) => (
-                <tr key={row.node} style={{ borderBottom: i < PIPELINE_ROWS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                  <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.9)", fontFamily: "monospace", fontSize: 12 }}>{row.node}</td>
-                  <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.6)", fontFamily: "monospace", fontSize: 12 }}>{row.service}</td>
-                  <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.75)" }}>{row.role}</td>
+                <tr key={row.node} style={{ borderBottom: i < PIPELINE_ROWS.length - 1 ? "1px solid var(--soft)" : "none" }}>
+                  <td style={{ padding: "11px 16px", color: "var(--text)", fontFamily: "monospace", fontSize: 12 }}>{row.node}</td>
+                  <td style={{ padding: "11px 16px", color: "var(--muted)", fontFamily: "monospace", fontSize: 12 }}>{row.service}</td>
+                  <td style={{ padding: "11px 16px", color: "var(--text)" }}>{row.role}</td>
                   <td style={{ padding: "11px 16px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "monospace", color: OUTPUT_COLORS[row.output] || "#888" }}>{row.output}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "monospace", color: OUTPUT_COLORS[row.output] || "var(--muted)" }}>{row.output}</span>
                   </td>
                   <td style={{ padding: "11px 16px" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: row.healthy ? "#22c55e" : "#ef4444", boxShadow: row.healthy ? "0 0 5px #22c55e" : "none" }} />
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: row.healthy ? "var(--text)" : "#ef4444", boxShadow: row.healthy ? "0 0 5px var(--text)" : "none" }} />
                   </td>
                 </tr>
               ))}
@@ -567,18 +567,18 @@ const AgentSystem = () => {
       </div>
 
       {/* ── api key pool ── */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", borderRadius: 12, overflow: "hidden" }}>
         <button
           onClick={() => { fetchKeyPool(); setKeyPoolOpen(p => keyPool ? !p : true); }}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 26, height: 26, borderRadius: 7, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <KeyRound size={13} color="#f59e0b" />
+              <KeyRound size={13} color="var(--muted)" />
             </div>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>API Key Pool</span>
             {keyPool && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", color: "#22c55e" }}>
+                background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)", color: "var(--text)" }}>
                 ACTIVE KEYS: {activeKeyCount} / {keyPoolKeys.length}
               </span>
             )}
@@ -587,14 +587,14 @@ const AgentSystem = () => {
         </button>
 
         {keyPoolOpen && (
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "6px 0" }}>
+          <div style={{ borderTop: "1px solid var(--soft)", padding: "6px 0" }}>
             {!keyPool ? (
               <div style={{ padding: "20px 16px", fontSize: 12, color: "var(--muted)" }}>
                 Click above to fetch the allocator snapshot.
               </div>
             ) : keyPoolKeys.length === 0 ? (
               <div style={{ padding: "16px", overflowX: "auto" }}>
-                <pre style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", margin: 0 }}>
+                <pre style={{ fontSize: 10, color: "var(--muted)", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", margin: 0 }}>
                   {JSON.stringify(keyPool, null, 2)}
                 </pre>
               </div>
@@ -604,15 +604,15 @@ const AgentSystem = () => {
               const usage = k.usage_pct ?? (k.requests_used && k.requests_limit ? Math.round(k.requests_used / k.requests_limit * 100) : null);
               const exhausted = k.exhausted || (usage !== null && usage >= 100);
               return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: i < keyPoolKeys.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: exhausted ? "#ef4444" : "#22c55e", boxShadow: exhausted ? "none" : "0 0 5px #22c55e", flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 12, fontFamily: "monospace", color: "rgba(255,255,255,0.75)", letterSpacing: "0.04em" }}>{masked}</span>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: i < keyPoolKeys.length - 1 ? "1px solid var(--soft)" : "none" }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: exhausted ? "#ef4444" : "var(--text)", boxShadow: exhausted ? "none" : "0 0 5px var(--text)", flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 12, fontFamily: "monospace", color: "var(--text)", letterSpacing: "0.04em" }}>{masked}</span>
                   {usage !== null && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 80, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
-                        <div style={{ width: `${usage}%`, height: "100%", background: exhausted ? "#ef4444" : usage > 80 ? "#f59e0b" : "#22c55e", borderRadius: 99 }} />
+                      <div style={{ width: 80, height: 3, background: "var(--soft)", borderRadius: 99 }}>
+                        <div style={{ width: `${usage}%`, height: "100%", background: exhausted ? "#ef4444" : usage > 80 ? "var(--muted)" : "var(--text)", borderRadius: 99 }} />
                       </div>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "monospace", minWidth: 36 }}>Usage {usage}%</span>
+                      <span style={{ fontSize: 10, color: "var(--faint)", fontFamily: "monospace", minWidth: 36 }}>Usage {usage}%</span>
                     </div>
                   )}
                 </div>

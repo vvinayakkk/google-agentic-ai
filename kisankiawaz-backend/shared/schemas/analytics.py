@@ -35,6 +35,7 @@ class AdminInsightOverview(BaseModel):
     operational_health: dict
     market_intelligence: dict
     opportunities: dict
+    visualizations: dict = Field(default_factory=dict)
     recommendations: list[str]
 
 

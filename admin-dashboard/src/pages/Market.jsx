@@ -44,10 +44,7 @@ const PALETTE = [
    INJECT STYLES ONCE
 ═══════════════════════════════════════════════════════════════ */
 const STYLE_ID = "mkt-v4-styles";
-if (!document.getElementById(STYLE_ID)) {
-  const s = document.createElement("style");
-  s.id = STYLE_ID;
-  s.textContent = `
+const MARKET_STYLES = `
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Serif+Display&display=swap');
 
     @keyframes shimmer        { 0%{background-position:-800px 0} 100%{background-position:800px 0} }
@@ -64,7 +61,7 @@ if (!document.getElementById(STYLE_ID)) {
     @keyframes scan-line      { 0%{top:0%} 100%{top:100%} }
     @keyframes number-tick    { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
 
-    .mkt-skeleton { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.04) 75%); background-size:800px 100%; animation:shimmer 1.5s ease-in-out infinite; border-radius:8px; }
+    .mkt-skeleton { background:linear-gradient(90deg,var(--soft) 25%,var(--soft-strong) 50%,var(--soft) 75%); background-size:800px 100%; animation:shimmer 1.5s ease-in-out infinite; border-radius:8px; }
     .mkt-fade-up  { animation:fadeUp 0.42s cubic-bezier(.16,1,.3,1) both; }
     .mkt-fade-in  { animation:fadeIn 0.28s ease both; }
     .mkt-slide-in { animation:slideIn 0.32s cubic-bezier(.16,1,.3,1) both; }
@@ -75,10 +72,10 @@ if (!document.getElementById(STYLE_ID)) {
       position:relative; display:flex; align-items:center; gap:7px; padding:8px 15px;
       border-radius:9px; font-size:11.5px; font-weight:600; white-space:nowrap;
       flex-shrink:0; cursor:pointer; border:none; font-family:'Syne',sans-serif;
-      transition:all 0.2s ease; background:transparent; color:rgba(255,255,255,0.4);
+      transition:all 0.2s ease; background:transparent; color:var(--muted);
     }
-    .mkt-tab-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.85); }
-    .mkt-tab-btn.active { color:#fff; }
+    .mkt-tab-btn:hover { background:var(--soft-strong); color:var(--text); }
+    .mkt-tab-btn.active { color:var(--text); }
     .mkt-tab-btn.active::after {
       content:''; position:absolute; bottom:-1px; left:14px; right:14px; height:2px;
       border-radius:1px; background:var(--tab-accent,#22c55e);
@@ -88,54 +85,79 @@ if (!document.getElementById(STYLE_ID)) {
     .mkt-btn {
       display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:9px;
       font-size:11px; font-family:'Syne',sans-serif; cursor:pointer;
-      border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05);
-      color:rgba(255,255,255,0.75); transition:all 0.15s; outline:none;
+      border:1px solid var(--soft-strong); background:var(--soft);
+      color:var(--text); transition:all 0.15s; outline:none;
     }
-    .mkt-btn:hover { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.22); color:#fff; }
+    .mkt-btn:hover { background:var(--soft-strong); border-color:var(--faint); color:var(--text); }
     .mkt-btn.active-btn { background:rgba(34,197,94,0.12); border-color:rgba(34,197,94,0.4); color:#22c55e; }
 
     .mkt-sel {
-      background:rgba(10,12,18,0.95); color:#e8edf2; border:1px solid rgba(255,255,255,0.1);
+      background:var(--surface); color:var(--text); border:1px solid var(--soft-strong);
       border-radius:9px; padding:8px 12px; font-size:11px; font-family:'Syne',sans-serif; outline:none;
       cursor:pointer;
     }
-    .mkt-sel:focus { border-color:rgba(255,255,255,0.25); }
-    .mkt-sel option { background:#0e1118; }
+    .mkt-sel:focus { border-color:var(--faint); }
+    .mkt-sel option { background:var(--surface-2); color:var(--text); }
 
     .mkt-inp {
-      background:rgba(255,255,255,0.04); color:#e8edf2; border:1px solid rgba(255,255,255,0.1);
+      background:var(--surface); color:var(--text); border:1px solid var(--soft-strong);
       border-radius:9px; padding:8px 10px 8px 33px; font-size:11px;
       font-family:'Syne',sans-serif; outline:none; box-sizing:border-box;
       transition:border-color 0.15s;
     }
-    .mkt-inp:focus { border-color:rgba(255,255,255,0.28); background:rgba(255,255,255,0.06); }
-    .mkt-inp::placeholder { color:rgba(255,255,255,0.22); }
+    .mkt-inp:focus { border-color:var(--faint); background:var(--surface); }
+    .mkt-inp::placeholder { color:var(--faint); }
 
     .mkt-card {
-      background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
+      background:var(--app-shell-gradient); border:1px solid var(--soft-strong);
       border-radius:14px; transition:border-color 0.2s, box-shadow 0.2s;
       position:relative; overflow:hidden;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
-    .mkt-card:hover { border-color:rgba(255,255,255,0.12); }
+    .mkt-card::before {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background:rgba(200,230,201,0.08);
+    }
+    [data-theme="dark"] .mkt-card::before {
+      background:rgba(34,197,94,0.08);
+    }
+    [data-theme="dark"] .mkt-card {
+      background:
+        linear-gradient(150deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.24) 58%, rgba(0,0,0,0.12) 100%),
+        var(--app-shell-gradient);
+      border-color:rgba(34,197,94,0.20);
+    }
+    [data-theme="light"] .mkt-card {
+      background:var(--app-shell-gradient);
+    }
+    .mkt-card:hover { border-color:var(--soft-strong); }
     .mkt-card-glow { box-shadow:0 0 32px var(--card-glow,rgba(0,229,160,0.08)); }
 
+    .mkt-sidebar-toggle {
+      background:var(--app-shell-gradient) !important;
+      border:1px solid var(--soft-strong) !important;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
     .mkt-scroll::-webkit-scrollbar { width:3px; height:3px; }
-    .mkt-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+    .mkt-scroll::-webkit-scrollbar-thumb { background:var(--soft-strong); border-radius:2px; }
     .mkt-scroll::-webkit-scrollbar-track { background:transparent; }
 
     .live-dot { width:7px; height:7px; border-radius:50%; position:relative; flex-shrink:0; display:inline-block; }
     .live-dot::after { content:''; position:absolute; inset:-3px; border-radius:50%; background:inherit; animation:pulse-ring 1.9s ease-out infinite; }
 
     .data-row { transition:background 0.12s; cursor:pointer; }
-    .data-row:hover { background:rgba(255,255,255,0.05) !important; }
-    .data-row.selected { background:rgba(255,255,255,0.07) !important; }
+    .data-row:hover { background:var(--soft) !important; }
+    .data-row.selected { background:var(--soft-strong) !important; }
 
     .ticker-wrap { overflow:hidden; position:relative; }
     .ticker-inner { display:inline-flex; gap:36px; white-space:nowrap; animation:ticker-scroll 36s linear infinite; }
     .ticker-inner:hover { animation-play-state:paused; }
 
     .scan-overlay { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-    .scan-line { position:absolute; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent); animation:scan-line 4s linear infinite; }
+    .scan-line { position:absolute; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--soft),transparent); animation:scan-line 4s linear infinite; }
 
     .hbar-fill { transition:width 0.9s cubic-bezier(.16,1,.3,1); transform-origin:left; }
     .radial-segment { transition:opacity 0.2s; }
@@ -159,15 +181,25 @@ if (!document.getElementById(STYLE_ID)) {
       display:inline-flex; align-items:center; gap:5px; padding:3px 9px;
       border-radius:20px; font-size:9px; font-family:'Syne',sans-serif;
       font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-      background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.5);
-      border:1px solid rgba(255,255,255,0.1);
+      background:var(--soft-strong); color:var(--muted);
+      border:1px solid var(--soft-strong);
     }
-    .mkt-divider { height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent); }
+    .mkt-divider { height:1px; background:linear-gradient(90deg,transparent,var(--soft-strong),transparent); }
     .metric-bar { border-radius:3px; transition:width 1s cubic-bezier(.16,1,.3,1); }
 
     .spotlight-field:last-child { border-bottom:none !important; }
-    .section-label { font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(255,255,255,0.3); font-family:'Syne',sans-serif; font-weight:700; }
+    .section-label { font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:var(--faint); font-family:'Syne',sans-serif; font-weight:700; }
   `;
+
+const existingMarketStyle = document.getElementById(STYLE_ID);
+if (existingMarketStyle) {
+  if (existingMarketStyle.textContent !== MARKET_STYLES) {
+    existingMarketStyle.textContent = MARKET_STYLES;
+  }
+} else {
+  const s = document.createElement("style");
+  s.id = STYLE_ID;
+  s.textContent = MARKET_STYLES;
   document.head.appendChild(s);
 }
 
@@ -186,6 +218,7 @@ const uniq    = (arr) => [...new Set(arr.map((x) => String(x||"").trim()).filter
 const fmtN    = (v)   => { const n=Number(v); return Number.isFinite(n)?n.toLocaleString("en-IN",{maximumFractionDigits:2}):"—"; };
 const fmtM    = (v)   => { const n=Number(v); return(!n||!Number.isFinite(n))?"—":`₹${fmtN(n)}`; };
 const fmtD    = (v)   => { if(!v) return "—"; const d=new Date(v); return isNaN(d)?String(v):d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}); };
+const fmtDX   = (v)   => { if(!v) return ""; const d=new Date(v); return isNaN(d)?String(v):d.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"2-digit"}); };
 const short   = (v,n=60) => { const s=String(v??""); return s.length>n?s.slice(0,n)+"…":s; };
 const fL      = (k)   => k.replace(/_/g," ").replace(/\b\w/g,(m)=>m.toUpperCase());
 const arrAvg  = (arr) => arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
@@ -209,7 +242,7 @@ const groupAvg = (rows,groupKey,valKey) => {
 const MktTooltip = ({ active, payload, label, accent="#22c55e", isMoney=false, formatter }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{background:"rgba(6,8,14,0.98)",border:`1px solid ${accent}40`,borderRadius:11,padding:"11px 14px",fontSize:11,boxShadow:`0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)`,fontFamily:"'JetBrains Mono',monospace",backdropFilter:"blur(12px)"}}>
+    <div style={{background:"var(--surface)",border:`1px solid ${accent}40`,borderRadius:11,padding:"11px 14px",fontSize:11,boxShadow:"var(--shadow-lg)",fontFamily:"'JetBrains Mono',monospace",backdropFilter:"blur(12px)"}}>
       {label&&<div style={{color:"rgba(255,255,255,0.38)",marginBottom:7,fontSize:9,fontFamily:"'Syne',sans-serif",textTransform:"uppercase",letterSpacing:"0.08em"}}>{fmtD(label)||label}</div>}
       {payload.map((p,i)=>(
         <div key={i} style={{display:"flex",alignItems:"center",gap:9,marginTop:i>0?5:0}}>
@@ -228,7 +261,7 @@ const MktTooltip = ({ active, payload, label, accent="#22c55e", isMoney=false, f
    LOADING SKELETON
 ═══════════════════════════════════════════════════════════════ */
 const ChartSkeleton = ({ h=280, label="Loading…", accent="#22c55e" }) => (
-  <div style={{height:h,position:"relative",borderRadius:14,background:"rgba(255,255,255,0.015)",overflow:"hidden",border:"1px solid rgba(255,255,255,0.06)"}}>
+  <div style={{height:h,position:"relative",borderRadius:14,background:"var(--soft-subtle)",overflow:"hidden",border:"1px solid var(--soft)"}}>
     <div className="mkt-skeleton" style={{position:"absolute",inset:0}}/>
     <div className="scan-overlay"><div className="scan-line"/></div>
     {[78,52,91,61,84,47,70,88,55,73].map((hv,i)=>(
@@ -236,7 +269,7 @@ const ChartSkeleton = ({ h=280, label="Loading…", accent="#22c55e" }) => (
     ))}
     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}}>
       <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${accent}30`,borderTop:`2px solid ${accent}`,animation:"spin 1s linear infinite"}}/>
-      <span style={{fontSize:11,color:"rgba(255,255,255,0.25)",fontFamily:"'Syne',sans-serif"}}>{label}</span>
+      <span style={{fontSize:11,color:"var(--faint)",fontFamily:"'Syne',sans-serif"}}>{label}</span>
     </div>
   </div>
 );
@@ -247,7 +280,7 @@ const ChartSkeleton = ({ h=280, label="Loading…", accent="#22c55e" }) => (
 const StatCard = ({ label, value, sub, accent="#22c55e", trend, icon:Icon, delay=0, sparkData }) => {
   const isPos = trend>0;
   return (
-    <div className="mkt-card mkt-fade-up" style={{padding:"15px 17px",animationDelay:`${delay}ms`,background:`linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))`}}>
+    <div className="mkt-card mkt-fade-up" style={{padding:"15px 17px",animationDelay:`${delay}ms`,background:`linear-gradient(135deg,var(--soft-subtle),var(--soft-subtle))`}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:9}}>
         <span className="section-label">{label}</span>
         {Icon&&<div style={{width:28,height:28,borderRadius:8,background:`${accent}14`,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${accent}25`}}><Icon size={12} color={accent}/></div>}
@@ -260,7 +293,7 @@ const StatCard = ({ label, value, sub, accent="#22c55e", trend, icon:Icon, delay
             {isPos?"+":""}{Number(trend).toFixed(1)}%
           </span>
         )}
-        {sub&&<span style={{fontSize:9.5,color:"rgba(255,255,255,0.3)",fontFamily:"'Syne',sans-serif"}}>{sub}</span>}
+        {sub&&<span style={{fontSize:9.5,color:"var(--faint)",fontFamily:"'Syne',sans-serif"}}>{sub}</span>}
       </div>
       {sparkData&&sparkData.length>1&&(
         <div style={{marginTop:10,height:32}}>
@@ -272,7 +305,7 @@ const StatCard = ({ label, value, sub, accent="#22c55e", trend, icon:Icon, delay
           </ResponsiveContainer>
         </div>
       )}
-      <div style={{marginTop:sparkData?6:10,height:2,background:"rgba(255,255,255,0.05)",borderRadius:1}}>
+      <div style={{marginTop:sparkData?6:10,height:2,background:"var(--soft)",borderRadius:1}}>
         <div style={{height:"100%",width:"65%",background:`linear-gradient(90deg,${accent},${accent}40)`,borderRadius:1,animation:"fadeUp 0.8s ease both",animationDelay:`${delay+200}ms`}}/>
       </div>
     </div>
@@ -307,19 +340,15 @@ const TickerTape = ({ rows, accent }) => {
   if(!items.length) return null;
   const doubled = [...items, ...items];
   return (
-    <div style={{background:"linear-gradient(90deg, rgba(34,197,94,0.14) 0%, rgba(10,14,12,0.96) 24%, rgba(10,14,12,0.96) 100%)",borderTop:"1px solid rgba(34,197,94,0.25)",borderBottom:"1px solid rgba(34,197,94,0.18)",padding:"5px 0",display:"flex",alignItems:"center",gap:0}}>
-      <div style={{padding:"0 12px",display:"flex",alignItems:"center",gap:6,flexShrink:0,borderRight:"1px solid rgba(34,197,94,0.24)"}}>
-        <div className="live-dot" style={{background:accent}}/>
-        <span style={{fontSize:9,fontFamily:"'Syne',sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:accent}}>LIVE</span>
-      </div>
+    <div style={{background:"linear-gradient(90deg, rgba(34,197,94,0.05) 0%, var(--surface) 24%, var(--surface) 100%)",borderTop:"1px solid rgba(34,197,94,0.18)",borderBottom:"1px solid rgba(34,197,94,0.12)",padding:"5px 0",display:"flex",alignItems:"center",gap:0}}>
       <div className="ticker-wrap" style={{flex:1}}>
         <div className="ticker-inner">
           {doubled.map((item,i)=>(
-            <span key={i} style={{fontSize:10.5,color:"rgba(255,255,255,0.55)",display:"inline-flex",alignItems:"center",gap:7,flexShrink:0}}>
+            <span key={i} style={{fontSize:10.5,color:"var(--muted)",display:"inline-flex",alignItems:"center",gap:7,flexShrink:0}}>
               <span style={{color:accent,fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:10}}>{item.name}</span>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",color:"rgba(255,255,255,0.92)",fontWeight:600}}>{fmtM(item.val)}</span>
-              {item.state&&<span style={{color:"rgba(255,255,255,0.28)",fontSize:9,fontFamily:"'Syne',sans-serif"}}>{item.state}</span>}
-              <span style={{color:"rgba(255,255,255,0.1)",fontSize:9}}>◆</span>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",color:"var(--text)",fontWeight:600}}>{fmtM(item.val)}</span>
+              {item.state&&<span style={{color:"var(--faint)",fontSize:9,fontFamily:"'Syne',sans-serif"}}>{item.state}</span>}
+              <span style={{color:"var(--soft-strong)",fontSize:9}}>◆</span>
             </span>
           ))}
         </div>
@@ -345,8 +374,8 @@ const HeatMap = ({ data, label, accent, valueKey="value", nameKey="name" }) => {
           return (
             <div key={i} className="heat-cell" title={`${d[nameKey]}: ${fmtN(d[valueKey])}`}
               style={{height:32,borderRadius:5,background:`${accent}${Math.round(intensity*80+10).toString(16).padStart(2,"0")}`,border:`1px solid ${accent}${Math.round(intensity*60+5).toString(16).padStart(2,"0")}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
-              <span style={{fontSize:7,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif",textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap",maxWidth:"90%",textAlign:"center"}}>{short(d[nameKey],6)}</span>
-              <span style={{fontSize:8,fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:intensity>0.5?`rgba(255,255,255,0.9)`:`${accent}cc`}}>{fmtN(d[valueKey])}</span>
+              <span style={{fontSize:7,color:"var(--muted)",fontFamily:"'Syne',sans-serif",textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap",maxWidth:"90%",textAlign:"center"}}>{short(d[nameKey],6)}</span>
+              <span style={{fontSize:8,fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:intensity>0.5?`var(--text)`:`${accent}cc`}}>{fmtN(d[valueKey])}</span>
             </div>
           );
         })}
@@ -363,15 +392,15 @@ const CircularProgress = ({ value, max, size=80, accent, label, sub }) => {
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
       <svg width={size} height={size} viewBox="0 0 72 72">
-        <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6"/>
+        <circle cx="36" cy="36" r={r} fill="none" stroke="var(--soft)" strokeWidth="6"/>
         <circle className="progress-ring" cx="36" cy="36" r={r} fill="none" stroke={accent} strokeWidth="6"
           strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c*(1-pct)}
           style={{transition:"stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1)"}}>
         </circle>
-        <text x="36" y="37" textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.92)" fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{Math.round(pct*100)}%</text>
+        <text x="36" y="37" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{Math.round(pct*100)}%</text>
       </svg>
-      {label&&<div style={{fontSize:10,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.6)",textAlign:"center"}}>{label}</div>}
-      {sub&&<div style={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.3)",textAlign:"center"}}>{sub}</div>}
+      {label&&<div style={{fontSize:10,fontFamily:"'Syne',sans-serif",color:"var(--muted)",textAlign:"center"}}>{label}</div>}
+      {sub&&<div style={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"var(--faint)",textAlign:"center"}}>{sub}</div>}
     </div>
   );
 };
@@ -382,8 +411,8 @@ const CircularProgress = ({ value, max, size=80, accent, label, sub }) => {
 const Spotlight = ({ row, tab, accent }) => {
   if(!row) return (
     <div style={{padding:"32px 20px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <Eye size={18} color="rgba(255,255,255,0.2)"/>
+      <div style={{width:48,height:48,borderRadius:"50%",background:"var(--soft)",border:"1px solid var(--soft-strong)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <Eye size={18} color="var(--faint)"/>
       </div>
       <span style={{fontSize:11,color:"rgba(255,255,255,0.22)",fontFamily:"'Syne',sans-serif"}}>Select a row to inspect</span>
     </div>
@@ -405,9 +434,9 @@ const Spotlight = ({ row, tab, accent }) => {
           const isDate=k.includes("date")||k.includes("_at");
           const disp=isDate?fmtD(v):isMoney&&typeof v==="number"?fmtM(v):short(String(v??""),52);
           return (
-            <div key={k} className="spotlight-field" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-              <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:"rgba(255,255,255,0.3)",flexShrink:0,paddingTop:1,fontFamily:"'Syne',sans-serif"}}>{fL(k)}</span>
-              <span style={{fontSize:10.5,fontWeight:isMoney?700:400,color:isMoney?accent:"rgba(255,255,255,0.75)",fontFamily:isMoney?"'JetBrains Mono',monospace":"'Syne',sans-serif",textAlign:"right",maxWidth:160,wordBreak:"break-word"}}>
+            <div key={k} className="spotlight-field" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,padding:"8px 0",borderBottom:"1px solid var(--soft)"}}>
+              <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:"var(--faint)",flexShrink:0,paddingTop:1,fontFamily:"'Syne',sans-serif"}}>{fL(k)}</span>
+              <span style={{fontSize:10.5,fontWeight:isMoney?700:400,color:isMoney?accent:"var(--text)",fontFamily:isMoney?"'JetBrains Mono',monospace":"'Syne',sans-serif",textAlign:"right",maxWidth:160,wordBreak:"break-word"}}>
                 {disp}
               </span>
             </div>
@@ -423,8 +452,8 @@ const Spotlight = ({ row, tab, accent }) => {
 ═══════════════════════════════════════════════════════════════ */
 const DataTable = ({ rows, cols, selected, onSelect, accent, maxH=340 }) => {
   if(!rows.length) return (
-    <div style={{padding:"40px 20px",textAlign:"center",color:"rgba(255,255,255,0.2)",fontSize:12,fontFamily:"'Syne',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <Database size={24} color="rgba(255,255,255,0.1)"/>
+    <div style={{padding:"40px 20px",textAlign:"center",color:"var(--faint)",fontSize:12,fontFamily:"'Syne',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+      <Database size={24} color="var(--soft-strong)"/>
       No records loaded from backend
     </div>
   );
@@ -434,7 +463,7 @@ const DataTable = ({ rows, cols, selected, onSelect, accent, maxH=340 }) => {
         <thead>
           <tr>
             {cols.map(c=>(
-              <th key={c} style={{position:"sticky",top:0,zIndex:2,padding:"10px 13px",textAlign:"left",background:"rgba(6,8,14,0.99)",fontSize:9,textTransform:"uppercase",letterSpacing:"0.13em",color:"rgba(255,255,255,0.3)",borderBottom:"1px solid rgba(255,255,255,0.07)",fontWeight:700,fontFamily:"'Syne',sans-serif",whiteSpace:"nowrap"}}>
+              <th key={c} style={{position:"sticky",top:0,zIndex:2,padding:"10px 13px",textAlign:"left",background:"var(--surface-2)",fontSize:9,textTransform:"uppercase",letterSpacing:"0.13em",color:"var(--faint)",borderBottom:"1px solid var(--soft-strong)",fontWeight:700,fontFamily:"'Syne',sans-serif",whiteSpace:"nowrap"}}>
                 {fL(c)}
               </th>
             ))}
@@ -452,9 +481,9 @@ const DataTable = ({ rows, cols, selected, onSelect, accent, maxH=340 }) => {
                   const isDate=c.includes("date")||c.includes("_at");
                   const disp=isDate?fmtD(v):isMoney&&typeof v==="number"?fmtM(v):short(String(v??""  ),48);
                   return (
-                    <td key={c} style={{padding:"9px 13px",borderBottom:"1px solid rgba(255,255,255,0.04)",color:isMoney?accent:c==="status"&&String(v).toLowerCase()==="active"?"#4ade80":"rgba(255,255,255,0.72)",fontWeight:isMoney?700:400,fontFamily:isMoney?"'JetBrains Mono',monospace":"'Syne',sans-serif",whiteSpace:"nowrap"}}>
+                    <td key={c} style={{padding:"9px 13px",borderBottom:"1px solid var(--soft)",color:isMoney?accent:c==="status"&&String(v).toLowerCase()==="active"?"#4ade80":"rgba(255,255,255,0.72)",fontWeight:isMoney?700:400,fontFamily:isMoney?"'JetBrains Mono',monospace":"'Syne',sans-serif",whiteSpace:"nowrap"}}>
                       {c==="status"?(
-                        <span style={{padding:"2px 8px",borderRadius:20,background:String(v).toLowerCase()==="active"?"rgba(74,222,128,0.12)":"rgba(255,255,255,0.06)",border:`1px solid ${String(v).toLowerCase()==="active"?"rgba(74,222,128,0.3)":"rgba(255,255,255,0.1)"}`,fontSize:9}}>{disp}</span>
+                        <span style={{padding:"2px 8px",borderRadius:20,background:String(v).toLowerCase()==="active"?"rgba(74,222,128,0.12)":"var(--soft)",border:`1px solid ${String(v).toLowerCase()==="active"?"rgba(74,222,128,0.3)":"var(--soft-strong)"}`,fontSize:9}}>{disp}</span>
                       ):disp}
                     </td>
                   );
@@ -577,22 +606,22 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={290}>
-          <ComposedChart data={sorted} margin={{top:8,right:20,bottom:4,left:4}}>
+          <ComposedChart data={sorted} margin={{top:8,right:20,bottom:18,left:4}}>
             <defs>
               <linearGradient id="pgMax2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PALETTE[1]} stopOpacity={0.18}/><stop offset="100%" stopColor={PALETTE[1]} stopOpacity={0}/></linearGradient>
               <linearGradient id="pgModal2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity={0.38}/><stop offset="100%" stopColor={accent} stopOpacity={0.01}/></linearGradient>
               <filter id="glw"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
-            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-            <XAxis dataKey="arrival_date" tickFormatter={v=>fmtD(v)} tick={{fill:"rgba(255,255,255,0.22)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
-            <YAxis tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.22)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} width={48}/>
+            <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+            <XAxis dataKey="arrival_date" tickFormatter={v=>fmtDX(v)} tick={{fill:"var(--faint)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={28} angle={-18} textAnchor="end" height={40}/>
+            <YAxis tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"var(--faint)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} width={52}/>
             <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
-            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
+            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"var(--muted)"}}/>
             <Area type="monotone" dataKey="max_price"   fill="url(#pgMax2)"   stroke="transparent" name="Max Price" isAnimationActive animationDuration={900}/>
             <Area type="monotone" dataKey="modal_price" fill="url(#pgModal2)" stroke={accent} strokeWidth={2.5} dot={false} name="Modal Price" isAnimationActive animationDuration={1100}/>
             <Line type="monotone" dataKey="min_price" stroke="#16a34a" strokeWidth={1.5} dot={false} strokeDasharray="3 4" name="Min Price" isAnimationActive animationDuration={1300}/>
             {avgModal>0&&<ReferenceLine y={avgModal} stroke={`${accent}60`} strokeDasharray="5 4" label={{value:"AVG",position:"insideRight",fill:`${accent}80`,fontSize:9,fontFamily:"'JetBrains Mono',monospace"}}/>}
-            <Brush dataKey="arrival_date" height={24} stroke="rgba(255,255,255,0.08)" fill="rgba(255,255,255,0.025)" travellerWidth={8} tickFormatter={v=>fmtD(v)}/>
+            <Brush dataKey="arrival_date" height={24} stroke="var(--soft-strong)" fill="var(--soft-subtle)" travellerWidth={8} tickFormatter={v=>fmtD(v)}/>
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -604,8 +633,8 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
           <div className="section-label" style={{marginBottom:12}}>Records by State</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byState} layout="vertical" margin={{left:-6,right:12,top:0,bottom:0}}>
-              <XAxis type="number" tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="name" tick={{fill:"rgba(255,255,255,0.5)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
+              <XAxis type="number" tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
+              <YAxis type="category" dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Bar dataKey="value" radius={[0,5,5,0]} isAnimationActive animationDuration={1000}>
                 {byState.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} fillOpacity={0.85}/>)}
@@ -619,8 +648,8 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
           <div className="section-label" style={{marginBottom:12}}>Avg Price by Commodity</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byCommodity.slice(0,8)} layout="vertical" margin={{left:-6,right:12,top:0,bottom:0}}>
-              <XAxis type="number" tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="name" tick={{fill:"rgba(255,255,255,0.5)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
+              <XAxis type="number" tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
+              <YAxis type="category" dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
               <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
               <Bar dataKey="value" radius={[0,5,5,0]} isAnimationActive animationDuration={1200}>
                 {byCommodity.map((_,i)=><Cell key={i} fill={PALETTE[(i+3)%PALETTE.length]} fillOpacity={0.85}/>)}
@@ -639,8 +668,8 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
                 const col=PALETTE[(i+6)%PALETTE.length];
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{width:68,fontSize:9,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.commodity}</span>
-                    <div style={{flex:1,height:7,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
+                    <span style={{width:68,fontSize:9,color:"var(--muted)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.commodity}</span>
+                    <div style={{flex:1,height:7,background:"var(--soft)",borderRadius:4,overflow:"hidden"}}>
                       <div className="hbar-fill" style={{height:"100%",width:`${pct*100}%`,background:col,borderRadius:4}}/>
                     </div>
                     <span style={{width:62,fontSize:9,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:col,textAlign:"right"}}>{fmtM(r.spread)}</span>
@@ -648,7 +677,7 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
                 );
               })}
             </div>
-          ):<div style={{padding:20,textAlign:"center",color:"rgba(255,255,255,0.2)",fontSize:11}}>No spread data</div>}
+          ):<div style={{padding:20,textAlign:"center",color:"var(--faint)",fontSize:11}}>No spread data</div>}
         </div>
       </div>
 
@@ -660,7 +689,7 @@ const PricesViz = ({ rows, loading, accent, payload }) => {
             {stateSparklines.map((s,i)=>{
               const col=PALETTE[i%PALETTE.length]; const isPos=s.trend>=0;
               return (
-                <div key={s.state} className="mkt-fade-up" style={{padding:"12px",background:"rgba(255,255,255,0.025)",borderRadius:10,border:"1px solid rgba(255,255,255,0.07)",animationDelay:`${i*50}ms`}}>
+                <div key={s.state} className="mkt-fade-up" style={{padding:"12px",background:"var(--soft-subtle)",borderRadius:10,border:"1px solid var(--soft-strong)",animationDelay:`${i*50}ms`}}>
                   <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{s.state}</div>
                   <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:col}}>{fmtM(s.avg)}</div>
                   <div style={{fontSize:9,color:isPos?accent:"#16a34a",display:"flex",alignItems:"center",gap:3,marginTop:2,fontFamily:"'Syne',sans-serif"}}>{isPos?<ArrowUpRight size={9}/>:<ArrowDownRight size={9}/>}{isPos?"+":""}{s.trend.toFixed(1)}%</div>
@@ -726,12 +755,12 @@ const MspViz = ({ rows, loading, accent }) => {
           <div style={{fontSize:14,fontWeight:600,fontFamily:"'Syne',sans-serif",marginBottom:14}}>{rows.length} crops · {sorted[0]?.season||"2024-25"}</div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={top10} layout="vertical" margin={{left:0,right:72,top:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" horizontal={false}/>
-              <XAxis type="number" tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.2)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="commodity" tick={{fill:"rgba(255,255,255,0.6)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" horizontal={false}/>
+              <XAxis type="number" tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
+              <YAxis type="category" dataKey="commodity" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
               <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
               <Bar dataKey="msp" radius={[0,7,7,0]} isAnimationActive animationDuration={1100}
-                label={{position:"right",fill:"rgba(255,255,255,0.4)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>fmtM(v)}}>
+                label={{position:"right",fill:"var(--muted)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>fmtM(v)}}>
                 {top10.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]}/>)}
               </Bar>
             </BarChart>
@@ -746,8 +775,8 @@ const MspViz = ({ rows, loading, accent }) => {
               <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="90%"
                 data={top10.slice(0,8).map((r,i)=>({...r,val:Math.round((r.msp/maxMsp)*100),fill:PALETTE[i%PALETTE.length]}))}>
                 <RadialBar minAngle={12} dataKey="val" isAnimationActive animationDuration={1400} cornerRadius={4}
-                  label={{position:"insideStart",fill:"rgba(255,255,255,0.3)",fontSize:7,fontFamily:"'JetBrains Mono',monospace",formatter:v=>`${v}%`}}/>
-                <Tooltip content={({active,payload})=>active&&payload?.length?<div style={{background:"rgba(6,8,14,0.97)",border:`1px solid ${payload[0]?.payload?.fill}50`,borderRadius:10,padding:"9px 12px",fontSize:10,fontFamily:"'JetBrains Mono',monospace"}}><div style={{color:payload[0]?.payload?.fill,fontWeight:700}}>{payload[0]?.payload?.commodity}</div><div style={{color:"rgba(255,255,255,0.5)",marginTop:3}}>{fmtM(payload[0]?.payload?.msp)}</div></div>:null}/>
+                  label={{position:"insideStart",fill:"var(--faint)",fontSize:7,fontFamily:"'JetBrains Mono',monospace",formatter:v=>`${v}%`}}/>
+                <Tooltip content={({active,payload})=>active&&payload?.length?<div style={{background:"var(--surface)",border:`1px solid ${payload[0]?.payload?.fill}50`,borderRadius:10,padding:"9px 12px",fontSize:10,fontFamily:"'JetBrains Mono',monospace"}}><div style={{color:payload[0]?.payload?.fill,fontWeight:700}}>{payload[0]?.payload?.commodity}</div><div style={{color:"var(--muted)",marginTop:3}}>{fmtM(payload[0]?.payload?.msp)}</div></div>:null}/>
               </RadialBarChart>
             </ResponsiveContainer>
           </div>
@@ -757,8 +786,8 @@ const MspViz = ({ rows, loading, accent }) => {
             <div className="section-label" style={{marginBottom:8}}>Price Distribution</div>
             <ResponsiveContainer width="100%" height={130}>
               <BarChart data={buckets} margin={{left:-16,right:4,top:4,bottom:4}}>
-                <XAxis dataKey="range" tick={{fill:"rgba(255,255,255,0.25)",fontSize:7,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fill:"rgba(255,255,255,0.2)",fontSize:8}} axisLine={false} tickLine={false}/>
+                <XAxis dataKey="range" tick={{fill:"var(--faint)",fontSize:7,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fill:"var(--faint)",fontSize:8}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<MktTooltip accent={accent}/>}/>
                 <Bar dataKey="count" radius={[4,4,0,0]} isAnimationActive animationDuration={800}>
                   {buckets.map((_,i)=><Cell key={i} fill={accent} fillOpacity={0.5+i*0.05}/>)}
@@ -776,10 +805,10 @@ const MspViz = ({ rows, loading, accent }) => {
           {sorted.slice(0,20).map((r,i)=>{
             const p=maxMsp?r.msp/maxMsp:0; const c=PALETTE[i%PALETTE.length];
             return (
-              <div key={r.id} className="mkt-fade-up" style={{padding:"11px 12px",background:"rgba(255,255,255,0.025)",borderRadius:10,border:`1px solid ${c}20`,animationDelay:`${i*25}ms`,cursor:"default"}}>
-                <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",marginBottom:5,fontFamily:"'Syne',sans-serif",fontWeight:600}}>{r.commodity}</div>
+              <div key={r.id} className="mkt-fade-up" style={{padding:"11px 12px",background:"var(--soft-subtle)",borderRadius:10,border:`1px solid ${c}20`,animationDelay:`${i*25}ms`,cursor:"default"}}>
+                <div style={{fontSize:9,color:"var(--muted)",marginBottom:5,fontFamily:"'Syne',sans-serif",fontWeight:600}}>{r.commodity}</div>
                 <div style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:c}}>{fmtM(r.msp)}</div>
-                <div style={{marginTop:7,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2}}>
+                <div style={{marginTop:7,height:3,background:"var(--soft)",borderRadius:2}}>
                   <div style={{height:"100%",width:`${p*100}%`,background:c,borderRadius:2,transition:"width 1s cubic-bezier(.16,1,.3,1)"}}/>
                 </div>
                 <div style={{fontSize:8,color:"rgba(255,255,255,0.22)",marginTop:5,fontFamily:"'JetBrains Mono',monospace"}}>{r.season}</div>
@@ -863,15 +892,15 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
             <defs>
               <linearGradient id="tg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity={0.32}/><stop offset="100%" stopColor={accent} stopOpacity={0.01}/></linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
+            <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
             <XAxis dataKey="date" tickFormatter={v=>fmtD(v)} tick={{fill:"rgba(255,255,255,0.22)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
             <YAxis tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.22)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} width={50}/>
             <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
-            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
+            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"var(--muted)"}}/>
             <Area type="monotone" dataKey="modal_price" fill="url(#tg2)" stroke={accent} strokeWidth={2.5} dot={false} name="Modal Price" isAnimationActive animationDuration={1400}/>
             <Line type="monotone" dataKey="ma" stroke={PALETTE[1]} strokeWidth={1.5} dot={false} strokeDasharray="6 3" name="7-Day MA" isAnimationActive animationDuration={1600}/>
             {allVals.length>0&&<ReferenceLine y={arrAvg(allVals)} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" label={{value:"AVG",position:"insideRight",fill:"rgba(255,255,255,0.28)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}}/>}
-            <Brush dataKey="date" height={24} stroke="rgba(255,255,255,0.08)" fill="rgba(255,255,255,0.02)" travellerWidth={8} tickFormatter={v=>fmtD(v)}/>
+            <Brush dataKey="date" height={24} stroke="var(--soft-strong)" fill="var(--soft-subtle)" travellerWidth={8} tickFormatter={v=>fmtD(v)}/>
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -883,9 +912,9 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
             <div className="section-label" style={{marginBottom:12}}>Month-over-Month % Change</div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={pts.filter((_,i)=>i>0&&i%Math.max(1,Math.floor(pts.length/20))===0).map((p,i,arr)=>({date:p.date,chg:i>0?pctChg(p.modal_price,arr[i-1]?.modal_price||p.modal_price):0}))} margin={{left:-10,right:8,top:4,bottom:4}}>
-                <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-                <XAxis dataKey="date" tickFormatter={v=>fmtD(v)} tick={{fill:"rgba(255,255,255,0.2)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
-                <YAxis tick={{fill:"rgba(255,255,255,0.2)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v.toFixed(0)}%`}/>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+                <XAxis dataKey="date" tickFormatter={v=>fmtD(v)} tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                <YAxis tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v.toFixed(0)}%`}/>
                 <Tooltip content={<MktTooltip accent={accent} formatter={v=>`${v.toFixed(2)}%`}/>}/>
                 <Bar dataKey="chg" radius={[3,3,0,0]} isAnimationActive animationDuration={900}>
                   {pts.filter((_,i)=>i>0&&i%Math.max(1,Math.floor(pts.length/20))===0).map((_,i)=>{
@@ -903,17 +932,17 @@ const TrendsViz = ({ rows, loading, accent, payload, commodityF }) => {
               {[
                 {label:"Std Dev", value:fmtM(vol.std), col:accent},
                 {label:"CV %", value:`${vol.cv.toFixed(1)}%`, col:vol.cv>20?"#16a34a":vol.cv>10?PALETTE[3]:accent},
-                {label:"Range",value:`${fmtM(arrMin(allVals))} – ${fmtM(arrMax(allVals))}`,col:"rgba(255,255,255,0.7)"},
-                {label:"Sample",value:allVals.length,col:"rgba(255,255,255,0.7)"},
+                {label:"Range",value:`${fmtM(arrMin(allVals))} – ${fmtM(arrMax(allVals))}`,col:"var(--text)"},
+                {label:"Sample",value:allVals.length,col:"var(--text)"},
               ].map((item,i)=>(
-                <div key={i} style={{padding:"10px",background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.06)"}}>
-                  <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",fontFamily:"'Syne',sans-serif",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.08em"}}>{item.label}</div>
+                <div key={i} style={{padding:"10px",background:"var(--soft-subtle)",borderRadius:8,border:"1px solid var(--soft)"}}>
+                  <div style={{fontSize:8,color:"var(--faint)",fontFamily:"'Syne',sans-serif",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.08em"}}>{item.label}</div>
                   <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:item.col}}>{item.value}</div>
                 </div>
               ))}
             </div>
             <div className="mkt-divider"/>
-            <div style={{marginTop:12,fontSize:10,color:"rgba(255,255,255,0.4)",fontFamily:"'Syne',sans-serif",lineHeight:1.6}}>
+            <div style={{marginTop:12,fontSize:10,color:"var(--muted)",fontFamily:"'Syne',sans-serif",lineHeight:1.6}}>
               {vol.cv<10?"✅ Low volatility — stable market conditions"
                :vol.cv<20?"⚠ Moderate volatility — normal price movement"
                :"🔴 High volatility — monitor price risks closely"}
@@ -960,18 +989,18 @@ const MandisViz = ({ rows, loading, accent }) => {
         {/* Scatter geo */}
         <div className="mkt-card" style={{padding:"16px"}}>
           <div className="section-label" style={{marginBottom:6}}>Geographic Distribution</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>{scatterData.length} geo-tagged mandis across India</div>
+          <div style={{fontSize:11,color:"var(--faint)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>{scatterData.length} geo-tagged mandis across India</div>
           {scatterData.length>0?(
             <ResponsiveContainer width="100%" height={240}>
               <ScatterChart margin={{top:4,right:8,bottom:4,left:-12}}>
-                <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)"/>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)"/>
                 <XAxis dataKey="x" name="Longitude" domain={[68,98]} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
                 <YAxis dataKey="y" name="Latitude" domain={[8,38]} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-                <Tooltip cursor={{strokeDasharray:"2 3",stroke:"rgba(255,255,255,0.1)"}} content={({active,payload})=>active&&payload?.length?<div style={{background:"rgba(6,8,14,0.97)",border:`1px solid ${accent}40`,borderRadius:9,padding:"9px 12px",fontSize:10,fontFamily:"'Syne',sans-serif"}}><div style={{color:accent,fontWeight:700,marginBottom:3}}>{payload[0]?.payload?.name}</div><div style={{color:"rgba(255,255,255,0.45)"}}>{payload[0]?.payload?.state}</div></div>:null}/>
+                <Tooltip cursor={{strokeDasharray:"2 3",stroke:"var(--soft-strong)"}} content={({active,payload})=>active&&payload?.length?<div style={{background:"var(--surface)",border:`1px solid ${accent}40`,borderRadius:9,padding:"9px 12px",fontSize:10,fontFamily:"'Syne',sans-serif"}}><div style={{color:accent,fontWeight:700,marginBottom:3}}>{payload[0]?.payload?.name}</div><div style={{color:"var(--muted)"}}>{payload[0]?.payload?.state}</div></div>:null}/>
                 <Scatter name="Mandis" data={scatterData} fill={accent} fillOpacity={0.65} r={3}/>
               </ScatterChart>
             </ResponsiveContainer>
-          ):<div style={{height:240,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.18)",fontSize:11,fontFamily:"'Syne',sans-serif",flexDirection:"column",gap:8}}><MapPin size={24} color="rgba(255,255,255,0.1)"/>No coordinates available</div>}
+          ):<div style={{height:240,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.18)",fontSize:11,fontFamily:"'Syne',sans-serif",flexDirection:"column",gap:8}}><MapPin size={24} color="var(--soft-strong)"/>No coordinates available</div>}
         </div>
       </div>
 
@@ -981,8 +1010,8 @@ const MandisViz = ({ rows, loading, accent }) => {
           <div className="section-label" style={{marginBottom:12}}>Top Districts by Mandi Count</div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={byDistrict} margin={{left:0,right:12,top:4,bottom:36}}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-              <XAxis dataKey="name" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-25} textAnchor="end"/>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+              <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-25} textAnchor="end"/>
               <YAxis tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Bar dataKey="value" radius={[6,6,0,0]} isAnimationActive animationDuration={950}>
@@ -998,13 +1027,13 @@ const MandisViz = ({ rows, loading, accent }) => {
           {srcBreakdown.length>0?(
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={srcBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" isAnimationActive animationDuration={1200} label={({name,percent})=>`${short(name,8)} ${(percent*100).toFixed(0)}%`} labelLine={{stroke:"rgba(255,255,255,0.2)",strokeWidth:1}} fontSize={8} fontFamily="'Syne',sans-serif" fill="rgba(255,255,255,0.5)">
+                <Pie data={srcBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" isAnimationActive animationDuration={1200} label={({name,percent})=>`${short(name,8)} ${(percent*100).toFixed(0)}%`} labelLine={{stroke:"var(--faint)",strokeWidth:1}} fontSize={8} fontFamily="'Syne',sans-serif" fill="var(--muted)">
                   {srcBreakdown.map((_,i)=><Cell key={i} fill={PALETTE[(i+2)%PALETTE.length]}/>)}
                 </Pie>
                 <Tooltip content={<MktTooltip accent={accent}/>}/>
               </PieChart>
             </ResponsiveContainer>
-          ):<div style={{height:200,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.2)",fontSize:11,fontFamily:"'Syne',sans-serif"}}>No source data</div>}
+          ):<div style={{height:200,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--faint)",fontSize:11,fontFamily:"'Syne',sans-serif"}}>No source data</div>}
         </div>
       </div>
 
@@ -1054,8 +1083,8 @@ const ColdViz = ({ rows, loading, accent }) => {
           <div style={{fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif",marginBottom:14}}>(Metric Tonnes)</div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={stateData} margin={{left:0,right:12,top:4,bottom:52}}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-              <XAxis dataKey="state" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end"/>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+              <XAxis dataKey="state" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end"/>
               <YAxis tickFormatter={v=>`${Math.round(v/1000)}K`} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.45)"}}/>
@@ -1073,7 +1102,7 @@ const ColdViz = ({ rows, loading, accent }) => {
               <CircularProgress value={totReq} max={totAvail||1} size={100} accent={avgUtil>80?"#16a34a":avgUtil>60?PALETTE[3]:accent} label="National Utilization" sub={`${fmtN(Math.round(totReq/1000))}K / ${fmtN(Math.round(totAvail/1000))}K MT`}/>
             </div>
             <div className="mkt-divider"/>
-            <div style={{marginTop:12,fontSize:10,color:"rgba(255,255,255,0.4)",fontFamily:"'Syne',sans-serif",textAlign:"center",lineHeight:1.6}}>
+            <div style={{marginTop:12,fontSize:10,color:"var(--muted)",fontFamily:"'Syne',sans-serif",textAlign:"center",lineHeight:1.6}}>
               {avgUtil>85?"🔴 Critical — storage nearing capacity":avgUtil>65?"⚠ Moderate — watch demand pressure":"✅ Adequate — supply buffer available"}
             </div>
           </div>
@@ -1085,8 +1114,8 @@ const ColdViz = ({ rows, loading, accent }) => {
                 const col=r.utilization>85?"#16a34a":r.utilization>65?PALETTE[3]:accent;
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:9}}>
-                    <span style={{width:68,fontSize:9,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.state}</span>
-                    <div style={{flex:1,height:7,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
+                    <span style={{width:68,fontSize:9,color:"var(--muted)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.state}</span>
+                    <div style={{flex:1,height:7,background:"var(--soft)",borderRadius:4,overflow:"hidden"}}>
                       <div className="hbar-fill" style={{height:"100%",width:`${r.utilization}%`,background:col,borderRadius:4}}/>
                     </div>
                     <span style={{width:36,fontSize:9,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:col,textAlign:"right"}}>{r.utilization}%</span>
@@ -1109,7 +1138,7 @@ const ColdViz = ({ rows, loading, accent }) => {
                 <div key={i} style={{padding:"11px",background:`${col}08`,borderRadius:9,border:`1px solid ${col}20`}}>
                   <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{short(r.state,12)}</div>
                   <div style={{fontSize:13,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:col}}>{isSurplus?"+":""}{fmtN(Math.round(s/1000))}K MT</div>
-                  <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginTop:3,fontFamily:"'Syne',sans-serif"}}>{r.utilization}% utilized</div>
+                  <div style={{fontSize:8,color:"var(--faint)",marginTop:3,fontFamily:"'Syne',sans-serif"}}>{r.utilization}% utilized</div>
                 </div>
               );
             })}
@@ -1152,16 +1181,16 @@ const ReservoirViz = ({ rows, loading, accent }) => {
         <div style={{fontSize:14,fontWeight:600,fontFamily:"'Syne',sans-serif",marginBottom:14}}>% of normal capacity · {sd.length} states</div>
         <ResponsiveContainer width="100%" height={290}>
           <ComposedChart data={sd} margin={{left:0,right:12,top:8,bottom:52}}>
-            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-            <XAxis dataKey="state" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end"/>
-            <YAxis tick={{fill:"rgba(255,255,255,0.2)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+            <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+            <XAxis dataKey="state" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end"/>
+            <YAxis tick={{fill:"var(--faint)",fontSize:9,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
             <Tooltip content={<MktTooltip accent={accent} formatter={v=>`${fmtN(v)}%`}/>}/>
-            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
+            <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"var(--muted)"}}/>
             <Bar dataKey="storage" name="Storage %" radius={[5,5,0,0]} isAnimationActive animationDuration={1000}>
               {sd.map((r,i)=><Cell key={i} fill={r.storage<30?"#16a34a":r.storage<60?PALETTE[3]:accent} fillOpacity={0.82}/>)}
             </Bar>
             <Line type="monotone" dataKey="deficiency" name="Deficiency %" stroke={PALETTE[10]} strokeWidth={2.5} dot={{fill:PALETTE[10],r:3,strokeWidth:0}} isAnimationActive animationDuration={1300}/>
-            <ReferenceLine y={100} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" label={{value:"100%",position:"insideRight",fill:"rgba(255,255,255,0.2)",fontSize:9}}/>
+            <ReferenceLine y={100} stroke="var(--soft-strong)" strokeDasharray="4 4" label={{value:"100%",position:"insideRight",fill:"var(--faint)",fontSize:9}}/>
             <ReferenceLine y={30} stroke="rgba(34,197,94,0.4)" strokeDasharray="3 3" label={{value:"CRITICAL",position:"insideRight",fill:"#16a34a",fontSize:8}}/>
           </ComposedChart>
         </ResponsiveContainer>
@@ -1174,12 +1203,12 @@ const ReservoirViz = ({ rows, loading, accent }) => {
             <div className="section-label" style={{marginBottom:12}}>State Comparison · Radar</div>
             <ResponsiveContainer width="100%" height={230}>
               <RadarChart data={radarData}>
-                <PolarGrid stroke="rgba(255,255,255,0.07)"/>
-                <PolarAngleAxis dataKey="state" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}}/>
-                <PolarRadiusAxis angle={90} domain={[0,100]} tick={{fill:"rgba(255,255,255,0.2)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false}/>
+                <PolarGrid stroke="var(--soft-strong)"/>
+                <PolarAngleAxis dataKey="state" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}}/>
+                <PolarRadiusAxis angle={90} domain={[0,100]} tick={{fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false}/>
                 <Radar name="Storage %" dataKey="storage" stroke={accent} fill={accent} fillOpacity={0.2} isAnimationActive animationDuration={1300}/>
                 <Radar name="Deficiency %" dataKey="deficiency" stroke={PALETTE[10]} fill={PALETTE[10]} fillOpacity={0.12} isAnimationActive animationDuration={1500}/>
-                <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"rgba(255,255,255,0.4)"}}/>
+                <Legend wrapperStyle={{fontSize:9,fontFamily:"'Syne',sans-serif",color:"var(--muted)"}}/>
                 <Tooltip content={<MktTooltip accent={accent} formatter={v=>`${fmtN(v)}%`}/>}/>
               </RadarChart>
             </ResponsiveContainer>
@@ -1194,9 +1223,9 @@ const ReservoirViz = ({ rows, loading, accent }) => {
               const col=r.storage<30?"#16a34a":r.storage<60?PALETTE[3]:accent;
               return (
                 <div key={i} style={{padding:"10px 8px",background:`${col}0c`,borderRadius:8,border:`1px solid ${col}22`,textAlign:"center"}}>
-                  <div style={{fontSize:8,color:"rgba(255,255,255,0.4)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{short(r.state,9)}</div>
+                  <div style={{fontSize:8,color:"var(--muted)",fontFamily:"'Syne',sans-serif",marginBottom:4}}>{short(r.state,9)}</div>
                   <div style={{fontSize:18,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:col}}>{r.storage.toFixed(0)}%</div>
-                  <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,marginTop:5}}>
+                  <div style={{height:3,background:"var(--soft)",borderRadius:2,marginTop:5}}>
                     <div style={{height:"100%",width:`${r.storage}%`,background:col,borderRadius:2,transition:"width 1s cubic-bezier(.16,1,.3,1)"}}/>
                   </div>
                 </div>
@@ -1242,12 +1271,12 @@ const GenericViz = ({ rows, loading, accent, tab }) => {
             <div style={{fontSize:13,fontWeight:600,fontFamily:"'Syne',sans-serif",marginBottom:14}}>{grouped.length} unique values</div>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={grouped} layout="vertical" margin={{left:-4,right:56,top:0,bottom:0}}>
-                <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" horizontal={false}/>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" horizontal={false}/>
                 <XAxis type="number" tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-                <YAxis type="category" dataKey="name" tick={{fill:"rgba(255,255,255,0.55)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={90}/>
+                <YAxis type="category" dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={90}/>
                 <Tooltip content={<MktTooltip accent={accent}/>}/>
                 <Bar dataKey="value" radius={[0,6,6,0]} isAnimationActive animationDuration={1000}
-                  label={{position:"right",fill:"rgba(255,255,255,0.35)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>v}}>
+                  label={{position:"right",fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>v}}>
                   {grouped.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} fillOpacity={0.85}/>)}
                 </Bar>
               </BarChart>
@@ -1257,7 +1286,7 @@ const GenericViz = ({ rows, loading, accent, tab }) => {
           {/* Donut */}
           <div className="mkt-card" style={{padding:"16px"}}>
             <div className="section-label" style={{marginBottom:6}}>Share Breakdown</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Top {Math.min(8,grouped.length)} categories</div>
+            <div style={{fontSize:11,color:"var(--faint)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Top {Math.min(8,grouped.length)} categories</div>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={grouped.slice(0,8)} cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={4} dataKey="value" isAnimationActive animationDuration={1200}>
@@ -1268,7 +1297,7 @@ const GenericViz = ({ rows, loading, accent, tab }) => {
             </ResponsiveContainer>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
               {grouped.slice(0,8).map((d,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif"}}>
+                <div key={i} style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:"var(--muted)",fontFamily:"'Syne',sans-serif"}}>
                   <div style={{width:8,height:8,borderRadius:2,background:PALETTE[i%PALETTE.length],flexShrink:0}}/>
                   {short(d.name,12)}
                 </div>
@@ -1292,8 +1321,8 @@ const GenericViz = ({ rows, loading, accent, tab }) => {
           <div className="section-label" style={{marginBottom:12}}>Avg {fL(numField)} by {groupField?fL(groupField):"Group"}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={numData} margin={{left:0,right:12,top:4,bottom:36}}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-              <XAxis dataKey="name" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end"/>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+              <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end"/>
               <YAxis tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Bar dataKey="value" radius={[5,5,0,0]} isAnimationActive animationDuration={1100}>
@@ -1360,7 +1389,7 @@ const EquipmentViz = ({ rows, loading, accent }) => {
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={byState} layout="vertical" margin={{left:-4,right:12,top:0,bottom:0}}>
               <XAxis type="number" tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="name" tick={{fill:"rgba(255,255,255,0.5)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
+              <YAxis type="category" dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={80}/>
               <Tooltip content={<MktTooltip accent={accent}/>}/>
               <Bar dataKey="value" radius={[0,5,5,0]} isAnimationActive animationDuration={1000}>
                 {byState.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} fillOpacity={0.82}/>)}
@@ -1374,14 +1403,14 @@ const EquipmentViz = ({ rows, loading, accent }) => {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div className="mkt-card" style={{padding:"16px"}}>
           <div className="section-label" style={{marginBottom:6}}>Daily Rental Rate by Category</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Average ₹ per day</div>
+          <div style={{fontSize:11,color:"var(--faint)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Average ₹ per day</div>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={rateData} layout="vertical" margin={{left:-4,right:72,top:0,bottom:0}}>
               <XAxis type="number" tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="name" tick={{fill:"rgba(255,255,255,0.5)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={90}/>
+              <YAxis type="category" dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} width={90}/>
               <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
               <Bar dataKey="value" radius={[0,6,6,0]} isAnimationActive animationDuration={1100}
-                label={{position:"right",fill:"rgba(255,255,255,0.35)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>fmtM(v)}}>
+                label={{position:"right",fill:"var(--faint)",fontSize:8,fontFamily:"'JetBrains Mono',monospace",formatter:v=>fmtM(v)}}>
                 {rateData.map((_,i)=><Cell key={i} fill={PALETTE[(i+2)%PALETTE.length]} fillOpacity={0.85}/>)}
               </Bar>
             </BarChart>
@@ -1390,11 +1419,11 @@ const EquipmentViz = ({ rows, loading, accent }) => {
 
         <div className="mkt-card" style={{padding:"16px"}}>
           <div className="section-label" style={{marginBottom:6}}>State-wise Avg Daily Rate</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Rental cost comparison</div>
+          <div style={{fontSize:11,color:"var(--faint)",marginBottom:12,fontFamily:"'Syne',sans-serif"}}>Rental cost comparison</div>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={stateRates} margin={{left:0,right:12,top:4,bottom:40}}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-              <XAxis dataKey="name" tick={{fill:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end"/>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--soft)" vertical={false}/>
+              <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:9,fontFamily:"'Syne',sans-serif"}} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end"/>
               <YAxis tickFormatter={v=>`₹${Math.round(v/1000)}k`} tick={{fill:"rgba(255,255,255,0.18)",fontSize:8,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false}/>
               <Tooltip content={<MktTooltip accent={accent} isMoney/>}/>
               {avgDay>0&&<ReferenceLine y={avgDay} stroke={`${accent}55`} strokeDasharray="4 4" label={{value:"AVG",position:"insideRight",fill:`${accent}80`,fontSize:9,fontFamily:"'JetBrains Mono',monospace"}}/>}
@@ -1417,8 +1446,8 @@ const EquipmentViz = ({ rows, loading, accent }) => {
               const col=PALETTE[(i+7)%PALETTE.length];
               return (
                 <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{width:80,fontSize:9,color:"rgba(255,255,255,0.5)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</span>
-                  <div style={{flex:1,height:7,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
+                  <span style={{width:80,fontSize:9,color:"var(--muted)",fontFamily:"'Syne',sans-serif",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</span>
+                  <div style={{flex:1,height:7,background:"var(--soft)",borderRadius:4,overflow:"hidden"}}>
                     <div className="hbar-fill" style={{height:"100%",width:`${pct*100}%`,background:col,borderRadius:4}}/>
                   </div>
                   <span style={{width:60,fontSize:9,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:col,textAlign:"right"}}>{fmtM(r.value)}/hr</span>
@@ -1437,21 +1466,21 @@ const EquipmentViz = ({ rows, loading, accent }) => {
                 <PieChart>
                   <Pie data={[{name:"Active",value:activeCount},{name:"Inactive",value:rows.length-activeCount}]} cx="50%" cy="50%" innerRadius={40} outerRadius={68} paddingAngle={4} dataKey="value" isAnimationActive animationDuration={1200}>
                     <Cell fill={accent}/>
-                    <Cell fill="rgba(255,255,255,0.12)"/>
+                    <Cell fill="var(--soft-strong)"/>
                   </Pie>
                   <Tooltip content={<MktTooltip accent={accent}/>}/>
                 </PieChart>
               </ResponsiveContainer>
               <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8}}>
-                {[{label:"Active",val:activeCount,col:accent},{label:"Inactive",val:rows.length-activeCount,col:"rgba(255,255,255,0.3)"}].map(s=>(
+                {[{label:"Active",val:activeCount,col:accent},{label:"Inactive",val:rows.length-activeCount,col:"var(--faint)"}].map(s=>(
                   <div key={s.label} style={{textAlign:"center"}}>
                     <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:s.col}}>{s.val}</div>
-                    <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontFamily:"'Syne',sans-serif"}}>{s.label}</div>
+                    <div style={{fontSize:9,color:"var(--faint)",fontFamily:"'Syne',sans-serif"}}>{s.label}</div>
                   </div>
                 ))}
               </div>
             </>
-          ):<div style={{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.2)",fontSize:11}}>No status data</div>}
+          ):<div style={{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--faint)",fontSize:11}}>No status data</div>}
         </div>
       </div>
 
@@ -1525,7 +1554,7 @@ const QuickInsights = ({ rows, tab, accent, payload }) => {
       <div className="section-label" style={{marginBottom:10}}>Quick Insights</div>
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {insights.map((ins,i)=>(
-          <div key={i} className="mkt-fade-up" style={{fontSize:10.5,color:"rgba(255,255,255,0.5)",lineHeight:1.5,paddingLeft:10,borderLeft:`2px solid ${accent}45`,animationDelay:`${i*40}ms`,fontFamily:"'Syne',sans-serif"}}>
+          <div key={i} className="mkt-fade-up" style={{fontSize:10.5,color:"var(--muted)",lineHeight:1.5,paddingLeft:10,borderLeft:`2px solid ${accent}45`,animationDelay:`${i*40}ms`,fontFamily:"'Syne',sans-serif"}}>
             {ins}
           </div>
         ))}
@@ -1558,8 +1587,8 @@ const Market = () => {
 
   const tabMeta = TABS.find(t=>t.id===activeTab)||TABS[0];
   const accent  = tabMeta.accent;
-  const pageBg = "var(--bg)";
-  const panelBg = "var(--surface)";
+  const pageBg = "transparent";
+  const panelBg = "transparent";
 
   /* bootstrap filter lists */
   useEffect(()=>{
@@ -1645,7 +1674,7 @@ const Market = () => {
 
   /* ── RENDER ── */
   return (
-    <div style={{fontFamily:"'Syne','Inter',system-ui,sans-serif",display:"flex",flexDirection:"column",height:"calc(100vh - 68px)",overflow:"hidden",background:pageBg,color:"var(--text)",marginTop:"-24px"}}>
+    <div style={{fontFamily:"'Syne','Inter',system-ui,sans-serif",display:"flex",flexDirection:"column",height:"calc(100vh - 68px)",overflow:"hidden",background:pageBg,color:"var(--text)",marginTop:"-24px",marginLeft:"-24px",marginRight:"-24px",width:"calc(100% + 48px)"}}>
 
       {/* ── STICKY HEADER ── */}
       <div style={{position:"sticky",top:0,zIndex:50,flexShrink:0,background:panelBg,borderBottom:"1px solid var(--border)"}}>
@@ -1653,9 +1682,8 @@ const Market = () => {
         {/* Top bar */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:accent,boxShadow:`0 0 12px ${accent}`}} className="live-dot"/>
             {updatedAt&&(
-              <span style={{fontSize:9.5,color:"rgba(255,255,255,0.28)",fontFamily:"'JetBrains Mono',monospace",display:"flex",alignItems:"center",gap:5}}>
+              <span style={{fontSize:9.5,color:"var(--muted)",fontFamily:"'JetBrains Mono',monospace",display:"flex",alignItems:"center",gap:5}}>
                 <Clock size={9}/>{new Date(updatedAt).toLocaleTimeString("en-IN")}
               </span>
             )}
@@ -1667,7 +1695,7 @@ const Market = () => {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {/* View toggles */}
-            <div style={{display:"flex",gap:2,background:"rgba(255,255,255,0.04)",borderRadius:9,padding:"3px"}}>
+            <div style={{display:"flex",gap:2,background:"var(--soft)",borderRadius:9,padding:"3px"}}>
               {[["split","Split",LayoutGrid],["viz","Viz",BarChart3],["table","Table",Table]].map(([mode,title,Icon])=>(
                 <button key={mode} title={title} className={`mkt-btn${viewMode===mode?" active-btn":""}`}
                   onClick={()=>setViewMode(mode)} type="button" style={{padding:"5px 10px",border:"none",borderRadius:6}}>
@@ -1675,7 +1703,7 @@ const Market = () => {
                 </button>
               ))}
             </div>
-            <button className={`mkt-btn${showRight?"":" active-btn"}`} type="button" onClick={()=>setShowRight(v=>!v)} title="Toggle sidebar"><Eye size={12}/></button>
+            <button className={`mkt-btn mkt-sidebar-toggle${showRight?"":" active-btn"}`} type="button" onClick={()=>setShowRight(v=>!v)} title="Toggle sidebar"><Eye size={12}/></button>
             <button className="mkt-btn" type="button" onClick={()=>setTick(v=>v+1)}>
               <RefreshCw size={12} className={loading?"mkt-spin":""}/>Refresh
             </button>
@@ -1683,7 +1711,7 @@ const Market = () => {
         </div>
 
         {/* Tabs */}
-        <div style={{display:"flex",gap:2,padding:"0 16px",borderTop:"1px solid rgba(255,255,255,0.05)",overflowX:"auto"}} className="mkt-scroll">
+        <div style={{display:"flex",gap:2,padding:"0 16px",borderTop:"1px solid var(--soft)",overflowX:"auto"}} className="mkt-scroll">
           {TABS.map(tab=>{
             const Icon=tab.icon; const active=activeTab===tab.id;
             return (
@@ -1691,7 +1719,6 @@ const Market = () => {
                 style={{"--tab-accent":tab.accent,background:active?tab.bg:"transparent"}}
                 onClick={()=>setActiveTab(tab.id)}>
                 <Icon size={12}/>{tab.label}
-                {active&&<div className="live-dot" style={{background:tab.accent,width:5,height:5,marginLeft:2}}/>}
               </button>
             );
           })}
@@ -1700,7 +1727,7 @@ const Market = () => {
         {/* Filters */}
         <div className="mkt-fade-in" style={{padding:"12px 20px",background:panelBg,borderTop:"1px solid var(--border)",display:"flex",gap:9,flexWrap:"wrap",alignItems:"flex-end"}}>
             <div style={{position:"relative",minWidth:190}}>
-              <Search size={11} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.28)"}}/>
+              <Search size={11} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--faint)"}}/>
               <input className="mkt-inp" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search rows…" style={{width:190}}/>
             </div>
             {stateOpts.length>0&&(
@@ -1730,7 +1757,7 @@ const Market = () => {
             <button className="mkt-btn" type="button" onClick={()=>{setSearch("");setStateF("");setCommodityF("");setDistrictF("");setMarketF("");}}>
               <X size={11}/> Clear
             </button>
-            <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",fontFamily:"'Syne',sans-serif",alignSelf:"center"}}>
+            <span style={{fontSize:10,color:"var(--faint)",fontFamily:"'Syne',sans-serif",alignSelf:"center"}}>
               {visibleRows.length} of {rows.length} rows
             </span>
         </div>
@@ -1752,7 +1779,7 @@ const Market = () => {
       <div style={{display:"grid",gridTemplateColumns:viewMode==="table"?"1fr":`1fr${showRight?" 280px":""}`,flex:1,minHeight:0}}>
 
         {/* ── LEFT: VIZ + TABLE ── */}
-        <div style={{borderRight:showRight&&viewMode!=="table"?"1px solid rgba(255,255,255,0.06)":"none",overflowY:"auto"}} className="mkt-scroll">
+        <div style={{borderRight:showRight&&viewMode!=="table"?"1px solid var(--soft)":"none",overflowY:"auto"}} className="mkt-scroll">
           <div style={{padding:"10px 20px 20px"}}>
 
             {/* VIZ section */}
@@ -1763,12 +1790,12 @@ const Market = () => {
               <div style={{marginTop:viewMode==="split"?20:0}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                   <div>
-                    <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.12em",fontFamily:"'Syne',sans-serif",marginBottom:4}}>Raw Data Table</div>
+                    <div style={{fontSize:10,color:"var(--faint)",textTransform:"uppercase",letterSpacing:"0.12em",fontFamily:"'Syne',sans-serif",marginBottom:4}}>Raw Data Table</div>
                     <div style={{fontSize:14,fontWeight:600,fontFamily:"'Syne',sans-serif"}}>{tabMeta.label} · {visibleRows.length} rows</div>
                   </div>
                   {viewMode==="table"&&(
                     <div style={{position:"relative"}}>
-                      <Search size={11} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.25)"}}/>
+                      <Search size={11} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--faint)"}}/>
                       <input className="mkt-inp" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{width:200}}/>
                     </div>
                   )}
@@ -1786,7 +1813,7 @@ const Market = () => {
           <div style={{display:"flex",flexDirection:"column",overflowY:"auto",background:panelBg,borderLeft:"1px solid var(--border)"}} className="mkt-scroll">
 
             {/* Tab meta */}
-            <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{padding:"16px 16px 12px",borderBottom:"1px solid var(--soft)"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 {(()=>{ const I=tabMeta.icon; return <I size={13} color={accent}/>; })()}
                 <span className="section-label">{tabMeta.label}</span>
@@ -1800,24 +1827,24 @@ const Market = () => {
                   ["Filters",  [stateF,commodityF,districtF,marketF].filter(Boolean).join(", ")||"None"],
                 ].map(([k,v])=>(
                   <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 0"}}>
-                    <span style={{fontSize:9,color:"rgba(255,255,255,0.3)",fontFamily:"'Syne',sans-serif",textTransform:"uppercase",letterSpacing:"0.08em"}}>{k}</span>
-                    <span style={{fontSize:9.5,color:"rgba(255,255,255,0.65)",fontFamily:"'JetBrains Mono',monospace",maxWidth:130,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</span>
+                    <span style={{fontSize:9,color:"var(--faint)",fontFamily:"'Syne',sans-serif",textTransform:"uppercase",letterSpacing:"0.08em"}}>{k}</span>
+                    <span style={{fontSize:9.5,color:"var(--muted)",fontFamily:"'JetBrains Mono',monospace",maxWidth:130,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Accent progress bar for rows */}
-            <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-              <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",marginBottom:6,fontFamily:"'Syne',sans-serif",textTransform:"uppercase",letterSpacing:"0.08em"}}>Data Load Quality</div>
-              <div style={{height:5,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:"1px solid var(--soft)"}}>
+              <div style={{fontSize:9,color:"var(--faint)",marginBottom:6,fontFamily:"'Syne',sans-serif",textTransform:"uppercase",letterSpacing:"0.08em"}}>Data Load Quality</div>
+              <div style={{height:5,background:"var(--soft)",borderRadius:3,overflow:"hidden"}}>
                 <div style={{height:"100%",width:rows.length>0?"100%":"0%",background:`linear-gradient(90deg,${accent},${accent}80)`,borderRadius:3,transition:"width 0.8s ease"}}/>
               </div>
               <div style={{fontSize:9,color:`${accent}99`,marginTop:5,fontFamily:"'Syne',sans-serif"}}>{rows.length>0?"Loaded successfully":"No data"}</div>
             </div>
 
             {/* Spotlight */}
-            <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{borderBottom:"1px solid var(--soft)"}}>
               <div style={{padding:"12px 16px 4px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span className="section-label">Record Spotlight</span>
                 {selectedRow&&<button className="mkt-btn" style={{padding:"2px 7px",fontSize:9}} onClick={()=>setSelectedRow(null)} type="button"><X size={9}/></button>}
@@ -1826,7 +1853,7 @@ const Market = () => {
             </div>
 
             {/* Quick insights */}
-            <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{borderBottom:"1px solid var(--soft)"}}>
               <QuickInsights rows={visibleRows} tab={activeTab} accent={accent} payload={payload}/>
             </div>
 
@@ -1837,7 +1864,7 @@ const Market = () => {
                 {TABS.filter(t=>t.id!==activeTab).slice(0,5).map(t=>{
                   const I=t.icon;
                   return (
-                    <button key={t.id} type="button" onClick={()=>setActiveTab(t.id)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:10,fontFamily:"'Syne',sans-serif",transition:"all 0.15s",textAlign:"left"}}>
+                    <button key={t.id} type="button" onClick={()=>setActiveTab(t.id)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"var(--soft-subtle)",border:"1px solid var(--soft)",cursor:"pointer",color:"var(--muted)",fontSize:10,fontFamily:"'Syne',sans-serif",transition:"all 0.15s",textAlign:"left"}}>
                       <I size={11} color={t.accent}/>{t.label}
                     </button>
                   );

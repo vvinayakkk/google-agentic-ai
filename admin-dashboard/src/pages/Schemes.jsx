@@ -24,6 +24,52 @@ import {
 import Modal from "../components/ui/Modal";
 import { apiTry, withQuery } from "../api/client";
 
+const SCHEMES_STYLE_ID = "schemes-theme-v2";
+const SCHEMES_STYLES = `
+  .sch-page {
+    background: var(--app-shell-gradient);
+    min-height: calc(100vh - 68px);
+    margin-top: -24px;
+    margin-left: -24px;
+    margin-right: -24px;
+    width: calc(100% + 48px);
+    padding: 18px 20px 28px;
+  }
+  .sch-glass {
+    background: var(--app-shell-gradient);
+    border: 1px solid var(--soft-strong);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .sch-input,
+  .sch-select {
+    background: var(--surface) !important;
+    border: 1px solid var(--soft-strong) !important;
+    color: var(--text) !important;
+  }
+  .sch-btn {
+    background: var(--app-shell-gradient);
+    border: 1px solid var(--soft-strong);
+    color: var(--muted);
+  }
+  .sch-btn:hover {
+    border-color: var(--faint);
+    color: var(--text);
+  }
+`;
+
+const existingSchemesStyle = document.getElementById(SCHEMES_STYLE_ID);
+if (existingSchemesStyle) {
+  if (existingSchemesStyle.textContent !== SCHEMES_STYLES) {
+    existingSchemesStyle.textContent = SCHEMES_STYLES;
+  }
+} else {
+  const s = document.createElement("style");
+  s.id = SCHEMES_STYLE_ID;
+  s.textContent = SCHEMES_STYLES;
+  document.head.appendChild(s);
+}
+
 /* ─────────────────────────────────────────────
    Helpers
 ───────────────────────────────────────────── */
@@ -85,11 +131,11 @@ const initialForm = {
 ───────────────────────────────────────────── */
 const TagPill = ({ label, variant = "default" }) => {
   const styles = {
-    default: { bg: "rgba(255,255,255,0.06)", color: "#a0a0a0", border: "rgba(255,255,255,0.1)" },
-    green: { bg: "rgba(34,197,94,0.12)", color: "#22C55E", border: "rgba(34,197,94,0.2)" },
-    blue: { bg: "rgba(96,165,250,0.12)", color: "#60A5FA", border: "rgba(96,165,250,0.2)" },
-    amber: { bg: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "rgba(245,158,11,0.2)" },
-    purple: { bg: "rgba(167,139,250,0.12)", color: "#A78BFA", border: "rgba(167,139,250,0.2)" },
+    default: { bg: "var(--app-shell-gradient)", color: "var(--muted)", border: "var(--soft-strong)" },
+    green: { bg: "var(--app-shell-gradient)", color: "var(--muted)", border: "var(--soft-strong)" },
+    blue: { bg: "var(--app-shell-gradient)", color: "var(--muted)", border: "var(--soft-strong)" },
+    amber: { bg: "var(--app-shell-gradient)", color: "var(--muted)", border: "var(--soft-strong)" },
+    purple: { bg: "var(--app-shell-gradient)", color: "var(--muted)", border: "var(--soft-strong)" },
   };
   const s = styles[variant] || styles.default;
   return (
@@ -101,14 +147,7 @@ const TagPill = ({ label, variant = "default" }) => {
   );
 };
 
-const categoryVariant = (cat = "") => {
-  const c = cat.toLowerCase();
-  if (c.includes("benefit") || c.includes("income")) return "green";
-  if (c.includes("solar") || c.includes("subsidy")) return "amber";
-  if (c.includes("insur") || c.includes("health") || c.includes("diagno")) return "blue";
-  if (c.includes("credit") || c.includes("loan")) return "purple";
-  return "default";
-};
+const categoryVariant = () => "default";
 
 /* ─────────────────────────────────────────────
    Expanded detail panel
@@ -133,12 +172,12 @@ const ExpandedDetail = ({ row }) => {
   }, [row.document_links]);
 
   return (
-    <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+    <tr style={{ background: "var(--soft-subtle)" }}>
       <td colSpan={8} style={{ padding: 0 }}>
         <div style={{
           margin: "0 0 2px 0",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--soft)",
+          borderBottom: "1px solid var(--soft)",
           padding: "20px 24px 20px 56px",
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -147,15 +186,15 @@ const ExpandedDetail = ({ row }) => {
           {/* Left: Description + How to Apply */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 8, fontWeight: 600 }}>Description</div>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, margin: 0 }}>
+              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8, fontWeight: 600 }}>Description</div>
+              <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
                 {row.description || row.summary || "No description available for this scheme."}
               </p>
             </div>
             {row.how_to_apply && (
               <div>
-                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 8, fontWeight: 600 }}>How to Apply</div>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.7, margin: 0 }}>
+                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8, fontWeight: 600 }}>How to Apply</div>
+                <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
                   {row.how_to_apply}
                 </p>
               </div>
@@ -166,10 +205,10 @@ const ExpandedDetail = ({ row }) => {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {eligibilityList.length > 0 && (
               <div>
-                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 8, fontWeight: 600 }}>Eligibility</div>
+                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8, fontWeight: 600 }}>Eligibility</div>
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
                   {eligibilityList.map((item, i) => (
-                    <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                    <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "var(--muted)" }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22C55E", marginTop: 5, flexShrink: 0 }} />
                       {item}
                     </li>
@@ -180,7 +219,7 @@ const ExpandedDetail = ({ row }) => {
 
             {(officialLinks.length > 0 || docLinks.length > 0 || row.contact_numbers?.length > 0) && (
               <div>
-                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 8, fontWeight: 600 }}>Official Links</div>
+                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8, fontWeight: 600 }}>Official Links</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {officialLinks.slice(0, 3).map((link, i) => {
                     const url = typeof link === "string" ? link : link.url;
@@ -216,10 +255,10 @@ const ExpandedDetail = ({ row }) => {
 
             {row.required_documents?.length > 0 && (
               <div>
-                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 6, fontWeight: 600 }}>Required Documents</div>
+                <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 6, fontWeight: 600 }}>Required Documents</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {(Array.isArray(row.required_documents) ? row.required_documents : [row.required_documents]).slice(0, 5).map((d, i) => (
-                    <span key={i} style={{ fontSize: 10, color: "#777", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "2px 7px" }}>
+                    <span key={i} style={{ fontSize: 10, color: "#777", background: "var(--soft)", border: "1px solid var(--soft-strong)", borderRadius: 4, padding: "2px 7px" }}>
                       {d}
                     </span>
                   ))}
@@ -244,24 +283,24 @@ const DocCard = ({ doc }) => {
 
   return (
     <div style={{
-      background: "#141414", border: "1px solid rgba(255,255,255,0.07)",
+      background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)",
       borderRadius: 8, padding: "12px 14px",
       display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
       transition: "border-color 0.15s",
     }}
-      onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)"}
-      onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--faint)"}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--soft-strong)"}
     >
       <div style={{ width: 36, height: 36, borderRadius: 8, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <Icon size={16} color={color} />
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-        <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
           {label}{size ? ` · ${size}` : ""}{date ? ` · ${new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}` : ""}
         </div>
       </div>
-      <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", padding: 4 }}>
+      <button style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 4 }}>
         <MoreHorizontal size={14} />
       </button>
     </div>
@@ -372,38 +411,35 @@ const Schemes = () => {
   }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0, minHeight: "100vh" }}>
+    <div className="sch-page" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#f0f0f0" }}>Schemes</h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--text)" }}>Schemes</h2>
           {total > 0 && (
             <span style={{
-              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 20, fontSize: 11, color: "#888", padding: "2px 10px", fontWeight: 500,
+              background: "var(--soft)", border: "1px solid var(--soft-strong)",
+              borderRadius: 20, fontSize: 11, color: "var(--muted)", padding: "2px 10px", fontWeight: 500,
             }}>{total} Total</span>
           )}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={load} style={{
+          <button className="sch-btn" onClick={load} style={{
             display: "flex", alignItems: "center", gap: 6,
-            background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 8, color: "#888", fontSize: 12, padding: "7px 14px", cursor: "pointer",
+            borderRadius: 8, fontSize: 12, padding: "7px 14px", cursor: "pointer",
           }}>
             <RefreshCw size={12} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} /> Refresh
           </button>
-          <button style={{
+          <button className="sch-btn" style={{
             display: "flex", alignItems: "center", gap: 6,
-            background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 8, color: "#888", fontSize: 12, padding: "7px 14px", cursor: "pointer",
+            borderRadius: 8, fontSize: 12, padding: "7px 14px", cursor: "pointer",
           }}>
             <Download size={12} /> Export
           </button>
-          <button onClick={() => { setForm(initialForm); setShowModal(true); }} style={{
+          <button className="btn-ghost" onClick={() => { setForm(initialForm); setShowModal(true); }} style={{
             display: "flex", alignItems: "center", gap: 6,
-            background: "#22C55E", border: "none", borderRadius: 8,
-            color: "#000", fontSize: 12, fontWeight: 700, padding: "7px 16px", cursor: "pointer",
+            borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "7px 16px", cursor: "pointer",
           }}>
             <Plus size={13} /> Add Scheme
           </button>
@@ -411,27 +447,27 @@ const Schemes = () => {
       </div>
 
       {/* ── Filter bar ── */}
-      <div style={{
-        background: "#141414", border: "1px solid rgba(255,255,255,0.07)",
+      <div className="sch-glass" style={{
         borderRadius: 10, padding: "10px 14px",
         display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap",
       }}>
         {/* Search */}
         <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
-          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#555" }} />
+          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by scheme name or ID..."
             style={{
               width: "100%", boxSizing: "border-box",
-              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--surface)", border: "1px solid var(--soft-strong)",
               borderRadius: 7, height: 34, paddingLeft: 32, paddingRight: search ? 32 : 12,
-              fontSize: 12, color: "#e0e0e0", outline: "none", fontFamily: "inherit",
+              fontSize: 12, color: "var(--text)", outline: "none", fontFamily: "inherit",
             }}
+            className="sch-input"
           />
           {search && (
-            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#555", cursor: "pointer", padding: 0 }}>
+            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 0 }}>
               <X size={12} />
             </button>
           )}
@@ -443,16 +479,17 @@ const Schemes = () => {
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value)}
             style={{
-              appearance: "none", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              appearance: "none", background: "var(--surface)", border: "1px solid var(--soft-strong)",
               borderRadius: 7, height: 34, padding: "0 32px 0 12px",
-              fontSize: 12, color: stateFilter ? "#e0e0e0" : "#666", outline: "none",
+              fontSize: 12, color: stateFilter ? "var(--text)" : "var(--muted)", outline: "none",
               cursor: "pointer", fontFamily: "inherit", minWidth: 120,
             }}
+            className="sch-select"
           >
             <option value="">All States</option>
             {allStates.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <ChevronDown size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#555", pointerEvents: "none" }} />
+          <ChevronDown size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
         </div>
 
         {/* Category dropdown */}
@@ -461,27 +498,28 @@ const Schemes = () => {
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
-              appearance: "none", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              appearance: "none", background: "var(--surface)", border: "1px solid var(--soft-strong)",
               borderRadius: 7, height: 34, padding: "0 32px 0 12px",
-              fontSize: 12, color: categoryFilter ? "#e0e0e0" : "#666", outline: "none",
+              fontSize: 12, color: categoryFilter ? "var(--text)" : "var(--muted)", outline: "none",
               cursor: "pointer", fontFamily: "inherit", minWidth: 120,
             }}
+            className="sch-select"
           >
             <option value="">Category</option>
             {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          <ChevronDown size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#555", pointerEvents: "none" }} />
+          <ChevronDown size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
         </div>
 
         {/* Active filter pills */}
-        <div style={{ display: "flex", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, overflow: "hidden", marginLeft: "auto" }}>
+        <div style={{ display: "flex", border: "1px solid var(--soft-strong)", borderRadius: 7, overflow: "hidden", marginLeft: "auto" }}>
           {["all", "active", "inactive"].map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
               style={{
-                background: activeFilter === f ? "rgba(255,255,255,0.1)" : "transparent",
-                border: "none", color: activeFilter === f ? "#e0e0e0" : "#666",
+                background: activeFilter === f ? "var(--soft-strong)" : "transparent",
+                border: "none", color: activeFilter === f ? "var(--text)" : "var(--muted)",
                 fontSize: 11, fontWeight: activeFilter === f ? 600 : 400,
                 padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
                 textTransform: "capitalize",
@@ -493,10 +531,9 @@ const Schemes = () => {
         </div>
 
         {/* Bulk Import */}
-        <label style={{
+        <label className="sch-btn" style={{
           display: "flex", alignItems: "center", gap: 6,
-          background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 7, color: "#888", fontSize: 11, padding: "6px 12px", cursor: "pointer",
+          borderRadius: 7, fontSize: 11, padding: "6px 12px", cursor: "pointer",
         }}>
           <Upload size={12} /> Bulk Import
           <input type="file" accept="application/json" style={{ display: "none" }} onChange={(e) => e.target.files?.[0] && bulkImport(e.target.files[0])} />
@@ -511,25 +548,25 @@ const Schemes = () => {
       )}
 
       {/* ── Table ── */}
-      <div style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
+      <div className="sch-glass" style={{ borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <tr style={{ borderBottom: "1px solid var(--soft)" }}>
               <th style={{ width: 40, padding: "10px 0 10px 16px" }} />
-              <th style={{ textAlign: "left", padding: "10px 16px 10px 0", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555" }}>Title / Ministry</th>
-              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", width: 140 }}>State</th>
-              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", width: 150 }}>Categories</th>
-              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", width: 160 }}>Tags</th>
-              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", width: 100 }}>Status</th>
-              <th style={{ textAlign: "right", padding: "10px 24px 10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", width: 120 }}>Actions</th>
+              <th style={{ textAlign: "left", padding: "10px 16px 10px 0", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>Title / Ministry</th>
+              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", width: 140 }}>State</th>
+              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", width: 150 }}>Categories</th>
+              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", width: 160 }}>Tags</th>
+              <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", width: 100 }}>Status</th>
+              <th style={{ textAlign: "right", padding: "10px 24px 10px 16px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", width: 120 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading && rows.length === 0 && (
               [...Array(5)].map((_, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <tr key={i} style={{ borderBottom: "1px solid var(--soft)" }}>
                   <td colSpan={7} style={{ padding: "14px 16px" }}>
-                    <div style={{ height: 14, background: "rgba(255,255,255,0.04)", borderRadius: 4, animation: "pulse 1.2s infinite" }} />
+                    <div style={{ height: 14, background: "var(--soft)", borderRadius: 4, animation: "pulse 1.2s infinite" }} />
                   </td>
                 </tr>
               ))
@@ -538,9 +575,9 @@ const Schemes = () => {
             {!loading && filteredRows.length === 0 && (
               <tr>
                 <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center" }}>
-                  <BookOpen size={32} style={{ color: "#333", marginBottom: 10 }} />
-                  <div style={{ color: "#555", fontSize: 13 }}>No schemes found</div>
-                  <div style={{ color: "#444", fontSize: 11, marginTop: 4 }}>Try adjusting your filters</div>
+                  <BookOpen size={32} style={{ color: "var(--faint)", marginBottom: 10 }} />
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>No schemes found</div>
+                  <div style={{ color: "var(--faint)", fontSize: 11, marginTop: 4 }}>Try adjusting your filters</div>
                 </td>
               </tr>
             )}
@@ -558,38 +595,38 @@ const Schemes = () => {
                     key={id}
                     onClick={() => toggleExpand(row)}
                     style={{
-                      borderBottom: isExpanded ? "none" : "1px solid rgba(255,255,255,0.04)",
-                      background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent",
+                      borderBottom: isExpanded ? "none" : "1px solid var(--soft)",
+                      background: isExpanded ? "var(--soft-subtle)" : "transparent",
                       cursor: "pointer",
                       transition: "background 0.12s",
                     }}
-                    onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                    onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = "var(--soft-subtle)"; }}
                     onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
                   >
                     {/* Chevron */}
                     <td style={{ padding: "14px 0 14px 16px", width: 40 }}>
                       <div style={{
                         width: 22, height: 22, borderRadius: 5,
-                        background: isExpanded ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${isExpanded ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.08)"}`,
+                        background: isExpanded ? "rgba(34,197,94,0.1)" : "var(--soft)",
+                        border: `1px solid ${isExpanded ? "rgba(34,197,94,0.25)" : "var(--soft-strong)"}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "all 0.15s",
                       }}>
-                        <ChevronDown size={12} style={{ color: isExpanded ? "#22C55E" : "#666", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                        <ChevronDown size={12} style={{ color: isExpanded ? "#22C55E" : "var(--muted)", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
                       </div>
                     </td>
 
                     {/* Title / Ministry */}
                     <td style={{ padding: "14px 16px 14px 0" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#e8e8e8" }}>{row.name || row.title || "-"}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{row.name || row.title || "-"}</div>
                       {row.ministry && (
-                        <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{row.ministry}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{row.ministry}</div>
                       )}
                     </td>
 
                     {/* State */}
                     <td style={{ padding: "14px 16px" }}>
-                      <span style={{ fontSize: 12, color: "#aaa" }}>{getStateLabel(row)}</span>
+                      <span style={{ fontSize: 12, color: "var(--muted)" }}>{getStateLabel(row)}</span>
                     </td>
 
                     {/* Category */}
@@ -611,11 +648,11 @@ const Schemes = () => {
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <span style={{
                           width: 6, height: 6, borderRadius: "50%",
-                          background: isActive ? "#22C55E" : "#555",
+                          background: isActive ? "#22C55E" : "var(--muted)",
                           boxShadow: isActive ? "0 0 6px rgba(34,197,94,0.6)" : "none",
                           flexShrink: 0,
                         }} />
-                        <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? "#22C55E" : "#555", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? "#22C55E" : "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                           {isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
@@ -625,26 +662,20 @@ const Schemes = () => {
                     <td style={{ padding: "14px 24px 14px 16px", textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
                         <button
+                          className="btn-ghost"
                           onClick={() => { setForm(row); setShowModal(true); }}
                           style={{
-                            background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 5, color: "#aaa", fontSize: 11, fontWeight: 500,
+                            borderRadius: 5, fontSize: 11, fontWeight: 500,
                             padding: "4px 10px", cursor: "pointer", fontFamily: "inherit",
-                            transition: "all 0.12s",
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = "#e0e0e0"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = "#aaa"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
                         >Edit</button>
                         <button
+                          className="btn-ghost"
                           onClick={() => remove(id)}
                           style={{
-                            background: "transparent", border: "1px solid rgba(239,68,68,0.18)",
-                            borderRadius: 5, color: "#f87171", fontSize: 11, fontWeight: 500,
+                            borderRadius: 5, fontSize: 11, fontWeight: 500,
                             padding: "4px 10px", cursor: "pointer", fontFamily: "inherit",
-                            transition: "all 0.12s",
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                         >Delete</button>
                       </div>
                     </td>
@@ -662,11 +693,10 @@ const Schemes = () => {
       {/* ── Scheme Documents ── */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555" }}>Scheme Documents</div>
-          <label style={{
+          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)" }}>Scheme Documents</div>
+          <label className="btn-ghost" style={{
             display: "flex", alignItems: "center", gap: 5,
-            background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
-            borderRadius: 6, color: "#22C55E", fontSize: 11, fontWeight: 600,
+            borderRadius: 6, fontSize: 11, fontWeight: 600,
             padding: "5px 12px", cursor: "pointer",
           }}>
             <Upload size={11} /> Bulk Upload
@@ -678,13 +708,12 @@ const Schemes = () => {
             {docs.map((doc, i) => <DocCard key={i} doc={doc} />)}
           </div>
         ) : (
-          <div style={{
-            background: "#141414", border: "1px solid rgba(255,255,255,0.07)",
+          <div className="sch-glass" style={{
             borderRadius: 10, padding: "28px 24px", textAlign: "center",
           }}>
-            <FileText size={24} style={{ color: "#333", marginBottom: 8 }} />
-            <div style={{ fontSize: 12, color: "#555" }}>No documents found</div>
-            <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>Upload scheme guidelines, forms, and reference documents</div>
+            <FileText size={24} style={{ color: "var(--faint)", marginBottom: 8 }} />
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>No documents found</div>
+            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 4 }}>Upload scheme guidelines, forms, and reference documents</div>
           </div>
         )}
       </div>
@@ -698,12 +727,12 @@ const Schemes = () => {
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button onClick={() => { setShowModal(false); setForm(initialForm); }} style={{
-              background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 7, color: "#888", fontSize: 12, padding: "7px 16px", cursor: "pointer", fontFamily: "inherit",
+              background: "transparent", border: "1px solid var(--soft-strong)",
+              borderRadius: 7, color: "var(--muted)", fontSize: 12, padding: "7px 16px", cursor: "pointer", fontFamily: "inherit",
             }}>Cancel</button>
-            <button onClick={upsert} style={{
-              background: "#22C55E", border: "none", borderRadius: 7,
-              color: "#000", fontSize: 12, fontWeight: 700, padding: "7px 20px", cursor: "pointer", fontFamily: "inherit",
+            <button className="btn-ghost" onClick={upsert} style={{
+              borderRadius: 7,
+              fontSize: 12, fontWeight: 700, padding: "7px 20px", cursor: "pointer", fontFamily: "inherit",
             }}>Save Scheme</button>
           </div>
         }
@@ -711,12 +740,12 @@ const Schemes = () => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {Object.keys(initialForm).map((key) => (
             <label key={key} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", color: "#666", fontWeight: 600 }}>{key.replace(/_/g, " ")}</span>
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted)", fontWeight: 600 }}>{key.replace(/_/g, " ")}</span>
               {key === "is_active" ? (
                 <select
                   value={String(form[key])}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value === "true" }))}
-                  style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, height: 32, padding: "0 10px", fontSize: 12, color: "#e0e0e0", fontFamily: "inherit", outline: "none" }}
+                  style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 6, height: 32, padding: "0 10px", fontSize: 12, color: "var(--text)", fontFamily: "inherit", outline: "none" }}
                 >
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>

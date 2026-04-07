@@ -1,0 +1,1654 @@
+KISANKIAWAAZ DATABASE ANALYSIS REPORT
+Generated at: 2026-04-07T15:48:29.130151+00:00
+
+=== EXECUTIVE SUMMARY ===
+Database: farmer
+Total collections analyzed: 35
+Total documents (sum across collections): 146,521
+Top 10 largest collections:
+- ref_mandi_prices: 75,391
+- market_prices: 30,217
+- ref_equipment_rate_history: 29,040
+- ref_soil_health: 4,454
+- ref_pin_master: 2,726
+- ref_equipment_providers: 1,210
+- ref_mandi_directory: 976
+- agent_session_messages: 922
+- users: 303
+- agent_sessions: 301
+
+=== ACTIVITY DIAGNOSTIC (WHY ANALYTICS CAN LOOK BORING) ===
+Key operational collection volumes:
+- users: 303
+- farmer_profiles: 298
+- crops: 8
+- market_prices: 30,217
+- equipment_bookings: 1
+- notifications: 32
+- agent_sessions: 301
+- agent_session_messages: 922
+- calendar_events: 18
+Low-volume high-impact collections (<100 docs):
+- crops
+- equipment_bookings
+- notifications
+- calendar_events
+
+=== RELATIONSHIP COVERAGE CHECKS ===
+- farmer_profiles.user_id -> users._id: distinct=298, matched=298, coverage=100.00%
+- notifications.user_id -> users._id: distinct=1, matched=1, coverage=100.00%
+- notification_preferences.user_id -> users._id: distinct=1, matched=1, coverage=100.00%
+- equipment_bookings.equipment_id -> equipment._id: distinct=1, matched=1, coverage=100.00%
+
+=== COLLECTION-BY-COLLECTION DEEP DIVE ===
+
+--- admin_audit_logs ---
+Total docs: 28
+Sample analyzed: 28
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- timestamp span: 2 days
+Top 7 fields by coverage:
+- _id: coverage=1.00, types={'str': 28}, unique~=28
+  examples="a443f80f6a084dfaaff715e342a65282"; "2b96762e2fd14d0f9125403be82c9ea2"; "4d642393c7e0403495af6fe7d0f9a7e7"
+- admin_id: coverage=1.00, types={'str': 28}, unique~=1
+  examples="admin_admin"
+- action: coverage=1.00, types={'str': 28}, unique~=3
+  examples="UPDATE_FARMER_STATUS"; "UPDATE_EQUIPMENT_PROVIDER"; "SOFT_DELETE_EQUIPMENT_PROVIDER"
+- target_collection: coverage=1.00, types={'str': 28}, unique~=2
+  examples="users"; "ref_equipment_providers"
+- target_doc_id: coverage=1.00, types={'str': 28}, unique~=10
+  examples="seed_farmer_01"; "seed_farmer_03"; "rental_prov_test_api_test_seeder_maharashtra_pune"
+- payload_summary: coverage=1.00, types={'str': 28}, unique~=3
+  examples="is_active=False"; "is_active=True"; "fields=contact_phone,documents_required,eligibility,provider_phone,rate_daily,rental_id,updated_at"
+- timestamp: coverage=1.00, types={'str': 28}, unique~=28
+  datetime[min=2026-03-30T09:34:07.378687+00:00, max=2026-04-01T23:31:07.041409+00:00, span_days=2]
+  examples="2026-03-30T09:34:07.378687+00:00"; "2026-03-30T09:34:11.735877+00:00"; "2026-03-30T09:34:15.297149+00:00"
+
+--- admin_users ---
+Total docs: 2
+Sample analyzed: 2
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- created_at span: 0 days
+Top 10 fields by coverage:
+- _id: coverage=1.00, types={'str': 2}, unique~=2
+  examples="admin_superadmin"; "admin_admin"
+- admin_id: coverage=1.00, types={'str': 2}, unique~=2
+  examples="admin_superadmin"; "admin_admin"
+- email: coverage=1.00, types={'str': 2}, unique~=2
+  examples="superadmin@kisankiawaz.in"; "admin@kisankiawaz.in"
+- password_hash: coverage=1.00, types={'str': 2}, unique~=2
+  examples="$2b$12$TOisPuaLK9ajJ95ITUXwJ.2vjM6nWojAOuYF2RZ3gHoiNfzexQJf2"; "$2b$12$NRZPYUd00KNhPtmgHy5Bj.bGY7wGuPapKJkhQu.BNlpJGrKi9G4aq"
+- name: coverage=1.00, types={'str': 2}, unique~=2
+  examples="Super Admin"; "Admin User"
+- role: coverage=1.00, types={'str': 2}, unique~=2
+  examples="super_admin"; "admin"
+- is_active: coverage=1.00, types={'bool': 2}, unique~=1
+  examples=true
+- created_at: coverage=1.00, types={'str': 2}, unique~=1
+  datetime[min=2026-03-26T20:03:54.744538+00:00, max=2026-03-26T20:03:54.744538+00:00, span_days=0]
+  examples="2026-03-26T20:03:54.744538+00:00"
+- last_login_at: coverage=1.00, types={'str': 2}, unique~=2
+  datetime[min=2026-03-31T15:16:19.240125+00:00, max=2026-04-07T14:52:01.020537+00:00, span_days=6]
+  examples="2026-03-31T15:16:19.240125+00:00"; "2026-04-07T14:52:01.020537+00:00"
+- created_by: coverage=1.00, types={'str': 2}, unique~=1
+  examples="seed_script"
+
+--- agent_session_messages ---
+Total docs: 922
+Sample analyzed: 922
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- timestamp span: 6 days
+Top 7 fields by coverage:
+- _id: coverage=1.00, types={'str': 922}, unique~=922
+  examples="e0be650552644d4aa122d88c3c20ced1"; "e2f3a1943326480b81b1c8acb4580388"; "10e9d4055a8048f18e57ca0e417d21b0"
+- session_id: coverage=1.00, types={'str': 922}, unique~=297
+  examples="176215d6-a19b-4531-b840-0ac5ddc0e034"; "18c51337-aeff-4223-9b04-ff48cc4f59d7"; "50f9d0ca-f4b4-49a6-a226-5f54bfc2bc19"
+- user_id: coverage=1.00, types={'str': 922}, unique~=1
+  examples="seed_farmer_01"
+- role: coverage=1.00, types={'str': 922}, unique~=2
+  examples="user"; "assistant"
+- content: coverage=1.00, types={'str': 922}, unique~=614
+  examples="Will it rain tomorrow in my area and is evening spray safe?"; "Here's the weather update and advice for your area (Pune):\n\n*   **Data Now (Source: OpenWeatherMap, retrieved 2026-04-01 11:04 UTC):**\n    *   **Tonight (April 1st):** Expec...; "PM-KISAN eligibility, required documents, and exact apply process for a Maharashtra farmer."
+- timestamp: coverage=1.00, types={'str': 922}, unique~=461
+  datetime[min=2026-04-01T11:04:20.816271+00:00, max=2026-04-07T14:34:09.744321+00:00, span_days=6]
+  examples="2026-04-01T11:04:20.816271+00:00"; "2026-04-01T11:04:23.332189+00:00"; "2026-04-01T11:04:24.504013+00:00"
+- agent: coverage=0.50, types={'str': 461}, unique~=11
+  examples="WeatherAgent"; "scheme_direct"; "equipment_direct"
+
+--- agent_sessions ---
+Total docs: 301
+Sample analyzed: 301
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- created_at span: 6 days
+- updated_at span: 6 days
+Top 13 fields by coverage:
+- farmer_facts[]: coverage=7.66, types={'str': 2306, 'null': 9}, unique~=45
+  examples="topics=weather"; "crops_of_interest=rice"; "location_hint=Pune"
+- _id: coverage=1.00, types={'str': 301}, unique~=301
+  examples="f7c968a8-994c-4e0d-9a18-14a1cec70c8a"; "6e7eb3d7-365d-4d6c-956c-118bcdbad259"; "08b703dd-f895-4d1c-a541-a566fb9eed48"
+- language: coverage=1.00, types={'str': 301}, unique~=13
+  examples="en"; "hinglish"; "hi"
+- updated_at: coverage=1.00, types={'str': 301}, unique~=301
+  datetime[min=2026-04-01T10:19:24.130824+00:00, max=2026-04-07T14:34:09.799856+00:00, span_days=6]
+  examples="2026-04-01T10:19:24.130824+00:00"; "2026-04-01T10:29:23.943562+00:00"; "2026-04-01T10:36:42.361084+00:00"
+- user_id: coverage=1.00, types={'str': 301}, unique~=1
+  examples="seed_farmer_01"
+- farmer_facts: coverage=1.00, types={'list': 301}, unique~=0
+  examples=["topics=weather"]; []; ["crops_of_interest=rice"]
+- summary: coverage=1.00, types={'str': 301}, unique~=301
+  examples="[2026-04-01T10:18:29.926236+00:00] User intent: hi what's the weather right now | Assistant response gist: Here's the current weather update for Pune, India, as of April 1, 202...; "[2026-04-01T10:29:23.943562+00:00] User intent: Give one concise daily farming recommendation in 1-2 sentences for calendar planning. Upcoming tasks: Market Alert on Mar 24 at ...; "[2026-04-01T10:35:29.891561+00:00] User intent: hi what's the price of tomat9 | Assistant response gist: Exact local match is limited in current records, so here is the closest...
+- agent_type: coverage=0.99, types={'str': 297}, unique~=6
+  examples="weather"; "market"; "scheme"
+- created_at: coverage=0.99, types={'str': 297}, unique~=297
+  datetime[min=2026-04-01T11:04:20.816271+00:00, max=2026-04-07T14:34:09.744321+00:00, span_days=6]
+  examples="2026-04-01T11:04:20.816271+00:00"; "2026-04-01T11:09:19.305746+00:00"; "2026-04-01T11:13:18.094915+00:00"
+- farmer_id: coverage=0.99, types={'str': 297}, unique~=1
+  examples="seed_farmer_01"
+- last_activity: coverage=0.99, types={'str': 297}, unique~=297
+  datetime[min=2026-04-01T11:04:52.554343+00:00, max=2026-04-07T14:34:09.744321+00:00, span_days=6]
+  examples="2026-04-01T11:04:52.554343+00:00"; "2026-04-01T11:11:03.087646+00:00"; "2026-04-01T11:14:48.097985+00:00"
+- message_count: coverage=0.99, types={'int': 297}, unique~=9
+  numeric[min=2.00, p50=2.00, max=18.00, mean=3.10]
+  examples=8; 16; 18
+- session_id: coverage=0.99, types={'str': 297}, unique~=297
+  examples="176215d6-a19b-4531-b840-0ac5ddc0e034"; "18c51337-aeff-4223-9b04-ff48cc4f59d7"; "50f9d0ca-f4b4-49a6-a226-5f54bfc2bc19"
+
+--- analytics_snapshots ---
+Total docs: 3
+Sample analyzed: 3
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+Top 30 fields by coverage:
+- insights.growth_trends.farmers[]: coverage=30.00, types={'dict': 90}, unique~=0
+  examples={"date": "2026-02-25", "value": 0}; {"date": "2026-02-26", "value": 0}; {"date": "2026-02-27", "value": 0}
+- insights.growth_trends.farmers[].date: coverage=30.00, types={'str': 90}, unique~=66
+  datetime[min=2025-12-31T00:00:00+00:00, max=2026-04-01T00:00:00+00:00, span_days=91]
+  examples="2026-02-25"; "2026-02-26"; "2026-02-27"
+- insights.growth_trends.farmers[].value: coverage=30.00, types={'int': 90}, unique~=3
+  numeric[min=0.00, p50=0.00, max=8.00, mean=0.23]
+  examples=0; 8; 5
+- insights.growth_trends.conversations[]: coverage=30.00, types={'dict': 90}, unique~=0
+  examples={"date": "2026-02-25", "value": 0}; {"date": "2026-02-26", "value": 0}; {"date": "2026-02-27", "value": 0}
+- insights.growth_trends.conversations[].date: coverage=30.00, types={'str': 90}, unique~=66
+  datetime[min=2025-12-31T00:00:00+00:00, max=2026-04-01T00:00:00+00:00, span_days=91]
+  examples="2026-02-25"; "2026-02-26"; "2026-02-27"
+- insights.growth_trends.conversations[].value: coverage=30.00, types={'int': 90}, unique~=1
+  numeric[min=0.00, p50=0.00, max=0.00, mean=0.00]
+  examples=0
+- insights.growth_trends.bookings[]: coverage=30.00, types={'dict': 90}, unique~=0
+  examples={"date": "2026-02-25", "value": 0}; {"date": "2026-02-26", "value": 0}; {"date": "2026-02-27", "value": 0}
+- insights.growth_trends.bookings[].date: coverage=30.00, types={'str': 90}, unique~=66
+  datetime[min=2025-12-31T00:00:00+00:00, max=2026-04-01T00:00:00+00:00, span_days=91]
+  examples="2026-02-25"; "2026-02-26"; "2026-02-27"
+- insights.growth_trends.bookings[].value: coverage=30.00, types={'int': 90}, unique~=2
+  numeric[min=0.00, p50=0.00, max=1.00, mean=0.02]
+  examples=0; 1
+- insights.scorecard[]: coverage=4.00, types={'dict': 12}, unique~=0
+  examples={"title": "Total Farmers", "value": 8, "delta": 100.0, "trend": "up", "context": "New farmers in last 30 days: 8"}; {"title": "Active Farmers", "value": 1, "delta": 12.5, "trend": "neutral", "context": "Activation rate in 30 days: 12.5%"}; {"title": "Conversations", "value": 0, "delta": 0.0, "trend": "down", "context": "Agent usage intensity over current window"}
+- insights.scorecard[].title: coverage=4.00, types={'str': 12}, unique~=4
+  examples="Total Farmers"; "Active Farmers"; "Conversations"
+- insights.scorecard[].value: coverage=4.00, types={'int': 12}, unique~=4
+  numeric[min=0.00, p50=1.00, max=13.00, mean=2.92]
+  examples=8; 1; 0
+- insights.scorecard[].delta: coverage=4.00, types={'float': 12}, unique~=4
+  numeric[min=0.00, p50=12.50, max=100.00, mean=52.72]
+  examples=100.0; 12.5; 0.0
+- insights.scorecard[].trend: coverage=4.00, types={'str': 12}, unique~=3
+  examples="up"; "neutral"; "down"
+- insights.scorecard[].context: coverage=4.00, types={'str': 12}, unique~=8
+  examples="New farmers in last 30 days: 8"; "Activation rate in 30 days: 12.5%"; "Agent usage intensity over current window"
+- insights.operational_health.top_states[]: coverage=3.33, types={'dict': 10}, unique~=0
+  examples={"state": "maharashtra", "farmers": 1}; {"state": "punjab", "farmers": 1}; {"state": "uttar pradesh", "farmers": 1}
+- insights.operational_health.top_states[].state: coverage=3.33, types={'str': 10}, unique~=8
+  examples="maharashtra"; "punjab"; "uttar pradesh"
+- insights.operational_health.top_states[].farmers: coverage=3.33, types={'int': 10}, unique~=3
+  numeric[min=1.00, p50=1.00, max=8.00, mean=2.30]
+  examples=1; 8; 7
+- insights.recommendations[]: coverage=3.33, types={'str': 10}, unique~=4
+  examples="Run a 14-day onboarding nudging campaign for new farmers to improve activation."; "Prioritize at-risk farmers with targeted notifications and local language outreach."; "Launch profile completion prompts; missing profile data is blocking insight precision."
+- _id: coverage=1.00, types={'str': 3}, unique~=3
+  datetime[min=2026-03-26T00:00:00+00:00, max=2026-04-01T00:00:00+00:00, span_days=6]
+  examples="2026-03-26"; "2026-03-30"; "2026-04-01"
+- date: coverage=1.00, types={'str': 3}, unique~=3
+  datetime[min=2026-03-26T00:00:00+00:00, max=2026-04-01T00:00:00+00:00, span_days=6]
+  examples="2026-03-26"; "2026-03-30"; "2026-04-01"
+- window_days: coverage=1.00, types={'int': 3}, unique~=2
+  numeric[min=30.00, p50=30.00, max=90.00, mean=50.00]
+  examples=30; 90
+- insights: coverage=1.00, types={'dict': 3}, unique~=0
+  examples={"window_days": 30, "generated_at": "2026-03-26T22:39:27.786498+00:00", "scorecard": [{"title": "Total Farmers", "value": 8, "delta": 100.0, "trend": "up", "context": "New farme...; {"window_days": 90, "generated_at": "2026-03-30T15:19:00.610096+00:00", "scorecard": [{"title": "Total Farmers", "value": 8, "delta": 100.0, "trend": "up", "context": "New farme...; {"window_days": 30, "generated_at": "2026-04-01T20:16:25.579058+00:00", "scorecard": [{"title": "Total Farmers", "value": 13, "delta": 100.0, "trend": "up", "context": "New farm...
+- insights.window_days: coverage=1.00, types={'int': 3}, unique~=2
+  numeric[min=30.00, p50=30.00, max=90.00, mean=50.00]
+  examples=30; 90
+- insights.generated_at: coverage=1.00, types={'str': 3}, unique~=3
+  datetime[min=2026-03-26T22:39:27.786498+00:00, max=2026-04-01T20:16:25.579058+00:00, span_days=5]
+  examples="2026-03-26T22:39:27.786498+00:00"; "2026-03-30T15:19:00.610096+00:00"; "2026-04-01T20:16:25.579058+00:00"
+- insights.scorecard: coverage=1.00, types={'list': 3}, unique~=0
+  examples=[{"title": "Total Farmers", "value": 8, "delta": 100.0, "trend": "up", "context": "New farmers in last 30 days: 8"}, {"title": "Active Farmers", "value": 1, "delta": 12.5, "tren...; [{"title": "Total Farmers", "value": 8, "delta": 100.0, "trend": "up", "context": "New farmers in last 90 days: 8"}, {"title": "Active Farmers", "value": 1, "delta": 12.5, "tren...; [{"title": "Total Farmers", "value": 13, "delta": 100.0, "trend": "up", "context": "New farmers in last 30 days: 13"}, {"title": "Active Farmers", "value": 1, "delta": 7.69, "tr...
+- insights.growth_trends: coverage=1.00, types={'dict': 3}, unique~=0
+  examples={"farmers": [{"date": "2026-02-25", "value": 0}, {"date": "2026-02-26", "value": 0}, {"date": "2026-02-27", "value": 0}, {"date": "2026-02-28", "value": 0}, {"date": "2026-03-01...; {"farmers": [{"date": "2025-12-31", "value": 0}, {"date": "2026-01-01", "value": 0}, {"date": "2026-01-02", "value": 0}, {"date": "2026-01-03", "value": 0}, {"date": "2026-01-04...; {"farmers": [{"date": "2026-03-03", "value": 0}, {"date": "2026-03-04", "value": 0}, {"date": "2026-03-05", "value": 0}, {"date": "2026-03-06", "value": 0}, {"date": "2026-03-07...
+- insights.growth_trends.farmers: coverage=1.00, types={'list': 3}, unique~=0
+  examples=[{"date": "2026-02-25", "value": 0}, {"date": "2026-02-26", "value": 0}, {"date": "2026-02-27", "value": 0}, {"date": "2026-02-28", "value": 0}, {"date": "2026-03-01", "value": ...; [{"date": "2025-12-31", "value": 0}, {"date": "2026-01-01", "value": 0}, {"date": "2026-01-02", "value": 0}, {"date": "2026-01-03", "value": 0}, {"date": "2026-01-04", "value": ...; [{"date": "2026-03-03", "value": 0}, {"date": "2026-03-04", "value": 0}, {"date": "2026-03-05", "value": 0}, {"date": "2026-03-06", "value": 0}, {"date": "2026-03-07", "value": ...
+- insights.growth_trends.conversations: coverage=1.00, types={'list': 3}, unique~=0
+  examples=[{"date": "2026-02-25", "value": 0}, {"date": "2026-02-26", "value": 0}, {"date": "2026-02-27", "value": 0}, {"date": "2026-02-28", "value": 0}, {"date": "2026-03-01", "value": ...; [{"date": "2025-12-31", "value": 0}, {"date": "2026-01-01", "value": 0}, {"date": "2026-01-02", "value": 0}, {"date": "2026-01-03", "value": 0}, {"date": "2026-01-04", "value": ...; [{"date": "2026-03-03", "value": 0}, {"date": "2026-03-04", "value": 0}, {"date": "2026-03-05", "value": 0}, {"date": "2026-03-06", "value": 0}, {"date": "2026-03-07", "value": ...
+- insights.growth_trends.bookings: coverage=1.00, types={'list': 3}, unique~=0
+  examples=[{"date": "2026-02-25", "value": 0}, {"date": "2026-02-26", "value": 0}, {"date": "2026-02-27", "value": 0}, {"date": "2026-02-28", "value": 0}, {"date": "2026-03-01", "value": ...; [{"date": "2025-12-31", "value": 0}, {"date": "2026-01-01", "value": 0}, {"date": "2026-01-02", "value": 0}, {"date": "2026-01-03", "value": 0}, {"date": "2026-01-04", "value": ...; [{"date": "2026-03-03", "value": 0}, {"date": "2026-03-04", "value": 0}, {"date": "2026-03-05", "value": 0}, {"date": "2026-03-06", "value": 0}, {"date": "2026-03-07", "value": ...
+Very sparse fields (<10% coverage):
+- insights.market_intelligence.top_commodities[]
+
+--- app_config ---
+Total docs: 1
+Sample analyzed: 1
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+- updated_at span: 0 days
+Top 14 fields by coverage:
+- _id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="global"
+- agent_enabled: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- data_gov_api_keys: coverage=1.00, types={'list': 1}, unique~=0
+  examples=[]
+- feature_flags: coverage=1.00, types={'dict': 1}, unique~=0
+  examples={"schemes_search": true, "voice_streaming": true, "price_alerts": true, "admin_dashboard": true}
+- feature_flags.schemes_search: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- feature_flags.voice_streaming: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- feature_flags.price_alerts: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- feature_flags.admin_dashboard: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- maintenance_mode: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=false
+- max_price_alert_per_user: coverage=1.00, types={'int': 1}, unique~=1
+  numeric[min=10.00, p50=10.00, max=10.00, mean=10.00]
+  examples=10
+- updated_at: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-03-24T21:00:25.151136+00:00, max=2026-03-24T21:00:25.151136+00:00, span_days=0]
+  examples="2026-03-24T21:00:25.151136+00:00"
+- updated_by: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_script"
+- voice_enabled: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+- data_gov_api_keys[]: coverage=0.00, types={'null': 1}, unique~=0
+Very sparse fields (<10% coverage):
+- data_gov_api_keys[]
+
+--- calendar_action_logs ---
+Total docs: 13
+Sample analyzed: 13
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 60 fields under 20% coverage
+- created_at span: 4 days
+Top 30 fields by coverage:
+- payload.deleted.metadata.route_context.schemes.results[].tags[]: coverage=7.23, types={'str': 94}, unique~=37
+  examples="credit"; "loan"; "kisan credit"
+- payload.deleted.metadata.route_context.mandis.mandis[]: coverage=3.08, types={'dict': 40}, unique~=0
+  examples={"name": "Pundibari", "state": "West Bengal", "district": "Coochbehar", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}; {"name": "Toofanganj", "state": "West Bengal", "district": "Coochbehar", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}; {"name": "Sheoraphuly", "state": "West Bengal", "district": "Hooghly", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}
+- payload.deleted.metadata.route_context.mandis.mandis[].name: coverage=3.08, types={'str': 40}, unique~=20
+  examples="Pundibari"; "Toofanganj"; "Sheoraphuly"
+- payload.deleted.metadata.route_context.mandis.mandis[].state: coverage=3.08, types={'str': 40}, unique~=4
+  examples="West Bengal"; "Uttar Pradesh"; "Gujarat"
+- payload.deleted.metadata.route_context.mandis.mandis[].district: coverage=3.08, types={'str': 40}, unique~=13
+  examples="Coochbehar"; "Hooghly"; "Bulandshahar"
+- payload.deleted.metadata.route_context.mandis.mandis[].source: coverage=3.08, types={'str': 40}, unique~=1
+  examples="data.gov.in_daily_prices"
+- payload.deleted.metadata.route_context.mandis.mandis[].ingested_at: coverage=3.08, types={'str': 40}, unique~=1
+  datetime[min=2026-03-25T21:16:07.072428+00:00, max=2026-03-25T21:16:07.072428+00:00, span_days=0]
+  examples="2026-03-25T21:16:07.072428+00:00"
+- payload.deleted.metadata.route_context.schemes.results[].where_to_apply[]: coverage=2.77, types={'str': 36}, unique~=8
+  examples="Official portal: https://www.nabard.org"; "Nearest CSC"; "District Agriculture Department Office"
+- payload.deleted.metadata.route_context.schemes.results[].required_documents[]: coverage=2.31, types={'str': 30, 'null': 6}, unique~=13
+  examples="Aadhaar Card"; "PAN Card"; "Land ownership documents (7/12 extract / Khasra)"
+- payload.deleted.metadata.route_context.schemes.results[].benefits[]: coverage=2.15, types={'str': 28, 'null': 6}, unique~=14
+  examples="Short-term crop loan at 4% interest (after 3% subvention from Govt). Loan up to Rs. 3 lakh at concessional rate. Credit limit based on land holding. Flexible withdrawal and rep...; "000. Asset insurance coverage."; "Enhanced convergence of PM-KISAN"
+- payload.deleted.metadata.route_context.schemes.results[].eligibility[]: coverage=2.00, types={'str': 26, 'null': 6}, unique~=13
+  examples="All farmers - individual or joint borrowers"; "Tenant farmers, oral lessees and share croppers"; "Self Help Groups (SHGs) and Joint Liability Groups (JLGs)"
+- payload.deleted.metadata.route_context.schemes.results[].application_process[]: coverage=1.85, types={'str': 24, 'null': 6}, unique~=12
+  examples="Step 1: Visit your nearest bank branch (SBI, UCO, PNB, Cooperative Bank etc.) or apply online Any scheduled commercial bank, regional rural bank, or cooperative bank provides K...; "Step 2: Download and fill KCC application form Available at bank branches or online on bank websites"; "Step 3: Submit application with all required documents Land records, Aadhaar, bank account details are mandatory"
+- payload.deleted.metadata.route_context.market_prices.prices[]: coverage=1.54, types={'dict': 20}, unique~=0
+  examples={"market": "Kharar APMC", "state": "Punjab", "district": "Mohali", "commodity": "Tomato", "variety": "Tomato", "modal_price": 2000, "min_price": 1500, "max_price": 2500, "arriva...; {"market": "Pallikonda(Uzhavar Sandhai)", "state": "Tamil Nadu", "district": "Vellore", "commodity": "Tomato", "variety": "Deshi", "modal_price": 1650, "min_price": 1500, "max_p...; {"market": "Peravurani(Uzhavar Sandhai)", "state": "Tamil Nadu", "district": "Thanjavur", "commodity": "Tomato", "variety": "Deshi", "modal_price": 2000, "min_price": 2000, "max...
+- payload.deleted.metadata.route_context.market_prices.prices[].market: coverage=1.54, types={'str': 20}, unique~=10
+  examples="Kharar APMC"; "Pallikonda(Uzhavar Sandhai)"; "Peravurani(Uzhavar Sandhai)"
+- payload.deleted.metadata.route_context.market_prices.prices[].state: coverage=1.54, types={'str': 20}, unique~=5
+  examples="Punjab"; "Tamil Nadu"; "Maharashtra"
+- payload.deleted.metadata.route_context.market_prices.prices[].district: coverage=1.54, types={'str': 20}, unique~=10
+  examples="Mohali"; "Vellore"; "Thanjavur"
+- payload.deleted.metadata.route_context.market_prices.prices[].commodity: coverage=1.54, types={'str': 20}, unique~=1
+  examples="Tomato"
+- payload.deleted.metadata.route_context.market_prices.prices[].variety: coverage=1.54, types={'str': 20}, unique~=5
+  examples="Tomato"; "Deshi"; "Other"
+- payload.deleted.metadata.route_context.market_prices.prices[].modal_price: coverage=1.54, types={'int': 20}, unique~=9
+  numeric[min=800.00, p50=1700.00, max=3600.00, mean=1760.00]
+  examples=2000; 1650; 1700
+- payload.deleted.metadata.route_context.market_prices.prices[].min_price: coverage=1.54, types={'int': 20}, unique~=6
+  numeric[min=250.00, p50=1500.00, max=3500.00, mean=1535.00]
+  examples=1500; 2000; 1600
+- payload.deleted.metadata.route_context.market_prices.prices[].max_price: coverage=1.54, types={'int': 20}, unique~=7
+  numeric[min=1125.00, p50=1800.00, max=3700.00, mean=1962.50]
+  examples=2500; 1800; 2000
+- payload.deleted.metadata.route_context.market_prices.prices[].arrival_date: coverage=1.54, types={'str': 20}, unique~=1
+  examples="20/03/2026"
+- payload.deleted.metadata.route_context.market_prices.prices[].ingested_at: coverage=1.54, types={'str': 20}, unique~=1
+  datetime[min=2026-03-24T20:19:48.396062+00:00, max=2026-03-24T20:19:48.396062+00:00, span_days=0]
+  examples="2026-03-24T20:19:48.396062+00:00"
+- payload.deleted.metadata.route_context.schemes.results[].categories[]: coverage=1.38, types={'str': 18}, unique~=5
+  examples="Agricultural Credit"; "Integrated Agricultural Development"; "Agriculture Extension"
+- payload.deleted.metadata.route_context.schemes.results[].official_links[]: coverage=1.23, types={'str': 16}, unique~=8
+  examples="https://www.nabard.org"; "https://www.sbi.co.in/web/agri-rural/agriculture-banking/kisan-credit-card"; "https://agricoop.nic.in"
+- payload.event_ids[]: coverage=1.15, types={'str': 15}, unique~=15
+  examples="f50fc03a3b104825a958ddd5f2530498"; "bc8227f6b53a4a4cbc379fe27579a375"; "af1536e6664a40e7bfaea3f210a6d4c4"
+- _id: coverage=1.00, types={'str': 13}, unique~=13
+  examples="83a5bb5ff6f54224a22488386011db27"; "b5a15bebf2fc4e15b97fdf089513c4d7"; "77969ec2e83a42eab88cab5f7a0e5338"
+- user_id: coverage=1.00, types={'str': 13}, unique~=1
+  examples="seed_farmer_01"
+- action_type: coverage=1.00, types={'str': 13}, unique~=3
+  examples="batch_create"; "update"; "delete"
+- payload: coverage=1.00, types={'dict': 13}, unique~=0
+  examples={"event_ids": ["f50fc03a3b104825a958ddd5f2530498", "bc8227f6b53a4a4cbc379fe27579a375"], "request_text": "Please schedule and verify these events in my calendar: 2026-04-12 06:30...; {"before": {"id": "f50fc03a3b104825a958ddd5f2530498", "title": "E2E Calendar Task One", "event_date": "2026-04-12", "event_time": "06:30", "status": "planned", "details": "Sched...; {"deleted": {"id": "bc8227f6b53a4a4cbc379fe27579a375", "user_id": "seed_farmer_01", "title": "E2E Calendar Task Two.", "details": "Scheduled from chat request", "event_date": "2...
+
+--- calendar_events ---
+Total docs: 18
+Sample analyzed: 18
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 60 fields under 20% coverage
+- created_at span: 4 days
+- updated_at span: 4 days
+Top 30 fields by coverage:
+- metadata.route_context.schemes.results[].tags[]: coverage=15.00, types={'str': 270}, unique~=132
+  examples="Haryana"; "farm mechanization"; "tractor subsidy"
+- metadata.route_context.schemes.results[].required_documents[]: coverage=8.39, types={'str': 151, 'null': 7}, unique~=65
+  examples="Aadhaar Card"; "Land records (Jamabandi/Fard)"; "Bank account details (with IFSC)"
+- metadata.route_context.schemes.results[].eligibility[]: coverage=7.39, types={'str': 133, 'null': 7}, unique~=80
+  examples="Permanent resident of Haryana"; "Must be a farmer with agricultural land in own name or close family member's name (spouse, parents, children)"; "Small, marginal, women, and SC farmers get priority"
+- metadata.route_context.schemes.results[].application_process[]: coverage=6.72, types={'str': 121, 'null': 7}, unique~=73
+  examples="Step 1: Register on Haryana Agriculture portal or Meri Fasal Mera Byora Create farmer account if not already registered (https://agriharyana.gov.in)"; "Step 2: Apply online for Krishi Yantra Anudan Yojana Fill application with district, block, name, Aadhaar, land details (https://www.agriharyanacrm.com)"; "Step 3: Submit application and note reference number Save reference number for tracking"
+- metadata.route_context.mandis.mandis[]: coverage=6.61, types={'dict': 119}, unique~=0
+  examples={"name": "Bhiwani", "state": "Haryana", "district": "Bhiwani", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}; {"name": "Ch. Dadri", "state": "Haryana", "district": "Bhiwani", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}; {"name": "Tosham", "state": "Haryana", "district": "Bhiwani", "source": "data.gov.in_daily_prices", "ingested_at": "2026-03-25T21:16:07.072428+00:00"}
+- metadata.route_context.mandis.mandis[].name: coverage=6.61, types={'str': 119}, unique~=22
+  examples="Bhiwani"; "Ch. Dadri"; "Tosham"
+- metadata.route_context.mandis.mandis[].state: coverage=6.61, types={'str': 119}, unique~=4
+  examples="Haryana"; "West Bengal"; "Uttar Pradesh"
+- metadata.route_context.mandis.mandis[].district: coverage=6.61, types={'str': 119}, unique~=15
+  examples="Bhiwani"; "Hissar"; "Panchkula"
+- metadata.route_context.mandis.mandis[].source: coverage=6.61, types={'str': 119}, unique~=1
+  examples="data.gov.in_daily_prices"
+- metadata.route_context.mandis.mandis[].ingested_at: coverage=6.39, types={'str': 119}, unique~=2
+  datetime[min=2026-03-25T21:16:07.072428+00:00, max=2026-03-25T21:16:07.072428+00:00, span_days=0]
+  examples="2026-03-25T21:16:07.072428+00:00"; ""
+- metadata.route_context.schemes.results[].where_to_apply[]: coverage=6.33, types={'str': 114}, unique~=23
+  examples="Official portal: https://agriharyana.gov.in"; "Nearest CSC"; "District Agriculture Department Office"
+- metadata.route_context.schemes.results[].benefits[]: coverage=4.94, types={'str': 89, 'null': 7}, unique~=54
+  examples="40-50% subsidy on purchase of eligible agricultural machinery. Maximum subsidy up to Rs. 3 lakh for tractors for SC farmers. Up to 3 machines per farmer."; "Rs. 4"; "000 per acre incentive for farmers adopting DSR technique. Saves water and labour. Eligible for DSR machine subsidy additionally."
+- metadata.route_context.schemes.results[]: coverage=4.61, types={'str': 45, 'dict': 38}, unique~=6
+  examples="Under Pradhan Mantri Krishi Sinchai Yojana (PMKSY) - Per Drop More Crop: Other farmers: 45% subsidy"; "Under Pradhan Mantri Krishi Sinchai Yojana (PMKSY) - Per Drop More Crop: Fertigation support included"; "Under Pradhan Mantri Krishi Sinchai Yojana (PMKSY) - Per Drop More Crop: Small/marginal farmers: 55% subsidy on micro-irrigation systems"
+- metadata.route_context.market_prices.prices[]: coverage=3.89, types={'null': 5, 'dict': 70}, unique~=0
+  examples={"market": "Pundri APMC", "state": "Haryana", "district": "Kaithal", "commodity": "Tomato", "variety": "Other", "modal_price": 1700, "min_price": 1600, "max_price": 1800, "arriv...; {"market": "Sonepat APMC", "state": "Haryana", "district": "Sonipat", "commodity": "Tomato", "variety": "Deshi", "modal_price": 1000, "min_price": 900, "max_price": 1500, "arriv...; {"market": "Raipur Rai APMC", "state": "Haryana", "district": "Panchkula", "commodity": "Tomato", "variety": "Tomato", "modal_price": 1800, "min_price": 1800, "max_price": 2000,...
+- metadata.route_context.market_prices.prices[].market: coverage=3.89, types={'str': 70}, unique~=20
+  examples="Pundri APMC"; "Sonepat APMC"; "Raipur Rai APMC"
+- metadata.route_context.market_prices.prices[].state: coverage=3.89, types={'str': 70}, unique~=6
+  examples="Haryana"; "Punjab"; "Tamil Nadu"
+- metadata.route_context.market_prices.prices[].district: coverage=3.89, types={'str': 70}, unique~=18
+  examples="Kaithal"; "Sonipat"; "Panchkula"
+- metadata.route_context.market_prices.prices[].commodity: coverage=3.89, types={'str': 70}, unique~=1
+  examples="Tomato"
+- metadata.route_context.market_prices.prices[].variety: coverage=3.89, types={'str': 70}, unique~=5
+  examples="Other"; "Deshi"; "Tomato"
+- metadata.route_context.market_prices.prices[].modal_price: coverage=3.89, types={'int': 70}, unique~=13
+  numeric[min=800.00, p50=1700.00, max=3600.00, mean=1678.57]
+  examples=1700; 1000; 1800
+- metadata.route_context.market_prices.prices[].min_price: coverage=3.89, types={'int': 70}, unique~=9
+  numeric[min=250.00, p50=1500.00, max=3500.00, mean=1467.86]
+  examples=1600; 900; 1800
+- metadata.route_context.market_prices.prices[].max_price: coverage=3.89, types={'int': 70}, unique~=8
+  numeric[min=1125.00, p50=1800.00, max=3700.00, mean=1861.79]
+  examples=1800; 1500; 2000
+- metadata.route_context.market_prices.prices[].arrival_date: coverage=3.89, types={'str': 70}, unique~=1
+  examples="20/03/2026"
+- metadata.route_context.market_prices.prices[].ingested_at: coverage=3.89, types={'str': 70}, unique~=1
+  datetime[min=2026-03-24T20:19:48.396062+00:00, max=2026-03-24T20:19:48.396062+00:00, span_days=0]
+  examples="2026-03-24T20:19:48.396062+00:00"
+- metadata.route_context.weather_knowledge.results[]: coverage=3.50, types={'str': 63}, unique~=8
+  examples="Sprinkler Irrigation System (\u0938\u094d\u092a\u094d\u0930\u093f\u0902\u0915\u0932\u0930 \u0938\u093f\u0902\u091a\u093e\u0908 \u092a\u094d\u0930\u0923\u093e\u0932\u0940): Port...; "Drip Irrigation Kit (Portable) (\u0921\u094d\u0930\u093f\u092a \u0938\u093f\u0902\u091a\u093e\u0908 \u0915\u093f\u091f): Temporary drip kit for seasonal crops. Rental: \u20b945...; "Drip Irrigation Kit (Portable) (\u0921\u094d\u0930\u093f\u092a \u0938\u093f\u0902\u091a\u093e\u0908 \u0915\u093f\u091f): Temporary drip kit for seasonal crops. Category: Irriga...
+- metadata.route_context.equipment.results[]: coverage=3.39, types={'str': 60, 'dict': 1}, unique~=10
+  examples="Cultivator (\u0915\u0932\u094d\u091f\u0940\u0935\u0947\u091f\u0930): 9-tyne cultivator for secondary tillage. Rental: \u20b9650/per acre. Availability: High."; "Potato Planter (\u0906\u0932\u0942 \u092c\u094b\u0935\u093e\u0908 \u092e\u0936\u0940\u0928): Automatic potato planter with fertilizer attachment. Category: Sowing & Planting. R...; "Potato Planter (\u0906\u0932\u0942 \u092c\u094b\u0935\u093e\u0908 \u092e\u0936\u0940\u0928): Automatic potato planter with fertilizer attachment. Rental: \u20b92000/per acre. A...
+- metadata.route_context.crop_calendar.info[]: coverage=3.00, types={'str': 54}, unique~=3
+  examples="Finalize seed and field prep 2-3 weeks before local sowing window."; "Complete sowing when soil moisture is adequate and temperature supports germination."; "Plan harvest labor and storage in advance to reduce post-harvest losses."
+- metadata.route_context.schemes.results[].official_links[]: coverage=2.78, types={'str': 50}, unique~=25
+  examples="https://agriharyana.gov.in"; "https://www.agriharyanacrm.com"; "https://fasal.haryana.gov.in"
+- metadata.route_context.schemes.results[].categories[]: coverage=2.50, types={'str': 45}, unique~=19
+  examples="Farm Mechanization"; "Water Conservation"; "Agricultural Credit"
+- metadata.route_context.mandis.results[]: coverage=2.22, types={'str': 40}, unique~=8
+  examples="[Commodity: Karbuja(Musk Melon)] [Market: PMY Kangni Mandi, Mandi, Himachal Pradesh] Recent modal price \u20b92900/quintal. 7-day avg: \u20b92900. Trend: STABLE."; "[Commodity: Arhar(Tur/Red Gram)(Whole)] [Market: Mahuva(Station Road) APMC, Bhavnagar, Gujarat] Recent modal price \u20b96910/quintal. 7-day avg: \u20b96910. Trend: STABLE."; "[Commodity: Masur Dal] [Market: Dhanotu (Mandi), Mandi, Himachal Pradesh] Recent modal price \u20b92782/quintal. 7-day avg: \u20b92782. Trend: DOWN."
+Very sparse fields (<10% coverage):
+- metadata.route_context.mandis.requested_filters.district
+- metadata.route_context.soil.as_of_latest_date
+- metadata.route_context.soil.records[]
+- metadata.route_context.weather_knowledge.source
+- metadata.route_context.weather_knowledge.retrieved_at_utc
+- metadata.route_context.weather_knowledge.note
+- metadata.route_context.equipment.retrieved_at_utc
+- metadata.route_context.equipment.results[].equipment
+- metadata.route_context.equipment.results[].category
+- metadata.route_context.equipment.results[].provider
+- metadata.route_context.equipment.results[].state
+- metadata.route_context.equipment.results[].district
+- metadata.route_context.equipment.results[].rate_hourly
+- metadata.route_context.equipment.results[].rate_daily
+- metadata.route_context.equipment.results[].contact
+- metadata.route_context.equipment.results[].last_updated
+- metadata.route_context.equipment.total
+- metadata.route_context.equipment.note
+
+--- chat_user_preferences ---
+Total docs: 1
+Sample analyzed: 1
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- updated_at span: 0 days
+Top 3 fields by coverage:
+- _id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_farmer_01"
+- response_mode: coverage=1.00, types={'str': 1}, unique~=1
+  examples="detailed"
+- updated_at: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-04-02T22:14:20.540957+00:00, max=2026-04-02T22:14:20.540957+00:00, span_days=0]
+  examples="2026-04-02T22:14:20.540957+00:00"
+
+--- crops ---
+Total docs: 8
+Sample analyzed: 8
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- created_at span: 0 days
+- updated_at span: 0 days
+Top 11 fields by coverage:
+- _id: coverage=1.00, types={'str': 8}, unique~=8
+  examples="crop_seed_farmer_01"; "crop_seed_farmer_02"; "crop_seed_farmer_03"
+- farmer_id: coverage=1.00, types={'str': 8}, unique~=8
+  examples="seed_farmer_01"; "seed_farmer_02"; "seed_farmer_03"
+- name: coverage=1.00, types={'str': 8}, unique~=8
+  examples="Wheat"; "Rice"; "Soybean"
+- variety: coverage=1.00, types={'str': 8}, unique~=8
+  examples="HD-2967"; "Pusa Basmati 1121"; "JS-335"
+- season: coverage=1.00, types={'str': 8}, unique~=2
+  examples="kharif"; "rabi"
+- area: coverage=1.00, types={'float': 8}, unique~=8
+  numeric[min=1.50, p50=2.90, max=4.90, mean=3.19]
+  examples=1.5; 2.0; 2.5
+- sowing_date: coverage=1.00, types={'str': 8}, unique~=2
+  datetime[min=2026-06-15T00:00:00+00:00, max=2026-11-12T00:00:00+00:00, span_days=150]
+  examples="2026-06-15"; "2026-11-12"
+- status: coverage=1.00, types={'str': 8}, unique~=1
+  examples="growing"
+- created_at: coverage=1.00, types={'str': 8}, unique~=8
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-03-24T21:00:45.904026+00:00, span_days=0]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- updated_at: coverage=1.00, types={'str': 8}, unique~=8
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-03-24T21:00:45.904026+00:00, span_days=0]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- is_seed_data: coverage=1.00, types={'bool': 8}, unique~=1
+  examples=true
+
+--- document_builder_sessions ---
+Total docs: 14
+Sample analyzed: 14
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 4 fields under 20% coverage
+- created_at span: 9 days
+- updated_at span: 9 days
+Top 30 fields by coverage:
+- form_fields[]: coverage=14.57, types={'dict': 204}, unique~=0
+  examples={"field": "farmer_name", "label": "Full Name", "type": "text", "required": true, "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"}; {"field": "father_name", "label": "Father's Name", "type": "text", "required": true, "hindi_label": "\u092a\u093f\u0924\u093e \u0915\u093e \u0928\u093e\u092e"}; {"field": "gender", "label": "Gender", "type": "select", "options": ["Male", "Female", "Other"], "required": true, "hindi_label": "\u0932\u093f\u0902\u0917"}
+- form_fields[].field: coverage=14.57, types={'str': 204}, unique~=22
+  examples="farmer_name"; "father_name"; "gender"
+- form_fields[].label: coverage=14.57, types={'str': 204}, unique~=22
+  examples="Full Name"; "Father's Name"; "Gender"
+- form_fields[].type: coverage=14.57, types={'str': 204}, unique~=4
+  examples="text"; "select"; "date"
+- form_fields[].required: coverage=14.57, types={'bool': 204}, unique~=2
+  examples=true; false
+- form_fields[].hindi_label: coverage=14.57, types={'str': 204}, unique~=24
+  examples="\u092a\u0942\u0930\u093e \u0928\u093e\u092e"; "\u092a\u093f\u0924\u093e \u0915\u093e \u0928\u093e\u092e"; "\u0932\u093f\u0902\u0917"
+- questions_asked[]: coverage=8.79, types={'str': 123}, unique~=16
+  examples="ifsc_code"; "bank_account_number"; "father_name"
+- form_fields[].options[]: coverage=5.43, types={'str': 76}, unique~=13
+  examples="Male"; "Female"; "Other"
+- required_documents[]: coverage=5.36, types={'str': 75}, unique~=11
+  examples="Aadhaar Card"; "Land ownership documents / Land records (Khatauni/Khasra)"; "Bank account details (passbook copy)"
+- form_fields[].options: coverage=1.50, types={'list': 21}, unique~=0
+  examples=["Male", "Female", "Other"]; ["General", "SC", "ST", "OBC"]; ["Canal", "Tube Well", "Well", "Rain-fed", "Drip", "Sprinkler"]
+- uploaded_documents[].extracted_fields[]: coverage=1.43, types={'str': 20}, unique~=2
+  examples="farmer_name"; "date_of_birth"
+- _id: coverage=1.00, types={'str': 14}, unique~=14
+  examples="a30367d66a6047cfa0bd9510ce5163d1"; "3b6056a4e2a24d0a8976a9ce7ea8f51b"; "de19e9f9621a461bb67caadcc2fa3005"
+- session_id: coverage=1.00, types={'str': 14}, unique~=14
+  examples="a30367d66a6047cfa0bd9510ce5163d1"; "3b6056a4e2a24d0a8976a9ce7ea8f51b"; "de19e9f9621a461bb67caadcc2fa3005"
+- scheme_name: coverage=1.00, types={'str': 14}, unique~=3
+  examples="PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)"; "Soil Health Card Scheme"; "Mukhyamantri Kisan Kalyan Yojana (Madhya Pradesh)"
+- scheme_short_name: coverage=1.00, types={'str': 14}, unique~=3
+  examples="PM-KISAN"; "SHC"; "MKKY"
+- scheme_category: coverage=1.00, types={'str': 14}, unique~=2
+  examples="income_support"; "soil_health"
+- form_fields: coverage=1.00, types={'list': 14}, unique~=0
+  examples=[{"field": "farmer_name", "label": "Full Name", "type": "text", "required": true, "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"}, {"field": "father_name", "label"...; [{"field": "farmer_name", "label": "Full Name", "type": "text", "required": true, "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"}, {"field": "mobile_number", "labe...; [{"field": "farmer_name", "label": "Full Name", "type": "text", "required": true, "hindi_label": "\u092a\u0942\u0930\u093e \u0928\u093e\u092e"}, {"field": "aadhaar_number", "lab...
+- filled_fields: coverage=1.00, types={'dict': 14}, unique~=0
+  examples={"state": "state", "district": "district", "village": "village", "aadhaar_number": "123456789012", "farmer_name": "Vinayak", "date_of_birth": "01/01/1990"}; {"state": "Maharashtra", "district": "Mumbai", "village": "Mulund", "farmer_name": "Vinayak Bhatia", "mobile_number": "9930679651", "khasra_number": "3455", "land_area_hectares"...; {"state": "state", "district": "district", "village": "village"}
+- filled_fields.state: coverage=1.00, types={'str': 14}, unique~=2
+  examples="state"; "Maharashtra"
+- filled_fields.district: coverage=1.00, types={'str': 14}, unique~=3
+  examples="district"; "Mumbai"; "mumbai"
+- filled_fields.village: coverage=1.00, types={'str': 14}, unique~=3
+  examples="village"; "Mulund"; "mulund"
+- required_documents: coverage=1.00, types={'list': 14}, unique~=0
+  examples=["Aadhaar Card", "Land ownership documents / Land records (Khatauni/Khasra)", "Bank account details (passbook copy)", "Mobile number linked with Aadhaar", "State/UT domicile cer...; ["Aadhaar Card", "Land details (khasra/survey number)", "Mobile number"]; ["Aadhaar Card", "PM-KISAN registration", "Bank account details", "Land records (Khasra/B1)"]
+- uploaded_documents: coverage=1.00, types={'list': 14}, unique~=0
+  examples=[{"filename": "sample.txt", "path": "/tmp/doc_uploads/a30367d66a6047cfa0bd9510ce5163d1_sample.txt", "extracted_fields": ["farmer_name", "date_of_birth"], "uploaded_at": "2026-03...; [{"filename": "sample.txt", "path": "/tmp/doc_uploads/3b6056a4e2a24d0a8976a9ce7ea8f51b_sample.txt", "extracted_fields": ["farmer_name", "date_of_birth"], "uploaded_at": "2026-03...; [{"filename": "sample.txt", "path": "/tmp/doc_uploads/de19e9f9621a461bb67caadcc2fa3005_sample.txt", "extracted_fields": ["farmer_name", "date_of_birth"], "uploaded_at": "2026-03...
+- status: coverage=1.00, types={'str': 14}, unique~=2
+  examples="in_progress"; "completed"
+- questions_asked: coverage=1.00, types={'list': 14}, unique~=0
+  examples=["ifsc_code", "bank_account_number", "father_name", "mobile_number", "sub_district", "bank_name", "farmer_name", "date_of_birth", "aadhaar_number", "gender"]; ["gender", "farmer_name", "ifsc_code", "mobile_number", "father_name", "bank_account_number", "sub_district", "bank_name", "aadhaar_number", "date_of_birth"]; ["sub_district", "bank_name", "date_of_birth", "gender", "aadhaar_number", "mobile_number", "farmer_name", "father_name", "ifsc_code", "bank_account_number"]
+- created_at: coverage=1.00, types={'str': 14}, unique~=14
+  datetime[min=2026-03-24T21:04:37.662351+00:00, max=2026-04-03T20:48:39.374369+00:00, span_days=9]
+  examples="2026-03-24T21:04:37.662351+00:00"; "2026-03-24T21:10:05.041778+00:00"; "2026-03-24T21:15:49.843855+00:00"
+- updated_at: coverage=1.00, types={'str': 14}, unique~=14
+  datetime[min=2026-03-24T21:04:50.597432+00:00, max=2026-04-03T20:48:50.753255+00:00, span_days=9]
+  examples="2026-03-24T21:04:50.597432+00:00"; "2026-03-24T21:10:14.211341+00:00"; "2026-03-24T21:15:59.943694+00:00"
+- filled_fields.farmer_name: coverage=0.93, types={'str': 13}, unique~=3
+  examples="Vinayak"; "Vinayak Bhatia"; "vinayak bhatia"
+- filled_fields.aadhaar_number: coverage=0.86, types={'str': 12}, unique~=2
+  examples="123456789012"; "750352486425"
+- filled_fields.date_of_birth: coverage=0.71, types={'str': 10}, unique~=1
+  examples="01/01/1990"
+Very sparse fields (<10% coverage):
+- filled_fields.khasra_number
+- filled_fields.previous_crop
+
+--- equipment ---
+Total docs: 48
+Sample analyzed: 48
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_farmer_updated_desc | keys=SON([('farmer_id', 1), ('updated_at', -1)]) | unique=False
+- ix_status_type_updated_desc | keys=SON([('status', 1), ('type', 1), ('updated_at', -1)]) | unique=False
+Quality findings:
+- High sparsity: 73 fields under 20% coverage
+- created_at span: 7 days
+- updated_at span: 7 days
+Top 30 fields by coverage:
+- _id: coverage=1.00, types={'str': 48}, unique~=48
+  examples="equipment_seed_farmer_01"; "equipment_seed_farmer_02"; "equipment_seed_farmer_03"
+- name: coverage=1.00, types={'str': 48}, unique~=43
+  examples="Tractor 45HP"; "Rotavator"; "Seed Drill"
+- created_at: coverage=1.00, types={'str': 48}, unique~=9
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-04-01T16:59:16.988185+00:00, span_days=7]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- updated_at: coverage=1.00, types={'str': 48}, unique~=9
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-04-01T16:59:16.988185+00:00, span_days=7]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- is_seed_data: coverage=1.00, types={'bool': 48}, unique~=1
+  examples=true
+- availability: coverage=0.83, types={'str': 40}, unique~=4
+  examples="High"; "Medium"; "Low"
+- category: coverage=0.83, types={'str': 40}, unique~=10
+  examples="land_preparation"; "sowing_planting"; "irrigation"
+- description: coverage=0.83, types={'str': 40}, unique~=40
+  examples="Medium-duty tractor for ploughing, tilling, and hauling"; "Multi-row seed drill for wheat, rice, pulses"; "Direct seeding in standing stubble (anti-stubble burning)"
+- hindi_name: coverage=0.83, types={'str': 40}, unique~=40
+  examples="\u091f\u094d\u0930\u0948\u0915\u094d\u091f\u0930 (35-45 HP)"; "\u0938\u0940\u0921 \u0921\u094d\u0930\u093f\u0932"; "\u0939\u0948\u092a\u0940 \u0938\u0940\u0921\u0930"
+- is_active: coverage=0.83, types={'bool': 40}, unique~=1
+  examples=true
+- rental_rates: coverage=0.83, types={'dict': 40}, unique~=0
+  examples={"hourly": {"min": 500, "max": 800, "avg": 650}, "daily": {"min": 3000, "max": 5000, "avg": 4000}, "per_acre": {"min": 800, "max": 1500, "avg": 1100}}; {"per_acre": {"min": 400, "max": 800, "avg": 600}}; {"per_acre": {"min": 1200, "max": 2000, "avg": 1600}}
+- source: coverage=0.83, types={'str': 40}, unique~=21
+  examples="CHC/FMTTI"; "CHC"; "CHC/State Agri Dept"
+- rental_rates.per_acre: coverage=0.54, types={'dict': 26}, unique~=0
+  examples={"min": 800, "max": 1500, "avg": 1100}; {"min": 400, "max": 800, "avg": 600}; {"min": 1200, "max": 2000, "avg": 1600}
+- rental_rates.per_acre.min: coverage=0.54, types={'int': 26}, unique~=12
+  numeric[min=200.00, p50=800.00, max=5000.00, mean=1176.92]
+  examples=800; 400; 1200
+- rental_rates.per_acre.max: coverage=0.54, types={'int': 26}, unique~=16
+  numeric[min=400.00, p50=1500.00, max=10000.00, mean=2119.23]
+  examples=1500; 800; 2000
+- rental_rates.per_acre.avg: coverage=0.54, types={'int': 26}, unique~=16
+  numeric[min=300.00, p50=1100.00, max=7500.00, mean=1640.38]
+  examples=1100; 600; 1600
+- popular_brands[]: coverage=0.38, types={'str': 18}, unique~=16
+  examples="Mahindra"; "Swaraj"; "John Deere"
+- state_variations: coverage=0.33, types={'dict': 16}, unique~=0
+  examples={"Punjab": {"per_acre": 900, "daily": 3500}, "Haryana": {"per_acre": 950, "daily": 3800}, "Uttar Pradesh": {"per_acre": 800, "daily": 3000}, "Madhya Pradesh": {"per_acre": 850, ...; {"Punjab": {"per_acre": 450}, "Haryana": {"per_acre": 500}, "Madhya Pradesh": {"per_acre": 550}, "Rajasthan": {"per_acre": 600}}; {"Punjab": {"per_acre": 1200}, "Haryana": {"per_acre": 1400}, "Uttar Pradesh": {"per_acre": 1500}}
+- rental_rates.daily: coverage=0.27, types={'dict': 13}, unique~=0
+  examples={"min": 3000, "max": 5000, "avg": 4000}; {"min": 5000, "max": 8000, "avg": 6500}; {"min": 600, "max": 1000, "avg": 800}
+- rental_rates.daily.min: coverage=0.27, types={'int': 13}, unique~=9
+  numeric[min=50.00, p50=500.00, max=5000.00, mean=1053.85]
+  examples=3000; 5000; 600
+- rental_rates.daily.max: coverage=0.27, types={'int': 13}, unique~=10
+  numeric[min=150.00, p50=800.00, max=8000.00, mean=1811.54]
+  examples=5000; 8000; 1000
+- rental_rates.daily.avg: coverage=0.27, types={'int': 13}, unique~=10
+  numeric[min=100.00, p50=650.00, max=6500.00, mean=1413.46]
+  examples=4000; 6500; 800
+- requires_tractor: coverage=0.25, types={'bool': 12}, unique~=1
+  examples=true
+- operator_included: coverage=0.23, types={'bool': 11}, unique~=1
+  examples=true
+- state_variations.Punjab: coverage=0.23, types={'dict': 11}, unique~=0
+  examples={"per_acre": 900, "daily": 3500}; {"per_acre": 450}; {"per_acre": 1200}
+- state_variations.Punjab.per_acre: coverage=0.23, types={'int': 11}, unique~=8
+  numeric[min=450.00, p50=1300.00, max=2000.00, mean=1259.09]
+  examples=900; 450; 1200
+- state_variations.Uttar Pradesh: coverage=0.23, types={'dict': 11}, unique~=0
+  examples={"per_acre": 800, "daily": 3000}; {"per_acre": 1500}; {"per_acre": 2000}
+- state_variations.Uttar Pradesh.per_acre: coverage=0.23, types={'int': 11}, unique~=6
+  numeric[min=600.00, p50=1500.00, max=5000.00, mean=1645.45]
+  examples=800; 1500; 2000
+- booking_advance_days: coverage=0.21, types={'int': 10}, unique~=5
+  numeric[min=1.00, p50=3.00, max=7.00, mean=3.60]
+  examples=1; 3; 5
+- fuel_cost_extra: coverage=0.21, types={'bool': 10}, unique~=2
+  examples=true; false
+Very sparse fields (<10% coverage):
+- popular_brands
+- state_rate
+- state_rate.per_acre
+- state_rate.daily
+- state_variations.Punjab.daily
+- state_variations.Haryana.daily
+- state_variations.Uttar Pradesh.daily
+- state_variations.Madhya Pradesh.daily
+- state_variations.Maharashtra.daily
+- state_variations.Karnataka.daily
+- state_variations.Tamil Nadu
+- state_variations.Tamil Nadu.per_acre
+- state_variations.Tamil Nadu.daily
+- state_variations.Rajasthan.daily
+- state_variations.Gujarat
+- state_variations.Gujarat.per_acre
+- state_variations.Gujarat.daily
+- state_variations.Andhra Pradesh
+- state_variations.Andhra Pradesh.per_acre
+- state_variations.Andhra Pradesh.daily
+- state_variations.Telangana
+- state_variations.Telangana.per_acre
+- state_variations.Telangana.daily
+- state_variations.West Bengal.daily
+- state_variations.Bihar
+- ... plus 24 more
+
+--- equipment_bookings ---
+Total docs: 1
+Sample analyzed: 1
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_renter_created_desc | keys=SON([('renter_id', 1), ('created_at', -1)]) | unique=False
+- ix_owner_status_updated_desc | keys=SON([('owner_id', 1), ('status', 1), ('updated_at', -1)]) | unique=False
+- ix_equipment_status_start | keys=SON([('equipment_id', 1), ('status', 1), ('start_date', 1)]) | unique=False
+Quality findings:
+- created_at span: 0 days
+- updated_at span: 0 days
+Top 12 fields by coverage:
+- _id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="booking_seed_01"
+- equipment_id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="equipment_seed_farmer_01"
+- equipment_name: coverage=1.00, types={'str': 1}, unique~=1
+  examples="Tractor 45HP"
+- owner_id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_farmer_01"
+- renter_id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_farmer_02"
+- start_date: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-03-25T00:00:00+00:00, max=2026-03-25T00:00:00+00:00, span_days=0]
+  examples="2026-03-25"
+- end_date: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-03-27T00:00:00+00:00, max=2026-03-27T00:00:00+00:00, span_days=0]
+  examples="2026-03-27"
+- message: coverage=1.00, types={'str': 1}, unique~=1
+  examples="Need for pre-sowing field prep"
+- status: coverage=1.00, types={'str': 1}, unique~=1
+  examples="approved"
+- created_at: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-03-24T21:00:46.679447+00:00, max=2026-03-24T21:00:46.679447+00:00, span_days=0]
+  examples="2026-03-24T21:00:46.679447+00:00"
+- updated_at: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-03-24T21:00:46.679447+00:00, max=2026-03-24T21:00:46.679447+00:00, span_days=0]
+  examples="2026-03-24T21:00:46.679447+00:00"
+- is_seed_data: coverage=1.00, types={'bool': 1}, unique~=1
+  examples=true
+
+--- farmer_profiles ---
+Total docs: 298
+Sample analyzed: 298
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ux_user_id | keys=SON([('user_id', 1)]) | unique=True
+- ix_created_at_desc | keys=SON([('created_at', -1)]) | unique=False
+- ix_state_district | keys=SON([('state', 1), ('district', 1)]) | unique=False
+Quality findings:
+- High sparsity: 6 fields under 20% coverage
+- created_at span: 8 days
+- updated_at span: 0 days
+Top 30 fields by coverage:
+- _id: coverage=1.00, types={'str': 298}, unique~=298
+  examples="profile_seed_farmer_02"; "profile_seed_farmer_03"; "profile_seed_farmer_04"
+- user_id: coverage=1.00, types={'str': 298}, unique~=298
+  examples="seed_farmer_02"; "seed_farmer_03"; "seed_farmer_04"
+- village: coverage=1.00, types={'str': 298}, unique~=292
+  examples="Andheri East"; "Hisar Kheda X"; "Visakhapatnam Kheda 1"
+- district: coverage=1.00, types={'str': 298}, unique~=140
+  examples="Visakhapatnam"; "Papum Pare"; "Jorhat"
+- state: coverage=1.00, types={'str': 298}, unique~=29
+  examples="Andhra Pradesh"; "Arunachal Pradesh"; "Assam"
+- pin_code: coverage=1.00, types={'str': 298}, unique~=146
+  examples="400069"; "125001"; "530001"
+- soil_type: coverage=1.00, types={'str': 298}, unique~=11
+  examples="black"; "red"; "loamy"
+- irrigation_type: coverage=1.00, types={'str': 298}, unique~=11
+  examples="canal"; "tube_well"; "sprinkler"
+- created_at: coverage=1.00, types={'str': 298}, unique~=9
+  datetime[min=2026-03-24T21:00:44.007359+00:00, max=2026-04-02T17:54:10.238772+00:00, span_days=8]
+  examples="2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"; "2026-03-24T21:00:44.533636+00:00"
+- updated_at: coverage=1.00, types={'str': 298}, unique~=3
+  datetime[min=2026-04-02T17:54:10.238772+00:00, max=2026-04-02T18:29:13.375586+00:00, span_days=0]
+  examples="2026-04-02T17:54:10.238772+00:00"; "2026-04-02T18:29:13.375586+00:00"; "2026-04-02T17:54:52.670704+00:00"
+- location_label: coverage=1.00, types={'str': 298}, unique~=298
+  examples="Andheri East, Visakhapatnam, Andhra Pradesh"; "Andheri East, Papum Pare, Arunachal Pradesh"; "Andheri East, Jorhat, Assam"
+- address_line_1: coverage=1.00, types={'str': 298}, unique~=298
+  examples="House 10, Visakhapatnam Kheda"; "House 10, Naharlagun Kheda"; "House 10, Jorhat Kheda"
+- address_line_2: coverage=1.00, types={'str': 298}, unique~=144
+  examples="Near Visakhapatnam APMC Yard"; "Near Naharlagun APMC Yard"; "Near Jorhat APMC Yard"
+- name: coverage=1.00, types={'str': 297}, unique~=207
+  examples="Seed Farmer 2"; "Seed Farmer 3"; "Seed Farmer 4"
+- phone: coverage=1.00, types={'str': 297}, unique~=297
+  examples="+919800000002"; "+919800000003"; "+919800000004"
+- farm_size: coverage=1.00, types={'float': 297}, unique~=296
+  numeric[min=0.80, p50=6.94, max=12.49, mean=6.80]
+  examples=3.3; 4.1; 4.9
+- farm_size_unit: coverage=1.00, types={'str': 297}, unique~=2
+  examples="acres"; "acre"
+- preferred_language: coverage=1.00, types={'str': 297}, unique~=13
+  examples="mr"; "en"; "ta"
+- is_seed_data: coverage=1.00, types={'bool': 297}, unique~=1
+  examples=true
+- saved_documents: coverage=0.98, types={'list': 291}, unique~=0
+  examples=[{"scheme_id": "MKKY", "scheme_name": "Mukhyamantri Kisan Kalyan Yojana (Madhya Pradesh)", "session_id": "ec5767cef83b45e69196dbc29f36ea65", "document_url": "http://127.0.0.1:80...; []
+- land_size_acres: coverage=0.98, types={'float': 291}, unique~=291
+  numeric[min=0.80, p50=6.96, max=12.49, mean=6.83]
+  examples=6.8; 0.8; 1.41
+- language: coverage=0.98, types={'str': 291}, unique~=13
+  examples="en"; "te"; "as"
+- aadhaar_number: coverage=0.97, types={'str': 290}, unique~=290
+  examples="311700000000"; "311800190007"; "311900380014"
+- alternate_mobile_number: coverage=0.97, types={'str': 290}, unique~=290
+  examples="9430000161"; "9440000198"; "9450000235"
+- bank_account_holder_name: coverage=0.97, types={'str': 290}, unique~=200
+  examples="Ramesh Patel"; "Suresh Sharma"; "Mahesh Singh"
+- bank_account_number: coverage=0.97, types={'str': 290}, unique~=290
+  examples="101000000000"; "101000009973"; "101000019946"
+- bank_ifsc: coverage=0.97, types={'str': 290}, unique~=290
+  examples="SBIN0100000"; "PUNB0100001"; "BARB0100002"
+- bank_name: coverage=0.97, types={'str': 290}, unique~=5
+  examples="State Bank of India"; "Punjab National Bank"; "Bank of Baroda"
+- block_or_tehsil: coverage=0.97, types={'str': 290}, unique~=285
+  examples="Visakhapatnam Tehsil 1"; "Krishna Tehsil 2"; "Guntur Tehsil 3"
+- category: coverage=0.97, types={'str': 290}, unique~=4
+  examples="General"; "OBC"; "SC"
+Very sparse fields (<10% coverage):
+- saved_documents[]
+- saved_documents[].scheme_id
+- saved_documents[].scheme_name
+- saved_documents[].session_id
+- saved_documents[].document_url
+- saved_documents[].generated_at
+
+--- livestock ---
+Total docs: 8
+Sample analyzed: 8
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_farmer_updated_desc | keys=SON([('farmer_id', 1), ('updated_at', -1)]) | unique=False
+- ix_farmer_type | keys=SON([('farmer_id', 1), ('type', 1)]) | unique=False
+Quality findings:
+- created_at span: 0 days
+- updated_at span: 0 days
+Top 9 fields by coverage:
+- _id: coverage=1.00, types={'str': 8}, unique~=8
+  examples="livestock_seed_farmer_01"; "livestock_seed_farmer_02"; "livestock_seed_farmer_03"
+- farmer_id: coverage=1.00, types={'str': 8}, unique~=8
+  examples="seed_farmer_01"; "seed_farmer_02"; "seed_farmer_03"
+- type: coverage=1.00, types={'str': 8}, unique~=4
+  examples="cow"; "buffalo"; "goat"
+- breed: coverage=1.00, types={'str': 8}, unique~=4
+  examples="Sahiwal"; "Murrah"; "Jamunapari"
+- count: coverage=1.00, types={'int': 8}, unique~=4
+  numeric[min=3.00, p50=4.00, max=6.00, mean=4.50]
+  examples=3; 4; 5
+- health_status: coverage=1.00, types={'str': 8}, unique~=1
+  examples="healthy"
+- created_at: coverage=1.00, types={'str': 8}, unique~=8
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-03-24T21:00:45.904026+00:00, span_days=0]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- updated_at: coverage=1.00, types={'str': 8}, unique~=8
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-03-24T21:00:45.904026+00:00, span_days=0]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- is_seed_data: coverage=1.00, types={'bool': 8}, unique~=1
+  examples=true
+
+--- market_prices ---
+Total docs: 30,217
+Sample analyzed: 3,000
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_state_district_crop_date_desc | keys=SON([('state', 1), ('district', 1), ('crop_name', 1), ('date_iso', -1)]) | unique=False
+- ix_crop_date_desc | keys=SON([('crop_name', 1), ('date_iso', -1)]) | unique=False
+- ix_state_district_commodity_date_desc | keys=SON([('state', 1), ('district', 1), ('commodity', 1), ('date_iso', -1)]) | unique=False
+Quality findings:
+- created_at span: 9 days
+Top 14 fields by coverage:
+- _id: coverage=1.00, types={'str': 3000}, unique~=3000
+  examples="b0e74d98b6e249eb848747bd12f54aa8"; "40515ff1d25d460fb21d60ddba543e4e"; "0d30da2468d2411fab680f810897799c"
+- crop_name: coverage=1.00, types={'str': 3000}, unique~=58
+  examples="Arecanut(Betelnut/Supari)"; "Elephant Yam (Suran)"; "Wheat"
+- variety: coverage=1.00, types={'str': 3000}, unique~=60
+  examples="New Variety"; "Other"; "Lokwan"
+- mandi_name: coverage=1.00, types={'str': 3000}, unique~=149
+  examples="Puttur"; "Kuttoor"; "Banapura"
+- state: coverage=1.00, types={'str': 3000}, unique~=14
+  examples="Karnataka"; "Kerala"; "Madhya Pradesh"
+- district: coverage=1.00, types={'str': 3000}, unique~=103
+  examples="Mangalore(Dakshin Kannad)"; "Pathanamthitta"; "Hoshangabad"
+- min_price: coverage=1.00, types={'float': 3000}, unique~=334
+  numeric[min=0.00, p50=1600.00, max=64925.00, mean=4231.95]
+  examples=10000.0; 1000.0; 956.0
+- max_price: coverage=1.00, types={'float': 3000}, unique~=388
+  numeric[min=0.00, p50=2000.00, max=79019.00, mean=5153.21]
+  examples=16500.0; 1500.0; 980.0
+- modal_price: coverage=1.00, types={'float': 3000}, unique~=411
+  numeric[min=250.00, p50=1900.00, max=70979.00, mean=4718.14]
+  examples=12800.0; 1200.0; 980.0
+- unit: coverage=1.00, types={'str': 3000}, unique~=1
+  examples="quintal"
+- date: coverage=1.00, types={'str': 3000}, unique~=1277
+  examples="24/02/2014"; "23/12/2009"; "14/08/2007"
+- source: coverage=1.00, types={'str': 3000}, unique~=1
+  examples="data.gov.in"
+- created_at: coverage=1.00, types={'str': 3000}, unique~=13
+  datetime[min=2026-03-25T13:16:53.956000+00:00, max=2026-04-03T20:48:09.964571+00:00, span_days=9]
+  examples="2026-04-01T15:01:06.676171+00:00"; "2026-04-01T15:47:05.397587+00:00"; "2026-03-25T13:20:40.997274+00:00"
+- date_iso: coverage=0.66, types={'str': 1984}, unique~=1079
+  datetime[min=2003-06-16T00:00:00+00:00, max=2017-12-31T00:00:00+00:00, span_days=5312]
+  examples="2007-08-14"; "2007-02-12"; "2015-05-02"
+
+--- notification_preferences ---
+Total docs: 1
+Sample analyzed: 1
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- updated_at span: 0 days
+Top 3 fields by coverage:
+- _id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_farmer_01"
+- updated_at: coverage=1.00, types={'str': 1}, unique~=1
+  datetime[min=2026-04-01T17:01:38.467157+00:00, max=2026-04-01T17:01:38.467157+00:00, span_days=0]
+  examples="2026-04-01T17:01:38.467157+00:00"
+- user_id: coverage=1.00, types={'str': 1}, unique~=1
+  examples="seed_farmer_01"
+
+--- notifications ---
+Total docs: 32
+Sample analyzed: 32
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 3 fields under 20% coverage
+- created_at span: 13 days
+Top 17 fields by coverage:
+- _id: coverage=1.00, types={'str': 32}, unique~=32
+  examples="notif_seed_01"; "a03371753c2d4be3a98ce04eba05e04c"; "57d63cc6bb1149458bc11237818cb042"
+- user_id: coverage=1.00, types={'str': 32}, unique~=1
+  examples="seed_farmer_01"
+- title: coverage=1.00, types={'str': 32}, unique~=6
+  examples="Market Alert"; "Calendar task scheduled"; "Calendar tasks scheduled"
+- body: coverage=1.00, types={'str': 32}, unique~=12
+  examples="Wheat modal price increased in nearby mandi."; "E2E Calendar Task One on 2026-04-12 at 06:30."; "E2E Calendar Task Two. on 2026-04-12 at 17:00."
+- type: coverage=1.00, types={'str': 32}, unique~=2
+  examples="market"; "calendar"
+- is_read: coverage=1.00, types={'bool': 32}, unique~=2
+  examples=true; false
+- created_at: coverage=1.00, types={'str': 32}, unique~=32
+  datetime[min=2026-03-24T21:00:46.692638+00:00, max=2026-04-07T07:37:24.608493+00:00, span_days=13]
+  examples="2026-03-24T21:00:46.692638+00:00"; "2026-04-02T19:38:38.792020+00:00"; "2026-04-02T19:38:38.906305+00:00"
+- message: coverage=0.97, types={'str': 31}, unique~=11
+  examples="E2E Calendar Task One on 2026-04-12 at 06:30."; "E2E Calendar Task Two. on 2026-04-12 at 17:00."; "Scheduled 2 task(s). Reused 0 existing task(s)."
+- data: coverage=0.97, types={'dict': 31}, unique~=0
+  examples={"event_id": "f50fc03a3b104825a958ddd5f2530498", "action": "create"}; {"event_id": "bc8227f6b53a4a4cbc379fe27579a375", "action": "create"}; {"action": "batch_create", "created_count": 2, "reused_count": 0}
+- data.action: coverage=0.97, types={'str': 31}, unique~=5
+  examples="create"; "batch_create"; "update"
+- read: coverage=0.97, types={'bool': 31}, unique~=1
+  examples=false
+- data.event_id: coverage=0.69, types={'str': 22}, unique~=15
+  examples="f50fc03a3b104825a958ddd5f2530498"; "bc8227f6b53a4a4cbc379fe27579a375"; "af1536e6664a40e7bfaea3f210a6d4c4"
+- data.created_count: coverage=0.28, types={'int': 9}, unique~=2
+  numeric[min=1.00, p50=2.00, max=2.00, mean=1.67]
+  examples=2; 1
+- data.reused_count: coverage=0.28, types={'int': 9}, unique~=1
+  numeric[min=0.00, p50=0.00, max=0.00, mean=0.00]
+  examples=0
+- data.action_type: coverage=0.09, types={'str': 3}, unique~=2
+  examples="delete"; "update"
+- is_seed_data: coverage=0.03, types={'bool': 1}, unique~=1
+  examples=true
+- read_at: coverage=0.03, types={'str': 1}, unique~=1
+  datetime[min=2026-04-01T15:04:29.127676+00:00, max=2026-04-01T15:04:29.127676+00:00, span_days=0]
+  examples="2026-04-01T15:04:29.127676+00:00"
+Very sparse fields (<10% coverage):
+- is_seed_data
+- read_at
+- data.action_type
+
+--- ref_cold_storage ---
+Total docs: 32
+Sample analyzed: 32
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 7 fields by coverage:
+- _id: coverage=1.00, types={'str': 32}, unique~=32
+  examples="andhra_pradesh"; "arunachal_pradesh"; "assam"
+- _ingested_at: coverage=1.00, types={'str': 32}, unique~=1
+  datetime[min=2026-03-24T21:00:14.796022+00:00, max=2026-03-24T21:00:14.796022+00:00, span_days=0]
+  examples="2026-03-24T21:00:14.796022+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 32}, unique~=1
+  examples="a75195de-8cd6-4ecf-a818-54c761dfa24a"
+- capacity_required_mt: coverage=1.00, types={'float': 32}, unique~=32
+  numeric[min=2271.00, p50=157709.00, max=35100664.00, mean=2193791.50]
+  examples=530925.0; 7508.0; 71996.0
+- resource_id: coverage=1.00, types={'str': 32}, unique~=1
+  examples="a75195de-8cd6-4ecf-a818-54c761dfa24a"
+- state: coverage=1.00, types={'str': 32}, unique~=32
+  examples="Andhra Pradesh"; "Arunachal Pradesh"; "Assam"
+- available_capacity_mt: coverage=0.97, types={'float': 31, 'null': 1}, unique~=31
+  numeric[min=2000.00, p50=217280.00, max=31823701.00, mean=2053142.00]
+  examples=1577828.0; 5000.0; 119652.0
+
+--- ref_crop_varieties ---
+Total docs: 18
+Sample analyzed: 18
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 7 fields by coverage:
+- _id: coverage=1.00, types={'str': 18}, unique~=18
+  examples="rice_kharif"; "rice_rabi"; "total_total"
+- _ingested_at: coverage=1.00, types={'str': 18}, unique~=1
+  datetime[min=2026-03-24T21:00:15.849534+00:00, max=2026-03-24T21:00:15.849534+00:00, span_days=0]
+  examples="2026-03-24T21:00:15.849534+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 18}, unique~=1
+  examples="7b9f57f0-5f8a-4442-9759-352dacb9d71b"
+- crop: coverage=1.00, types={'str': 18}, unique~=12
+  examples="Rice"; "Total"; "Wheat"
+- production_target_2016_17: coverage=1.00, types={'str': 18}, unique~=17
+  examples="93"; "15.5"; "270.1"
+- resource_id: coverage=1.00, types={'str': 18}, unique~=1
+  examples="7b9f57f0-5f8a-4442-9759-352dacb9d71b"
+- season: coverage=1.00, types={'str': 18}, unique~=3
+  examples="Kharif"; "Rabi"; "Total"
+
+--- ref_data_ingestion_meta ---
+Total docs: 26
+Sample analyzed: 26
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 13 fields under 20% coverage
+- timestamp span: 7 days
+Top 19 fields by coverage:
+- _id: coverage=1.00, types={'str': 26}, unique~=26
+  examples="seed_reference_data_ref_mandi_prices"; "seed_reference_data_ref_mandi_directory"; "seed_reference_data_ref_farmer_schemes"
+- status: coverage=0.96, types={'str': 25}, unique~=1
+  examples="success"
+- script: coverage=0.92, types={'str': 24}, unique~=5
+  examples="seed_reference_data"; "replace_schemes_from_json"; "replace_equipment_providers_from_json"
+- dataset: coverage=0.88, types={'str': 23}, unique~=23
+  examples="ref_mandi_prices"; "ref_mandi_directory"; "ref_farmer_schemes"
+- last_run_at: coverage=0.88, types={'str': 23}, unique~=4
+  datetime[min=2026-03-24T21:00:25.200470+00:00, max=2026-04-01T13:28:29.788870+00:00, span_days=7]
+  examples="2026-03-24T21:00:25.200470+00:00"; "2026-03-25T20:25:44.135842+00:00"; "2026-03-25T20:25:48.314031+00:00"
+- row_count: coverage=0.81, types={'int': 21}, unique~=19
+  numeric[min=0.00, p50=64.00, max=92407.00, mean=6337.33]
+  examples=92407; 1566; 743
+- input_file: coverage=0.19, types={'str': 5}, unique~=4
+  examples="scripts/reports/scheme.json"; "scripts/reports/equipment_rental_pan_india_2026.json"; "C:/Users/vinay/OneDrive/Desktop/google/google-agentic-ai/kisankiawaz-backend/scripts/reports/new_schemes_plus50.csv"
+- deleted_docs: coverage=0.12, types={'int': 3}, unique~=3
+  numeric[min=0.00, p50=155.00, max=1210.00, mean=455.00]
+  examples=155; 1210; 0
+- inserted_docs: coverage=0.12, types={'int': 3}, unique~=3
+  numeric[min=155.00, p50=1210.00, max=29040.00, mean=10135.00]
+  examples=155; 1210; 29040
+- timestamp: coverage=0.12, types={'str': 3}, unique~=3
+  datetime[min=2026-03-25T20:48:26.173577+00:00, max=2026-04-02T13:45:04.335896+00:00, span_days=7]
+  examples="2026-03-25T20:48:26.173577+00:00"; "2026-03-31T19:40:33.114342+00:00"; "2026-04-02T13:45:04.335896+00:00"
+- providers_count: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=166.00, p50=166.00, max=166.00, mean=166.00]
+  examples=166
+- input_rows: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=50.00, p50=50.00, max=50.00, mean=50.00]
+  examples=50
+- inserted: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=0.00, p50=0.00, max=0.00, mean=0.00]
+  examples=0
+- invalid_rows: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=0.00, p50=0.00, max=0.00, mean=0.00]
+  examples=0
+- normalized_rows: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=50.00, p50=50.00, max=50.00, mean=50.00]
+  examples=50
+- reembed: coverage=0.08, types={'bool': 2}, unique~=1
+  examples=false
+- skipped_duplicate_in_db: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=50.00, p50=50.00, max=50.00, mean=50.00]
+  examples=50
+- skipped_duplicate_in_file: coverage=0.08, types={'int': 2}, unique~=1
+  numeric[min=0.00, p50=0.00, max=0.00, mean=0.00]
+  examples=0
+- months: coverage=0.04, types={'int': 1}, unique~=1
+  numeric[min=24.00, p50=24.00, max=24.00, mean=24.00]
+  examples=24
+Very sparse fields (<10% coverage):
+- providers_count
+- input_rows
+- inserted
+- invalid_rows
+- normalized_rows
+- reembed
+- skipped_duplicate_in_db
+- skipped_duplicate_in_file
+- months
+
+--- ref_equipment_providers ---
+Total docs: 1,210
+Sample analyzed: 1,210
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_active_state_district_category_source | keys=SON([('is_active', 1), ('state', 1), ('district', 1), ('category', 1), ('source_type', 1)]) | unique=False
+- ix_state_district_name | keys=SON([('state', 1), ('district', 1), ('name', 1)]) | unique=False
+- ix_provider_id | keys=SON([('provider_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 3 fields under 20% coverage
+Top 30 fields by coverage:
+- eligibility[]: coverage=4.00, types={'str': 4840}, unique~=4
+  examples="Valid mobile number"; "Farmer ID or Aadhaar"; "Advance booking token"
+- documents_required[]: coverage=3.00, types={'str': 3630}, unique~=3
+  examples="Aadhaar Card"; "Any farm proof (land record/tenant letter)"; "Mobile number"
+- booking_channels[]: coverage=3.00, types={'str': 3630}, unique~=3
+  examples="phone"; "whatsapp"; "centre_visit"
+- _id: coverage=1.00, types={'str': 1210}, unique~=1210
+  examples="prov-mahpun1--tractor-45-hp"; "prov-mahpun1--rotavator-7-feet"; "prov-mahpun1--seed-drill-9-row"
+- rental_id: coverage=1.00, types={'str': 1210}, unique~=1210
+  examples="prov-mahpun1--tractor-45-hp"; "prov-mahpun1--rotavator-7-feet"; "prov-mahpun1--seed-drill-9-row"
+- provider_id: coverage=1.00, types={'str': 1210}, unique~=166
+  examples="PROV-MAHPUN1"; "PROV-MAHNAS2"; "PROV-MAHNAG3"
+- provider_name: coverage=1.00, types={'str': 1210}, unique~=165
+  examples="Pune Agro Rental Centre"; "Nashik Agro Rental Centre"; "Nagpur Agro Rental Centre"
+- source_type: coverage=1.00, types={'str': 1210}, unique~=4
+  examples="CHC"; "State Agri Dept"; "FPO Network"
+- source_url: coverage=1.00, types={'str': 1210}, unique~=4
+  examples="https://agrimachinery.nic.in/CustomHiring"; "https://agriwelfare.gov.in/"; "https://sfacindia.com/"
+- source: coverage=1.00, types={'str': 1210}, unique~=1
+  examples="equipment_pan_india_curated_2026"
+- equipment_id: coverage=1.00, types={'str': 1210}, unique~=1160
+  examples="equip-tractor-45-hp-maharashtra-pune"; "equip-rotavator-7-feet-maharashtra-pune"; "equip-seed-drill-9-row-maharashtra-pune"
+- name: coverage=1.00, types={'str': 1210}, unique~=10
+  examples="Tractor 45 HP"; "Rotavator 7 feet"; "Seed Drill 9-row"
+- category: coverage=1.00, types={'str': 1210}, unique~=7
+  examples="land_preparation"; "sowing_planting"; "crop_protection"
+- state: coverage=1.00, types={'str': 1210}, unique~=29
+  examples="Maharashtra"; "Uttar Pradesh"; "Bihar"
+- district: coverage=1.00, types={'str': 1210}, unique~=115
+  examples="Pune"; "Nashik"; "Nagpur"
+- city: coverage=1.00, types={'str': 1210}, unique~=115
+  examples="Pune"; "Nashik"; "Nagpur"
+- pincode: coverage=1.00, types={'str': 1210}, unique~=116
+  examples="564995"; "844412"; "568760"
+- address: coverage=1.00, types={'str': 1210}, unique~=116
+  examples="Pune Mandi Road, Pune, Maharashtra"; "Nashik Mandi Road, Nashik, Maharashtra"; "Nagpur Mandi Road, Nagpur, Maharashtra"
+- contact_person: coverage=1.00, types={'str': 1210}, unique~=1
+  examples="Rental Manager"
+- provider_phone: coverage=1.00, types={'str': 1210}, unique~=116
+  examples="+918807527732"; "+918868553123"; "+918844857862"
+- alternate_phone: coverage=1.00, types={'str': 1210}, unique~=116
+  examples="+918807537833"; "+918868563224"; "+918844867963"
+- whatsapp: coverage=1.00, types={'str': 1210}, unique~=116
+  examples="+918807527732"; "+918868553123"; "+918844857862"
+- eligibility: coverage=1.00, types={'list': 1210}, unique~=0
+  examples=["Valid mobile number", "Farmer ID or Aadhaar", "Advance booking token", "Fuel charges extra where applicable"]
+- documents_required: coverage=1.00, types={'list': 1210}, unique~=0
+  examples=["Aadhaar Card", "Any farm proof (land record/tenant letter)", "Mobile number"]
+- security_deposit_policy: coverage=1.00, types={'str': 1210}, unique~=1
+  examples="Refundable deposit varies by equipment from Rs. 500 to Rs. 5000"
+- working_hours: coverage=1.00, types={'str': 1210}, unique~=1
+  examples="08:00-18:00"
+- booking_channels: coverage=1.00, types={'list': 1210}, unique~=0
+  examples=["phone", "whatsapp", "centre_visit"]
+- service_radius_km: coverage=1.00, types={'int': 1210}, unique~=2
+  numeric[min=35.00, p50=35.00, max=50.00, mean=42.50]
+  examples=35; 50
+- geo: coverage=1.00, types={'dict': 1210}, unique~=0
+  examples={"lat": null, "lng": null}; {}
+- rate_daily: coverage=1.00, types={'int': 1210}, unique~=620
+  numeric[min=1320.00, p50=2943.00, max=11597.00, mean=3738.96]
+  examples=4410; 3360; 2310
+Very sparse fields (<10% coverage):
+- geo.lat
+- geo.lng
+- rate_per_trip
+
+--- ref_equipment_rate_history ---
+Total docs: 29,040
+Sample analyzed: 3,000
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- created_at span: 0 days
+Top 13 fields by coverage:
+- _id: coverage=1.00, types={'str': 3000}, unique~=3000
+  examples="prov-madjab3--combine-harvester--madhya-pradesh--2024-06"; "prov-punpat3--boom-sprayer-400l--punjab--2024-12"; "prov-tamsal3--rotavator-7-feet--tamil-nadu--2025-10"
+- equipment_name: coverage=1.00, types={'str': 3000}, unique~=10
+  examples="Combine Harvester"; "Boom Sprayer 400L"; "Rotavator 7 feet"
+- category: coverage=1.00, types={'str': 3000}, unique~=7
+  examples="harvesting"; "crop_protection"; "land_preparation"
+- provider_id: coverage=1.00, types={'str': 3000}, unique~=160
+  examples="PROV-MADJAB3"; "PROV-PUNPAT3"; "PROV-TAMSAL3"
+- state: coverage=1.00, types={'str': 3000}, unique~=29
+  examples="Madhya Pradesh"; "Punjab"; "Tamil Nadu"
+- district: coverage=1.00, types={'str': 3000}, unique~=115
+  examples="Jabalpur"; "Patiala"; "Salem"
+- period: coverage=1.00, types={'str': 3000}, unique~=24
+  examples="2024-06"; "2024-12"; "2025-10"
+- rate_daily: coverage=1.00, types={'float': 3000}, unique~=2996
+  numeric[min=1202.29, p50=3278.35, max=13993.14, mean=4145.96]
+  examples=9736.37; 1713.78; 4075.95
+- rate_hourly: coverage=1.00, types={'float': 3000}, unique~=2935
+  numeric[min=169.60, p50=479.54, max=2294.98, mean=597.06]
+  examples=1265.31; 265.77; 636.48
+- source_note: coverage=1.00, types={'str': 3000}, unique~=1
+  examples="Generated monthly history from curated provider inventory v2026.03"
+- created_at: coverage=1.00, types={'str': 3000}, unique~=1
+  datetime[min=2026-04-02T13:45:04.335896+00:00, max=2026-04-02T13:45:04.335896+00:00, span_days=0]
+  examples="2026-04-02T13:45:04.335896+00:00"
+- _ingested_at: coverage=1.00, types={'str': 3000}, unique~=1
+  datetime[min=2026-04-02T13:45:04.335896+00:00, max=2026-04-02T13:45:04.335896+00:00, span_days=0]
+  examples="2026-04-02T13:45:04.335896+00:00"
+- rate_per_acre: coverage=0.90, types={'float': 2713, 'null': 287}, unique~=2687
+  numeric[min=352.53, p50=992.25, max=3239.48, mean=1128.89]
+  examples=2253.97; 428.45; 1146.12
+
+--- ref_farmer_schemes ---
+Total docs: 155
+Sample analyzed: 155
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_scheme_id | keys=SON([('scheme_id', 1)]) | unique=False
+- ix_beneficiary_state | keys=SON([('beneficiary_state', 1)]) | unique=False
+- ix_categories | keys=SON([('categories', 1)]) | unique=False
+- ix_ministry_status | keys=SON([('ministry', 1), ('status', 1)]) | unique=False
+- ix_beneficiary_state_ingested_desc | keys=SON([('beneficiary_state', 1), ('_ingested_at', -1)]) | unique=False
+- ix_categories_ingested_desc | keys=SON([('categories', 1), ('_ingested_at', -1)]) | unique=False
+Quality findings:
+- High sparsity: 2 fields under 20% coverage
+Top 30 fields by coverage:
+- tags[]: coverage=6.39, types={'str': 991}, unique~=589
+  examples="income support"; "DBT"; "direct benefit transfer"
+- where_to_apply[]: coverage=3.00, types={'str': 465}, unique~=135
+  examples="Official portal: https://pmkisan.gov.in"; "Nearest CSC"; "District Agriculture Department Office"
+- required_documents[]: coverage=2.99, types={'str': 463, 'null': 50}, unique~=246
+  examples="Aadhaar Card (mandatory)"; "Land ownership document / Khasra-Khatauni / 7/12 extract"; "Bank account passbook with IFSC code"
+- eligibility[]: coverage=2.77, types={'str': 429, 'null': 50}, unique~=410
+  examples="Must be a landholding farmer family (husband, wife and minor children)"; "Must own cultivable agricultural land"; "Must be an Indian citizen"
+- application_process[]: coverage=2.48, types={'str': 385, 'null': 50}, unique~=385
+  examples="Step 1: Visit the official PM-KISAN portal Go to the homepage of pmkisan.gov.in (https://pmkisan.gov.in)"; "Step 2: Click on 'New Farmer Registration' under Farmers Corner Choose 'Rural Farmer Registration' or 'Urban Farmer Registration' (https://pmkisan.gov.in/RegistrationFormupdate...; "Step 3: Enter Aadhaar number, select state and captcha System checks if farmer is already registered"
+- conditions[]: coverage=2.48, types={'str': 385, 'null': 50}, unique~=381
+  examples="Institutional landholders not eligible"; "Farmer families holding constitutional posts excluded"; "Serving/retired officers of Central/State Government excluded (except Group D employees)"
+- benefits[]: coverage=2.08, types={'str': 323, 'null': 50}, unique~=308
+  examples="Rs. 6"; "000 per year (Rs. 2"; "000 per instalment every 4 months) directly deposited into Aadhaar-linked bank accounts via DBT. Reduces dependency on moneylenders."
+- categories[]: coverage=1.34, types={'str': 208}, unique~=83
+  examples="Income Support"; "Pension"; "Crop Insurance"
+- official_links[]: coverage=1.19, types={'str': 184}, unique~=155
+  examples="https://pmkisan.gov.in"; "https://pmkisan.gov.in/RegistrationFormupdated.aspx"; "https://maandhan.in"
+- _id: coverage=1.00, types={'str': 155}, unique~=155
+  examples="scheme_central-pm-kisan"; "scheme_central-pm-kmy"; "scheme_central-pmfby"
+- source: coverage=1.00, types={'str': 155}, unique~=1
+  examples="scheme_json_user_upload"
+- scheme_id: coverage=1.00, types={'str': 155}, unique~=155
+  examples="central-pm-kisan"; "central-pm-kmy"; "central-pmfby"
+- title: coverage=1.00, types={'str': 155}, unique~=154
+  examples="Pradhan Mantri Kisan Samman Nidhi"; "Pradhan Mantri Kisan Maandhan Yojana"; "Pradhan Mantri Fasal Bima Yojana"
+- summary: coverage=1.00, types={'str': 155}, unique~=155
+  examples="PM-KISAN is a 100% centrally funded scheme that provides income support of Rs. 6,000 per year to all landholding farmer families across India. The amount is disbursed in three ...; "PM-KMY is a voluntary and contributory pension scheme launched on September 12, 2019, providing old-age social security to small and marginal farmers. Life Insurance Corporatio...; "PMFBY provides comprehensive crop insurance from pre-sowing to post-harvest stages against natural calamities, pests and diseases. Launched in Kharif 2016, it replaced the Nati...
+- categories: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Income Support"]; ["Pension"]; ["Crop Insurance"]
+- beneficiary_state: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["All"]; ["Maharashtra"]; ["Telangana"]
+- tags: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["income support", "DBT", "direct benefit transfer", "small farmer", "marginal farmer", "PM-KISAN", "cash transfer"]; ["pension", "social security", "old age", "small farmer", "voluntary", "LIC"]; ["crop insurance", "natural calamity", "kharif", "rabi", "horticulture", "pest", "disease", "DBT"]
+- official_links: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["https://pmkisan.gov.in", "https://pmkisan.gov.in/RegistrationFormupdated.aspx"]; ["https://maandhan.in", "https://maandhan.in/pmkmy"]; ["https://pmfby.gov.in", "https://pmfby.gov.in/farmerRegistrationForm"]
+- document_links: coverage=1.00, types={'list': 155}, unique~=0
+  examples=[]
+- contact_numbers: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["155261 / 011-24300606", "1800-180-1551"]; ["1800-267-6888"]; ["14447", "1800-200-7710"]
+- contact_emails: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["pmkisan-ict@gov.in"]; ["pmkmy-agri@gov.in"]; ["help.agri@gov.in"]
+- application_process: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Step 1: Visit the official PM-KISAN portal Go to the homepage of pmkisan.gov.in (https://pmkisan.gov.in)", "Step 2: Click on 'New Farmer Registration' under Farmers Corner Cho...; ["Step 1: Visit PM-KMY portal or nearest CSC Access the scheme via the official portal (https://maandhan.in)", "Step 2: Select 'Pradhan Mantri Kisan Maandhan Yojana' option Clic...; ["Step 1: Visit PMFBY portal Access official crop insurance portal (https://pmfby.gov.in)", "Step 2: Click on 'Farmer Application' > 'Guest Farmer' For new registration (https:/...
+- eligibility: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Must be a landholding farmer family (husband, wife and minor children)", "Must own cultivable agricultural land", "Must be an Indian citizen", "Bank account must be linked wit...; ["Small and Marginal Farmers (land holding upto 2 hectares)", "Age between 18 to 40 years at entry", "Must not be covered under NPS, ESIC, EPFO", "Must not be an income tax paye...; ["All farmers (loanee and non-loanee) growing notified crops in notified areas", "Loanee farmers: mandatory enrollment if crop loan availed for notified crops", "Non-loanee farm...
+- conditions: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Institutional landholders not eligible", "Farmer families holding constitutional posts excluded", "Serving/retired officers of Central/State Government excluded (except Group ...; ["Voluntary exit allowed after 10 years of contribution with interest", "Contribution amount depends on age of entry (younger = lower contribution)", "On exit before 60, corpus ...; ["Must be enrolled before cut-off date (10 days from Kharif sowing / 31 days for Rabi)", "Crop must be notified for the specific district/block", "Post-harvest losses covered fo...
+- required_documents: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Aadhaar Card (mandatory)", "Land ownership document / Khasra-Khatauni / 7/12 extract", "Bank account passbook with IFSC code", "Mobile number linked to Aadhaar", "Passport-siz...; ["Aadhaar Card", "Bank account passbook / IFSC code", "Land ownership documents (Khasra/Khatauni)", "Mobile number", "Self-declaration regarding land holding"]; ["Aadhaar Card", "Land records (7/12 extract or Khasra/Khatauni)", "Bank account passbook", "Sowing certificate from Patwari/VLW", "Loan documents (for loanee farmers)", "Tenant...
+- benefits: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Rs. 6", "000 per year (Rs. 2", "000 per instalment every 4 months) directly deposited into Aadhaar-linked bank accounts via DBT. Reduces dependency on moneylenders."]; ["Rs. 3", "000 per month pension after age 60. Central Government matches farmer's contribution on 50:50 basis. Spouse (widow/widower) gets Rs. 1", "500 per month on farmer's de...; ["Full sum insured coverage for crop loss. Very low farmer premium (2% Kharif", "1.5% Rabi", "5% horticulture). Balance premium paid by Government. Coverage for prevented sowing...
+- where_to_apply: coverage=1.00, types={'list': 155}, unique~=0
+  examples=["Official portal: https://pmkisan.gov.in", "Nearest CSC", "District Agriculture Department Office"]; ["Official portal: https://maandhan.in", "Nearest CSC", "District Agriculture Department Office"]; ["Official portal: https://pmfby.gov.in", "Nearest CSC", "District Agriculture Department Office"]
+- _ingested_at: coverage=1.00, types={'str': 155}, unique~=1
+  datetime[min=2026-03-25T20:48:26.173577+00:00, max=2026-03-25T20:48:26.173577+00:00, span_days=0]
+  examples="2026-03-25T20:48:26.173577+00:00"
+- contact_numbers[]: coverage=0.70, types={'str': 109, 'null': 50}, unique~=74
+  examples="155261 / 011-24300606"; "1800-180-1551"; "1800-267-6888"
+- objective: coverage=0.68, types={'str': 155}, unique~=106
+  examples="To supplement the financial needs of farmers in procuring agricultural inputs and meeting domestic needs, ensuring proper crop health and appropriate yield."; "To provide social security in the form of minimum pension of Rs. 3,000 per month to small and marginal farmers at the age of 60 years."; "To provide financial support to farmers suffering crop loss/damage due to unforeseen events (natural calamities, pests and diseases), stabilize farmer income and encourage mode...
+Very sparse fields (<10% coverage):
+- document_links[]
+- is_active
+
+--- ref_fasal_data ---
+Total docs: 21
+Sample analyzed: 21
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 10 fields by coverage:
+- _id: coverage=1.00, types={'str': 21}, unique~=21
+  examples="paddy_k_k_s"; "paddy_s_t_p"; "banana"
+- _ingested_at: coverage=1.00, types={'str': 21}, unique~=1
+  datetime[min=2026-03-24T21:00:20.867750+00:00, max=2026-03-24T21:00:20.867750+00:00, span_days=0]
+  examples="2026-03-24T21:00:20.867750+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 21}, unique~=1
+  examples="14f6f0d0-311d-4b71-acfe-ac08bbecfd1c"
+- crop: coverage=1.00, types={'str': 21}, unique~=21
+  examples="Paddy K/K/S"; "Paddy S/T/P"; "Banana"
+- crop_cutting_experiments_firkas: coverage=1.00, types={'str': 21}, unique~=8
+  examples="NA"; "1560"; "60"
+- crop_cutting_experiments_villages: coverage=1.00, types={'str': 21}, unique~=14
+  examples="21872"; "47116"; "4316"
+- notified_firkas: coverage=1.00, types={'str': 21}, unique~=8
+  examples="NA"; "156"; "6"
+- notified_villages: coverage=1.00, types={'str': 21}, unique~=14
+  examples="5468"; "11779"; "1079"
+- resource_id: coverage=1.00, types={'str': 21}, unique~=1
+  examples="14f6f0d0-311d-4b71-acfe-ac08bbecfd1c"
+- sl_no: coverage=1.00, types={'str': 21}, unique~=21
+  examples="1"; "2"; "3"
+
+--- ref_fertilizer_data ---
+Total docs: 200
+Sample analyzed: 200
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 15 fields by coverage:
+- _id: coverage=1.00, types={'str': 200}, unique~=200
+  examples="fertilizer_0"; "fertilizer_1"; "fertilizer_2"
+- _ingested_at: coverage=1.00, types={'str': 200}, unique~=1
+  datetime[min=2026-03-24T21:00:16.434309+00:00, max=2026-03-24T21:00:16.434309+00:00, span_days=0]
+  examples="2026-03-24T21:00:16.434309+00:00"
+- _resource_id: coverage=1.00, types={'str': 200}, unique~=1
+  examples="5c2f62fe-5afa-4119-a499-fec9d604d5bd"
+- _source_resource_id: coverage=1.00, types={'str': 200}, unique~=1
+  examples="5c2f62fe-5afa-4119-a499-fec9d604d5bd"
+- circlename: coverage=1.00, types={'str': 200}, unique~=1
+  examples="Telangana Circle"
+- delivery: coverage=1.00, types={'str': 200}, unique~=2
+  examples="Delivery"; "Non Delivery"
+- district: coverage=1.00, types={'str': 200}, unique~=21
+  examples="KUMURAM BHEEM ASIFABAD"; "MANCHERIAL"; "HANUMAKONDA"
+- divisionname: coverage=1.00, types={'str': 200}, unique~=8
+  examples="Adilabad Division"; "Hanamkonda Division"; "Karimnagar Division"
+- officename: coverage=1.00, types={'str': 200}, unique~=194
+  examples="Kothimir B.O"; "Papanpet B.O"; "Kukuda B.O"
+- officetype: coverage=1.00, types={'str': 200}, unique~=1
+  examples="BO"
+- pincode: coverage=1.00, types={'str': 200}, unique~=98
+  examples="504273"; "504299"; "504296"
+- regionname: coverage=1.00, types={'str': 200}, unique~=2
+  examples="Hyderabad Region"; "Hyderabad City Region"
+- statename: coverage=1.00, types={'str': 200}, unique~=1
+  examples="TELANGANA"
+- latitude: coverage=0.99, types={'float': 198, 'null': 2}, unique~=196
+  numeric[min=14.36, p50=18.18, max=79.00, mean=18.38]
+  examples=19.3638689; 19.4764899; 19.3285752
+- longitude: coverage=0.99, types={'float': 198, 'null': 2}, unique~=196
+  numeric[min=17.00, p50=78.97, max=80.52, mean=78.33]
+  examples=79.5376658; 79.583923; 79.4760132
+
+--- ref_mandi_directory ---
+Total docs: 976
+Sample analyzed: 976
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+Top 9 fields by coverage:
+- _id: coverage=1.00, types={'str': 976}, unique~=976
+  examples="west_bengal_coochbehar_pundibari"; "west_bengal_coochbehar_toofanganj"; "west_bengal_hooghly_sheoraphuly"
+- _ingested_at: coverage=1.00, types={'str': 976}, unique~=1
+  datetime[min=2026-03-25T21:16:07.072428+00:00, max=2026-03-25T21:16:07.072428+00:00, span_days=0]
+  examples="2026-03-25T21:16:07.072428+00:00"
+- district: coverage=1.00, types={'str': 976}, unique~=356
+  examples="Coochbehar"; "Hooghly"; "Bulandshahar"
+- name: coverage=1.00, types={'str': 976}, unique~=967
+  examples="Pundibari"; "Toofanganj"; "Sheoraphuly"
+- source: coverage=1.00, types={'str': 976}, unique~=3
+  examples="data.gov.in_daily_prices"; "derived_data_gov"; "derived_from_market_records"
+- state: coverage=1.00, types={'str': 976}, unique~=28
+  examples="West Bengal"; "Uttar Pradesh"; "Gujarat"
+- latitude: coverage=0.40, types={'null': 587, 'float': 389}, unique~=168
+  numeric[min=-17.57, p50=25.29, max=45.15, mean=22.70]
+  examples=22.57688; 26.51667; 25.00447
+- longitude: coverage=0.40, types={'null': 587, 'float': 389}, unique~=168
+  numeric[min=-8.28, p50=76.97, max=94.26, mean=75.33]
+  examples=88.31857; 88.73333; 88.14573
+- geocode_quality: coverage=0.17, types={'str': 976}, unique~=7
+  examples=""; "PPL"; "PPLA2"
+
+--- ref_mandi_prices ---
+Total docs: 75,391
+Sample analyzed: 3,000
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_state_district_commodity_arrival_desc | keys=SON([('state', 1), ('district', 1), ('commodity', 1), ('arrival_date_iso', -1)]) | unique=False
+- ix_commodity_arrival_desc | keys=SON([('commodity', 1), ('arrival_date_iso', -1)]) | unique=False
+Top 16 fields by coverage:
+- _id: coverage=1.00, types={'str': 3000}, unique~=3000
+  examples="tamil_nadu_erode_sathiyamagalam_uzhavar_sandhai_apmc_cauliflower_20_03_2026"; "maharashtra_kolhapur_kolhapur_laxmipuri_green_gram_dal_moong_dal_12_01_2010"; "punjab_ferozpur_zira_paddy_dhan_common_08_11_2010"
+- _ingested_at: coverage=1.00, types={'str': 3000}, unique~=1
+  datetime[min=2026-03-24T20:19:48.396062+00:00, max=2026-03-24T20:19:48.396062+00:00, span_days=0]
+  examples="2026-03-24T20:19:48.396062+00:00"
+- arrival_date: coverage=1.00, types={'str': 3000}, unique~=679
+  examples="20/03/2026"; "12/01/2010"; "08/11/2010"
+- commodity: coverage=1.00, types={'str': 3000}, unique~=119
+  examples="Cauliflower"; "Green Gram Dal (Moong Dal)"; "Paddy(Dhan)(Common)"
+- district: coverage=1.00, types={'str': 3000}, unique~=408
+  examples="Erode"; "Kolhapur"; "Ferozpur"
+- market: coverage=1.00, types={'str': 3000}, unique~=1106
+  examples="Sathiyamagalam(Uzhavar Sandhai ) APMC"; "Kolhapur(Laxmipuri)"; "Zira"
+- max_price: coverage=1.00, types={'int': 3000}, unique~=619
+  numeric[min=0.00, p50=1101.00, max=55000.00, mean=1962.86]
+  examples=3000; 8400; 1030
+- min_price: coverage=1.00, types={'int': 3000}, unique~=496
+  numeric[min=0.00, p50=1000.00, max=52000.00, mean=1675.62]
+  examples=2500; 8000; 1030
+- modal_price: coverage=1.00, types={'int': 3000}, unique~=656
+  numeric[min=6.00, p50=1080.00, max=53000.00, mean=1946.40]
+  examples=2750; 8200; 1030
+- resource_id: coverage=1.00, types={'str': 3000}, unique~=2
+  examples="9ef84268-d588-465a-a308-a864a43d0070"; "35985678-0d79-46b4-9ed6-6f13308a1d24"
+- state: coverage=1.00, types={'str': 3000}, unique~=29
+  examples="Tamil Nadu"; "Maharashtra"; "Punjab"
+- variety: coverage=1.00, types={'str': 3000}, unique~=179
+  examples="Ranchi"; "Green Gram Dal"; "Other"
+- arrival_date_iso: coverage=1.00, types={'str': 3000}, unique~=679
+  datetime[min=2002-09-13T00:00:00+00:00, max=2026-03-20T00:00:00+00:00, span_days=8589]
+  examples="2026-03-20"; "2010-01-12"; "2010-11-08"
+- grade: coverage=0.86, types={'str': 2575}, unique~=11
+  examples="Local"; "FAQ"; "Medium"
+- commodity_code: coverage=0.77, types={'str': 2575}, unique~=40
+  examples=""; "265"; "2"
+- _source_resource_id: coverage=0.48, types={'str': 3000}, unique~=3
+  examples="9ef84268-d588-465a-a308-a864a43d0070"; ""; "35985678-0d79-46b4-9ed6-6f13308a1d24"
+
+--- ref_msp_prices ---
+Total docs: 10
+Sample analyzed: 10
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 6 fields by coverage:
+- _id: coverage=1.00, types={'str': 10}, unique~=10
+  examples="groundnut"; "castor"; "sesame"
+- _ingested_at: coverage=1.00, types={'str': 10}, unique~=1
+  datetime[min=2026-03-24T21:00:16.276456+00:00, max=2026-03-24T21:00:16.276456+00:00, span_days=0]
+  examples="2026-03-24T21:00:16.276456+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 10}, unique~=1
+  examples="5e6056c8-b644-40a8-a346-3da6b3d8e67e"
+- crop: coverage=1.00, types={'str': 10}, unique~=10
+  examples="Groundnut"; "Castor"; "Sesame"
+- oilseeds_production_lakh_tonnes: coverage=1.00, types={'float': 10}, unique~=10
+  numeric[min=0.39, p50=7.92, max=365.65, mean=73.13]
+  examples=101.19; 17.74; 7.92
+- resource_id: coverage=1.00, types={'str': 10}, unique~=1
+  examples="5e6056c8-b644-40a8-a346-3da6b3d8e67e"
+
+--- ref_pesticide_advisory ---
+Total docs: 14
+Sample analyzed: 14
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 6 fields by coverage:
+- _id: coverage=1.00, types={'str': 14}, unique~=14
+  examples="rice"; "bajra"; "maize"
+- _ingested_at: coverage=1.00, types={'str': 14}, unique~=1
+  datetime[min=2026-03-24T21:00:20.252527+00:00, max=2026-03-24T21:00:20.252527+00:00, span_days=0]
+  examples="2026-03-24T21:00:20.252527+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 14}, unique~=1
+  examples="98a33686-715f-4076-97da-fa3dcf6bc61b"
+- crop: coverage=1.00, types={'str': 14}, unique~=14
+  examples="Rice"; "Bajra"; "Maize"
+- production_million_tonnes: coverage=1.00, types={'float': 14}, unique~=13
+  numeric[min=1.75, p50=10.09, max=465.05, mean=61.27]
+  examples=104.99; 9.75; 23.1
+- resource_id: coverage=1.00, types={'str': 14}, unique~=1
+  examples="98a33686-715f-4076-97da-fa3dcf6bc61b"
+
+--- ref_pin_master ---
+Total docs: 2,726
+Sample analyzed: 2,726
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 12 fields by coverage:
+- _id: coverage=1.00, types={'str': 2726}, unique~=2726
+  examples="847409_219990"; "488446_937938"; "483119_916287"
+- _ingested_at: coverage=1.00, types={'str': 2726}, unique~=1
+  datetime[min=2026-03-25T21:16:38.251018+00:00, max=2026-03-25T21:16:38.251018+00:00, span_days=0]
+  examples="2026-03-25T21:16:38.251018+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 2726}, unique~=1
+  examples="f17a1608-5f10-4610-bb50-a63c80d83974"
+- district_code: coverage=1.00, types={'str': 2726}, unique~=104
+  examples="206"; "420"; "411"
+- district_name: coverage=1.00, types={'str': 2726}, unique~=104
+  examples="Madhubani"; "Panna"; "Jabalpur"
+- pincode: coverage=1.00, types={'str': 2726}, unique~=615
+  examples="847409"; "488446"; "483119"
+- state_code: coverage=1.00, types={'str': 2726}, unique~=18
+  examples="10"; "23"; "8"
+- state_name: coverage=1.00, types={'str': 2726}, unique~=18
+  examples="Bihar"; "Madhya Pradesh"; "Rajasthan"
+- subdistrict_code: coverage=1.00, types={'str': 2726}, unique~=370
+  examples="1085"; "3440"; "3629"
+- subdistrict_name: coverage=1.00, types={'str': 2726}, unique~=368
+  examples="Laukaha"; "Pawai"; "Patan"
+- village_code: coverage=1.00, types={'str': 2726}, unique~=2726
+  examples="219990"; "937938"; "916287"
+- village_name: coverage=1.00, types={'str': 2726}, unique~=2700
+  examples="Bagha Kusmar"; "Maheda"; "Karhaiyakhurd"
+
+--- ref_pmfby_data ---
+Total docs: 6
+Sample analyzed: 6
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Top 10 fields by coverage:
+- _id: coverage=1.00, types={'str': 6}, unique~=6
+  examples="pmfby_2016_17"; "pmfby_2017_18"; "pmfby_2018_19"
+- _ingested_at: coverage=1.00, types={'str': 6}, unique~=1
+  datetime[min=2026-03-24T21:00:16.185383+00:00, max=2026-03-24T21:00:16.185383+00:00, span_days=0]
+  examples="2026-03-24T21:00:16.185383+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 6}, unique~=1
+  examples="a330e681-6562-4552-a94b-58f1df7eccf3"
+- claims_paid_crores: coverage=1.00, types={'float': 6}, unique~=6
+  numeric[min=14716.90, p50=20423.90, max=28651.80, mean=21669.20]
+  examples=16795.5; 22065.5; 28651.8
+- farmer_premium_crores: coverage=1.00, types={'float': 6}, unique~=6
+  numeric[min=3772.10, p50=4085.10, max=4695.70, mean=4208.63]
+  examples=4085.1; 4172.0; 4695.7
+- goi_premium_crores: coverage=1.00, types={'float': 6}, unique~=6
+  numeric[min=8648.70, p50=12316.70, max=13525.90, mean=11690.55]
+  examples=8648.7; 10055.9; 12316.7
+- resource_id: coverage=1.00, types={'str': 6}, unique~=1
+  examples="a330e681-6562-4552-a94b-58f1df7eccf3"
+- state_premium_crores: coverage=1.00, types={'float': 6}, unique~=6
+  numeric[min=8944.60, p50=12676.60, max=14620.50, mean=12455.42]
+  examples=8944.6; 10239.8; 12676.6
+- total_farmer_applications_lakhs: coverage=1.00, types={'float': 6}, unique~=6
+  numeric[min=531.80, p50=582.00, max=832.80, mean=627.95]
+  examples=581.7; 531.8; 582.0
+- year: coverage=1.00, types={'str': 6}, unique~=6
+  examples="2016-17"; "2017-18"; "2018-19"
+
+--- ref_reservoir_data ---
+Total docs: 23
+Sample analyzed: 23
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+Top 8 fields by coverage:
+- _id: coverage=1.00, types={'str': 23}, unique~=23
+  examples="andhra_pradesh_and_telengana_srisailam"; "andhra_pradesh_donkarayi"; "telengana_priyadarshini_jurala"
+- _ingested_at: coverage=1.00, types={'str': 23}, unique~=1
+  datetime[min=2026-04-01T13:00:59.269846+00:00, max=2026-04-01T13:00:59.269846+00:00, span_days=0]
+  examples="2026-04-01T13:00:59.269846+00:00"
+- _source_resource_id: coverage=1.00, types={'str': 23}, unique~=1
+  examples="247146af-5216-47ff-80f6-ddea261f1139"
+- current_storage_pct_of_normal: coverage=1.00, types={'float': 23}, unique~=18
+  numeric[min=0.00, p50=66.00, max=80.00, mean=58.57]
+  examples=76.0; 80.0; 56.0
+- project_name: coverage=1.00, types={'str': 23}, unique~=23
+  examples="Srisailam"; "Donkarayi"; "Priyadarshini Jurala"
+- resource_id: coverage=1.00, types={'str': 23}, unique~=1
+  examples="247146af-5216-47ff-80f6-ddea261f1139"
+- state: coverage=1.00, types={'str': 23}, unique~=14
+  examples="Andhra Pradesh and Telangana"; "Andhra Pradesh"; "Telangana"
+- projects_deficiency_pct: coverage=0.00, types={'null': 23}, unique~=0
+Very sparse fields (<10% coverage):
+- projects_deficiency_pct
+
+--- ref_soil_health ---
+Total docs: 4,454
+Sample analyzed: 3,000
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+- ix_state_district_date_desc | keys=SON([('state', 1), ('district', 1), ('date_iso', -1)]) | unique=False
+- ix_state_district_block_date_desc | keys=SON([('state', 1), ('district', 1), ('block', 1), ('date_iso', -1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+Top 12 fields by coverage:
+- _id: coverage=1.00, types={'str': 3000}, unique~=3000
+  examples="bihar_saran_2019_11"; "assam_tinsukia_2018_08"; "uttar_pradesh_gonda_2020_02"
+- _ingested_at: coverage=1.00, types={'str': 3000}, unique~=1
+  datetime[min=2026-03-24T20:51:29.493084+00:00, max=2026-03-24T20:51:29.493084+00:00, span_days=0]
+  examples="2026-03-24T20:51:29.493084+00:00"
+- agency_name: coverage=1.00, types={'str': 3000}, unique~=1
+  examples="NRSC VIC MODEL"
+- avg_smlvl_at15cm: coverage=1.00, types={'float': 3000}, unique~=2998
+  numeric[min=0.00, p50=20.62, max=38.51, mean=20.70]
+  examples=10.5752567; 32.6260353; 19.0116973
+- date: coverage=1.00, types={'str': 3000}, unique~=290
+  datetime[min=2018-07-24T00:00:00+00:00, max=2020-12-31T00:00:00+00:00, span_days=891]
+  examples="2019-11-16"; "2018-08-29"; "2020-02-28"
+- district: coverage=1.00, types={'str': 3000}, unique~=729
+  examples="Saran"; "Tinsukia"; "Gonda"
+- month: coverage=1.00, types={'int': 3000}, unique~=10
+  numeric[min=1.00, p50=9.00, max=12.00, mean=8.90]
+  examples=11; 8; 2
+- resource_id: coverage=1.00, types={'str': 3000}, unique~=1
+  examples="4554a3c8-74e3-4f93-8727-8fd92161e345"
+- state: coverage=1.00, types={'str': 3000}, unique~=36
+  examples="Bihar"; "Assam"; "Uttar Pradesh"
+- year: coverage=1.00, types={'int': 3000}, unique~=3
+  numeric[min=2018.00, p50=2019.00, max=2020.00, mean=2018.73]
+  examples=2019; 2018; 2020
+- date_iso: coverage=1.00, types={'str': 3000}, unique~=290
+  datetime[min=2018-07-24T00:00:00+00:00, max=2020-12-31T00:00:00+00:00, span_days=891]
+  examples="2019-11-16"; "2018-08-29"; "2020-02-28"
+- _source_resource_id: coverage=0.01, types={'str': 3000}, unique~=2
+  examples=""; "4554a3c8-74e3-4f93-8727-8fd92161e345"
+Very sparse fields (<10% coverage):
+- _source_resource_id
+
+--- users ---
+Total docs: 303
+Sample analyzed: 303
+Indexes:
+- _id_ | keys=SON([('_id', 1)]) | unique=False
+Quality findings:
+- High sparsity: 1 fields under 20% coverage
+- created_at span: 8 days
+- updated_at span: 1 days
+Top 14 fields by coverage:
+- _id: coverage=1.00, types={'str': 303}, unique~=303
+  examples="seed_farmer_01"; "seed_farmer_02"; "seed_farmer_03"
+- phone: coverage=1.00, types={'str': 303}, unique~=303
+  examples="+919800000001"; "+919800000002"; "+919800000003"
+- password_hash: coverage=1.00, types={'str': 303}, unique~=14
+  examples="$2b$12$ghiEe7Rg8AAdnRIHTGx4Lefcf8G0DkSt.j5cKSbgXmrH1psCgwpim"; "$2b$12$hK0zJkJWyGJYuwz1Mpf.N.cRXg8q/.XNk93XuCT0xoN8Xqezp2f0y"; "$2b$12$2SPyIgY0rYVp0VDhkwevQe3Wn3HkoqS.J7vlpmIw0.6Ae5oAnjmEa"
+- name: coverage=1.00, types={'str': 303}, unique~=209
+  examples="Seed Farmer 1"; "Seed Farmer 2"; "Seed Farmer 3"
+- role: coverage=1.00, types={'str': 303}, unique~=1
+  examples="farmer"
+- language: coverage=1.00, types={'str': 303}, unique~=13
+  examples="en"; "mr"; "ta"
+- is_active: coverage=1.00, types={'bool': 303}, unique~=1
+  examples=true
+- created_at: coverage=1.00, types={'str': 303}, unique~=14
+  datetime[min=2026-03-24T21:00:43.627707+00:00, max=2026-04-02T17:54:10.238772+00:00, span_days=8]
+  examples="2026-03-24T21:00:43.627707+00:00"; "2026-03-24T21:00:44.007359+00:00"; "2026-03-24T21:00:44.283882+00:00"
+- updated_at: coverage=1.00, types={'str': 303}, unique~=6
+  datetime[min=2026-04-01T15:07:52.300966+00:00, max=2026-04-02T17:54:10.238772+00:00, span_days=1]
+  examples="2026-04-02T17:54:10.238772+00:00"; "2026-04-01T23:24:51.736377+00:00"; "2026-04-01T15:07:52.300966+00:00"
+- is_seed_data: coverage=0.98, types={'bool': 298}, unique~=1
+  examples=true
+- district: coverage=0.98, types={'str': 298}, unique~=140
+  examples="Hisar"; "Visakhapatnam"; "Papum Pare"
+- state: coverage=0.98, types={'str': 298}, unique~=29
+  examples="Haryana"; "Andhra Pradesh"; "Arunachal Pradesh"
+- village: coverage=0.98, types={'str': 298}, unique~=292
+  examples="Hisar Kheda X"; "Andheri East"; "Visakhapatnam Kheda 1"
+- email: coverage=0.00, types={'null': 5}, unique~=0
+Very sparse fields (<10% coverage):
+- email
+
+=== STRATEGIC RECOMMENDATIONS ===
+1. Improve analytics engagement by increasing write frequency to low-volume operational collections.
+2. Add stricter validation for sparse high-impact fields and normalize timestamp storage to ISO UTC.
+3. Backfill missing relations where relationship coverage is low (users/profile/booking links).
+4. Create daily materialized analytics snapshots for trend charts when event volumes are low.
+5. Add ingestion freshness monitoring and alerts using ref_data_ingestion_meta and updated_at spans.

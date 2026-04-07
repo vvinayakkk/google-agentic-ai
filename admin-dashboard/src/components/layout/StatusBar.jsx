@@ -13,17 +13,13 @@ const StatusBar = ({ services = [], lastSync, onReset }) => {
   }, [services]);
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-40 flex h-7 items-center justify-between border-t border-white/5 bg-[#1C1C1C]/92 px-2 text-[10px] text-white/60 backdrop-blur-xl sm:px-3">
+    <footer className="fixed bottom-0 left-0 right-0 z-40 flex h-7 items-center justify-between px-2 text-[10px] backdrop-blur-xl sm:px-3" style={{ borderTop: "1px solid var(--border)", background: "color-mix(in srgb, var(--surface) 92%, transparent)", color: "var(--muted)" }}>
       <div className="flex items-center gap-2">
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400">
-          <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-400/60" />
-        </span>
-        <span className="text-emerald-200">Live</span>
-        <span className="hidden text-white/35 sm:inline">Last sync: {formatDateTime(lastSync)}</span>
+        <span className="hidden sm:inline" style={{ color: "var(--faint)" }}>Last sync: {formatDateTime(lastSync)}</span>
       </div>
       <div className="mx-2 hidden items-center gap-2 overflow-x-auto whitespace-nowrap md:flex">
         {mergedServices.map((service) => (
-          <span key={service.name} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-1.5 py-0.5">
+          <span key={service.name} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5" style={{ border: "1px solid var(--soft)" }}>
             <span className={`h-1.5 w-1.5 rounded-full ${service.ok === false ? "bg-rose-400" : "bg-emerald-400"}`} />
             {service.name}
           </span>

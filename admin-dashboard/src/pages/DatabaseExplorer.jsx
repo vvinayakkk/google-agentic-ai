@@ -31,6 +31,44 @@ const GROUPS = [
 
 const DEFAULT_QUERY_INPUT = '{\n  "filter": {},\n  "limit": 50\n}';
 
+const DBX_STYLE_ID = "dbx-theme-v2";
+const DBX_STYLES = `
+  .dbx-page {
+    background: var(--app-shell-gradient);
+  }
+  .dbx-glass {
+    background: var(--app-shell-gradient);
+    border: 1px solid var(--soft-strong);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+  .dbx-chip-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--app-shell-gradient);
+    border: 1px solid var(--soft-strong);
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+`;
+
+const existingDbxStyle = document.getElementById(DBX_STYLE_ID);
+if (existingDbxStyle) {
+  if (existingDbxStyle.textContent !== DBX_STYLES) {
+    existingDbxStyle.textContent = DBX_STYLES;
+  }
+} else {
+  const s = document.createElement("style");
+  s.id = DBX_STYLE_ID;
+  s.textContent = DBX_STYLES;
+  document.head.appendChild(s);
+}
+
 /* ─────────────────────────────────────────────
    Helpers
 ───────────────────────────────────────────── */
@@ -188,17 +226,24 @@ const applyQuerySort = (inputRows, sortSpec) => {
 };
 
 const TYPE_STYLES = {
-  string:   { bg: "rgba(96,165,250,0.12)",  color: "#60A5FA", label: "string" },
-  id:       { bg: "rgba(167,139,250,0.12)", color: "#A78BFA", label: "string" },
-  integer:  { bg: "rgba(34,197,94,0.12)",   color: "#22C55E", label: "integer" },
-  float:    { bg: "rgba(34,197,94,0.12)",   color: "#22C55E", label: "float" },
-  datetime: { bg: "rgba(245,158,11,0.12)",  color: "#F59E0B", label: "datetime" },
-  boolean:  { bg: "rgba(239,68,68,0.12)",   color: "#F87171", label: "boolean" },
-  object:   { bg: "rgba(168,85,247,0.12)",  color: "#C084FC", label: "object" },
-  array:    { bg: "rgba(20,184,166,0.12)",  color: "#2DD4BF", label: "array" },
-  enum:     { bg: "rgba(249,115,22,0.12)",  color: "#FB923C", label: "enum" },
-  null:     { bg: "rgba(255,255,255,0.06)", color: "#666",    label: "null" },
+  string:   { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "string" },
+  id:       { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "string" },
+  integer:  { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "integer" },
+  float:    { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "float" },
+  datetime: { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "datetime" },
+  boolean:  { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "boolean" },
+  object:   { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "object" },
+  array:    { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "array" },
+  enum:     { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "enum" },
+  null:     { bg: "var(--app-shell-gradient)", color: "var(--muted)", label: "null" },
 };
+
+const statusCard = (label, dotColor, textColor = "var(--muted)") => (
+  <span className="dbx-chip-card" style={{ color: textColor }}>
+    <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+    {label}
+  </span>
+);
 
 const FIELD_DESCRIPTIONS = {
   id:          "Unique record identifier (UUID v4)",
@@ -233,11 +278,11 @@ const FIELD_DESCRIPTIONS = {
 };
 
 const fmtCell = (val) => {
-  if (val === null || val === undefined) return <span style={{ color: "#444" }}>—</span>;
+  if (val === null || val === undefined) return <span style={{ color: "var(--faint)" }}>—</span>;
   const t = inferType(val);
   if (t === "float" || t === "integer") {
     return (
-      <span style={{ color: "#22C55E", fontFamily: "monospace", fontWeight: 600, fontSize: 12 }}>
+      <span style={{ color: "var(--text)", fontFamily: "monospace", fontWeight: 600, fontSize: 12 }}>
         {typeof val === "number" ? val.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : val}
       </span>
     );
@@ -245,38 +290,34 @@ const fmtCell = (val) => {
   if (t === "datetime") {
     const d = new Date(val);
     return (
-      <span style={{ color: "#aaa", fontSize: 11, fontFamily: "monospace" }}>
+      <span style={{ color: "var(--muted)", fontSize: 11, fontFamily: "monospace" }}>
         {d.toLocaleDateString("en-IN", { year: "numeric", month: "2-digit", day: "2-digit" })}
         <br />
-        <span style={{ color: "#555" }}>{d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span style={{ color: "var(--muted)" }}>{d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
       </span>
     );
   }
   if (t === "object" || t === "array") {
-    return <span style={{ color: "#666", fontFamily: "monospace", fontSize: 10 }}>{JSON.stringify(val).slice(0, 60)}{JSON.stringify(val).length > 60 ? "…" : ""}</span>;
+    return <span style={{ color: "var(--muted)", fontFamily: "monospace", fontSize: 10 }}>{JSON.stringify(val).slice(0, 60)}{JSON.stringify(val).length > 60 ? "…" : ""}</span>;
   }
   if (t === "boolean") {
-    return (
-      <span style={{
-        background: val ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-        color: val ? "#22C55E" : "#F87171",
-        border: `1px solid ${val ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
-        borderRadius: 4, fontSize: 10, padding: "1px 6px", fontWeight: 600,
-      }}>{String(val)}</span>
-    );
+    return statusCard(val ? "ACTIVE" : "INACTIVE", val ? "var(--text)" : "var(--faint)", "var(--text)");
   }
   const s = String(val);
   // Status-like values
-  const statusColors = { active: "#22C55E", inactive: "#666", pending: "#F59E0B", approved: "#22C55E", rejected: "#F87171", completed: "#60A5FA", cancelled: "#F87171" };
+  const statusColors = {
+    active: "var(--text)",
+    inactive: "var(--muted)",
+    pending: "var(--muted)",
+    approved: "var(--text)",
+    rejected: "var(--faint)",
+    completed: "var(--text)",
+    cancelled: "var(--faint)",
+  };
   if (statusColors[s.toLowerCase()]) {
-    return (
-      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        <span style={{ width: 5, height: 5, borderRadius: "50%", background: statusColors[s.toLowerCase()], flexShrink: 0 }} />
-        <span style={{ color: statusColors[s.toLowerCase()], fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{s}</span>
-      </span>
-    );
+    return statusCard(s, statusColors[s.toLowerCase()], "var(--text)");
   }
-  return <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>{s.length > 60 ? s.slice(0, 60) + "…" : s}</span>;
+  return <span style={{ color: "var(--text)", fontSize: 12 }}>{s.length > 60 ? s.slice(0, 60) + "…" : s}</span>;
 };
 
 /* ─────────────────────────────────────────────
@@ -301,16 +342,16 @@ const SchemaInspector = ({ rows, collection, freshness, onClose, onGenerateConfi
   return (
     <div style={{
       width: 280, flexShrink: 0,
-      background: "#111", borderLeft: "1px solid rgba(255,255,255,0.07)",
+      background: "var(--app-shell-gradient)", borderLeft: "1px solid var(--soft-strong)",
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)",
+        padding: "14px 16px", borderBottom: "1px solid var(--soft-strong)",
       }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#888" }}>Schema Inspector</span>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", padding: 2, display: "flex" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--muted)" }}>Schema Inspector</span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 2, display: "flex" }}>
           <X size={14} />
         </button>
       </div>
@@ -318,41 +359,41 @@ const SchemaInspector = ({ rows, collection, freshness, onClose, onGenerateConfi
       <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
         {/* Detection note */}
         <div style={{
-          background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.18)",
+          background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)",
           borderRadius: 7, padding: "10px 12px", marginBottom: 16,
         }}>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#F59E0B", marginBottom: 5 }}>Detection Logic</div>
-          <div style={{ fontSize: 11, color: "rgba(245,158,11,0.75)", fontWeight: 600, marginBottom: 4 }}>Inferred from current records</div>
-          <div style={{ fontSize: 10, color: "#664", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 5 }}>Detection Logic</div>
+          <div style={{ fontSize: 11, color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>Inferred from current records</div>
+          <div style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.5 }}>
             No fixed schema found. System is providing field types inferred based on the top {Math.min(rows.length, 50)} ingestions.
           </div>
           {freshnessItem?.last_run_at && (
-            <div style={{ fontSize: 10, color: "#775", marginTop: 6 }}>
+            <div style={{ fontSize: 10, color: "var(--faint)", marginTop: 6 }}>
               Last ingestion: {new Date(freshnessItem.last_run_at).toLocaleString("en-IN")}
             </div>
           )}
         </div>
 
         {/* Field definitions */}
-        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", marginBottom: 10 }}>Field Definitions</div>
+        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 10 }}>Field Definitions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {schema.map(({ key, type, description }) => {
             const ts = TYPE_STYLES[type] || TYPE_STYLES.string;
             return (
               <div key={key} style={{
-                background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
+                background: "var(--soft-subtle)", border: "1px solid var(--soft)",
                 borderRadius: 6, padding: "9px 11px",
               }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontFamily: "monospace", fontSize: 12, color: "#e0e0e0", fontWeight: 500 }}>{key}</span>
+                  <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--text)", fontWeight: 500 }}>{key}</span>
                   <span style={{
                     background: ts.bg, color: ts.color,
-                    border: `1px solid ${ts.color}30`,
-                    borderRadius: 3, fontSize: 9, fontWeight: 700,
+                    border: "1px solid var(--soft-strong)",
+                    borderRadius: 7, fontSize: 9, fontWeight: 700,
                     padding: "1px 6px", textTransform: "lowercase",
                   }}>{ts.label}</span>
                 </div>
-                <div style={{ fontSize: 10, color: "#555", lineHeight: 1.5 }}>{description}</div>
+                <div style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.5 }}>{description}</div>
               </div>
             );
           })}
@@ -363,17 +404,17 @@ const SchemaInspector = ({ rows, collection, freshness, onClose, onGenerateConfi
       </div>
 
       {/* Generate button */}
-      <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ padding: "12px 16px", borderTop: "1px solid var(--soft)" }}>
         <button
           onClick={onGenerateConfig}
           style={{
-            width: "100%", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
-            borderRadius: 7, color: "#22C55E", fontSize: 11, fontWeight: 700,
+            width: "100%", background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)",
+            borderRadius: 7, color: "var(--muted)", fontSize: 11, fontWeight: 700,
             padding: "9px 0", cursor: "pointer", fontFamily: "inherit",
             transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(34,197,94,0.18)"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "rgba(34,197,94,0.1)"}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--faint)"}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--soft-strong)"}
         >Generate Schema Config</button>
       </div>
     </div>
@@ -606,26 +647,26 @@ const DatabaseExplorer = () => {
   }, [generatedConfig]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", overflow: "hidden", margin: "-24px", marginTop: 0 }}>
+    <div className="dbx-page" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", overflow: "hidden", margin: "-24px", marginTop: 0 }}>
 
       {/* ── Top toolbar ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)",
-        background: "#111", flexShrink: 0,
+        padding: "10px 20px", borderBottom: "1px solid var(--soft-strong)",
+        background: "var(--app-shell-gradient)", flexShrink: 0,
       }}>
         {/* Search */}
         <div style={{ position: "relative", width: 200 }}>
-          <Search size={12} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#444" }} />
+          <Search size={12} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--faint)" }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search..."
             style={{
               width: "100%", boxSizing: "border-box",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--surface)", border: "1px solid var(--soft-strong)",
               borderRadius: 6, height: 30, paddingLeft: 28, paddingRight: 10,
-              fontSize: 12, color: "#ddd", outline: "none", fontFamily: "inherit",
+              fontSize: 12, color: "var(--text)", outline: "none", fontFamily: "inherit",
             }}
           />
         </div>
@@ -635,9 +676,9 @@ const DatabaseExplorer = () => {
           onClick={() => setShowFilter((v) => !v)}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            background: showFilter ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)",
-            border: `1px solid ${showFilter ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`,
-            borderRadius: 6, color: showFilter ? "#22C55E" : "#888", fontSize: 12,
+            background: "var(--app-shell-gradient)",
+            border: "1px solid var(--soft-strong)",
+            borderRadius: 6, color: showFilter ? "var(--text)" : "var(--muted)", fontSize: 12,
             padding: "5px 12px", cursor: "pointer", fontFamily: "inherit",
           }}
         ><SlidersHorizontal size={12} /> Filter</button>
@@ -647,24 +688,24 @@ const DatabaseExplorer = () => {
           <button
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              background: sortKey ? "rgba(96,165,250,0.1)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${sortKey ? "rgba(96,165,250,0.3)" : "rgba(255,255,255,0.08)"}`,
-              borderRadius: 6, color: sortKey ? "#60A5FA" : "#888", fontSize: 12,
+              background: "var(--app-shell-gradient)",
+              border: "1px solid var(--soft-strong)",
+              borderRadius: 6, color: sortKey ? "var(--text)" : "var(--muted)", fontSize: 12,
               padding: "5px 12px", cursor: "pointer", fontFamily: "inherit",
             }}
           ><ArrowUpDown size={12} /> Sort{sortKey ? `: ${sortKey}` : ""}</button>
         </div>
 
         {/* View mode pills */}
-        <div style={{ display: "flex", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, overflow: "hidden", marginLeft: 4 }}>
+        <div style={{ display: "flex", border: "1px solid var(--soft-strong)", borderRadius: 6, overflow: "hidden", marginLeft: 4 }}>
           {[["table", "Table View"], ["json", "JSON View"], ["query", "Query"]].map(([mode, label]) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
-                background: viewMode === mode ? (mode === "query" ? "#22C55E" : "rgba(255,255,255,0.1)") : "transparent",
-                border: "none", color: viewMode === mode ? (mode === "query" ? "#000" : "#e0e0e0") : "#666",
+                background: viewMode === mode ? "var(--soft-strong)" : "transparent",
+                border: "none", color: viewMode === mode ? "var(--text)" : "var(--muted)",
                 fontSize: 11, fontWeight: viewMode === mode ? 700 : 400,
                 padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
               }}
@@ -678,14 +719,14 @@ const DatabaseExplorer = () => {
           style={{
             marginLeft: "auto",
             display: "flex", alignItems: "center", gap: 5,
-            background: schemaOpen ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.04)",
-            border: `1px solid ${schemaOpen ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.08)"}`,
-            borderRadius: 6, color: schemaOpen ? "#A78BFA" : "#888", fontSize: 11,
+            background: "var(--app-shell-gradient)",
+            border: "1px solid var(--soft-strong)",
+            borderRadius: 6, color: schemaOpen ? "var(--text)" : "var(--muted)", fontSize: 11,
             padding: "5px 12px", cursor: "pointer", fontFamily: "inherit",
           }}
         ><Info size={11} /> Schema Inspector</button>
 
-        <button onClick={load} style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "#666", padding: "5px 10px", cursor: "pointer", display: "flex" }}>
+        <button onClick={load} style={{ background: "none", border: "1px solid var(--soft-strong)", borderRadius: 6, color: "var(--muted)", padding: "5px 10px", cursor: "pointer", display: "flex" }}>
           <RefreshCw size={12} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
         </button>
       </div>
@@ -694,35 +735,35 @@ const DatabaseExplorer = () => {
       {showFilter && (
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 20px", background: "#0d0d0d",
-          borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0,
+          padding: "8px 20px", background: "var(--app-shell-gradient)",
+          borderBottom: "1px solid var(--soft)", flexShrink: 0,
         }}>
-          <span style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Field</span>
+          <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Field</span>
           <select
             value={fieldFilter}
             onChange={(e) => setFieldFilter(e.target.value)}
-            style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "#aaa", fontFamily: "inherit", outline: "none" }}
+            style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "var(--muted)", fontFamily: "inherit", outline: "none" }}
           >
             <option value="__all">All fields</option>
             {fieldOptions.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
-          <span style={{ fontSize: 10, color: "#555" }}>contains</span>
+          <span style={{ fontSize: 10, color: "var(--muted)" }}>contains</span>
           <input
             value={fieldValue}
             onChange={(e) => setFieldValue(e.target.value)}
             placeholder="value..."
-            style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, height: 28, padding: "0 10px", fontSize: 11, color: "#ddd", fontFamily: "inherit", outline: "none", width: 160 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 5, height: 28, padding: "0 10px", fontSize: 11, color: "var(--text)", fontFamily: "inherit", outline: "none", width: 160 }}
           />
-          <span style={{ fontSize: 10, color: "#555", marginLeft: 16 }}>Sort by</span>
-          <select value={sortKey} onChange={(e) => setSortKey(e.target.value)} style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "#aaa", fontFamily: "inherit", outline: "none" }}>
+          <span style={{ fontSize: 10, color: "var(--muted)", marginLeft: 16 }}>Sort by</span>
+          <select value={sortKey} onChange={(e) => setSortKey(e.target.value)} style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "var(--muted)", fontFamily: "inherit", outline: "none" }}>
             <option value="">— none —</option>
             {fieldOptions.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
-          <select value={sortDir} onChange={(e) => setSortDir(e.target.value)} style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "#aaa", fontFamily: "inherit", outline: "none" }}>
+          <select value={sortDir} onChange={(e) => setSortDir(e.target.value)} style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "var(--muted)", fontFamily: "inherit", outline: "none" }}>
             <option value="desc">Desc</option>
             <option value="asc">Asc</option>
           </select>
-          <select value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "#aaa", fontFamily: "inherit", outline: "none" }}>
+          <select value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} style={{ background: "var(--surface)", border: "1px solid var(--soft-strong)", borderRadius: 5, height: 28, padding: "0 8px", fontSize: 11, color: "var(--muted)", fontFamily: "inherit", outline: "none" }}>
             {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} per page</option>)}
           </select>
           {(fieldValue || sortKey) && (
@@ -740,14 +781,14 @@ const DatabaseExplorer = () => {
         {/* Left sidebar */}
         <div style={{
           width: 200, flexShrink: 0,
-          background: "#0d0d0d", borderRight: "1px solid rgba(255,255,255,0.07)",
+          background: "var(--app-shell-gradient)", borderRight: "1px solid var(--soft-strong)",
           overflowY: "auto", padding: "14px 0",
         }}>
           {GROUPS.map(([group, names]) => (
             <div key={group} style={{ marginBottom: 20 }}>
               <div style={{
                 fontSize: 9, fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: "0.12em", color: "#444", padding: "0 14px", marginBottom: 6,
+                letterSpacing: "0.12em", color: "var(--faint)", padding: "0 14px", marginBottom: 6,
               }}>{group}</div>
               {names.map((name) => {
                 const isActive = collection === name;
@@ -757,16 +798,16 @@ const DatabaseExplorer = () => {
                     onClick={() => { setCollection(name); setPage(1); }}
                     style={{
                       display: "block", width: "100%", textAlign: "left",
-                      background: isActive ? "rgba(34,197,94,0.08)" : "transparent",
+                      background: isActive ? "var(--soft-subtle)" : "transparent",
                       border: "none",
-                      borderLeft: `2px solid ${isActive ? "#22C55E" : "transparent"}`,
-                      color: isActive ? "#e0e0e0" : "#666",
+                      borderLeft: `2px solid ${isActive ? "var(--soft-strong)" : "transparent"}`,
+                      color: isActive ? "var(--text)" : "var(--muted)",
                       fontSize: 11, padding: "6px 14px 6px 12px",
                       cursor: "pointer", fontFamily: "inherit",
                       transition: "all 0.1s",
                     }}
-                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "#aaa"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}}
-                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "#666"; e.currentTarget.style.background = "transparent"; }}}
+                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "var(--soft-subtle)"; }}}
+                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "var(--muted)"; e.currentTarget.style.background = "transparent"; }}}
                   >{name}</button>
                 );
               })}
@@ -790,7 +831,7 @@ const DatabaseExplorer = () => {
             <div style={{ flex: 1, overflowX: "auto", overflowY: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                 <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
-                  <tr style={{ background: "#111", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--soft)" }}>
                     {columns.map((col) => (
                       <th
                         key={col}
@@ -799,9 +840,9 @@ const DatabaseExplorer = () => {
                           textAlign: "left", padding: "9px 14px",
                           fontSize: 10, fontWeight: 700, textTransform: "uppercase",
                           letterSpacing: "0.08em",
-                          color: sortKey === col ? "#22C55E" : "#555",
+                          color: sortKey === col ? "var(--text)" : "var(--muted)",
                           whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
-                          background: sortKey === col ? "rgba(34,197,94,0.04)" : "transparent",
+                          background: sortKey === col ? "var(--soft-subtle)" : "transparent",
                         }}
                       >
                         {col}
@@ -813,10 +854,10 @@ const DatabaseExplorer = () => {
                 <tbody>
                   {loading && sortedRows.length === 0 && (
                     [...Array(8)].map((_, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <tr key={i} style={{ borderBottom: "1px solid var(--soft-subtle)" }}>
                         {[...Array(Math.max(columns.length, 5))].map((_, j) => (
                           <td key={j} style={{ padding: "12px 14px" }}>
-                            <div style={{ height: 12, background: "rgba(255,255,255,0.04)", borderRadius: 3, animation: "pulse 1.2s infinite", animationDelay: `${i * 0.05}s` }} />
+                            <div style={{ height: 12, background: "var(--soft)", borderRadius: 3, animation: "pulse 1.2s infinite", animationDelay: `${i * 0.05}s` }} />
                           </td>
                         ))}
                       </tr>
@@ -825,8 +866,8 @@ const DatabaseExplorer = () => {
                   {!loading && sortedRows.length === 0 && (
                     <tr>
                       <td colSpan={columns.length || 1} style={{ padding: "60px 24px", textAlign: "center" }}>
-                        <Database size={28} style={{ color: "#2a2a2a", marginBottom: 10 }} />
-                        <div style={{ color: "#444", fontSize: 13 }}>No records found</div>
+                        <Database size={28} style={{ color: "var(--faint)", marginBottom: 10 }} />
+                        <div style={{ color: "var(--muted)", fontSize: 13 }}>No records found</div>
                       </td>
                     </tr>
                   )}
@@ -835,15 +876,15 @@ const DatabaseExplorer = () => {
                     return (
                       <tr
                         key={id}
-                        style={{ borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.1s" }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.015)"}
+                        style={{ borderBottom: "1px solid var(--soft-subtle)", transition: "background 0.1s" }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--soft-subtle)"}
                         onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                       >
                         {columns.map((col) => (
                           <td key={col} style={{ padding: "10px 14px", verticalAlign: "middle", maxWidth: 200 }}>
                             {/* First col (ID-like) gets monospace styling */}
                             {(col === "id" || col === "_id" || col.endsWith("_id")) && typeof row[col] === "string" ? (
-                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#666" }}>
+                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "var(--muted)" }}>
                                 {String(row[col]).slice(0, 18)}{String(row[col]).length > 18 ? "…" : ""}
                               </span>
                             ) : fmtCell(row[col])}
@@ -862,8 +903,8 @@ const DatabaseExplorer = () => {
             <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
               <pre style={{
                 margin: 0, fontSize: 11, lineHeight: 1.7,
-                color: "#aaa", fontFamily: "monospace",
-                background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
+                color: "var(--muted)", fontFamily: "monospace",
+                background: "var(--soft-subtle)", border: "1px solid var(--soft)",
                 borderRadius: 8, padding: 16,
               }}>
                 {JSON.stringify(sortedRows, null, 2)}
@@ -875,14 +916,14 @@ const DatabaseExplorer = () => {
           {viewMode === "query" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, gap: 12, minHeight: 0 }}>
               <div style={{ flexShrink: 0 }}>
-                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "#555", fontWeight: 600, marginBottom: 8 }}>MongoDB Query</div>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", fontWeight: 600, marginBottom: 8 }}>MongoDB Query</div>
                 <textarea
                   value={queryInput}
                   onChange={(e) => setQueryInput(e.target.value)}
                   style={{
                     width: "100%", boxSizing: "border-box",
-                    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 8, padding: 14, fontSize: 12, color: "#ddd",
+                    background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)",
+                    borderRadius: 8, padding: 14, fontSize: 12, color: "var(--text)",
                     fontFamily: "monospace", lineHeight: 1.7, outline: "none", resize: "vertical",
                     height: 180,
                   }}
@@ -893,30 +934,30 @@ const DatabaseExplorer = () => {
                   onClick={runQuery}
                   disabled={queryRunning}
                   style={{
-                  background: "#22C55E", border: "none", borderRadius: 7,
-                  color: "#000", fontSize: 12, fontWeight: 700, padding: "8px 20px", cursor: queryRunning ? "not-allowed" : "pointer", fontFamily: "inherit",
+                  background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)", borderRadius: 7,
+                  color: "var(--muted)", fontSize: 12, fontWeight: 700, padding: "8px 20px", cursor: queryRunning ? "not-allowed" : "pointer", fontFamily: "inherit",
                   opacity: queryRunning ? 0.55 : 1,
                 }}
                 >{queryRunning ? "Running..." : "Run Query"}</button>
                 <button onClick={() => { setQueryInput(DEFAULT_QUERY_INPUT); setQueryMeta(null); setQueryRows([]); }} style={{
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 7, color: "#888", fontSize: 12, padding: "8px 16px", cursor: "pointer", fontFamily: "inherit",
+                  background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)",
+                  borderRadius: 7, color: "var(--muted)", fontSize: 12, padding: "8px 16px", cursor: "pointer", fontFamily: "inherit",
                 }}>Reset</button>
               </div>
-              <div style={{ fontSize: 11, color: "#555" }}>
-                Query against collection: <span style={{ color: "#22C55E", fontFamily: "monospace" }}>{collection}</span> · {total} documents
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                Query against collection: <span style={{ color: "var(--text)", fontFamily: "monospace" }}>{collection}</span> · {total} documents
               </div>
               {queryMeta && (
-                <div style={{ fontSize: 11, color: "#666" }}>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>
                   Query result: fetched {queryMeta.fetched} · matched {queryMeta.matched} · returned {queryMeta.returned}
                 </div>
               )}
 
               <div style={{
                 marginTop: 2,
-                border: "1px solid rgba(255,255,255,0.07)",
+                border: "1px solid var(--soft-strong)",
                 borderRadius: 8,
-                background: "rgba(255,255,255,0.015)",
+                background: "var(--soft-subtle)",
                 flex: 1,
                 minHeight: 180,
                 overflow: "auto",
@@ -925,14 +966,14 @@ const DatabaseExplorer = () => {
                 {queryRows.length > 0 ? (
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                     <thead style={{ position: "sticky", top: 0, zIndex: 5 }}>
-                      <tr style={{ background: "#111", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--soft)" }}>
                         {queryColumns.map((col) => (
                           <th
                             key={`q-${col}`}
                             style={{
                               textAlign: "left", padding: "8px 12px",
                               fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-                              letterSpacing: "0.08em", color: "#555", whiteSpace: "nowrap",
+                              letterSpacing: "0.08em", color: "var(--muted)", whiteSpace: "nowrap",
                             }}
                           >
                             {col}
@@ -944,11 +985,11 @@ const DatabaseExplorer = () => {
                       {queryRows.map((row, idx) => {
                         const id = row.id || row._id || row.scheme_id || row.farmer_id || `query-row-${idx}`;
                         return (
-                          <tr key={id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                          <tr key={id} style={{ borderBottom: "1px solid var(--soft-subtle)" }}>
                             {queryColumns.map((col) => (
                               <td key={`${id}-${col}`} style={{ padding: "8px 12px", verticalAlign: "middle", maxWidth: 220 }}>
                                 {(col === "id" || col === "_id" || col.endsWith("_id")) && typeof row[col] === "string" ? (
-                                  <span style={{ fontFamily: "monospace", fontSize: 11, color: "#666" }}>
+                                  <span style={{ fontFamily: "monospace", fontSize: 11, color: "var(--muted)" }}>
                                     {String(row[col]).slice(0, 20)}{String(row[col]).length > 20 ? "…" : ""}
                                   </span>
                                 ) : fmtCell(row[col])}
@@ -961,7 +1002,7 @@ const DatabaseExplorer = () => {
                   </table>
                 ) : (
                   <div style={{ padding: "28px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 12, color: "#666" }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>
                       {queryMeta ? "No rows matched this query" : "Run a query to see results here"}
                     </div>
                   </div>
@@ -974,11 +1015,11 @@ const DatabaseExplorer = () => {
           {viewMode === "table" && totalPages > 1 && (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "8px 16px", borderTop: "1px solid rgba(255,255,255,0.05)",
-              background: "#111", flexShrink: 0,
+              padding: "8px 16px", borderTop: "1px solid var(--soft)",
+              background: "var(--app-shell-gradient)", flexShrink: 0,
             }}>
-              <span style={{ fontSize: 11, color: "#555" }}>
-                Page {page} of {totalPages} · <span style={{ color: "#888" }}>{total} records</span>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                Page {page} of {totalPages} · <span style={{ color: "var(--faint)" }}>{total} records</span>
               </span>
               <div style={{ display: "flex", gap: 4 }}>
                 <button disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))} style={pgBtnStyle(false, page <= 1)}>Prev</button>
@@ -1006,27 +1047,27 @@ const DatabaseExplorer = () => {
       {/* ── Status bar ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 0,
-        background: "#090909", borderTop: "1px solid rgba(255,255,255,0.05)",
+        background: "var(--surface)", borderTop: "1px solid var(--soft)",
         padding: "5px 20px", flexShrink: 0,
       }}>
-        <StatusItem icon={<span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 5px rgba(34,197,94,0.7)", display: "inline-block" }} />}>
-          REAL-TIME STREAM · ACTIVE
+        <StatusItem icon={<span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--soft-strong)", display: "inline-block" }} />}>
+          SYSTEM STATUS · ONLINE
         </StatusItem>
         <StatusDivider />
-        <StatusItem icon={<Activity size={10} color="#555" />}>
+        <StatusItem icon={<Activity size={10} color="var(--muted)" />}>
           SYNC LATENCY · {syncLatency !== null ? `${syncLatency}ms` : "—"}
         </StatusItem>
         <StatusDivider />
-        <StatusItem icon={<Clock size={10} color="#555" />}>
+        <StatusItem icon={<Clock size={10} color="var(--muted)" />}>
           LAST INDEX UPDATE · {lastUpdate ? new Date(lastUpdate).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST" : "—"}
         </StatusItem>
         <StatusDivider />
-        <StatusItem icon={<Database size={10} color="#555" />}>
+        <StatusItem icon={<Database size={10} color="var(--muted)" />}>
           {collection} · {sortedRows.length} rows
         </StatusItem>
         <div style={{ marginLeft: "auto" }}>
           <StatusItem icon={null}>
-            <span style={{ color: "#333" }}>v2.4.1</span>
+            <span style={{ color: "var(--faint)" }}>v2.4.1</span>
           </StatusItem>
         </div>
       </div>
@@ -1038,27 +1079,27 @@ const DatabaseExplorer = () => {
         onClose={() => setConfigModalOpen(false)}
         footer={
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 11, color: copyStatus ? "#22C55E" : "#666" }}>{copyStatus || "Use Copy to place JSON in clipboard"}</span>
+            <span style={{ fontSize: 11, color: copyStatus ? "var(--text)" : "var(--muted)" }}>{copyStatus || "Use Copy to place JSON in clipboard"}</span>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={() => setConfigModalOpen(false)}
                 style={{
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 7, color: "#aaa", fontSize: 12, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit",
+                  background: "var(--soft)", border: "1px solid var(--soft-strong)",
+                  borderRadius: 7, color: "var(--muted)", fontSize: 12, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit",
                 }}
               >Close</button>
               <button
                 onClick={handleCopyConfig}
                 style={{
-                  background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
-                  borderRadius: 7, color: "#22C55E", fontSize: 12, fontWeight: 700, padding: "7px 16px", cursor: "pointer", fontFamily: "inherit",
+                  background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)",
+                  borderRadius: 7, color: "var(--muted)", fontSize: 12, fontWeight: 700, padding: "7px 16px", cursor: "pointer", fontFamily: "inherit",
                 }}
               >Copy Config</button>
             </div>
           </div>
         }
       >
-        <div style={{ fontSize: 11, color: "#666", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8 }}>
           Generated from current explorer rows. Edit this JSON before using it in ingestion or validation pipelines.
         </div>
         <textarea
@@ -1067,8 +1108,8 @@ const DatabaseExplorer = () => {
           value={generatedConfig}
           style={{
             width: "100%", boxSizing: "border-box", height: 380,
-            background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 8, padding: 12, fontSize: 12, color: "#ddd",
+            background: "var(--soft-subtle)", border: "1px solid var(--soft-strong)",
+            borderRadius: 8, padding: 12, fontSize: 12, color: "var(--text)",
             fontFamily: "monospace", lineHeight: 1.6, outline: "none", resize: "vertical",
           }}
         />
@@ -1079,7 +1120,7 @@ const DatabaseExplorer = () => {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
       `}</style>
     </div>
   );
@@ -1089,9 +1130,9 @@ const DatabaseExplorer = () => {
    Small helpers
 ───────────────────────────────────────────── */
 const pgBtnStyle = (active, disabled) => ({
-  background: active ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)",
-  border: `1px solid ${active ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`,
-  borderRadius: 5, color: active ? "#22C55E" : disabled ? "#333" : "#888",
+  background: active ? "var(--soft-subtle)" : "var(--soft)",
+  border: `1px solid ${active ? "var(--soft-strong)" : "var(--soft-strong)"}`,
+  borderRadius: 5, color: active ? "var(--text)" : disabled ? "var(--faint)" : "var(--muted)",
   fontSize: 11, padding: "4px 9px", cursor: disabled ? "not-allowed" : "pointer",
   fontFamily: "inherit", transition: "all 0.1s",
 });
@@ -1099,12 +1140,12 @@ const pgBtnStyle = (active, disabled) => ({
 const StatusItem = ({ icon, children }) => (
   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 14px" }}>
     {icon}
-    <span style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#444" }}>{children}</span>
+    <span style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--faint)" }}>{children}</span>
   </div>
 );
 
 const StatusDivider = () => (
-  <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.07)" }} />
+  <div style={{ width: 1, height: 14, background: "var(--soft-strong)" }} />
 );
 
 export default DatabaseExplorer;

@@ -1,11 +1,11 @@
 import React, { useMemo, useRef, useState } from "react";
-import { RefreshCw, Download, Bell, ChevronDown, LogOut } from "lucide-react";
-import { NAV_ITEMS, PAGE_KEYS } from "../../utils/constants";
+import { RefreshCw, Download, Bell, ChevronDown, LogOut, Sun, Moon } from "lucide-react";
+import { NAV_ITEMS } from "../../utils/constants";
 import { useUI } from "../../context/UIContext";
 import { useAuth } from "../../context/AuthContext";
 
 const TopBar = ({ onRefresh }) => {
-  const { activePage, setExportOpen } = useUI();
+  const { activePage, setExportOpen, theme, toggleTheme } = useUI();
   const { profile, logout } = useAuth();
   const pageName = useMemo(() => NAV_ITEMS.find((i) => i.key === activePage)?.label || "Overview", [activePage]);
   const initial = (profile?.name || profile?.email || "A").slice(0, 1).toUpperCase();
@@ -45,16 +45,34 @@ const TopBar = ({ onRefresh }) => {
           <span>Export</span>
         </button>
         <button type="button" className="icon-btn" style={{ position: "relative" }}> <Bell size={16} /> </button>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: "1px solid var(--soft)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
 
-        <div style={{ position: "relative" }} ref={profileRef}>
+        <div style={{ position: "relative", zIndex: 120 }} ref={profileRef}>
           <button type="button" className="btn-ghost" onClick={() => setOpen((s) => !s)}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span style={{ display: "inline-flex", width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", fontSize: 12 }}>{initial}</span>
+              <span style={{ display: "inline-flex", width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", fontSize: 12, border: "1px solid var(--soft)" }}>{initial}</span>
               <ChevronDown size={14} />
             </span>
           </button>
           {open ? (
-            <div style={{ position: "absolute", right: 0, top: 44, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 8, minWidth: 180 }}>
+            <div style={{ position: "absolute", right: 0, top: 44, zIndex: 140, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 8, minWidth: 180, boxShadow: "var(--shadow-lg)" }}>
               <div style={{ padding: 8, borderBottom: "1px solid var(--border)", marginBottom: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{profile?.name || "Admin"}</div>
                 <div style={{ fontSize: 11, color: "var(--muted)" }}>{profile?.email || ""}</div>

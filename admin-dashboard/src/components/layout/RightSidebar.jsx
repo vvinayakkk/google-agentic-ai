@@ -10,7 +10,7 @@ const RightSidebar = () => {
   const { logout, profile } = useAuth();
 
   return (
-    <aside className="fixed bottom-14 right-2 top-14 z-40 hidden w-14 flex-col items-center justify-between overflow-y-auto rounded-2xl border border-white/10 bg-[#1C1C1C]/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:flex">
+    <aside className="fixed bottom-14 right-2 top-14 z-40 hidden w-14 flex-col items-center justify-between overflow-y-auto rounded-2xl p-2 backdrop-blur-xl lg:flex" style={{ border: "1px solid var(--soft)", background: "color-mix(in srgb, var(--surface) 95%, transparent)", boxShadow: "var(--shadow-lg)" }}>
       <div className="space-y-1">
         {NAV_ITEMS.map((item, idx) => {
           const Icon = Icons[item.icon];

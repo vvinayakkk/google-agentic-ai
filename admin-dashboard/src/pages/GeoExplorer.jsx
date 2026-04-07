@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "../components/ui/DataTable";
 import { apiTry, withQuery } from "../api/client";
+import { useUI } from "../context/UIContext";
 
 /* ─── Leaflet loader ─────────────────────────────────────────────────────── */
 const loadLeaflet = () =>
@@ -62,6 +63,7 @@ const mockCount = (name) => {
 };
 
 const GeoExplorer = () => {
+  const { theme } = useUI();
   /* ── pincode ── */
   const [pincode, setPincode] = useState("");
   const [pinResult, setPinResult] = useState(null);
@@ -88,6 +90,7 @@ const GeoExplorer = () => {
   /* ── map — default view ── */
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const pinMarkersRef = useRef([]);
   const [activeCoords, setActiveCoords] = useState({ lat: 22.5, lng: 80 });
   const [mapReady, setMapReady] = useState(false);
@@ -98,45 +101,74 @@ const GeoExplorer = () => {
 
   /* ─── Inject styles ──────────────────────────────────────────────────── */
   useEffect(() => {
-    if (document.getElementById("geo-ex-style")) return;
-    const el = document.createElement("style");
-    el.id = "geo-ex-style";
-    el.textContent = `
+    const geoStyles = `
       .geo-tip {
-        background: rgba(10,14,20,0.96) !important;
-        border: 1px solid rgba(0,255,156,0.4) !important;
-        color: #b6ffdc !important;
+        background: var(--app-shell-gradient) !important;
+        border: 1px solid var(--soft-strong) !important;
+        color: var(--text) !important;
         font-size: 12px !important;
         padding: 6px 10px !important;
         border-radius: 6px !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.7) !important;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.16) !important;
         white-space: nowrap !important;
         pointer-events: none !important;
       }
       .geo-tip::before { display:none !important; }
       .leaflet-popup-content-wrapper {
-        background: rgba(10,14,20,0.97);
-        border: 1px solid rgba(0,255,156,0.3);
-        color: #c8ffc8;
+        background: var(--app-shell-gradient);
+        border: 1px solid var(--soft-strong);
+        color: var(--text);
         border-radius: 8px;
-        box-shadow: 0 0 28px rgba(0,255,156,0.12);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.16);
         font-size: 12px;
       }
       .leaflet-popup-content { margin: 10px 14px; line-height: 1.65; }
       .leaflet-popup-tip-container { display:none; }
-      .leaflet-popup-close-button { color: rgba(0,255,156,0.5) !important; font-size:16px !important; top:6px !important; right:8px !important; }
+      .leaflet-popup-close-button { color: var(--muted) !important; font-size:16px !important; top:6px !important; right:8px !important; }
       .leaflet-control-zoom a {
-        background: rgba(10,14,20,0.9) !important;
-        color: #00FF9C !important;
-        border-color: rgba(0,255,156,0.2) !important;
+        background: var(--app-shell-gradient) !important;
+        color: var(--text) !important;
+        border-color: var(--soft-strong) !important;
         font-size: 15px !important;
       }
-      .leaflet-control-zoom a:hover { background: rgba(0,255,156,0.12) !important; }
-      .leaflet-bar { border: 1px solid rgba(0,255,156,0.2) !important; box-shadow: none !important; border-radius: 6px !important; overflow:hidden; }
-      .leaflet-container { background: #080c11; }
+      .leaflet-control-zoom a:hover { background: var(--soft-subtle) !important; }
+      .leaflet-bar { border: 1px solid var(--soft-strong) !important; box-shadow: none !important; border-radius: 6px !important; overflow:hidden; }
+      .leaflet-container { background: var(--surface); }
+      .geo-state-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        cursor: pointer;
+        background: rgba(21, 128, 61, 0.95) !important;
+        border: 2px solid rgba(187, 247, 208, 0.95) !important;
+        box-shadow: 0 0 14px rgba(34,197,94,0.65), 0 0 2px rgba(255,255,255,0.55) !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      html[data-theme="dark"] .geo-state-dot,
+      body[data-theme="dark"] .geo-state-dot,
+      [data-theme="dark"] .geo-state-dot {
+        background: rgba(34,197,94,1) !important;
+        border-color: rgba(255,255,255,0.98) !important;
+        box-shadow: 0 0 18px rgba(74,222,128,0.98), 0 0 4px rgba(255,255,255,0.9) !important;
+      }
+      .geo-state-dot:hover {
+        transform: scale(1.15);
+      }
       @keyframes geo-fade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
       .geo-fade { animation: geo-fade 0.2s ease both; }
     `;
+
+    const existing = document.getElementById("geo-ex-style");
+    if (existing) {
+      if (existing.textContent !== geoStyles) {
+        existing.textContent = geoStyles;
+      }
+      return;
+    }
+
+    const el = document.createElement("style");
+    el.id = "geo-ex-style";
+    el.textContent = geoStyles;
     document.head.appendChild(el);
   }, []);
 
@@ -169,7 +201,8 @@ const GeoExplorer = () => {
         preferCanvas: true,
       });
 
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      const tileTheme = theme === "dark" ? "dark_all" : "light_all";
+      tileLayerRef.current = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}{r}.png`, {
         maxZoom: 19,
         subdomains: "abcd",
       }).addTo(map);
@@ -182,26 +215,18 @@ const GeoExplorer = () => {
 
         const icon = L.divIcon({
           className: "",
-          html: `<div style="
-            width:9px;height:9px;
-            background:rgba(0,255,156,0.6);
-            border:1.5px solid rgba(0,255,156,0.95);
-            border-radius:50%;
-            cursor:pointer;
-            box-shadow:0 0 6px rgba(0,255,156,0.4);
-            transition:transform 0.15s,background 0.15s;
-          "></div>`,
-          iconSize: [9, 9],
-          iconAnchor: [4, 4],
+          html: `<div class="geo-state-dot"></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6],
         });
 
         const marker = L.marker(coords, { icon }).addTo(map);
 
         // Hover tooltip — shows place name + farmer count
         marker.bindTooltip(
-          `<b style="color:#00FF9C">${sName}</b><br/>
-           <span style="color:#7dd3fc">${count.toLocaleString()} farmers</span><br/>
-           <span style="color:#555;font-size:11px">${coords[0].toFixed(2)}°N &nbsp;${coords[1].toFixed(2)}°E</span>`,
+          `<b style="color:var(--text)">${sName}</b><br/>
+           <span style="color:var(--muted)">${count.toLocaleString()} farmers</span><br/>
+           <span style="color:var(--muted);font-size:11px">${coords[0].toFixed(2)}°N &nbsp;${coords[1].toFixed(2)}°E</span>`,
           {
             className: "geo-tip",
             direction: "top",
@@ -229,6 +254,22 @@ const GeoExplorer = () => {
     };
   }, []);
 
+  /* ─── Update basemap when theme changes ─────────────────────────────── */
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const L = window.L;
+    if (!map || !L) return;
+
+    const tileTheme = theme === "dark" ? "dark_all" : "light_all";
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    tileLayerRef.current = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tileTheme}/{z}/{x}/{y}{r}.png`, {
+      maxZoom: 19,
+      subdomains: "abcd",
+    }).addTo(map);
+  }, [theme]);
+
   /* ─── Fly map on state filter change ────────────────────────────────── */
   useEffect(() => {
     if (!mapInstanceRef.current || !state) return;
@@ -245,7 +286,7 @@ const GeoExplorer = () => {
     pinMarkersRef.current.forEach((m) => m.remove());
     const icon = window.L.divIcon({
       className: "",
-      html: `<div style="width:13px;height:13px;background:#00FF9C;border-radius:50%;border:2px solid #fff;box-shadow:0 0 14px rgba(0,255,156,0.7);"></div>`,
+      html: `<div style="width:13px;height:13px;background:var(--text);border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 14px rgba(0,0,0,0.2);"></div>`,
       iconSize: [13, 13],
       iconAnchor: [6, 6],
     });
@@ -326,7 +367,7 @@ const GeoExplorer = () => {
     setActiveView("map");
     mapInstanceRef.current.flyTo([lat, lng], 13, { duration: 1.0 });
     setActiveCoords({ lat, lng });
-    dropPinMarker(lat, lng, `<b>${row.village}</b><br/>${row.district}, ${row.state}<br/><span style="color:#00FF9C">${row.pincode}</span>`);
+    dropPinMarker(lat, lng, `<b>${row.village}</b><br/>${row.district}, ${row.state}<br/><span style="color:var(--text)">${row.pincode}</span>`);
   };
 
   /* ─── State grid ─────────────────────────────────────────────────────── */
@@ -340,7 +381,7 @@ const GeoExplorer = () => {
 
   /* ─── RENDER ─────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" style={{ background: "var(--app-shell-gradient)", border: "1px solid var(--soft-strong)", borderRadius: 12, padding: 10 }}>
 
       {/* ── FILTER BAR ─────────────────────────────────────────────────── */}
       <div className="panel grid grid-cols-4 gap-3 p-3 text-xs">
@@ -359,7 +400,7 @@ const GeoExplorer = () => {
               className="action-btn"
               onClick={lookupPin}
               disabled={pinLoading}
-              style={{ background: "var(--accent)", color: "#000", fontWeight: 700 }}
+              style={{ background: "var(--app-shell-gradient)", color: "var(--text)", fontWeight: 700, border: "1px solid var(--soft-strong)" }}
             >{pinLoading ? "…" : "Search"}</button>
           </div>
         </label>
@@ -430,7 +471,7 @@ const GeoExplorer = () => {
             type="button"
             onClick={() => setActiveView(id)}
             className={`action-btn ${activeView === id ? "active" : ""}`}
-            style={activeView === id ? { borderColor: "var(--accent)", color: "var(--accent)", fontWeight: 600 } : {}}
+            style={activeView === id ? { borderColor: "var(--soft-strong)", color: "var(--text)", fontWeight: 600 } : {}}
           >{label}</button>
         ))}
         <span className="muted ml-1">
@@ -447,9 +488,9 @@ const GeoExplorer = () => {
         {/* coords chip */}
         <div style={{
           position: "absolute", bottom: 12, left: 12, zIndex: 1000, pointerEvents: "none",
-          background: "rgba(8,12,17,0.88)", backdropFilter: "blur(6px)",
-          border: "1px solid rgba(0,255,156,0.3)", borderRadius: 5,
-          padding: "4px 10px", fontSize: 11, color: "#00FF9C",
+          background: "var(--app-shell-gradient)", backdropFilter: "blur(6px)",
+          border: "1px solid var(--soft-strong)", borderRadius: 5,
+          padding: "4px 10px", fontSize: 11, color: "var(--text)",
           fontFamily: "'JetBrains Mono','Fira Code',monospace", letterSpacing: "0.04em",
         }}>
           {activeCoords.lat.toFixed(4)}° N &nbsp;&nbsp; {activeCoords.lng.toFixed(4)}° E
@@ -459,16 +500,16 @@ const GeoExplorer = () => {
         {state && (
           <div style={{
             position: "absolute", top: 12, left: 12, zIndex: 1000,
-            background: "rgba(8,12,17,0.88)", backdropFilter: "blur(6px)",
-            border: "1px solid rgba(0,255,156,0.35)", borderRadius: 5,
-            padding: "4px 10px", fontSize: 11, color: "#00FF9C",
+            background: "var(--app-shell-gradient)", backdropFilter: "blur(6px)",
+            border: "1px solid var(--soft-strong)", borderRadius: 5,
+            padding: "4px 10px", fontSize: 11, color: "var(--text)",
             display: "flex", alignItems: "center", gap: 8,
           }}>
             <span style={{ fontWeight: 600 }}>{state}</span>
             <button
               type="button"
               onClick={() => { setState(""); mapInstanceRef.current?.flyTo([22.5, 80], 5, { duration: 0.8 }); }}
-              style={{ background: "none", border: "none", color: "rgba(0,255,156,0.45)", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}
+              style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}
               title="Clear state filter"
             >✕</button>
           </div>
@@ -478,7 +519,7 @@ const GeoExplorer = () => {
           <div style={{
             position: "absolute", inset: 0, zIndex: 999,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "#080c11", color: "rgba(0,255,156,0.35)",
+            background: "var(--surface)", color: "var(--muted)",
             fontSize: 11, letterSpacing: "0.1em",
           }}>
             Loading map…
@@ -500,7 +541,7 @@ const GeoExplorer = () => {
               { key: "state",       label: "State",       render: (r) => r.state },
               {
                 key: "pincode", label: "Pincode",
-                render: (r) => <span style={{ color: "var(--accent)", fontFamily: "monospace", fontWeight: 600 }}>{r.pincode}</span>,
+                render: (r) => <span style={{ color: "var(--text)", fontFamily: "monospace", fontWeight: 600 }}>{r.pincode}</span>,
               },
               {
                 key: "actions", label: "",
@@ -542,9 +583,9 @@ const GeoExplorer = () => {
       {/* ── STATS BAR ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total Villages",    value: stats.totalVillages,  color: "var(--accent)" },
-          { label: "Pincodes Linked",   value: stats.pincodesLinked, color: "#7dd3fc" },
-          { label: "Last Index Update", value: stats.lastUpdate,     color: "#fbbf24" },
+          { label: "Total Villages",    value: stats.totalVillages,  color: "var(--text)" },
+          { label: "Pincodes Linked",   value: stats.pincodesLinked, color: "var(--text)" },
+          { label: "Last Index Update", value: stats.lastUpdate,     color: "var(--text)" },
         ].map((s) => (
           <div key={s.label} className="panel card-pad">
             <p className="muted mb-1" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.label}</p>
@@ -567,15 +608,15 @@ const GeoExplorer = () => {
                 onClick={() => { setState(isActive ? "" : item.name); setActiveView("map"); }}
                 className="rounded-md border p-2"
                 style={{
-                  borderColor: isActive ? "var(--accent)" : "var(--b)",
+                  borderColor: isActive ? "var(--soft-strong)" : "var(--b)",
                   background: isActive
-                    ? "rgba(0,200,120,0.08)"
+                    ? "var(--soft-subtle)"
                     : `rgba(255,255,255,${0.02 + intensity * 0.05})`,
                   cursor: "pointer",
                   transition: "all 0.15s",
                 }}
               >
-                <p style={{ color: isActive ? "var(--accent)" : "var(--text)", fontWeight: isActive ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</p>
+                <p style={{ color: "var(--text)", fontWeight: isActive ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</p>
                 <p className="muted mt-0.5">{item.count.toLocaleString()}</p>
               </div>
             );

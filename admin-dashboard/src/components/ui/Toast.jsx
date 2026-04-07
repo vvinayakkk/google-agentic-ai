@@ -22,8 +22,10 @@ export const ToastProvider = ({ children }) => {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="min-w-72 rounded-xl border border-white/10 bg-[#1E1E1E] p-3 text-xs text-white/85"
+            className="min-w-72 rounded-xl p-3 text-xs"
             style={{
+              border: "1px solid var(--soft)",
+              color: "var(--text)",
               borderLeft: `3px solid ${toast.tone === "error" ? "#F87171" : toast.tone === "success" ? "#4ADE80" : "#60A5FA"}`,
               backgroundColor:
                 toast.tone === "error"

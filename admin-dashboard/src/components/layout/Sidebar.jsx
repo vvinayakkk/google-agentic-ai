@@ -46,25 +46,25 @@ const Sidebar = () => {
 
   return (
     <aside className="app-sidebar">
-      <div style={{ padding: "8px 8px 8px 0px", display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ width: 140, height: 140, overflow: "hidden", borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", marginRight: 0 }}>
+      <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid var(--border-soft)" }}>
+        <div style={{ width: 92, height: 92, overflow: "hidden", borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none" }}>
           <img
             src="/logo_light.png"
             alt="KisanKiAwaaz"
-            style={{ width: 200, height: 140, objectFit: "cover", display: "block", transform: "translateX(24px)" }}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
           />
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1 }}>{"KisanKiAwaaz"}</div>
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>KisanKiAwaaz</div>
           <div style={{ marginTop: 4 }}>
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                border: "1px solid rgba(255,255,255,0.95)",
+                border: "1px solid var(--soft-strong)",
                 borderRadius: 999,
                 padding: "2px 8px",
-                fontSize: 10,
+                fontSize: 11,
                 color: "var(--accent)",
                 background: "transparent",
                 fontWeight: 600,
@@ -79,20 +79,10 @@ const Sidebar = () => {
 
       <nav style={{ flex: 1, overflow: "auto", padding: "6px 0" }}>
         {(() => {
-          // Remove Overview from the nav and ensure Analytics is shown first,
-          // followed by Database Explorer, then the remaining items.
+          // Keep Overview out of sidebar, and otherwise honor NAV_ITEMS order.
           const filtered = NAV_ITEMS.filter((i) => i.key !== PAGE_KEYS.OVERVIEW);
-          const desiredOrder = [PAGE_KEYS.ANALYTICS, PAGE_KEYS.DATABASE];
-          const ordered = [];
-          desiredOrder.forEach((k) => {
-            const it = filtered.find((n) => n.key === k);
-            if (it) ordered.push(it);
-          });
-          filtered.forEach((n) => {
-            if (!desiredOrder.includes(n.key)) ordered.push(n);
-          });
 
-          return ordered.map((item) => {
+          return filtered.map((item) => {
             const Icon = Icons[item.icon] || Icons.Square;
             const isActive = item.key === activePage;
             return (
@@ -125,15 +115,15 @@ const Sidebar = () => {
             alignItems: "center",
             gap: 10,
             borderRadius: 16,
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "#151515",
+            border: "1px solid var(--soft)",
+            background: "var(--surface-2)",
             padding: "10px 10px 10px 8px",
           }}
         >
           <img
             src={avatarImg || avatarUrl}
             alt={profile?.name || "Admin avatar"}
-            style={{ width: 38, height: 38, borderRadius: 999, flexShrink: 0, objectFit: "cover", background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ width: 38, height: 38, borderRadius: 999, flexShrink: 0, objectFit: "cover", background: "var(--surface)", border: "1px solid var(--soft)" }}
           />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 600, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -154,8 +144,8 @@ const Sidebar = () => {
               width: 28,
               height: 28,
               borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.03)",
+              border: "1px solid var(--soft-strong)",
+              background: "var(--soft-subtle)",
               color: "var(--text)",
               cursor: "pointer",
               flexShrink: 0,
@@ -172,9 +162,9 @@ const Sidebar = () => {
                 right: 8,
                 bottom: "calc(100% + 8px)",
                 borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.10)",
-                background: "#1a1a1a",
-                boxShadow: "0 18px 36px rgba(0,0,0,0.45)",
+                border: "1px solid var(--soft)",
+                background: "var(--surface)",
+                boxShadow: "var(--shadow-lg)",
                 padding: 6,
                 zIndex: 20,
               }}
@@ -191,8 +181,8 @@ const Sidebar = () => {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--soft)",
+                  background: "var(--soft-subtle)",
                   color: "var(--text)",
                   borderRadius: 10,
                   padding: "8px 12px",

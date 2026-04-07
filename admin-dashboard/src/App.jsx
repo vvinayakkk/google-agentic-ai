@@ -7,6 +7,7 @@ import { useToast } from "./components/ui/Toast";
 import { PAGE_KEYS, NAV_ITEMS } from "./utils/constants";
 import Login from "./pages/Login";
 import TopBar from "./components/layout/TopBar";
+import GTranslate from "./components/GTranslate";
 
 const Overview = lazy(() => import("./pages/Overview"));
 const Farmers = lazy(() => import("./pages/Farmers"));
@@ -40,7 +41,7 @@ const Dashboard = () => {
   const [services, setServices] = useState([]);
   const [lastSync, setLastSync] = useState(new Date().toISOString());
   const [exportRows, setExportRows] = useState([]);
-  const ActivePage = pageMap[activePage] || Analytics;
+  const ActivePage = pageMap[activePage] || Market;
 
   const onRefresh = () => {
     setLastSync(new Date().toISOString());
@@ -66,11 +67,11 @@ const Dashboard = () => {
 
   const pageName = NAV_ITEMS.find((i) => i.key === activePage)?.label || "Overview";
   useEffect(() => {
-    setActivePage(PAGE_KEYS.ANALYTICS);
+    setActivePage(PAGE_KEYS.MARKET);
   }, [setActivePage]);
 
   return (
-    <div className="relative min-h-screen text-white">
+    <div className="relative min-h-screen" style={{ color: "var(--text)" }}>
       <Sidebar />
       <TopBar onRefresh={onRefresh} />
 
@@ -90,8 +91,12 @@ const Dashboard = () => {
 function App() {
   const { isAuthenticated } = useAuth();
 
-  if (!isAuthenticated) return <Login />;
-  return <Dashboard />;
+  return (
+    <>
+      {isAuthenticated ? <Dashboard /> : <Login />}
+      <GTranslate />
+    </>
+  );
 }
 
 export default App;

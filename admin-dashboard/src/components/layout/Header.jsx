@@ -61,7 +61,7 @@ const Header = ({ onRefresh, unread = 0 }) => {
   }, []);
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-white/10 bg-[#1C1C1C]/70 px-4 backdrop-blur-2xl shadow-lg">
+    <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between px-4 backdrop-blur-2xl shadow-lg" style={{ borderBottom: "1px solid var(--soft)", background: "color-mix(in srgb, var(--surface) 82%, transparent)" }}>
       {/* LEFT */}
       <div className="flex items-center gap-3 text-sm">
         {/* MENU */}
@@ -79,7 +79,7 @@ const Header = ({ onRefresh, unread = 0 }) => {
           </button>
 
           {isMenuOpen && (
-            <div className="absolute left-0 top-12 w-[380px] rounded-2xl border border-white/10 bg-[#1C1C1C] shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute left-0 top-12 w-[380px] rounded-2xl border shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{ borderColor: "var(--soft)", background: "var(--surface)" }}>
               {/* NAV */}
               <div className="border-b border-white/10 p-3">
                 <p className="text-[10px] uppercase tracking-wide text-white/40">
@@ -206,7 +206,7 @@ const Header = ({ onRefresh, unread = 0 }) => {
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 top-12 w-56 rounded-2xl border border-white/10 bg-[#1C1C1C] p-2 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 top-12 w-56 rounded-2xl border p-2 shadow-2xl animate-in fade-in zoom-in-95" style={{ borderColor: "var(--soft)", background: "var(--surface)" }}>
               <div className="p-2">
                 <p className="text-sm text-white">
                   {profile?.name || "Admin"}

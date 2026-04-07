@@ -48,23 +48,24 @@ const InfiniteCanvas = () => {
   }, [canvasScale, setCanvasPan, setCanvasScale, setMouse]);
 
   return (
-    <div ref={ref} className="pointer-events-auto fixed inset-0 z-0 overflow-hidden bg-[#1C1C1C]">
+    <div ref={ref} className="pointer-events-auto fixed inset-0 z-0 overflow-hidden" style={{ background: "var(--bg)" }}>
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 1px, transparent 1px)",
-          backgroundSize: `${8 * canvasScale}px ${8 * canvasScale}px`,
+          backgroundImage: "radial-gradient(var(--soft-strong) 1px, transparent 1px)",
+          backgroundSize: `${10 * canvasScale}px ${10 * canvasScale}px`,
           backgroundPosition: `${canvasPan.x}px ${canvasPan.y}px`,
         }}
       />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: "radial-gradient(rgba(255,215,0,0.25) 1px, transparent 1px)",
-          backgroundSize: `${8 * canvasScale}px ${8 * canvasScale}px`,
+          backgroundImage: "radial-gradient(var(--faint) 1px, transparent 1px)",
+          backgroundSize: `${50 * canvasScale}px ${50 * canvasScale}px`,
           backgroundPosition: `${canvasPan.x}px ${canvasPan.y}px`,
-          maskImage: `radial-gradient(circle 68px at ${mouse.x}px ${mouse.y}px, rgba(255,255,255,0.8), transparent)`,
-          WebkitMaskImage: `radial-gradient(circle 68px at ${mouse.x}px ${mouse.y}px, rgba(255,255,255,0.8), transparent)`,
+          opacity: 0.7,
+          maskImage: `radial-gradient(circle 110px at ${mouse.x}px ${mouse.y}px, var(--text), transparent)`,
+          WebkitMaskImage: `radial-gradient(circle 110px at ${mouse.x}px ${mouse.y}px, var(--text), transparent)`,
         }}
       />
     </div>

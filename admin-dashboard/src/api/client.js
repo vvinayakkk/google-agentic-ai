@@ -66,28 +66,42 @@ export const withQuery = (path, params = {}) => {
 
 export const healthChecks = async () => {
   const endpoints = [
-    "auth", "farmer", "crop", "market", "equipment", "agent", "voice", "notification", "schemes", "geo", "admin", "analytics",
+    { name: "auth", paths: ["/api/v1/auth/health", "/health"] },
+    { name: "farmer", paths: ["/api/v1/farmer/health", "/health"] },
+    { name: "crop", paths: ["/api/v1/crop/health", "/health"] },
+    { name: "market", paths: ["/api/v1/market/health", "/health"] },
+    { name: "equipment", paths: ["/api/v1/equipment/health", "/health"] },
+    { name: "agent", paths: ["/api/v1/agent/health", "/health"] },
+    { name: "voice", paths: ["/api/v1/voice/health", "/health"] },
+    { name: "notification", paths: ["/api/v1/notification/health", "/health"] },
+    { name: "schemes", paths: ["/api/v1/schemes/health", "/health"] },
+    { name: "geo", paths: ["/api/v1/geo/health", "/health"] },
+    { name: "admin", paths: ["/api/v1/admin/health", "/api/v1/admin/stats"] },
+    { name: "analytics", paths: ["/api/v1/analytics/health", "/api/v1/analytics/overview"] },
   ];
 
   const checks = await Promise.all(
-    endpoints.map(async (name) => {
+    endpoints.map(async (svc) => {
       const started = performance.now();
-      try {
-        await fetch(`${API_BASE_URL}/api/v1/admin/stats`, {
-          headers: buildHeaders(),
-        });
-        return {
-          name,
-          ok: true,
-          latencyMs: Math.round(performance.now() - started),
-        };
-      } catch {
-        return {
-          name,
-          ok: false,
-          latencyMs: Math.round(performance.now() - started),
-        };
+      for (const path of svc.paths) {
+        try {
+          const res = await fetch(`${API_BASE_URL}${path}`, { headers: buildHeaders() });
+          if (res.ok) {
+            return {
+              name: svc.name,
+              ok: true,
+              latencyMs: Math.round(performance.now() - started),
+            };
+          }
+        } catch {
+          // try the next fallback path
+        }
       }
+      return {
+        name: svc.name,
+        ok: false,
+        latencyMs: Math.round(performance.now() - started),
+      };
     })
   );
 

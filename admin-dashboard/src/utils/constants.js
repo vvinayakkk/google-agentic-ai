@@ -14,16 +14,16 @@ export const PAGE_KEYS = {
 };
 
 export const NAV_ITEMS = [
+  { key: PAGE_KEYS.MARKET, label: "Market Intelligence", icon: "BarChart2" },
   { key: PAGE_KEYS.DATABASE, label: "Database Explorer", icon: "Database" },
+  { key: PAGE_KEYS.GEO, label: "Geo Explorer", icon: "Map" },
+  { key: PAGE_KEYS.ANALYTICS, label: "Analytics", icon: "TrendingUp" },
   { key: PAGE_KEYS.OVERVIEW, label: "Overview", icon: "Home" },
   { key: PAGE_KEYS.FARMERS, label: "Farmers", icon: "User" },
-  { key: PAGE_KEYS.MARKET, label: "Market Intelligence", icon: "BarChart2" },
   { key: PAGE_KEYS.SCHEMES, label: "Schemes", icon: "BookOpen" },
   { key: PAGE_KEYS.EQUIPMENT, label: "Equipment & Livestock", icon: "Truck" },
-  { key: PAGE_KEYS.ANALYTICS, label: "Analytics", icon: "TrendingUp" },
   { key: PAGE_KEYS.AGENT, label: "Agent System", icon: "Bot" },
   { key: PAGE_KEYS.SYSTEM, label: "System Config", icon: "Settings" },
-  { key: PAGE_KEYS.GEO, label: "Geo Explorer", icon: "Map" },
 ];
 
 export const INDIAN_STATES = [

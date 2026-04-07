@@ -59,16 +59,16 @@ function StatusBadge({ active }) {
         fontSize: 10.5,
         fontWeight: 600,
         letterSpacing: "0.3px",
-        background: active ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-        color: active ? "#22c55e" : "#ef4444",
-        border: `1px solid ${active ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+        background: active ? "var(--soft-subtle)" : "rgba(239,68,68,0.1)",
+        color: active ? "var(--text)" : "#ef4444",
+        border: `1px solid ${active ? "var(--soft-strong)" : "rgba(239,68,68,0.2)"}`,
       }}
     >
       <span
         style={{
           width: 6, height: 6, borderRadius: "50%",
-          background: active ? "#22c55e" : "#ef4444",
-          boxShadow: active ? "0 0 5px #22c55e" : "none",
+          background: active ? "var(--text)" : "#ef4444",
+          boxShadow: active ? "0 0 5px var(--text)" : "none",
           flexShrink: 0,
         }}
       />
@@ -81,10 +81,10 @@ function StatusBadge({ active }) {
    Avatar
 ───────────────────────────────────────────── */
 const AVATAR_COLORS = [
-  ["#0f2e1a", "#22c55e"],
-  ["#0f1e2e", "#60a5fa"],
-  ["#1e1040", "#a78bfa"],
-  ["#2e1a0a", "#f59e0b"],
+  ["#0f2e1a", "var(--text)"],
+  ["#0f1e2e", "var(--muted)"],
+  ["#1e1040", "var(--muted)"],
+  ["#2e1a0a", "var(--muted)"],
   ["#2e0f1a", "#f43f5e"],
 ];
 
@@ -112,7 +112,7 @@ function Avatar({ name }) {
 function StatCard({ icon: Icon, label, value, sub, trend, iconBg, iconColor }) {
   return (
     <div className="flex items-start gap-3 rounded-xl px-4 py-3 border transition-colors hover:border-[#252525]"
-      style={{ background: "#0f0f0f", borderColor: "#1a1a1a" }}>
+      style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
       <div
         className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ background: iconBg, color: iconColor }}
@@ -121,16 +121,16 @@ function StatCard({ icon: Icon, label, value, sub, trend, iconBg, iconColor }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[18px] font-bold tracking-tight leading-tight truncate"
-          style={{ color: "#f0f0f0" }}>
+          style={{ color: "var(--text)" }}>
           {value}
         </div>
         <div className="text-[10px] font-semibold uppercase tracking-widest mt-0.5"
-          style={{ color: "#404040" }}>
+          style={{ color: "var(--faint)" }}>
           {label}
         </div>
         {sub && (
           <div className="text-[11px] mt-1 flex items-center gap-0.5 font-medium"
-            style={{ color: trend === "up" ? "#22c55e" : trend === "down" ? "#ef4444" : "#555" }}>
+            style={{ color: trend === "up" ? "var(--text)" : trend === "down" ? "#ef4444" : "var(--muted)" }}>
             {trend === "up" && <ArrowUpRight size={11} />}
             {sub}
           </div>
@@ -167,10 +167,10 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
   ];
 
   const quickStats = [
-    { icon: Wheat, label: "Crops", val: insight?.totals?.crops ?? insight?.total_crops ?? 0, color: "#f59e0b" },
-    { icon: MessageSquare, label: "Sessions", val: insight?.totals?.sessions ?? insight?.total_sessions ?? convos.length, color: "#60a5fa" },
-    { icon: Activity, label: "Queries", val: insight?.totals?.queries ?? "—", color: "#22c55e" },
-    { icon: BarChart2, label: "Alerts", val: insight?.totals?.alerts ?? "—", color: "#a78bfa" },
+    { icon: Wheat, label: "Crops", val: insight?.totals?.crops ?? insight?.total_crops ?? 0, color: "var(--muted)" },
+    { icon: MessageSquare, label: "Sessions", val: insight?.totals?.sessions ?? insight?.total_sessions ?? convos.length, color: "var(--muted)" },
+    { icon: Activity, label: "Queries", val: insight?.totals?.queries ?? "—", color: "var(--text)" },
+    { icon: BarChart2, label: "Alerts", val: insight?.totals?.alerts ?? "—", color: "var(--muted)" },
   ];
 
   return (
@@ -189,8 +189,8 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
       <div
         style={{
           position: "fixed", top: 0, right: 0, height: "100%",
-          width: 420, background: "#0a0a0a",
-          borderLeft: "1px solid #1c1c1c",
+          width: 420, background: "var(--surface)",
+          borderLeft: "1px solid var(--border)",
           zIndex: 50, display: "flex", flexDirection: "column",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
           transform: open ? "translateX(0)" : "translateX(100%)",
@@ -198,9 +198,9 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
         }}
       >
         {/* header */}
-        <div style={{ padding: "18px 20px", borderBottom: "1px solid #181818", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-soft)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.2px" }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.2px" }}>
               {fmt(farmer?.name)}
             </div>
             <div style={{ fontSize: 12, color: "#484848", marginTop: 2, fontFamily: "monospace" }}>
@@ -213,8 +213,8 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
               onClick={onClose}
               style={{
                 width: 28, height: 28, borderRadius: 7,
-                background: "#161616", border: "1px solid #222",
-                color: "#555", cursor: "pointer",
+                background: "var(--surface-2)", border: "1px solid var(--border)",
+                color: "var(--muted)", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -224,8 +224,8 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
         </div>
 
         {loading && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "#333" }}>
-            <Loader2 size={22} className="animate-spin" style={{ color: "#22c55e" }} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--faint)" }}>
+            <Loader2 size={22} className="animate-spin" style={{ color: "var(--text)" }} />
             <span style={{ fontSize: 13 }}>Loading farmer details…</span>
           </div>
         )}
@@ -240,10 +240,10 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
                 {quickStats.map(({ icon: Ic, label, val, color }) => (
                   <div
                     key={label}
-                    style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 10, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
                   >
                     <Ic size={13} style={{ color }} />
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#e0e0e0" }}>{val}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{val}</div>
                     <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.8px", color: "#3a3a3a" }}>{label}</div>
                   </div>
                 ))}
@@ -253,19 +253,19 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
             {/* profile */}
             <div>
               <SectionLabel>Profile</SectionLabel>
-              <div style={{ border: "1px solid #181818", borderRadius: 10, overflow: "hidden", marginTop: 10 }}>
+              <div style={{ border: "1px solid var(--border-soft)", borderRadius: 10, overflow: "hidden", marginTop: 10 }}>
                 {profileRows.map(([key, val], idx) => (
                   <div
                     key={key}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
                       padding: "9px 14px",
-                      background: idx % 2 === 0 ? "#0d0d0d" : "#0f0f0f",
-                      borderBottom: idx < profileRows.length - 1 ? "1px solid #141414" : "none",
+                      background: idx % 2 === 0 ? "var(--surface)" : "var(--surface-2)",
+                      borderBottom: idx < profileRows.length - 1 ? "1px solid var(--surface-2)" : "none",
                     }}
                   >
-                    <span style={{ fontSize: 11, color: "#404040", fontWeight: 500 }}>{key}</span>
-                    <span style={{ fontSize: 11.5, color: "#c0c0c0", fontWeight: 500 }}>{fmt(val)}</span>
+                    <span style={{ fontSize: 11, color: "var(--faint)", fontWeight: 500 }}>{key}</span>
+                    <span style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 500 }}>{fmt(val)}</span>
                   </div>
                 ))}
               </div>
@@ -279,11 +279,11 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
                   {convos.slice(0, 6).map((c, i) => (
                     <div
                       key={c.id ?? i}
-                      style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}
+                      style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}
                     >
-                      <MessageSquare size={12} style={{ color: "#60a5fa", flexShrink: 0 }} />
+                      <MessageSquare size={12} style={{ color: "var(--muted)", flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11.5, color: "#bbb", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 11.5, color: "var(--muted)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {c.session_id ?? c.id ?? `Session ${i + 1}`}
                         </div>
                         <div style={{ fontSize: 10, color: "#3a3a3a", marginTop: 2 }}>
@@ -305,8 +305,8 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
                   style={{
                     flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                     padding: "8px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    background: "rgba(34,197,94,0.08)", color: "#22c55e",
-                    border: "1px solid rgba(34,197,94,0.2)",
+                    background: "rgba(34,197,94,0.08)", color: "var(--text)",
+                    border: "1px solid var(--soft-strong)",
                   }}
                 >
                   <UserCheck size={13} /> Activate
@@ -333,7 +333,7 @@ function FarmerDrawer({ farmer, detail, onClose, onStatusChange }) {
 
 function SectionLabel({ children }) {
   return (
-    <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", color: "#333" }}>
+    <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", color: "var(--faint)" }}>
       {children}
     </div>
   );
@@ -508,17 +508,17 @@ const Farmers = () => {
           to   { opacity: 1; transform: translateY(0); }
         }
         .fk-row { animation: fkIn 0.18s ease both; }
-        .fk-tr:hover td { background: #0f0f0f !important; }
-        .fk-tr:hover td:first-child { border-left: 2px solid #22c55e; padding-left: 10px !important; }
+        .fk-tr:hover td { background: var(--surface-2) !important; }
+        .fk-tr:hover td:first-child { border-left: 2px solid var(--text); padding-left: 10px !important; }
         .fk-tr-sel td { background: #0a130a !important; }
-        .fk-tr-sel td:first-child { border-left: 2px solid #22c55e; padding-left: 10px !important; }
+        .fk-tr-sel td:first-child { border-left: 2px solid var(--text); padding-left: 10px !important; }
         .fk-tr td { transition: background 0.1s; }
-        select option { background: #111; color: #e0e0e0; }
+        select option { background: var(--surface-2); color: var(--text); }
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         .fk-icn { transition: color 0.12s, background 0.12s; }
-        .fk-icn:hover { background: #1a1a1a !important; }
+        .fk-icn:hover { background: var(--border) !important; }
       `}</style>
 
       <div className="flex flex-col gap-4 min-h-full">
@@ -526,14 +526,14 @@ const Farmers = () => {
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 style={{ fontSize: 17, fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.3px", margin: 0 }}>
+            <h1 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.3px", margin: 0 }}>
               Farmers
             </h1>
             {!loading && totalRecords > 0 && (
               <span style={{
                 padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: "rgba(34,197,94,0.1)", color: "#22c55e",
-                border: "1px solid rgba(34,197,94,0.2)",
+                background: "var(--soft-subtle)", color: "var(--text)",
+                border: "1px solid var(--soft-strong)",
               }}>
                 {totalRecords} total
               </span>
@@ -543,20 +543,20 @@ const Farmers = () => {
             <button
               onClick={load}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
-              style={{ background: "transparent", border: "1px solid #222", color: "#666", cursor: "pointer" }}
+              style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer" }}
             >
               <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
               Refresh
             </button>
             <button
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
-              style={{ background: "transparent", border: "1px solid #222", color: "#666", cursor: "pointer" }}
+              style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer" }}
             >
               <Download size={12} /> Export
             </button>
             <button
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-bold"
-              style={{ background: "#22c55e", color: "#040e04", border: "none", cursor: "pointer", boxShadow: "0 4px 14px rgba(34,197,94,0.2)" }}
+              style={{ background: "var(--text)", color: "#040e04", border: "none", cursor: "pointer", boxShadow: "0 4px 14px var(--soft-strong)" }}
             >
               <Plus size={14} strokeWidth={2.8} /> Add Farmer
             </button>
@@ -569,15 +569,15 @@ const Farmers = () => {
             icon={Users}
             label="Total Acreage Managed"
             value={`${totalAcres.toLocaleString("en-IN", { maximumFractionDigits: 1 })} ac`}
-            iconBg="rgba(34,197,94,0.12)"
-            iconColor="#22c55e"
+            iconBg="var(--soft-subtle)"
+            iconColor="var(--text)"
           />
           <StatCard
             icon={TrendingUp}
             label="New This Month"
             value={`+${newThisMonth}`}
-            iconBg="rgba(96,165,250,0.12)"
-            iconColor="#60a5fa"
+            iconBg="var(--soft-subtle)"
+            iconColor="var(--muted)"
             trend="up"
             sub="vs last month"
           />
@@ -585,74 +585,74 @@ const Farmers = () => {
             icon={CheckCircle2}
             label="Active Ratio"
             value={rows.length ? `${Math.round((activeCount / rows.length) * 100)}%` : "—"}
-            iconBg="rgba(167,139,250,0.12)"
-            iconColor="#a78bfa"
+            iconBg="var(--soft-subtle)"
+            iconColor="var(--muted)"
           />
           <StatCard
             icon={BarChart2}
             label="Avg Land / Farmer"
             value={rows.length ? `${averageAcres.toFixed(1)} ac` : "—"}
             sub={`${inactiveCount} suspended`}
-            iconBg="rgba(245,158,11,0.12)"
-            iconColor="#f59e0b"
+            iconBg="var(--soft-subtle)"
+            iconColor="var(--muted)"
           />
         </div>
 
         {/* ── ANALYTICS BLOCKS ── */}
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
-          <div style={{ background: "#0b0b0b", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#404040" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--faint)" }}>
                 Language Distribution
               </div>
-              <div style={{ fontSize: 11, color: "#666" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 {languageChartData.length} languages
               </div>
             </div>
             {languageChartData.length > 0 ? (
-              <BarChart data={languageChartData} horizontal color="#22c55e" maxBars={6} />
+              <BarChart data={languageChartData} horizontal color="var(--text)" maxBars={6} />
             ) : (
-              <div style={{ fontSize: 12, color: "#404040" }}>No language data available</div>
+              <div style={{ fontSize: 12, color: "var(--faint)" }}>No language data available</div>
             )}
           </div>
 
-          <div style={{ background: "#0b0b0b", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#404040" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--faint)" }}>
                 Regional Spread
               </div>
-              <div style={{ fontSize: 11, color: "#666" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Top states
               </div>
             </div>
             {stateChartData.length > 0 ? (
-              <BarChart data={stateChartData} horizontal color="#60a5fa" maxBars={6} />
+              <BarChart data={stateChartData} horizontal color="var(--muted)" maxBars={6} />
             ) : (
-              <div style={{ fontSize: 12, color: "#404040" }}>No state data available</div>
+              <div style={{ fontSize: 12, color: "var(--faint)" }}>No state data available</div>
             )}
           </div>
 
-          <div style={{ background: "#0b0b0b", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#404040" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--faint)" }}>
                 Active Split
               </div>
-              <div style={{ fontSize: 11, color: "#666" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Current page
               </div>
             </div>
-            <BarChart data={activeSplitData} horizontal color="#a78bfa" maxBars={2} />
+            <BarChart data={activeSplitData} horizontal color="var(--muted)" maxBars={2} />
           </div>
         </div>
 
         {/* ── FILTERS ── */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#333", pointerEvents: "none" }} />
+            <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--faint)", pointerEvents: "none" }} />
             <input
               style={{
-                width: "100%", background: "#0c0c0c", border: "1px solid #1c1c1c",
-                borderRadius: 8, color: "#e0e0e0", fontSize: 13,
+                width: "100%", background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: 8, color: "var(--text)", fontSize: 13,
                 padding: "8px 34px 8px 32px", outline: "none", boxSizing: "border-box",
               }}
               placeholder="Search name, phone, village…"
@@ -663,7 +663,7 @@ const Farmers = () => {
             {searchInput && (
               <button
                 onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }}
-                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#444", cursor: "pointer", padding: 2 }}
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--faint)", cursor: "pointer", padding: 2 }}
               >
                 <X size={12} />
               </button>
@@ -672,8 +672,8 @@ const Farmers = () => {
 
           <select
             style={{
-              background: "#0c0c0c", border: "1px solid #1c1c1c", borderRadius: 8,
-              color: "#e0e0e0", fontSize: 13, padding: "8px 12px",
+              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+              color: "var(--text)", fontSize: 13, padding: "8px 12px",
               outline: "none", cursor: "pointer", minWidth: 150,
             }}
             value={stateFilter || "All States"}
@@ -689,7 +689,7 @@ const Farmers = () => {
             onClick={applySearch}
             style={{
               padding: "8px 16px", borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-              background: "#141414", color: "#e0e0e0", border: "1px solid #242424",
+              background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)",
               cursor: "pointer", whiteSpace: "nowrap",
             }}
           >
@@ -715,14 +715,14 @@ const Farmers = () => {
         )}
 
         {/* ── TABLE ── */}
-        <div style={{ background: "#080808", border: "1px solid #161616", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--surface-2)", borderRadius: 12, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
             <thead>
-              <tr style={{ background: "#0d0d0d", borderBottom: "1px solid #181818" }}>
+              <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--border-soft)" }}>
                 {["#", "Name", "Phone", "Village", "District", "State", "Land (ac)", "Language", "Status", "Joined", "Actions"].map((h) => (
                   <th
                     key={h}
-                    style={{ textAlign: "left", padding: "10px 14px", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "#323232", whiteSpace: "nowrap" }}
+                    style={{ textAlign: "left", padding: "10px 14px", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--faint)", whiteSpace: "nowrap" }}
                   >
                     {h}
                   </th>
@@ -733,8 +733,8 @@ const Farmers = () => {
               {loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={11}>
-                    <div className="flex flex-col items-center justify-center gap-2.5 py-16" style={{ color: "#2e2e2e" }}>
-                      <Loader2 size={22} className="animate-spin" style={{ color: "#22c55e" }} />
+                    <div className="flex flex-col items-center justify-center gap-2.5 py-16" style={{ color: "var(--faint)" }}>
+                      <Loader2 size={22} className="animate-spin" style={{ color: "var(--text)" }} />
                       <span style={{ fontSize: 13 }}>Loading farmers…</span>
                     </div>
                   </td>
@@ -744,10 +744,10 @@ const Farmers = () => {
               {!loading && rows.length === 0 && !error && (
                 <tr>
                   <td colSpan={11}>
-                    <div className="flex flex-col items-center justify-center gap-2 py-16" style={{ color: "#2a2a2a" }}>
+                    <div className="flex flex-col items-center justify-center gap-2 py-16" style={{ color: "var(--faint)" }}>
                       <Sprout size={28} />
-                      <span style={{ fontSize: 13, color: "#404040" }}>No farmers found</span>
-                      <span style={{ fontSize: 11, color: "#2a2a2a" }}>Try adjusting filters or search</span>
+                      <span style={{ fontSize: 13, color: "var(--faint)" }}>No farmers found</span>
+                      <span style={{ fontSize: 11, color: "var(--faint)" }}>Try adjusting filters or search</span>
                     </div>
                   </td>
                 </tr>
@@ -758,10 +758,10 @@ const Farmers = () => {
                   key={r.id ?? i}
                   onClick={() => loadDetail(r)}
                   className={`fk-tr fk-row ${selected?.id === r.id ? "fk-tr-sel" : ""}`}
-                  style={{ cursor: "pointer", borderBottom: "1px solid #111", animationDelay: `${i * 18}ms` }}
+                  style={{ cursor: "pointer", borderBottom: "1px solid var(--surface-2)", animationDelay: `${i * 18}ms` }}
                 >
                   {/* # */}
-                  <td style={{ padding: "10px 14px", fontSize: 10, fontFamily: "monospace", color: "#2a2a2a", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 14px", fontSize: 10, fontFamily: "monospace", color: "var(--faint)", whiteSpace: "nowrap" }}>
                     {String((page - 1) * PER_PAGE + i + 1).padStart(3, "0")}
                   </td>
 
@@ -770,11 +770,11 @@ const Farmers = () => {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <Avatar name={r.name} />
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#e0e0e0", lineHeight: 1.3 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", lineHeight: 1.3 }}>
                           {fmt(r.name)}
                         </div>
                         {r.email && (
-                          <div style={{ fontSize: 10, color: "#383838", marginTop: 1, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <div style={{ fontSize: 10, color: "var(--faint)", marginTop: 1, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.email}
                           </div>
                         )}
@@ -783,7 +783,7 @@ const Farmers = () => {
                   </td>
 
                   {/* phone */}
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11, color: "#555", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>
                     {fmt(r.phone)}
                   </td>
 
@@ -798,18 +798,18 @@ const Farmers = () => {
                   </td>
 
                   {/* state */}
-                  <td style={{ padding: "10px 14px", color: "#aaa", fontWeight: 500 }}>
+                  <td style={{ padding: "10px 14px", color: "var(--muted)", fontWeight: 500 }}>
                     {fmt(r.state ?? r.profile?.state)}
                   </td>
 
                   {/* land */}
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: "#666" }}>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: "var(--muted)" }}>
                     {fmtAcres(r.land_holding_acres ?? r.profile?.land_size_acres)}
                   </td>
 
                   {/* language */}
                   <td style={{ padding: "10px 14px" }}>
-                    <span style={{ padding: "2px 7px", borderRadius: 5, fontSize: 10.5, fontWeight: 500, background: "#131313", color: "#666", border: "1px solid #1c1c1c" }}>
+                    <span style={{ padding: "2px 7px", borderRadius: 5, fontSize: 10.5, fontWeight: 500, background: "#131313", color: "var(--muted)", border: "1px solid var(--border)" }}>
                       {langLabel(r.language ?? r.profile?.language)}
                     </span>
                   </td>
@@ -820,7 +820,7 @@ const Farmers = () => {
                   </td>
 
                   {/* joined */}
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11, color: "#404040", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11, color: "var(--faint)", whiteSpace: "nowrap" }}>
                     {fmtDate(r.created_at)}
                   </td>
 
@@ -828,10 +828,10 @@ const Farmers = () => {
                   <td style={{ padding: "10px 14px" }} onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                       {[
-                        { icon: Eye, color: "#60a5fa", title: "View", action: () => loadDetail(r) },
-                        { icon: Edit2, color: "#a78bfa", title: r.is_active !== false ? "Suspend" : "Activate", action: () => updateStatus(r, r.is_active === false) },
-                        { icon: Trash2, color: "#ef4444", title: "Deactivate", action: () => updateStatus(r, false) },
-                      ].map(({ icon: Ic, color, title, action }) => (
+                        { icon: Eye, color: "var(--muted)", hoverBg: "var(--soft-subtle)", title: "View", action: () => loadDetail(r) },
+                        { icon: Edit2, color: "var(--muted)", hoverBg: "var(--soft-subtle)", title: r.is_active !== false ? "Suspend" : "Activate", action: () => updateStatus(r, r.is_active === false) },
+                        { icon: Trash2, color: "#ef4444", hoverBg: "rgba(239,68,68,0.12)", title: "Deactivate", action: () => updateStatus(r, false) },
+                      ].map(({ icon: Ic, color, hoverBg, title, action }) => (
                         <button
                           key={title}
                           title={title}
@@ -840,10 +840,10 @@ const Farmers = () => {
                           style={{
                             width: 26, height: 26, borderRadius: 6,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            background: "transparent", border: "none", color: "#383838", cursor: "pointer",
+                            background: "transparent", border: "none", color: "var(--faint)", cursor: "pointer",
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = color; e.currentTarget.style.background = color + "18"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = "#383838"; e.currentTarget.style.background = "transparent"; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = color; e.currentTarget.style.background = hoverBg; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--faint)"; e.currentTarget.style.background = "transparent"; }}
                         >
                           <Ic size={12} />
                         </button>
@@ -858,7 +858,7 @@ const Farmers = () => {
 
         {/* ── PAGINATION ── */}
         <div className="flex items-center justify-between">
-          <div style={{ fontSize: 11.5, color: "#333" }}>
+          <div style={{ fontSize: 11.5, color: "var(--faint)" }}>
             {rows.length > 0
               ? `Showing ${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, totalRecords)} of ${totalRecords} records`
               : "No records"}
@@ -875,9 +875,9 @@ const Farmers = () => {
                 style={{
                   width: 30, height: 30, borderRadius: 7, fontSize: 12, fontWeight: 600,
                   cursor: "pointer", border: "1px solid",
-                  background: page === n ? "#22c55e" : "transparent",
-                  color: page === n ? "#040e04" : "#555",
-                  borderColor: page === n ? "#22c55e" : "#1e1e1e",
+                  background: page === n ? "var(--text)" : "transparent",
+                  color: page === n ? "#040e04" : "var(--muted)",
+                  borderColor: page === n ? "var(--text)" : "var(--border)",
                   transition: "all 0.12s",
                 }}
               >
@@ -887,10 +887,10 @@ const Farmers = () => {
 
             {totalPages > 5 && page < totalPages - 2 && (
               <>
-                <span style={{ color: "#2a2a2a", padding: "0 2px" }}>…</span>
+                <span style={{ color: "var(--faint)", padding: "0 2px" }}>…</span>
                 <button
                   onClick={() => setPage(totalPages)}
-                  style={{ width: 30, height: 30, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", background: "transparent", color: "#555", border: "1px solid #1e1e1e" }}
+                  style={{ width: 30, height: 30, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", background: "transparent", color: "var(--muted)", border: "1px solid var(--border)" }}
                 >
                   {totalPages}
                 </button>
@@ -923,8 +923,8 @@ function PagBtn({ children, disabled, onClick }) {
       style={{
         display: "flex", alignItems: "center", gap: 3,
         padding: "5px 10px", borderRadius: 7, fontSize: 12, fontWeight: 500,
-        background: "transparent", color: disabled ? "#252525" : "#555",
-        border: `1px solid ${disabled ? "#161616" : "#1e1e1e"}`,
+        background: "transparent", color: disabled ? "#252525" : "var(--muted)",
+        border: `1px solid ${disabled ? "var(--surface-2)" : "var(--border)"}`,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "all 0.12s",
       }}

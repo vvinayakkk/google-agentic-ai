@@ -198,6 +198,150 @@ class InsightService:
         return recs
 
     @staticmethod
+    def _build_visualization_options(overview: dict[str, Any]) -> dict[str, Any]:
+        growth = overview.get("growth_trends", {})
+        engagement = overview.get("engagement", {})
+        operational = overview.get("operational_health", {})
+        market = overview.get("market_intelligence", {})
+        opportunities = overview.get("opportunities", {})
+
+        growth_farmers = growth.get("farmers", [])
+        growth_convos = growth.get("conversations", [])
+        growth_bookings = growth.get("bookings", [])
+
+        cumulative = []
+        running = {"farmers": 0, "conversations": 0, "bookings": 0}
+        for i in range(max(len(growth_farmers), len(growth_convos), len(growth_bookings))):
+            date = (
+                (growth_farmers[i].get("date") if i < len(growth_farmers) else None)
+                or (growth_convos[i].get("date") if i < len(growth_convos) else None)
+                or (growth_bookings[i].get("date") if i < len(growth_bookings) else None)
+                or ""
+            )
+            running["farmers"] += int(growth_farmers[i].get("value", 0)) if i < len(growth_farmers) else 0
+            running["conversations"] += int(growth_convos[i].get("value", 0)) if i < len(growth_convos) else 0
+            running["bookings"] += int(growth_bookings[i].get("value", 0)) if i < len(growth_bookings) else 0
+            cumulative.append(
+                {
+                    "date": date,
+                    "farmers": running["farmers"],
+                    "conversations": running["conversations"],
+                    "bookings": running["bookings"],
+                }
+            )
+
+        top_states = operational.get("top_states", [])
+        top_commodities = market.get("top_commodities", [])
+
+        opportunity_rows = [
+            {
+                "metric": "farmers_without_crops",
+                "label": "Without Crops",
+                "value": int(opportunities.get("farmers_without_crops", 0)),
+                "priority": "critical",
+            },
+            {
+                "metric": "inactive_farmers",
+                "label": "Inactive 30d+",
+                "value": int(opportunities.get("inactive_farmers", 0)),
+                "priority": "high",
+            },
+            {
+                "metric": "district_coverage_gaps",
+                "label": "District Gaps",
+                "value": int(opportunities.get("district_coverage_gaps", 0)),
+                "priority": "medium",
+            },
+        ]
+
+        return {
+            "boxes": {
+                "growth": {
+                    "title": "Growth Trends",
+                    "default": "line_area",
+                    "options": [
+                        {"id": "line_area", "label": "Line + Area"},
+                        {"id": "grouped_bar", "label": "Grouped Bar"},
+                        {"id": "stacked_bar", "label": "Stacked Bar"},
+                        {"id": "cumulative", "label": "Cumulative"},
+                        {"id": "delta", "label": "Daily Delta"},
+                    ],
+                    "data": {
+                        "farmers": growth_farmers,
+                        "conversations": growth_convos,
+                        "bookings": growth_bookings,
+                        "cumulative": cumulative,
+                    },
+                },
+                "states": {
+                    "title": "Top States",
+                    "default": "horizontal_bar",
+                    "options": [
+                        {"id": "horizontal_bar", "label": "Horizontal Bar"},
+                        {"id": "lollipop", "label": "Lollipop"},
+                        {"id": "packed_dots", "label": "Packed Dots"},
+                        {"id": "state_share", "label": "Share %"},
+                    ],
+                    "data": top_states,
+                },
+                "engagement": {
+                    "title": "Engagement",
+                    "default": "donut",
+                    "options": [
+                        {"id": "donut", "label": "Donut"},
+                        {"id": "gauge", "label": "Gauge"},
+                        {"id": "comparison", "label": "Comparison Bars"},
+                        {"id": "score_tiles", "label": "Score Tiles"},
+                    ],
+                    "data": {
+                        "active_farmers": int(engagement.get("active_farmers", 0)),
+                        "activation_rate_pct": float(engagement.get("activation_rate_pct", 0.0)),
+                        "retention_risk_pct": float(engagement.get("retention_risk_pct", 0.0)),
+                        "conversation_per_active_farmer": float(engagement.get("conversation_per_active_farmer", 0.0)),
+                        "voice_sessions_window": int(engagement.get("voice_sessions_window", 0)),
+                    },
+                },
+                "commodities": {
+                    "title": "Top Commodities",
+                    "default": "ranked_bar",
+                    "options": [
+                        {"id": "ranked_bar", "label": "Ranked Bars"},
+                        {"id": "momentum_scatter", "label": "Momentum Scatter"},
+                        {"id": "mentions_treemap", "label": "Treemap-style Grid"},
+                        {"id": "price_vs_mentions", "label": "Price vs Mentions"},
+                    ],
+                    "data": top_commodities,
+                },
+                "opportunities": {
+                    "title": "System Opportunities",
+                    "default": "priority_bars",
+                    "options": [
+                        {"id": "priority_bars", "label": "Priority Bars"},
+                        {"id": "risk_matrix", "label": "Risk Matrix"},
+                        {"id": "waterfall", "label": "Waterfall"},
+                        {"id": "funnel", "label": "Funnel"},
+                    ],
+                    "data": opportunity_rows,
+                },
+                "activity": {
+                    "title": "Activity Density",
+                    "default": "heatmap",
+                    "options": [
+                        {"id": "heatmap", "label": "Heatmap"},
+                        {"id": "pulse_timeline", "label": "Pulse Timeline"},
+                        {"id": "hourly_bars", "label": "Hourly Bars"},
+                        {"id": "weekday_bars", "label": "Weekday Bars"},
+                    ],
+                    "data": {
+                        "days": growth_farmers,
+                        "conversations": growth_convos,
+                        "bookings": growth_bookings,
+                    },
+                },
+            }
+        }
+
+    @staticmethod
     async def build_equipment_insights(db, days: int = 30) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         since = now - timedelta(days=days)
@@ -426,6 +570,7 @@ class InsightService:
             },
         }
         overview["recommendations"] = InsightService._recommendations(overview)
+        overview["visualizations"] = InsightService._build_visualization_options(overview)
         return overview
 
     @staticmethod

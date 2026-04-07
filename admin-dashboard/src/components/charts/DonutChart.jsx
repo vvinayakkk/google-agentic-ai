@@ -24,7 +24,7 @@ const DonutChart = ({ data = [] }) => {
   return (
     <div className="flex items-center gap-4">
       <svg viewBox="0 0 120 120" className="h-32 w-32">
-        <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="14" />
+        <circle cx="60" cy="60" r="44" fill="none" stroke="var(--soft-strong)" strokeWidth="14" />
         {segments.map((item, idx) => {
           const path = arcPath(60, 60, 44, item.start, item.end);
           return (
