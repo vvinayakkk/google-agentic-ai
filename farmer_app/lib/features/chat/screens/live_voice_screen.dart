@@ -8,7 +8,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -69,9 +68,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   String? _sessionId;
   String? _lastAudioBase64;
   bool _isPlaybackPaused = false;
-  Duration _playbackPosition = Duration.zero;
-  Duration _playbackDuration = Duration.zero;
-  int _lastPlaybackUiMs = -1;
   int _thinkingPulse = 0;
   int _thinkingElapsedSeconds = 0;
   bool _thinkingExpanded = true;
@@ -116,30 +112,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       setState(() {
         _state = _VoiceState.idle;
         _isPlaybackPaused = false;
-        _playbackPosition = Duration.zero;
-        _playbackDuration = Duration.zero;
-        _lastPlaybackUiMs = -1;
       });
       _startCardsStagger();
-    });
-
-    _audioPlayer.onDurationChanged.listen((duration) {
-      if (!mounted) return;
-      setState(() => _playbackDuration = duration);
-    });
-
-    _audioPlayer.onPositionChanged.listen((position) {
-      if (!mounted) return;
-      final atMs = position.inMilliseconds;
-      if (_playbackDuration > Duration.zero) {
-        final shouldPaint =
-            _lastPlaybackUiMs < 0 ||
-            (atMs - _lastPlaybackUiMs) >= 140 ||
-            atMs >= (_playbackDuration.inMilliseconds - 80);
-        if (!shouldPaint) return;
-      }
-      setState(() => _playbackPosition = position);
-      _lastPlaybackUiMs = atMs;
     });
 
     _audioPlayer.onPlayerStateChanged.listen((playerState) {
@@ -183,9 +157,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         setState(() {
           _state = _VoiceState.idle;
           _isPlaybackPaused = false;
-          _playbackPosition = Duration.zero;
-          _playbackDuration = Duration.zero;
-          _lastPlaybackUiMs = -1;
         });
         await _startRecording();
         break;
@@ -259,9 +230,25 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _waveController.stop();
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
+
+    setState(() {
+      _state = _VoiceState.processing;
+      _isPlaybackPaused = false;
+      _lastAudioBase64 = null;
+      _response = '';
+      _thinkingPulse = 0;
+      _thinkingElapsedSeconds = 0;
+      _thinkingExpanded = true;
+      _visibleCardCount = 0;
+      _liveVoiceLevel = 0;
+    });
+    _cardsStaggerTimer?.cancel();
+    _startThinkingTicker();
+
     final path = await _recorder.stop();
 
     if (path == null || path.isEmpty) {
+      _stopThinkingTicker();
       setState(() {
         _state = _VoiceState.idle;
         _liveVoiceLevel = 0;
@@ -321,6 +308,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   Future<void> _processVoiceFile(String path, {String? sourcePrompt}) async {
     final languageCode = context.locale.languageCode;
     final hintedQuestion = (sourcePrompt ?? '').trim();
+    final wasAlreadyProcessing = _state == _VoiceState.processing;
 
     setState(() {
       _state = _VoiceState.processing;
@@ -335,8 +323,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _liveVoiceLevel = 0;
     });
     _cardsStaggerTimer?.cancel();
-    _startThinkingTicker();
-    _waveController.repeat();
+    if (!wasAlreadyProcessing) {
+      _startThinkingTicker();
+    }
 
     try {
       final voice = ref.read(voiceServiceProvider);
@@ -456,7 +445,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
       if (audioToPlay.isNotEmpty) {
         _lastAudioBase64 = audioToPlay;
-        await _playAudioBase64(audioToPlay);
+        final played = await _playAudioBase64(audioToPlay);
+        if (!played && mounted) {
+          setState(() => _state = _VoiceState.idle);
+          _startCardsStagger();
+        }
       } else {
         _lastAudioBase64 = null;
         setState(() => _state = _VoiceState.idle);
@@ -483,28 +476,39 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     setState(() => _fadingQuestion = null);
   }
 
-  Future<void> _playAudioBase64(String base64Audio) async {
-    if (base64Audio.isEmpty) return;
+  Future<bool> _playAudioBase64(String base64Audio) async {
+    if (base64Audio.isEmpty) return false;
 
-    setState(() {
-      _state = _VoiceState.playing;
-      _isPlaybackPaused = false;
-      _playbackPosition = Duration.zero;
-      _playbackDuration = Duration.zero;
-      _lastPlaybackUiMs = -1;
-    });
-    final bytes = base64Decode(base64Audio);
-    final audioDir = await getTemporaryDirectory();
-    final audioFile = File(
-      '${audioDir.path}/voice_resp_${DateTime.now().millisecondsSinceEpoch}.wav',
-    );
-    await audioFile.writeAsBytes(bytes);
-    await _audioPlayer.play(DeviceFileSource(audioFile.path));
+    try {
+      if (!mounted) return false;
+      setState(() {
+        _state = _VoiceState.playing;
+        _isPlaybackPaused = false;
+      });
+      final bytes = base64Decode(base64Audio);
+      final audioDir = await getTemporaryDirectory();
+      final audioFile = File(
+        '${audioDir.path}/voice_resp_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+      await audioFile.writeAsBytes(bytes);
+      await _audioPlayer.play(DeviceFileSource(audioFile.path));
+      return true;
+    } catch (_) {
+      if (!mounted) return false;
+      setState(() {
+        _state = _VoiceState.idle;
+        _isPlaybackPaused = false;
+      });
+      return false;
+    }
   }
 
   Future<void> _replayLastResponse() async {
     if (_lastAudioBase64 != null && _lastAudioBase64!.isNotEmpty) {
-      await _playAudioBase64(_lastAudioBase64!);
+      final replayed = await _playAudioBase64(_lastAudioBase64!);
+      if (!replayed && mounted) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+      }
       return;
     }
 
@@ -526,7 +530,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         return;
       }
       _lastAudioBase64 = generatedBase64;
-      await _playAudioBase64(generatedBase64);
+      final replayed = await _playAudioBase64(generatedBase64);
+      if (!replayed && mounted) {
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+      }
     } catch (_) {
       if (mounted) {
         context.showSnack('voice_assistant.error'.tr(), isError: true);
@@ -565,9 +572,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   String get _heroText {
     if (_response.isNotEmpty) {
-      if (_state == _VoiceState.playing && _playbackDuration > Duration.zero) {
-        return _readingWindowText(_response);
-      }
       return _previewText(_response, maxChars: 220);
     }
     if (_activeQuestion.isNotEmpty) {
@@ -580,6 +584,74 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final clean = text.trim();
     if (clean.length <= maxChars) return clean;
     return '${clean.substring(0, maxChars).trim()}...';
+  }
+
+  List<String> _thinkingFeedLines() {
+    final hint = ('$_activeQuestion $_transcript').toLowerCase();
+    final lines = <String>[
+      'Reading your message carefully',
+      'Detecting language and intent',
+      'Checking recent context for relevance',
+      'Planning the best response and actions',
+      'Final quality check before speaking',
+    ];
+    if (hint.contains('market') ||
+        hint.contains('mandi') ||
+        hint.contains('price')) {
+      lines.insert(3, 'Reviewing market and mandi signals');
+    }
+    if (hint.contains('weather') || hint.contains('rain')) {
+      lines.insert(3, 'Checking weather risk context');
+    }
+    if (hint.contains('scheme') || hint.contains('subsidy')) {
+      lines.insert(3, 'Evaluating schemes and eligibility context');
+    }
+    return lines;
+  }
+
+  List<String> _responseChunks(String text) {
+    final clean = text.trim();
+    if (clean.isEmpty) return const <String>[];
+
+    final chunks = <String>[];
+    final parts = clean
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+
+    final source = parts.isEmpty ? <String>[clean] : parts;
+    for (final sentence in source) {
+      final s = sentence.trim();
+      if (s.length <= 64) {
+        chunks.add(s);
+        continue;
+      }
+
+      final words = s.split(RegExp(r'\s+'));
+      final buffer = StringBuffer();
+      for (final word in words) {
+        if (buffer.isEmpty) {
+          buffer.write(word);
+          continue;
+        }
+        final candidate = '${buffer.toString()} $word';
+        if (candidate.length > 64) {
+          chunks.add(buffer.toString());
+          buffer
+            ..clear()
+            ..write(word);
+        } else {
+          buffer
+            ..write(' ')
+            ..write(word);
+        }
+      }
+      if (buffer.isNotEmpty) {
+        chunks.add(buffer.toString());
+      }
+    }
+
+    return chunks;
   }
 
   String _cleanDisplayText(String text) {
@@ -626,35 +698,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
     out = out.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
     return out;
-  }
-
-  String _readingWindowText(String text) {
-    final clean = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (clean.length <= 132) return clean;
-
-    final totalMs = _playbackDuration.inMilliseconds;
-    final atMs = _playbackPosition.inMilliseconds;
-    if (totalMs <= 0) return _previewText(clean, maxChars: 180);
-
-    final progress = (atMs / totalMs).clamp(0.0, 1.0);
-    const int windowChars = 132;
-    final maxStart = math.max(0, clean.length - windowChars);
-    var start = (maxStart * progress).floor();
-    if (start > 0) {
-      final spaceAt = clean.lastIndexOf(' ', start);
-      if (spaceAt > start - 14) {
-        start = spaceAt + 1;
-      }
-    }
-
-    var end = math.min(clean.length, start + windowChars);
-    if (end < clean.length) {
-      final nextSpace = clean.indexOf(' ', end);
-      if (nextSpace != -1 && (nextSpace - end) <= 14) {
-        end = nextSpace;
-      }
-    }
-    return clean.substring(start, end).trim();
   }
 
   List<String> _extractActionTags(Map<String, dynamic> data) {
@@ -1028,6 +1071,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final borderColor = context.appColors.border.withValues(
       alpha: isDark ? 0.55 : 0.8,
     );
+    final thinkingLines = _thinkingFeedLines();
+    final activeThinkingLine =
+        thinkingLines[_thinkingPulse % thinkingLines.length];
 
     if (isProcessing) {
       final showQuestion = _thinkingExpanded && _activeQuestion.isNotEmpty;
@@ -1111,6 +1157,55 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                     padding: const EdgeInsets.only(top: 8),
                     child: Column(
                       children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : Colors.black.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 380),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              final isIncoming =
+                                  child.key ==
+                                  ValueKey(activeThinkingLine.hashCode);
+                              final slide = Tween<Offset>(
+                                begin: isIncoming
+                                    ? const Offset(0, 0.45)
+                                    : Offset.zero,
+                                end: isIncoming
+                                    ? Offset.zero
+                                    : const Offset(0, -0.45),
+                              ).animate(animation);
+                              return ClipRect(
+                                child: SlideTransition(
+                                  position: slide,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: Text(
+                              activeThinkingLine,
+                              key: ValueKey(activeThinkingLine.hashCode),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         if (showQuestion)
                           Container(
                             width: double.infinity,
@@ -1135,13 +1230,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                               ),
                             ),
                           ),
-                        if (showQuestion) const SizedBox(height: 12),
-                        _ReactiveWaveform(
-                          controller: _waveController,
-                          isActive: true,
-                          color: AppColors.primary,
-                          inputLevel: 0.55,
-                        ),
                       ],
                     ),
                   ),
@@ -1242,62 +1330,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   border: Border.all(color: borderColor),
                 ),
                 child: ClipRect(
-                  child: Builder(
-                    builder: (context) {
-                      final currentHeroKey = ValueKey(_heroText.hashCode);
-                      return AnimatedSwitcher(
-                        duration: _heroTextTransition,
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        layoutBuilder: (currentChild, previousChildren) {
-                          return Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: [
-                              ...previousChildren,
-                              ...[currentChild].whereType<Widget>(),
-                            ],
-                          );
-                        },
-                        transitionBuilder: (child, animation) {
-                          final isIncoming = child.key == currentHeroKey;
-                          final curve = CurvedAnimation(
-                            parent: animation,
-                            curve: Curves.easeInOutCubic,
-                          );
-                          final slideTween = Tween<Offset>(
-                            begin: isIncoming
-                                ? const Offset(0, 0.4)
-                                : Offset.zero,
-                            end: isIncoming
-                                ? Offset.zero
-                                : const Offset(0, -0.4),
-                          );
-                          return FadeTransition(
-                            opacity: curve,
-                            child: SlideTransition(
-                              position: slideTween.animate(curve),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Align(
-                          key: currentHeroKey,
-                          alignment: Alignment.bottomCenter,
-                          child: Text(
-                            _heroText,
-                            textAlign: TextAlign.center,
-                            maxLines: 5,
-                            overflow: TextOverflow.fade,
-                            style: GoogleFonts.sora(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w400,
-                              color: textColor,
-                              height: 1.45,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _BottomFlowText(
+                      key: ValueKey(_heroText.hashCode),
+                      lines: _responseChunks(_heroText),
+                      lineDuration: _heroTextTransition,
+                      textStyle: context.textTheme.bodyMedium?.copyWith(
+                        color: textColor,
+                        fontSize: 22,
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1593,8 +1638,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       duration: _cardPopDuration,
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
+        final safeOpacity = value.clamp(0.0, 1.0).toDouble();
         return Opacity(
-          opacity: value,
+          opacity: safeOpacity,
           child: Transform.translate(
             offset: Offset(0, (1 - value) * 20),
             child: Transform.scale(scale: 0.92 + (value * 0.08), child: child),
@@ -1766,6 +1812,100 @@ class _ReactiveWaveform extends StatelessWidget {
             }),
           );
         },
+      ),
+    );
+  }
+}
+
+class _BottomFlowText extends StatefulWidget {
+  final List<String> lines;
+  final Duration lineDuration;
+  final TextStyle? textStyle;
+
+  const _BottomFlowText({
+    super.key,
+    required this.lines,
+    required this.lineDuration,
+    this.textStyle,
+  });
+
+  @override
+  State<_BottomFlowText> createState() => _BottomFlowTextState();
+}
+
+class _BottomFlowTextState extends State<_BottomFlowText> {
+  Timer? _timer;
+  int _lineIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _restartTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BottomFlowText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final sameLines = oldWidget.lines.join('\n') == widget.lines.join('\n');
+    if (!sameLines || oldWidget.lineDuration != widget.lineDuration) {
+      _restartTicker();
+    }
+  }
+
+  void _restartTicker() {
+    _timer?.cancel();
+    _lineIndex = 0;
+    if (widget.lines.length <= 1) return;
+
+    final intervalMs = (widget.lineDuration.inMilliseconds * 0.55)
+        .clamp(260, 1400)
+        .toInt();
+    _timer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
+      if (!mounted || widget.lines.isEmpty) return;
+      setState(() {
+        _lineIndex = (_lineIndex + 1) % widget.lines.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveLines = widget.lines.isEmpty
+        ? const <String>['']
+        : widget.lines;
+    final line = effectiveLines[_lineIndex % effectiveLines.length];
+    final lineKey = ValueKey('${_lineIndex}_$line');
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 520),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final isIncoming = child.key == lineKey;
+        final slide = Tween<Offset>(
+          begin: isIncoming ? const Offset(0, 0.45) : Offset.zero,
+          end: isIncoming ? Offset.zero : const Offset(0, -0.45),
+        ).animate(animation);
+        return ClipRect(
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+      child: Align(
+        key: lineKey,
+        alignment: Alignment.bottomCenter,
+        child: Text(
+          line,
+          textAlign: TextAlign.center,
+          maxLines: 5,
+          overflow: TextOverflow.fade,
+          style: widget.textStyle,
+        ),
       ),
     );
   }
