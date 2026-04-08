@@ -71,12 +71,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   List<_VoiceActionCard> _actionCards = <_VoiceActionCard>[];
   int _visibleCardCount = 0;
 
-  double _liveVoiceLevel = 0;
+  double _hazeAmplitude = 0;
   StreamSubscription<Amplitude>? _amplitudeSub;
 
-  late final AnimationController _pulseController;
-  late final AnimationController _waveController;
-  late final AnimationController _playController;
+  late final AnimationController _hazeController;
   late final AnimationController _questionFadeController;
 
   final ScrollController _thinkingScrollController = ScrollController();
@@ -92,18 +90,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _hazeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1300),
-    )..repeat(reverse: true);
-    _waveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2100),
+      duration: const Duration(seconds: 3),
     )..repeat();
-    _playController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    );
     _questionFadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -136,9 +126,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _cardsStaggerTimer?.cancel();
     _amplitudeSub?.cancel();
 
-    _pulseController.dispose();
-    _waveController.dispose();
-    _playController.dispose();
+    _hazeController.dispose();
     _questionFadeController.dispose();
     _thinkingScrollController.dispose();
 
@@ -198,17 +186,16 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         .listen((amp) {
           if (!mounted || _state != _VoiceState.recording) return;
           final db = amp.current;
-          double normalized;
-          if (!db.isFinite) {
-            normalized = 0;
-          } else if (db <= 0) {
-            normalized = ((db + 60) / 60).clamp(0.0, 1.0);
-          } else {
-            normalized = (db / 160).clamp(0.0, 1.0);
+          final rawAmp = db.isFinite
+              ? ((db + 60) / 60).clamp(0.0, 1.0).toDouble()
+              : 0.0;
+          final smoothedAmp = (_hazeAmplitude * 0.75) + (rawAmp * 0.25);
+          if ((_hazeAmplitude - smoothedAmp).abs() < 0.01) {
+            return;
           }
-          final nextLevel = math.pow(normalized, 1.25).toDouble();
-          if ((_liveVoiceLevel - nextLevel).abs() < 0.02) return;
-          setState(() => _liveVoiceLevel = nextLevel);
+          setState(() {
+            _hazeAmplitude = smoothedAmp;
+          });
         });
 
     _stopThinkingTicker();
@@ -226,7 +213,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingTemplateCursor = 0;
       _actionCards = <_VoiceActionCard>[];
       _visibleCardCount = 0;
-      _liveVoiceLevel = 0;
+      _hazeAmplitude = 0;
       _responseExpanded = false;
       _responseFlowCompleted = false;
       _thinkingExpanded = false;
@@ -255,7 +242,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingElapsedSeconds = 0;
       _thinkingTemplateCursor = _thinkingSteps.length;
       _visibleCardCount = 0;
-      _liveVoiceLevel = 0;
+      _hazeAmplitude = 0;
       _thinkingExpanded = true;
     });
 
@@ -269,7 +256,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (!mounted) return;
       setState(() {
         _state = _VoiceState.idle;
-        _liveVoiceLevel = 0;
+        _hazeAmplitude = 0;
       });
       context.showSnack('voice_assistant.no_speech'.tr(), isError: true);
       return;
@@ -794,10 +781,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         _isPlaybackPaused = false;
       });
 
-      if (!_playController.isAnimating) {
-        _playController.repeat(reverse: true);
-      }
-
       final bytes = base64Decode(base64Audio);
       final audioDir = await getTemporaryDirectory();
       final audioFile = File(
@@ -818,10 +801,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 
   void _stopPlayPulseIfNeeded() {
-    if (_playController.isAnimating) {
-      _playController.stop();
-      _playController.value = 0;
-    }
+    // Legacy wave/pulse animation removed; haze is now the only animation layer.
   }
 
   Future<void> _replayLastResponse() async {
@@ -1490,44 +1470,76 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                 ),
         ),
         child: SafeArea(
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              _buildTopBar(isDark: isDark),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Column(
-                    children: [
-                      _buildCompactConversationStrip(
-                        isDark: isDark,
-                        compact: showCards,
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: showCards
-                              ? _buildActionCenterStage(
-                                  visibleCards,
-                                  isDark: isDark,
-                                  key: const ValueKey('action_stage'),
-                                )
-                              : _buildLiveWaveStage(
-                                  isDark: isDark,
-                                  key: const ValueKey('wave_stage'),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildThinkingPanel(isDark: isDark, compact: showCards),
-                      const SizedBox(height: 8),
-                    ],
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 78,
+                child: IgnorePointer(
+                  child: SizedBox(
+                    height: math.min(
+                      430,
+                      MediaQuery.of(context).size.height * 0.52,
+                    ),
+                    child: AnimatedBuilder(
+                      animation: _hazeController,
+                      builder: (context, _) {
+                        return CustomPaint(
+                          painter: VoiceHazeOrb(
+                            amplitude: _hazeAmplitude,
+                            pulseValue: _hazeController.value,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-              _buildBottomControlDock(isDark: isDark),
+              Column(
+                children: [
+                  _buildTopBar(isDark: isDark),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Column(
+                        children: [
+                          _buildCompactConversationStrip(
+                            isDark: isDark,
+                            compact: showCards,
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              child: showCards
+                                  ? _buildActionCenterStage(
+                                      visibleCards,
+                                      isDark: isDark,
+                                      key: const ValueKey('action_stage'),
+                                    )
+                                  : _buildLiveWaveStage(
+                                      isDark: isDark,
+                                      key: const ValueKey('wave_stage'),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildThinkingPanel(
+                            isDark: isDark,
+                            compact: showCards,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildBottomControlDock(isDark: isDark),
+                ],
+              ),
             ],
           ),
         ),
@@ -1918,66 +1930,32 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
 
-    final isRecording = _state == _VoiceState.recording;
-    final isProcessing = _state == _VoiceState.processing;
-    final isPlaying = _state == _VoiceState.playing;
-
-    final intensity = isRecording
-        ? _liveVoiceLevel.clamp(0.1, 1.0)
-        : isPlaying
-        ? (0.46 + (_playController.value * 0.45)).clamp(0.0, 1.0)
-        : isProcessing
-        ? (0.36 + (_pulseController.value * 0.28)).clamp(0.0, 1.0)
-        : 0.18;
-
     return RepaintBoundary(
       key: key,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([
-          _waveController,
-          _pulseController,
-          _playController,
-        ]),
-        builder: (context, _) {
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _GeminiGreenWavePainter(
-                    phase: _waveController.value,
-                    intensity: intensity,
-                    isDark: isDark,
-                  ),
-                ),
+      child: Align(
+        alignment: const Alignment(0, -0.22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _statusLabel,
+              style: TextStyle(
+                color: textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
               ),
-              Align(
-                alignment: const Alignment(0, -0.22),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _statusLabel,
-                      style: TextStyle(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Tap response to expand. Long press for full view.',
-                      style: TextStyle(
-                        color: textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Tap response to expand. Long press for full view.',
+              style: TextStyle(
+                color: textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2304,97 +2282,150 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 }
 
-class _GeminiGreenWavePainter extends CustomPainter {
-  final double phase;
-  final double intensity;
-  final bool isDark;
+class VoiceHazeOrb extends CustomPainter {
+  final double amplitude;
+  final double pulseValue;
 
-  const _GeminiGreenWavePainter({
-    required this.phase,
-    required this.intensity,
-    required this.isDark,
-  });
+  const VoiceHazeOrb({required this.amplitude, required this.pulseValue});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final centerX = size.width / 2;
-    final baseY = size.height * 0.94;
-    final t = phase * math.pi * 2;
+    final amp = amplitude.clamp(0.0, 1.0).toDouble();
+    final pulse = pulseValue.clamp(0.0, 1.0).toDouble();
+    final t = pulse * math.pi * 2;
 
-    final deepGlow = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [
-              const Color(0xFF10B981).withValues(alpha: 0.22 * intensity),
-              const Color(0xFF10B981).withValues(alpha: 0.02),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(centerX, baseY),
-              radius: size.width * 0.62,
-            ),
-          );
-    canvas.drawCircle(Offset(centerX, baseY), size.width * 0.64, deepGlow);
+    final ambientRect = Rect.fromLTWH(
+      -size.width * 0.08,
+      size.height * 0.56,
+      size.width * 1.16,
+      size.height * 0.48,
+    );
+    final ambient = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, 1.08),
+        radius: 1.12,
+        colors: [
+          const Color(0xFF34D399).withValues(alpha: 0.14 + (0.18 * amp)),
+          const Color(0xFF22C58B).withValues(alpha: 0.06 + (0.08 * amp)),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.58, 1.0],
+      ).createShader(ambientRect);
+    canvas.drawRect(ambientRect, ambient);
 
-    for (var i = 0; i < 5; i++) {
-      final spread = 0.36 + (i * 0.19);
-      final wave = math.sin(t + (i * 0.7)) * 0.018;
-      final width = size.width * (spread + wave);
-      final height = size.height * (0.18 + (i * 0.1));
-      final rect = Rect.fromCenter(
-        center: Offset(centerX, baseY),
-        width: width,
-        height: height,
-      );
+    void drawWaveLayer({
+      required double baseLevel,
+      required double ampFactor,
+      required double freq,
+      required double speed,
+      required double phaseShift,
+      required Color color,
+      required double alphaMultiplier,
+    }) {
+      final waveAmp = (7.0 + (18.0 * amp)) * ampFactor;
+      final breathingLift =
+          math.sin((t * 0.55) + phaseShift) * (3.5 + (amp * 4.0));
+      final baseY = (size.height * baseLevel) - breathingLift;
+      final step = math.max(6.0, size.width / 84);
 
-      final alpha = (0.48 - (i * 0.08)) * (0.45 + intensity * 0.7);
-      final stroke = Paint()
+      double waveY(double x) {
+        final nx = x / size.width;
+        final a =
+            math.sin((nx * freq * math.pi * 2) + (t * speed) + phaseShift) *
+            waveAmp;
+        final b =
+            math.sin(
+              (nx * (freq * 1.85) * math.pi * 2) -
+                  (t * speed * 0.62) +
+                  (phaseShift * 0.45),
+            ) *
+            (waveAmp * 0.34);
+        return baseY + a + b;
+      }
+
+      final fillPath = Path()..moveTo(0, size.height);
+      final firstY = waveY(0);
+      fillPath.lineTo(0, firstY);
+      for (double x = step; x <= size.width + step; x += step) {
+        final clampedX = x > size.width ? size.width : x;
+        fillPath.lineTo(clampedX, waveY(clampedX));
+      }
+      fillPath
+        ..lineTo(size.width, size.height)
+        ..close();
+
+      final shaderTop = baseY - (waveAmp * 2.2);
+      final fill = Paint()
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                color.withValues(
+                  alpha: (0.18 + (0.26 * amp)) * alphaMultiplier,
+                ),
+                color.withValues(
+                  alpha: (0.09 + (0.14 * amp)) * alphaMultiplier,
+                ),
+                color.withValues(alpha: 0.0),
+              ],
+              stops: const [0.0, 0.52, 1.0],
+            ).createShader(
+              Rect.fromLTWH(0, shaderTop, size.width, size.height - shaderTop),
+            );
+      canvas.drawPath(fillPath, fill);
+
+      final crestPath = Path()..moveTo(0, firstY);
+      for (double x = step; x <= size.width + step; x += step) {
+        final clampedX = x > size.width ? size.width : x;
+        crestPath.lineTo(clampedX, waveY(clampedX));
+      }
+      final crest = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 - (i * 0.2)
+        ..strokeWidth = 1.0 + (amp * 0.9)
         ..color = const Color(
-          0xFF10B981,
-        ).withValues(alpha: alpha.clamp(0.04, 0.5));
-      canvas.drawArc(rect, math.pi, math.pi, false, stroke);
+          0xFFA7F3D0,
+        ).withValues(alpha: (0.08 + (0.16 * amp)) * alphaMultiplier)
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+      canvas.drawPath(crestPath, crest);
     }
 
-    final bottomFill = Paint()
-      ..shader =
-          LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              const Color(0xFF10B981).withValues(alpha: isDark ? 0.3 : 0.22),
-              const Color(0xFF10B981).withValues(alpha: 0.0),
-            ],
-          ).createShader(
-            Rect.fromLTWH(
-              0,
-              size.height * 0.55,
-              size.width,
-              size.height * 0.45,
-            ),
-          );
+    drawWaveLayer(
+      baseLevel: 0.90,
+      ampFactor: 1.05,
+      freq: 1.15,
+      speed: 1.0,
+      phaseShift: 0.4,
+      color: const Color(0xFF0F9B6A),
+      alphaMultiplier: 0.95,
+    );
 
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, size.height * 0.84)
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        size.height * (0.7 + (math.sin(t) * 0.01)),
-        size.width,
-        size.height * 0.84,
-      )
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(path, bottomFill);
+    drawWaveLayer(
+      baseLevel: 0.86,
+      ampFactor: 0.78,
+      freq: 1.55,
+      speed: 1.22,
+      phaseShift: 1.25,
+      color: const Color(0xFF12B77B),
+      alphaMultiplier: 0.82,
+    );
+
+    drawWaveLayer(
+      baseLevel: 0.82,
+      ampFactor: 0.56,
+      freq: 1.95,
+      speed: 1.4,
+      phaseShift: 2.05,
+      color: const Color(0xFF34D399),
+      alphaMultiplier: 0.72,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _GeminiGreenWavePainter oldDelegate) {
-    return oldDelegate.phase != phase ||
-        oldDelegate.intensity != intensity ||
-        oldDelegate.isDark != isDark;
+  bool shouldRepaint(covariant VoiceHazeOrb oldDelegate) {
+    return oldDelegate.amplitude != amplitude ||
+        oldDelegate.pulseValue != pulseValue;
   }
 }
 
