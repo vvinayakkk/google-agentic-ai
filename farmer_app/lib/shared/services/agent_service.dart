@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
@@ -250,6 +253,79 @@ class VoiceService {
       ),
     );
     return res.data as Map<String, dynamic>;
+  }
+
+  /// POST /api/v1/voice/command/text/stream
+  /// -> SSE stream of stt_done/thinking/result/done events.
+  Stream<Map<String, dynamic>> voiceCommandTextStream(
+    String audioPath, {
+    required String language,
+    String? sessionId,
+  }) async* {
+    final normalizedLanguage = _normalizeVoiceLanguage(language);
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(audioPath),
+      'language': normalizedLanguage,
+      if (sessionId != null) 'session_id': sessionId,
+    });
+
+    final res = await _client.dio.post<ResponseBody>(
+      ApiEndpoints.voiceCommandTextStream,
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        responseType: ResponseType.stream,
+        headers: {'Accept': 'text/event-stream'},
+        receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 75),
+      ),
+    );
+
+    final body = res.data;
+    if (body == null) {
+      throw StateError('Missing stream response body');
+    }
+
+    final lineStream = body.stream
+        .cast<List<int>>()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    final eventDataLines = <String>[];
+
+    await for (final rawLine in lineStream) {
+      final line = rawLine.trimRight();
+      if (line.isEmpty) {
+        if (eventDataLines.isEmpty) continue;
+        final payload = eventDataLines.join('\n').trim();
+        eventDataLines.clear();
+        if (payload.isEmpty) continue;
+        final decoded = jsonDecode(payload);
+        if (decoded is Map<String, dynamic>) {
+          yield decoded;
+        }
+        continue;
+      }
+
+      if (!line.startsWith('data:')) {
+        continue;
+      }
+
+      final dataPart = line.substring(5).trimLeft();
+      if (dataPart.isNotEmpty) {
+        eventDataLines.add(dataPart);
+      }
+    }
+
+    if (eventDataLines.isNotEmpty) {
+      final payload = eventDataLines.join('\n').trim();
+      if (payload.isNotEmpty) {
+        final decoded = jsonDecode(payload);
+        if (decoded is Map<String, dynamic>) {
+          yield decoded;
+        }
+      }
+    }
   }
 }
 

@@ -135,6 +135,7 @@ abstract final class ApiEndpoints {
   static const voiceStt = '/api/v1/voice/stt';
   static const voiceCommand = '/api/v1/voice/command';
   static const voiceCommandText = '/api/v1/voice/command/text';
+  static const voiceCommandTextStream = '/api/v1/voice/command/text/stream';
 
   // ── Notification (:8008 → /api/v1/notifications) ──────
   static const notifications = '/api/v1/notifications/';

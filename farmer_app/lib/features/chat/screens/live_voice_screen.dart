@@ -14,12 +14,10 @@ import 'package:record/record.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_cache.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/agent_service.dart';
 
-/// Live voice conversation screen: Record → /voice/command/text → Play response.
 class LiveVoiceScreen extends ConsumerStatefulWidget {
   const LiveVoiceScreen({super.key});
 
@@ -28,18 +26,6 @@ class LiveVoiceScreen extends ConsumerStatefulWidget {
 }
 
 enum _VoiceState { idle, recording, processing, playing }
-
-class _VoiceTurn {
-  final String transcript;
-  final String response;
-  final DateTime at;
-
-  const _VoiceTurn({
-    required this.transcript,
-    required this.response,
-    required this.at,
-  });
-}
 
 class _VoiceActionCard {
   final String label;
@@ -55,60 +41,74 @@ class _VoiceActionCard {
 
 class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     with TickerProviderStateMixin {
+  static const _orbProcessing = Color(0xFF00D4FF);
+  static const _orbPlaying = Color(0xFF00E676);
+  static const _cardBg = Color(0xFF13131A);
+  static const _cardBorder = Color(0xFF252535);
+
   static const int _maxActionCards = 8;
   static const Duration _cardsStaggerStep = Duration(milliseconds: 420);
-  static const Duration _heroTextTransition = Duration(milliseconds: 760);
-  static const Duration _cardPopDuration = Duration(milliseconds: 560);
+  static const Duration _cardPopDuration = Duration(milliseconds: 480);
 
   _VoiceState _state = _VoiceState.idle;
-  String _transcript = '';
   String _response = '';
   String _activeQuestion = '';
   String? _fadingQuestion;
   String? _sessionId;
   String? _lastAudioBase64;
   bool _isPlaybackPaused = false;
-  int _thinkingPulse = 0;
+
+  final List<String> _thinkingSteps = <String>[];
   int _thinkingElapsedSeconds = 0;
-  bool _thinkingExpanded = true;
   Timer? _thinkingTimer;
+
+  Timer? _sessionTimer;
+  int _sessionElapsedSeconds = 0;
+
   Timer? _cardsStaggerTimer;
-  final List<_VoiceTurn> _recentTurns = <_VoiceTurn>[];
   List<_VoiceActionCard> _actionCards = <_VoiceActionCard>[];
   int _visibleCardCount = 0;
+
   double _liveVoiceLevel = 0;
   StreamSubscription<Amplitude>? _amplitudeSub;
 
   late final AnimationController _pulseController;
-  late final AnimationController _flickerController;
   late final AnimationController _waveController;
+  late final AnimationController _playController;
   late final AnimationController _questionFadeController;
+
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
+
+  int _responseFlowKeySeed = 0;
+  String _responseFlowSource = '';
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _flickerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    );
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1700),
+      duration: const Duration(milliseconds: 1800),
+    );
+    _playController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
     );
     _questionFadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 980),
+      duration: const Duration(milliseconds: 600),
+      value: 1,
     );
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
+      _stopWaveIfNeeded();
+      _stopPlayPulseIfNeeded();
       setState(() {
         _state = _VoiceState.idle;
         _isPlaybackPaused = false;
@@ -129,12 +129,15 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   @override
   void dispose() {
     _thinkingTimer?.cancel();
+    _sessionTimer?.cancel();
     _cardsStaggerTimer?.cancel();
     _amplitudeSub?.cancel();
+
     _pulseController.dispose();
-    _flickerController.dispose();
     _waveController.dispose();
+    _playController.dispose();
     _questionFadeController.dispose();
+
     _recorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -154,6 +157,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       case _VoiceState.playing:
         await _audioPlayer.stop();
         if (!mounted) return;
+        _stopPlayPulseIfNeeded();
         setState(() {
           _state = _VoiceState.idle;
           _isPlaybackPaused = false;
@@ -203,31 +207,33 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           setState(() => _liveVoiceLevel = nextLevel);
         });
 
+    _stopThinkingTicker();
+    _cardsStaggerTimer?.cancel();
+    _stopPlayPulseIfNeeded();
+
+    if (!_waveController.isAnimating) {
+      _waveController.repeat();
+    }
+
     setState(() {
       _state = _VoiceState.recording;
       _isPlaybackPaused = false;
-      _transcript = '';
       _response = '';
       _activeQuestion = '';
       _fadingQuestion = null;
+      _thinkingSteps.clear();
+      _thinkingElapsedSeconds = 0;
       _actionCards = <_VoiceActionCard>[];
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
-      _recentTurns.clear();
     });
-    _cardsStaggerTimer?.cancel();
+
     Haptics.light();
-    _pulseController.repeat(reverse: true);
-    _flickerController.repeat(reverse: true);
-    _waveController.repeat();
   }
 
   Future<void> _stopAndProcess() async {
     Haptics.heavy();
-    _pulseController.stop();
-    _flickerController.stop();
-    _flickerController.value = 0;
-    _waveController.stop();
+    final isHindi = context.locale.languageCode.toLowerCase().startsWith('hi');
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
 
@@ -236,30 +242,40 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _isPlaybackPaused = false;
       _lastAudioBase64 = null;
       _response = '';
-      _thinkingPulse = 0;
+      _thinkingSteps
+        ..clear()
+        ..addAll(
+          isHindi
+              ? <String>[
+                  'Awaaz process kar raha hoon',
+                  'Speech ko text mein badal raha hoon',
+                ]
+              : <String>['Processing your voice', 'Transcribing your speech'],
+        );
       _thinkingElapsedSeconds = 0;
-      _thinkingExpanded = true;
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
     });
+
     _cardsStaggerTimer?.cancel();
     _startThinkingTicker();
+    if (!_waveController.isAnimating) {
+      _waveController.repeat();
+    }
 
     final path = await _recorder.stop();
-
     if (path == null || path.isEmpty) {
       _stopThinkingTicker();
+      if (!mounted) return;
       setState(() {
         _state = _VoiceState.idle;
         _liveVoiceLevel = 0;
       });
-      if (mounted) {
-        context.showSnack('voice_assistant.no_speech'.tr(), isError: true);
-      }
+      context.showSnack('voice_assistant.no_speech'.tr(), isError: true);
       return;
     }
 
-    await _processVoiceFile(path);
+    await _processVoiceFileStream(path);
   }
 
   void _startThinkingTicker() {
@@ -267,8 +283,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _thinkingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _state != _VoiceState.processing) return;
       setState(() {
-        _thinkingPulse = (_thinkingPulse + 1) % 12;
         _thinkingElapsedSeconds += 1;
+        final fallback = _thinkingFallbackForElapsed(_thinkingElapsedSeconds);
+        if (fallback.isNotEmpty) {
+          _appendThinkingStepInState(fallback);
+        }
       });
     });
   }
@@ -276,6 +295,58 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   void _stopThinkingTicker() {
     _thinkingTimer?.cancel();
     _thinkingTimer = null;
+  }
+
+  String _thinkingFallbackForElapsed(int elapsed) {
+    final isHindi = context.locale.languageCode.toLowerCase().startsWith('hi');
+    if (_thinkingSteps.length >= 5) return '';
+    if (elapsed >= 6) {
+      return isHindi
+          ? 'Final answer tayar kar raha hoon'
+          : 'Preparing the final answer';
+    }
+    if (elapsed >= 4) {
+      return isHindi
+          ? 'Relevant context check kar raha hoon'
+          : 'Checking relevant context';
+    }
+    if (elapsed >= 2) {
+      return isHindi
+          ? 'Sawal ka intent samajh raha hoon'
+          : 'Understanding your intent';
+    }
+    return '';
+  }
+
+  void _appendThinkingStepInState(String step) {
+    final clean = step.trim();
+    if (clean.isEmpty) return;
+    if (_thinkingSteps.isNotEmpty &&
+        _thinkingSteps.last.toLowerCase() == clean.toLowerCase()) {
+      return;
+    }
+    _thinkingSteps.add(clean);
+    if (_thinkingSteps.length > 16) {
+      _thinkingSteps.removeRange(0, _thinkingSteps.length - 16);
+    }
+  }
+
+  void _startSessionTickerIfNeeded() {
+    _sessionTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_sessionId == null || _sessionId!.isEmpty) return;
+      setState(() => _sessionElapsedSeconds += 1);
+    });
+  }
+
+  void _syncSession(String? nextSessionId) {
+    final clean = (nextSessionId ?? '').trim();
+    if (clean.isEmpty) return;
+    if (_sessionId != clean) {
+      _sessionElapsedSeconds = 0;
+    }
+    _sessionId = clean;
+    _startSessionTickerIfNeeded();
   }
 
   void _startCardsStagger() {
@@ -289,7 +360,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
     setState(() => _visibleCardCount = 0);
     _cardsStaggerTimer = Timer.periodic(_cardsStaggerStep, (timer) {
-      if (!mounted || _state != _VoiceState.idle) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_state != _VoiceState.idle) {
         timer.cancel();
         return;
       }
@@ -305,167 +380,256 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     });
   }
 
-  Future<void> _processVoiceFile(String path, {String? sourcePrompt}) async {
+  Future<void> _processVoiceFileStream(
+    String path, {
+    String? sourcePrompt,
+  }) async {
     final languageCode = context.locale.languageCode;
     final hintedQuestion = (sourcePrompt ?? '').trim();
-    final wasAlreadyProcessing = _state == _VoiceState.processing;
+    final voice = ref.read(voiceServiceProvider);
+    var handledResult = false;
 
-    setState(() {
-      _state = _VoiceState.processing;
-      _isPlaybackPaused = false;
-      _lastAudioBase64 = null;
-      _response = '';
-      _thinkingPulse = 0;
-      _thinkingElapsedSeconds = 0;
-      _thinkingExpanded = true;
-      _actionCards = <_VoiceActionCard>[];
-      _visibleCardCount = 0;
-      _liveVoiceLevel = 0;
-    });
-    _cardsStaggerTimer?.cancel();
-    if (!wasAlreadyProcessing) {
-      _startThinkingTicker();
-    }
-
-    try {
-      final voice = ref.read(voiceServiceProvider);
+    Future<void> fallbackToNonStreaming() async {
       final data = await voice.voiceCommandText(
         path,
         language: languageCode,
         sessionId: _sessionId,
       );
-
       if (!mounted) return;
+      await _handleVoiceResult(
+        data,
+        languageCode: languageCode,
+        sourcePrompt: hintedQuestion,
+      );
+    }
 
-      final transcript = (data['transcript'] as String? ?? sourcePrompt ?? '')
-          .trim();
-      final transcriptDisplay =
-          (data['transcript_display'] as String? ?? transcript).trim();
-      final baseResponse = _cleanDisplayText(data['response'] as String? ?? '');
-      final audioBase64 = data['audio_base64'] as String? ?? '';
-
-      final actionTags = _extractActionTags(data);
-      var cards = _buildVoiceActionCards(actionTags);
-
-      final retryStyleResponse = _isRetryStyleResponse(baseResponse);
-      final weatherIntent = _isWeatherIntent(
-        '$transcript $transcriptDisplay $hintedQuestion',
+    try {
+      final stream = voice.voiceCommandTextStream(
+        path,
+        language: languageCode,
+        sessionId: _sessionId,
       );
 
-      var effectiveResponse = baseResponse;
-      if (retryStyleResponse && weatherIntent) {
-        effectiveResponse = _weatherFallbackResponse(languageCode);
-        cards = _mergePriorityCards(cards, const <String>[
-          'weather',
-          'soil_moisture',
-        ]);
+      await for (final event in stream) {
+        if (!mounted) return;
+        final type = (event['type'] ?? '').toString();
+
+        if (type == 'stt_done') {
+          final display =
+              (event['transcript_display'] ?? event['transcript'] ?? '')
+                  .toString()
+                  .trim();
+          final sttDoneStep = languageCode.toLowerCase().startsWith('hi')
+              ? 'Transcription complete, query samajh liya'
+              : 'Transcription complete, understood your query';
+          if (display.isNotEmpty) {
+            final previousQuestion = _activeQuestion;
+            setState(() {
+              _activeQuestion = display;
+              _appendThinkingStepInState(sttDoneStep);
+              if (previousQuestion.isNotEmpty && previousQuestion != display) {
+                _fadingQuestion = previousQuestion;
+              }
+            });
+            _questionFadeController.forward(from: 0);
+            if (_fadingQuestion != null) {
+              _questionFadeController.addStatusListener(
+                _clearQuestionStatusListener,
+              );
+            }
+          } else {
+            setState(() {
+              _appendThinkingStepInState(sttDoneStep);
+            });
+          }
+          continue;
+        }
+
+        if (type == 'thinking') {
+          final step = (event['step'] ?? '').toString().trim();
+          if (step.isNotEmpty) {
+            setState(() => _appendThinkingStepInState(step));
+          }
+          continue;
+        }
+
+        if (type == 'result') {
+          handledResult = true;
+          await _handleVoiceResult(
+            event,
+            languageCode: languageCode,
+            sourcePrompt: hintedQuestion,
+          );
+          continue;
+        }
+
+        if (type == 'done' && handledResult) {
+          break;
+        }
       }
 
-      final attachCardsCue = cards.isNotEmpty && !retryStyleResponse;
-      final responseForDisplay = _withCardsCue(
-        effectiveResponse,
-        languageCode: languageCode,
-        hasCards: attachCardsCue,
-        forDisplay: true,
-      );
-      final responseForSpeech = _withCardsCue(
-        effectiveResponse,
-        languageCode: languageCode,
-        hasCards: attachCardsCue,
-        forDisplay: false,
-      );
-
-      _sessionId = data['session_id'] as String? ?? _sessionId;
-      final visibleQuestion = transcriptDisplay.isNotEmpty
-          ? transcriptDisplay
-          : (transcript.isNotEmpty ? transcript : hintedQuestion);
-      final previousQuestion = _activeQuestion;
-
-      setState(() {
-        _transcript = transcript;
-        _response = '';
-        _activeQuestion = visibleQuestion;
-        _actionCards = cards;
-
-        if (effectiveResponse.isNotEmpty &&
-            previousQuestion.isNotEmpty &&
-            previousQuestion != visibleQuestion) {
-          _fadingQuestion = previousQuestion;
-          _questionFadeController.forward(from: 0);
+      if (!handledResult) {
+        if (mounted) {
+          setState(() {
+            _appendThinkingStepInState(
+              languageCode.toLowerCase().startsWith('hi')
+                  ? 'Streaming slow hai, backup path try kar raha hoon'
+                  : 'Streaming is slow, trying backup path',
+            );
+          });
         }
-
-        if (transcript.isNotEmpty || effectiveResponse.isNotEmpty) {
-          _recentTurns.insert(
-            0,
-            _VoiceTurn(
-              transcript: transcript,
-              response: responseForDisplay,
-              at: DateTime.now(),
-            ),
-          );
-          if (_recentTurns.length > 4) {
-            _recentTurns.removeRange(4, _recentTurns.length);
-          }
+        await fallbackToNonStreaming();
+      }
+    } catch (_) {
+      try {
+        if (mounted) {
+          setState(() {
+            _appendThinkingStepInState(
+              languageCode.toLowerCase().startsWith('hi')
+                  ? 'Network issue, backup request bhej raha hoon'
+                  : 'Network issue, sending backup request',
+            );
+          });
         }
-      });
+        await fallbackToNonStreaming();
+      } catch (_) {
+        _stopThinkingTicker();
+        _stopWaveIfNeeded();
+        _cardsStaggerTimer?.cancel();
+        if (!mounted) return;
+        setState(() {
+          _response = 'voice_assistant.error'.tr();
+          _state = _VoiceState.idle;
+          _visibleCardCount = 0;
+        });
+        context.showSnack('voice_assistant.error'.tr(), isError: true);
+      }
+    }
+  }
+
+  Future<void> _handleVoiceResult(
+    Map<String, dynamic> data, {
+    required String languageCode,
+    String? sourcePrompt,
+  }) async {
+    if (!mounted) return;
+
+    final hintedQuestion = (sourcePrompt ?? '').trim();
+    final transcript = (data['transcript'] as String? ?? sourcePrompt ?? '')
+        .trim();
+    final transcriptDisplay =
+        (data['transcript_display'] as String? ?? transcript).trim();
+    final baseResponse = _cleanDisplayText(data['response'] as String? ?? '');
+    final audioBase64 = data['audio_base64'] as String? ?? '';
+
+    final actionTags = _extractActionTags(data);
+    var cards = _buildVoiceActionCards(actionTags);
+
+    final retryStyleResponse = _isRetryStyleResponse(baseResponse);
+    final weatherIntent = _isWeatherIntent(
+      '$transcript $transcriptDisplay $hintedQuestion',
+    );
+    final schemeIntent = _isSchemeIntent(
+      '$transcript $transcriptDisplay $hintedQuestion',
+    );
+
+    var effectiveResponse = baseResponse;
+    if (retryStyleResponse && weatherIntent) {
+      effectiveResponse = _weatherFallbackResponse(languageCode);
+      cards = _mergePriorityCards(cards, const <String>[
+        'weather',
+        'soil_moisture',
+      ]);
+    } else if (retryStyleResponse && schemeIntent) {
+      effectiveResponse = _schemeFallbackResponse(languageCode);
+      cards = _mergePriorityCards(cards, const <String>['documents']);
+    }
+
+    final attachCardsCue = cards.isNotEmpty && !retryStyleResponse;
+    final responseForDisplay = _withCardsCue(
+      effectiveResponse,
+      languageCode: languageCode,
+      hasCards: attachCardsCue,
+      forDisplay: true,
+    );
+    final responseForSpeech = _withCardsCue(
+      effectiveResponse,
+      languageCode: languageCode,
+      hasCards: attachCardsCue,
+      forDisplay: false,
+    );
+
+    final nextSession = data['session_id'] as String?;
+    _syncSession(nextSession ?? _sessionId);
+
+    final visibleQuestion = transcriptDisplay.isNotEmpty
+        ? transcriptDisplay
+        : (transcript.isNotEmpty ? transcript : hintedQuestion);
+    final previousQuestion = _activeQuestion;
+
+    setState(() {
+      _response = '';
+      _activeQuestion = visibleQuestion;
+      _actionCards = cards;
+      _visibleCardCount = 0;
 
       if (effectiveResponse.isNotEmpty &&
           previousQuestion.isNotEmpty &&
           previousQuestion != visibleQuestion) {
-        _questionFadeController.addStatusListener(_clearQuestionStatusListener);
+        _fadingQuestion = previousQuestion;
+        _questionFadeController.forward(from: 0);
       }
+    });
 
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-      if (!mounted) return;
+    if (effectiveResponse.isNotEmpty &&
+        previousQuestion.isNotEmpty &&
+        previousQuestion != visibleQuestion) {
+      _questionFadeController.addStatusListener(_clearQuestionStatusListener);
+    }
 
-      setState(() {
-        _response = responseForDisplay;
-      });
-      Haptics.selection();
+    if (_responseFlowSource != responseForDisplay) {
+      _responseFlowSource = responseForDisplay;
+      _responseFlowKeySeed += 1;
+    }
 
-      String audioToPlay = audioBase64;
-      if (attachCardsCue && responseForSpeech.trim().isNotEmpty) {
-        try {
-          final regenerated = await voice.ttsBase64(
-            text: responseForSpeech,
-            language: languageCode,
-          );
-          final regeneratedAudio =
-              (regenerated['audio_base64'] as String? ?? '').trim();
-          if (regeneratedAudio.isNotEmpty) {
-            audioToPlay = regeneratedAudio;
-          }
-        } catch (_) {
-          // Keep server audio as fallback.
+    setState(() {
+      _response = responseForDisplay;
+    });
+    Haptics.selection();
+
+    String audioToPlay = audioBase64;
+    if (attachCardsCue && responseForSpeech.trim().isNotEmpty) {
+      try {
+        final voice = ref.read(voiceServiceProvider);
+        final regenerated = await voice.ttsBase64(
+          text: responseForSpeech,
+          language: languageCode,
+        );
+        final regeneratedAudio = (regenerated['audio_base64'] as String? ?? '')
+            .trim();
+        if (regeneratedAudio.isNotEmpty) {
+          audioToPlay = regeneratedAudio;
         }
+      } catch (_) {
+        // Keep primary server audio.
       }
+    }
 
-      _stopThinkingTicker();
-      _waveController.stop();
+    _stopThinkingTicker();
 
-      if (audioToPlay.isNotEmpty) {
-        _lastAudioBase64 = audioToPlay;
-        final played = await _playAudioBase64(audioToPlay);
-        if (!played && mounted) {
-          setState(() => _state = _VoiceState.idle);
-          _startCardsStagger();
-        }
-      } else {
-        _lastAudioBase64 = null;
+    if (audioToPlay.isNotEmpty) {
+      _lastAudioBase64 = audioToPlay;
+      final played = await _playAudioBase64(audioToPlay);
+      if (!played && mounted) {
+        _stopWaveIfNeeded();
         setState(() => _state = _VoiceState.idle);
         _startCardsStagger();
       }
-    } catch (_) {
-      _stopThinkingTicker();
-      _waveController.stop();
-      _cardsStaggerTimer?.cancel();
-      if (!mounted) return;
-      setState(() {
-        _response = 'voice_assistant.error'.tr();
-        _state = _VoiceState.idle;
-        _visibleCardCount = 0;
-      });
-      context.showSnack('voice_assistant.error'.tr(), isError: true);
+    } else {
+      _lastAudioBase64 = null;
+      _stopWaveIfNeeded();
+      setState(() => _state = _VoiceState.idle);
+      _startCardsStagger();
     }
   }
 
@@ -485,6 +649,14 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         _state = _VoiceState.playing;
         _isPlaybackPaused = false;
       });
+
+      if (!_playController.isAnimating) {
+        _playController.repeat(reverse: true);
+      }
+      if (!_waveController.isAnimating) {
+        _waveController.repeat();
+      }
+
       final bytes = base64Decode(base64Audio);
       final audioDir = await getTemporaryDirectory();
       final audioFile = File(
@@ -495,11 +667,26 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return true;
     } catch (_) {
       if (!mounted) return false;
+      _stopWaveIfNeeded();
+      _stopPlayPulseIfNeeded();
       setState(() {
         _state = _VoiceState.idle;
         _isPlaybackPaused = false;
       });
       return false;
+    }
+  }
+
+  void _stopWaveIfNeeded() {
+    if (_waveController.isAnimating) {
+      _waveController.stop();
+    }
+  }
+
+  void _stopPlayPulseIfNeeded() {
+    if (_playController.isAnimating) {
+      _playController.stop();
+      _playController.value = 0;
     }
   }
 
@@ -554,59 +741,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   void _openChatDirect() {
     context.push('${RoutePaths.chat}?agent=general');
-  }
-
-  String get _primarySuggestion {
-    final source = ('$_transcript $_response').toLowerCase();
-    if (source.contains('price') || source.contains('mandi')) {
-      return 'Try this: Compare tomato prices in my nearest 3 mandis.';
-    }
-    if (source.contains('rain') || source.contains('weather')) {
-      return 'Try this: Give me weather risk and farm action for next 3 days.';
-    }
-    if (source.contains('profile')) {
-      return 'Try this: Based on my profile, what should I do first today?';
-    }
-    return 'Try this: What is my best farm action today based on market and weather?';
-  }
-
-  String get _heroText {
-    if (_response.isNotEmpty) {
-      return _previewText(_response, maxChars: 220);
-    }
-    if (_activeQuestion.isNotEmpty) {
-      return _activeQuestion;
-    }
-    return _primarySuggestion;
-  }
-
-  String _previewText(String text, {int maxChars = 220}) {
-    final clean = text.trim();
-    if (clean.length <= maxChars) return clean;
-    return '${clean.substring(0, maxChars).trim()}...';
-  }
-
-  List<String> _thinkingFeedLines() {
-    final hint = ('$_activeQuestion $_transcript').toLowerCase();
-    final lines = <String>[
-      'Reading your message carefully',
-      'Detecting language and intent',
-      'Checking recent context for relevance',
-      'Planning the best response and actions',
-      'Final quality check before speaking',
-    ];
-    if (hint.contains('market') ||
-        hint.contains('mandi') ||
-        hint.contains('price')) {
-      lines.insert(3, 'Reviewing market and mandi signals');
-    }
-    if (hint.contains('weather') || hint.contains('rain')) {
-      lines.insert(3, 'Checking weather risk context');
-    }
-    if (hint.contains('scheme') || hint.contains('subsidy')) {
-      lines.insert(3, 'Evaluating schemes and eligibility context');
-    }
-    return lines;
   }
 
   List<String> _responseChunks(String text) {
@@ -938,12 +1072,27 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     ).hasMatch(s);
   }
 
+  bool _isSchemeIntent(String text) {
+    final s = text.toLowerCase();
+    return RegExp(
+      r'scheme|schemes|subsidy|pm-kisan|kcc|pmfby|eligibility',
+    ).hasMatch(s);
+  }
+
   String _weatherFallbackResponse(String languageCode) {
     final code = languageCode.toLowerCase();
     if (code.startsWith('hi')) {
       return 'Abhi direct weather answer lane mein issue aa raha hai. Neeche Weather ya Soil Moisture card par tap karke current update dekh lijiye.';
     }
     return 'I could not fetch the live weather answer right now. Tap Weather or Soil Moisture below to get current conditions quickly.';
+  }
+
+  String _schemeFallbackResponse(String languageCode) {
+    final code = languageCode.toLowerCase();
+    if (code.startsWith('hi')) {
+      return 'Scheme details laane mein abhi thoda issue aa raha hai. Neeche Schemes card par tap karke turant yojana aur eligibility dekh lijiye.';
+    }
+    return 'I am having trouble fetching scheme details right now. Tap the Schemes card below for eligibility and document guidance.';
   }
 
   List<_VoiceActionCard> _mergePriorityCards(
@@ -962,15 +1111,18 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
+  String _formatClock(int seconds) {
+    final mins = (seconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (seconds % 60).toString().padLeft(2, '0');
+    return '$mins:$secs';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isActive = _state == _VoiceState.recording;
-    final isProcessing = _state == _VoiceState.processing;
-    final isPlaying = _state == _VoiceState.playing;
-    final isDark = context.isDark;
-    final bgTop = context.theme.scaffoldBackgroundColor;
+    final visibleCards = _actionCards.take(_visibleCardCount).toList();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgTop = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final bgBottom = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final mutedText = context.appColors.textSecondary;
 
     return Scaffold(
       backgroundColor: bgTop,
@@ -983,654 +1135,441 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(context, isDark: isDark),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 620),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.06),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: _buildStateContent(
-                    context,
-                    isActive: isActive,
-                    isProcessing: isProcessing,
-                    isPlaying: isPlaying,
-                    isDark: isDark,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Column(
+              children: [
+                _buildTopBar(),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 1),
+                      _buildTranscriptChip(),
+                      const Spacer(flex: 1),
+                      _buildMicVisualizerSection(),
+                      const Spacer(flex: 1),
+                      _buildResponseArea(),
+                      const Spacer(flex: 1),
+                      _buildActionDeck(visibleCards),
+                    ],
                   ),
                 ),
-              ),
-              _buildActionDeck(context, isDark: isDark),
-              _buildMicButton(context, isDark: isDark),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24, top: 6),
-                child: Text(
-                  _statusLabel,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: mutedText.withValues(alpha: isDark ? 0.78 : 0.88),
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
+                _buildBottomBar(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTopBar(BuildContext context, {required bool isDark}) {
-    final iconColor = (isDark ? Colors.white : AppColors.lightText).withValues(
-      alpha: 0.78,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  Widget _buildTopBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedText = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    return SizedBox(
+      height: 54,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(Icons.close_rounded, color: iconColor),
             onPressed: () => context.pop(),
+            icon: Icon(Icons.close_rounded, color: mutedText),
           ),
+          const Spacer(),
+          if (_sessionId != null && _sessionId!.isNotEmpty)
+            _SessionTimer(label: _formatClock(_sessionElapsedSeconds)),
+          const Spacer(),
           IconButton(
-            icon: Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: iconColor.withValues(alpha: 0.84),
-            ),
             onPressed: _openChatDirect,
+            icon: Icon(Icons.chat_bubble_outline_rounded, color: mutedText),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStateContent(
-    BuildContext context, {
-    required bool isActive,
-    required bool isProcessing,
-    required bool isPlaying,
-    required bool isDark,
-  }) {
-    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
-    final softText = context.appColors.textSecondary;
-    final cardColor = isDark
-        ? AppColors.darkCard.withValues(alpha: 0.88)
-        : Colors.white.withValues(alpha: 0.92);
-    final borderColor = context.appColors.border.withValues(
-      alpha: isDark ? 0.55 : 0.8,
+  Widget _buildTranscriptChip() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final mutedText = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final chipBg = isDark
+        ? const Color(0x3313131A)
+        : Colors.white.withValues(alpha: 0.66);
+    final chipBorder = isDark
+        ? const Color(0x55252535)
+        : AppColors.lightBorder.withValues(alpha: 0.92);
+
+    final question = _activeQuestion.trim();
+    final hasAnyQuestion =
+        question.isNotEmpty || (_fadingQuestion ?? '').isNotEmpty;
+    if (!hasAnyQuestion) {
+      return const SizedBox(height: 18);
+    }
+
+    final fade = CurvedAnimation(
+      parent: _questionFadeController,
+      curve: Curves.easeOutCubic,
     );
-    final thinkingLines = _thinkingFeedLines();
-    final activeThinkingLine =
-        thinkingLines[_thinkingPulse % thinkingLines.length];
 
-    if (isProcessing) {
-      final showQuestion = _thinkingExpanded && _activeQuestion.isNotEmpty;
-      return Center(
-        key: const ValueKey('voice-processing'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 460),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
-                  blurRadius: 28,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () {
-                    setState(() => _thinkingExpanded = !_thinkingExpanded);
-                  },
-                  child: Padding(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: AnimatedBuilder(
+        animation: fade,
+        builder: (context, _) {
+          final dy = 12 * (1 - fade.value);
+          return Transform.translate(
+            offset: Offset(0, -dy),
+            child: Opacity(
+              opacity: fade.value,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if ((_fadingQuestion ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        _fadingQuestion!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: mutedText.withValues(alpha: 0.78),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 6,
+                      horizontal: 14,
+                      vertical: 10,
                     ),
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                            strokeWidth: 1.8,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Thinking${'.' * ((_thinkingPulse % 3) + 1)}',
-                          style: context.textTheme.titleSmall?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${_thinkingElapsedSeconds}s',
-                          style: context.textTheme.labelMedium?.copyWith(
-                            color: softText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          _thinkingExpanded
-                              ? Icons.keyboard_arrow_up_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          color: softText,
-                          size: 20,
-                        ),
-                      ],
+                    decoration: BoxDecoration(
+                      color: chipBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: chipBorder),
+                    ),
+                    child: Text(
+                      question,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 14,
+                        height: 1.35,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
-                ),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 320),
-                  crossFadeState: _thinkingExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  firstChild: const SizedBox.shrink(),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.black.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 380),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            transitionBuilder: (child, animation) {
-                              final isIncoming =
-                                  child.key ==
-                                  ValueKey(activeThinkingLine.hashCode);
-                              final slide = Tween<Offset>(
-                                begin: isIncoming
-                                    ? const Offset(0, 0.45)
-                                    : Offset.zero,
-                                end: isIncoming
-                                    ? Offset.zero
-                                    : const Offset(0, -0.45),
-                              ).animate(animation);
-                              return ClipRect(
-                                child: SlideTransition(
-                                  position: slide,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Text(
-                              activeThinkingLine,
-                              key: ValueKey(activeThinkingLine.hashCode),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: textColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (showQuestion)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(
-                                alpha: isDark ? 0.14 : 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              _activeQuestion,
-                              textAlign: TextAlign.center,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: textColor,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        },
+      ),
+    );
+  }
 
-    if (isActive) {
-      return Center(
-        key: const ValueKey('voice-recording'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Listening...',
-                style: TextStyle(
-                  color: softText,
-                  fontSize: 13,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ReactiveWaveform(
-                controller: _waveController,
-                isActive: true,
-                color: AppColors.primary,
-                inputLevel: _liveVoiceLevel,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+  Widget _buildMicVisualizerSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppColors.primary;
+    final centerFill = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.96);
+    final borderColor = isDark
+        ? AppColors.darkBorder.withValues(alpha: 0.9)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+    final iconColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final isRecording = _state == _VoiceState.recording;
+    final isProcessing = _state == _VoiceState.processing;
+    final isPlaying = _state == _VoiceState.playing;
+    final isActive = isRecording || isProcessing || isPlaying;
+    final level = isRecording
+        ? _liveVoiceLevel.clamp(0.0, 1.0)
+        : isPlaying
+        ? (0.35 + (_playController.value * 0.4)).clamp(0.0, 1.0)
+        : isProcessing
+        ? (0.22 + (_pulseController.value * 0.28)).clamp(0.0, 1.0)
+        : 0.08;
 
-    final showAnswer = isPlaying || _response.trim().isNotEmpty;
-    if (showAnswer) {
-      return Center(
-        key: const ValueKey('voice-answer'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return SizedBox(
+      width: 300,
+      height: 210,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          _waveController,
+          _pulseController,
+          _playController,
+        ]),
+        builder: (context, _) {
+          final phase = _waveController.value;
+          return Stack(
+            alignment: Alignment.center,
             children: [
-              if (_fadingQuestion != null)
-                Text(
-                  _fadingQuestion!,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: softText.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
-                ),
-              if (_fadingQuestion != null) const SizedBox(height: 8),
-              if (_activeQuestion.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(
-                      alpha: isDark ? 0.1 : 0.08,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    _activeQuestion,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: softText,
-                      fontSize: 14,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 500),
-                height: 210,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: borderColor),
-                ),
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: _BottomFlowText(
-                      key: ValueKey(_heroText.hashCode),
-                      lines: _responseChunks(_heroText),
-                      lineDuration: _heroTextTransition,
-                      textStyle: context.textTheme.bodyMedium?.copyWith(
-                        color: textColor,
-                        fontSize: 22,
-                        height: 1.45,
-                        fontWeight: FontWeight.w500,
+              for (var i = 0; i < 3; i++)
+                Transform.scale(
+                  scale:
+                      1 +
+                      (i * 0.22) +
+                      (isActive
+                          ? (math.sin((phase * math.pi * 2) + i) * 0.045)
+                          : 0),
+                  child: Container(
+                    width: 96 + (i * 28),
+                    height: 96 + (i * 28),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accent.withValues(
+                          alpha: isActive
+                              ? (0.24 - (i * 0.06))
+                              : (0.1 - (i * 0.02)),
+                        ),
+                        width: 1.3,
                       ),
                     ),
                   ),
                 ),
+              Positioned(
+                bottom: 34,
+                child: CustomPaint(
+                  size: const Size(240, 82),
+                  painter: _CenterMicBarsPainter(
+                    level: level,
+                    phase: phase,
+                    active: isActive,
+                    color: accent,
+                    mutedColor: borderColor,
+                  ),
+                ),
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Center(
-      key: const ValueKey('voice-idle'),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              final scale = 0.92 + (_pulseController.value * 0.16);
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.18),
-                    AppColors.primary.withValues(alpha: 0.01),
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: centerFill,
+                  border: Border.all(color: borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: isActive ? 0.22 : 0.1),
+                      blurRadius: isActive ? 24 : 12,
+                      spreadRadius: isActive ? 1 : 0,
+                    ),
                   ],
                 ),
+                child: Icon(
+                  isRecording
+                      ? Icons.graphic_eq_rounded
+                      : isProcessing
+                      ? Icons.auto_awesome_rounded
+                      : isPlaying
+                      ? Icons.volume_up_rounded
+                      : Icons.mic_none_rounded,
+                  color: iconColor,
+                  size: 34,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Tap the mic to speak',
-            style: TextStyle(color: softText, fontSize: 12),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  double _cardsDeckHeight(int count) {
-    if (count <= 0) return 0;
-    if (count == 1) return 140;
-    if (count == 2) return 182;
-    final rows = _cardPatternRowCount(count);
-    final estimated = 74 + (rows * 114.0);
-    return estimated.clamp(182.0, 520.0);
-  }
+  Widget _buildResponseArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final mutedText = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
-  int _cardPatternRowCount(int count) {
-    if (count <= 0) return 0;
-    if (count == 1 || count == 2) return 1;
-
-    var rows = 1; // first row is square + square
-    var remaining = count - 2;
-    var placeWide = true;
-
-    while (remaining > 0) {
-      rows += 1;
-      if (placeWide) {
-        remaining -= 1;
-      } else {
-        remaining -= math.min(2, remaining);
-      }
-      placeWide = !placeWide;
+    if (_state == _VoiceState.processing) {
+      return _buildThinkingPanel();
     }
-    return rows;
+
+    final showResponse =
+        _response.trim().isNotEmpty || _state == _VoiceState.playing;
+    if (!showResponse) {
+      return Text(
+        'Tap mic below to speak',
+        style: TextStyle(color: mutedText, fontSize: 13, letterSpacing: 0.5),
+      );
+    }
+
+    final glow = _state == _VoiceState.playing ? _orbPlaying : _orbProcessing;
+    final maxHeight = (MediaQuery.of(context).size.height * 0.30)
+        .clamp(130.0, 250.0)
+        .toDouble();
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 620, maxHeight: maxHeight),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: _state == _VoiceState.playing
+              ? Colors.transparent
+              : (isDark
+                    ? const Color(0x2213131A)
+                    : Colors.white.withValues(alpha: 0.42)),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: glow.withValues(alpha: 0.14),
+              blurRadius: 40,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: _BottomFlowText(
+          key: ValueKey('flow-${_responseFlowKeySeed.toString()}'),
+          lines: _responseChunks(_response),
+          lineDuration: const Duration(milliseconds: 460),
+          textStyle: TextStyle(
+            color: textPrimary,
+            fontSize: 18.5,
+            fontWeight: FontWeight.w400,
+            height: 1.55,
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _buildActionDeck(BuildContext context, {required bool isDark}) {
-    final visibleCards = _actionCards.take(_visibleCardCount).toList();
+  Widget _buildThinkingPanel() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textMuted = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final panelBg = isDark
+        ? const Color(0x2213131A)
+        : Colors.white.withValues(alpha: 0.66);
+    final panelBorder = isDark
+        ? const Color(0x55252535)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+
+    final steps = _thinkingSteps;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 560),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: panelBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: panelBorder),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (steps.isEmpty)
+              Text(
+                'Listening to your request...',
+                style: TextStyle(color: textMuted, fontSize: 14),
+              ),
+            if (steps.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 170),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < steps.length; i++)
+                        AnimatedSlide(
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                          offset: Offset(0, (steps.length - 1 - i) * -0.02),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 320),
+                            opacity: i == steps.length - 1 ? 1.0 : 0.62,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: _orbProcessing.withValues(
+                                        alpha: i == steps.length - 1 ? 1 : 0.62,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      steps[i],
+                                      style: TextStyle(
+                                        color: textMuted,
+                                        fontSize: 13.5,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '${_thinkingElapsedSeconds}s',
+                style: TextStyle(
+                  color: textMuted.withValues(alpha: 0.78),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionDeck(List<_VoiceActionCard> visibleCards) {
     final shouldShow =
         _state == _VoiceState.idle &&
         _response.trim().isNotEmpty &&
         visibleCards.isNotEmpty;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
-      height: shouldShow ? _cardsDeckHeight(visibleCards.length) : 0,
-      child: ClipRect(
-        child: AnimatedSlide(
-          offset: shouldShow ? Offset.zero : const Offset(0, 1),
-          duration: const Duration(milliseconds: 380),
-          curve: Curves.easeOutCubic,
-          child: AnimatedOpacity(
-            opacity: shouldShow ? 1 : 0,
-            duration: const Duration(milliseconds: 300),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: _buildCardPattern(context, visibleCards, isDark: isDark),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCardPattern(
-    BuildContext context,
-    List<_VoiceActionCard> cards, {
-    required bool isDark,
-  }) {
-    final entries = cards.asMap().entries.toList();
-    if (entries.isEmpty) return const SizedBox.shrink();
-
-    final rows = <Widget>[];
-
-    if (entries.length == 1) {
-      rows.add(
-        _buildActionTile(
-          context,
-          entry: entries[0],
-          isWide: true,
-          isDark: isDark,
-        ),
-      );
-    } else {
-      rows.add(_buildSquarePairRow(context, entries[0], entries[1], isDark));
-      var i = 2;
-      var placeWide = true;
-      while (i < entries.length) {
-        rows.add(const SizedBox(height: 12));
-        if (placeWide) {
-          rows.add(
-            _buildActionTile(
-              context,
-              entry: entries[i],
-              isWide: true,
-              isDark: isDark,
-            ),
-          );
-          i += 1;
-        } else {
-          final hasPair = i + 1 < entries.length;
-          if (hasPair) {
-            rows.add(
-              _buildSquarePairRow(context, entries[i], entries[i + 1], isDark),
-            );
-            i += 2;
-          } else {
-            rows.add(_buildCenteredSquareRow(context, entries[i], isDark));
-            i += 1;
-          }
-        }
-        placeWide = !placeWide;
-      }
+    if (!shouldShow) {
+      return const SizedBox(height: 8);
     }
 
-    return Column(children: rows);
-  }
-
-  Widget _buildSquarePairRow(
-    BuildContext context,
-    MapEntry<int, _VoiceActionCard> left,
-    MapEntry<int, _VoiceActionCard> right,
-    bool isDark,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionTile(
-            context,
-            entry: left,
-            isWide: false,
-            isDark: isDark,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionTile(
-            context,
-            entry: right,
-            isWide: false,
-            isDark: isDark,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCenteredSquareRow(
-    BuildContext context,
-    MapEntry<int, _VoiceActionCard> entry,
-    bool isDark,
-  ) {
-    return Row(
-      children: [
-        const Spacer(),
-        Expanded(
-          flex: 2,
-          child: _buildActionTile(
-            context,
-            entry: entry,
-            isWide: false,
-            isDark: isDark,
-          ),
-        ),
-        const Spacer(),
-      ],
-    );
-  }
-
-  Widget _buildActionTile(
-    BuildContext context, {
-    required MapEntry<int, _VoiceActionCard> entry,
-    required bool isWide,
-    required bool isDark,
-  }) {
-    final card = entry.value;
-    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
-    final subText = context.appColors.textSecondary;
-    final surface = isDark
-        ? AppColors.darkCard.withValues(alpha: 0.94)
-        : Colors.white.withValues(alpha: 0.97);
-    final borderColor = context.appColors.border.withValues(
-      alpha: isDark ? 0.62 : 0.78,
-    );
-
-    final tile = Material(
-      color: surface,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () {
-          Haptics.selection();
-          context.push(card.route);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: borderColor),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: isWide ? 44 : 40,
-                height: isWide ? 44 : 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(card.icon, color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      card.label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.titleSmall?.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Open now',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: subText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_rounded, color: subText, size: 18),
-            ],
-          ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 210),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final card in visibleCards)
+              SizedBox(width: 168, child: _buildActionTile(card)),
+          ],
         ),
       ),
     );
+  }
 
-    final shapedTile = isWide
-        ? SizedBox(height: 96, child: tile)
-        : AspectRatio(aspectRatio: 1.15, child: tile);
+  Widget _buildActionTile(_VoiceActionCard card) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final textMuted = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final cardBg = isDark ? _cardBg : Colors.white.withValues(alpha: 0.9);
+    final cardBorder = isDark
+        ? _cardBorder
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+
+    final topic = _topicColor(card.route);
 
     return TweenAnimationBuilder<double>(
       key: ValueKey('voice-card-${card.route}'),
@@ -1638,113 +1577,189 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       duration: _cardPopDuration,
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
-        final safeOpacity = value.clamp(0.0, 1.0).toDouble();
+        final opacity = value.clamp(0.0, 1.0).toDouble();
         return Opacity(
-          opacity: safeOpacity,
-          child: Transform.translate(
-            offset: Offset(0, (1 - value) * 20),
-            child: Transform.scale(scale: 0.92 + (value * 0.08), child: child),
-          ),
+          opacity: opacity,
+          child: Transform.scale(scale: 0.8 + (value * 0.2), child: child),
         );
       },
-      child: shapedTile,
+      child: Material(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () {
+            Haptics.selection();
+            context.push(card.route);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        topic.withValues(alpha: 0.92),
+                        topic.withValues(alpha: 0.35),
+                      ],
+                    ),
+                  ),
+                  child: Icon(card.icon, size: 18, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _topicDescription(card.route),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textMuted,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildMicButton(BuildContext context, {required bool isDark}) {
-    final softText = context.appColors.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 32, top: 12),
-      child: Center(
-        child: GestureDetector(
-          onTap: _onMicTap,
-          onLongPress: () {
-            if (_state == _VoiceState.playing) {
-              _togglePauseResume();
-              return;
-            }
-            if (_response.trim().isNotEmpty) {
-              _replayLastResponse();
-            }
-          },
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_pulseController, _flickerController]),
-            builder: (context, _) {
-              final isRecording = _state == _VoiceState.recording;
-              final isProcessing = _state == _VoiceState.processing;
-              final pulseScale = isRecording
-                  ? (1.0 + _pulseController.value * 0.14)
-                  : 1.0;
+  Color _topicColor(String route) {
+    if (route == RoutePaths.weather || route == RoutePaths.soilMoisture) {
+      return const Color(0xFF00BFA5);
+    }
+    if (route == RoutePaths.marketplace || route == RoutePaths.marketPrices) {
+      return const Color(0xFF42A5F5);
+    }
+    if (route == RoutePaths.documents) {
+      return const Color(0xFFFFB74D);
+    }
+    if (route == RoutePaths.equipmentMarketplace ||
+        route == RoutePaths.equipmentHub) {
+      return const Color(0xFF8BC34A);
+    }
+    if (route == RoutePaths.cattle) {
+      return const Color(0xFFEF5350);
+    }
+    return const Color(0xFF9FA8DA);
+  }
 
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (isRecording)
-                    Transform.scale(
-                      scale: pulseScale,
-                      child: Container(
-                        width: 108,
-                        height: 108,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primary.withValues(
-                              alpha: 0.35 - (_pulseController.value * 0.15),
-                            ),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (isRecording)
-                    Transform.scale(
-                      scale: 1.0 + _pulseController.value * 0.06,
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.55),
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isRecording
-                          ? AppColors.primary
-                          : (isProcessing
-                                ? context.colors.surface.withValues(alpha: 0.88)
-                                : (isDark
-                                      ? Colors.white.withValues(alpha: 0.12)
-                                      : Colors.black.withValues(alpha: 0.08))),
-                      border: Border.all(
-                        color: isRecording
-                            ? AppColors.primaryLight
-                            : context.appColors.border.withValues(
-                                alpha: isDark ? 0.52 : 0.78,
-                              ),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Icon(
-                      isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                      color: isRecording
-                          ? Colors.white
-                          : softText.withValues(alpha: isDark ? 0.95 : 0.9),
-                      size: 32,
-                    ),
+  String _topicDescription(String route) {
+    if (route == RoutePaths.weather) return 'Forecast and rain risks';
+    if (route == RoutePaths.soilMoisture) return 'Field moisture insights';
+    if (route == RoutePaths.marketplace) return 'Buy and sell quickly';
+    if (route == RoutePaths.marketPrices) return 'Latest mandi signals';
+    if (route == RoutePaths.documents) return 'Scheme help and docs';
+    if (route == RoutePaths.cropDoctor) return 'Disease and pest guidance';
+    if (route == RoutePaths.equipmentMarketplace) return 'Tools and machinery';
+    if (route == RoutePaths.rental) return 'Nearby rental options';
+    if (route == RoutePaths.calendar) return 'Tasks and reminders';
+    if (route == RoutePaths.cattle) return 'Dairy and livestock support';
+    if (route == RoutePaths.mentalHealth) return 'Stress support resources';
+    return 'Open related assistant tools';
+  }
+
+  Widget _buildBottomBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textMuted = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final isRecording = _state == _VoiceState.recording;
+    final isProcessing = _state == _VoiceState.processing;
+    final isPlaying = _state == _VoiceState.playing;
+    final activeColor = isRecording
+        ? AppColors.primary
+        : isProcessing
+        ? AppColors.info
+        : isPlaying
+        ? AppColors.warning
+        : AppColors.primary;
+    final buttonBg = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.95)
+        : Colors.white.withValues(alpha: 0.98);
+    final buttonBorder = isDark
+        ? AppColors.darkBorder.withValues(alpha: 0.95)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _onMicTap,
+            onLongPress: () {
+              if (_state == _VoiceState.playing) {
+                _togglePauseResume();
+                return;
+              }
+              if (_response.trim().isNotEmpty) {
+                _replayLastResponse();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: buttonBg,
+                border: Border.all(color: buttonBorder, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.28),
+                    blurRadius: isRecording || isProcessing ? 26 : 14,
+                    spreadRadius: isRecording || isProcessing ? 1.5 : 0,
                   ),
                 ],
-              );
-            },
+              ),
+              child: Icon(
+                isRecording || isProcessing || isPlaying
+                    ? Icons.stop_rounded
+                    : Icons.mic_rounded,
+                color: activeColor,
+                size: 34,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 10),
+          Text(
+            _statusLabel,
+            style: TextStyle(
+              color: textMuted,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1752,68 +1767,92 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   String get _statusLabel {
     switch (_state) {
       case _VoiceState.idle:
-        return 'voice_assistant.tap_to_speak'.tr();
+        return 'Tap to speak';
       case _VoiceState.recording:
-        return 'voice_assistant.listening'.tr();
+        return 'Listening...';
       case _VoiceState.processing:
-        return 'voice_assistant.processing'.tr();
+        return 'Thinking...';
       case _VoiceState.playing:
-        return _isPlaybackPaused
-            ? 'Playback paused'
-            : 'voice_assistant.playing'.tr();
+        return _isPlaybackPaused ? 'Playback paused' : 'Speaking...';
     }
   }
 }
 
-class _ReactiveWaveform extends StatelessWidget {
-  final Animation<double> controller;
-  final bool isActive;
-  final Color color;
-  final double inputLevel;
+class _SessionTimer extends StatelessWidget {
+  final String label;
 
-  const _ReactiveWaveform({
-    required this.controller,
-    required this.isActive,
-    required this.color,
-    this.inputLevel = 0,
-  });
+  const _SessionTimer({required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) {
-          final t = controller.value * math.pi * 2;
-          final level = inputLevel.clamp(0.0, 1.0);
-          final energy = isActive ? (0.08 + (level * 0.92)) : 0.15;
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: List.generate(28, (i) {
-              final wave = math.sin(t + (i * 0.28)).abs();
-              final flutter = math.sin((t * 2.1) + (i * 0.18)).abs();
-              final base = isActive ? 6.0 : 3.0;
-              final amp = isActive ? 36.0 : 10.0;
-              final h = base + (amp * wave * energy) + (8 * flutter * energy);
-              final alpha = isActive
-                  ? (0.9 - (i % 3) * 0.15).clamp(0.3, 0.9)
-                  : 0.2;
-              return Container(
-                width: 3,
-                height: h,
-                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: alpha.toDouble()),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              );
-            }),
-          );
-        },
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0x2213131A),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x55252535)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFB7B7CC),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
+  }
+}
+
+class _CenterMicBarsPainter extends CustomPainter {
+  final double level;
+  final double phase;
+  final bool active;
+  final Color color;
+  final Color mutedColor;
+
+  const _CenterMicBarsPainter({
+    required this.level,
+    required this.phase,
+    required this.active,
+    required this.color,
+    required this.mutedColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const bars = 30;
+    const barWidth = 4.0;
+    const gap = 3.2;
+    final total = (bars * barWidth) + ((bars - 1) * gap);
+    final startX = (size.width - total) / 2;
+    final centerY = size.height * 0.5;
+    final waveBase = phase * math.pi * 2;
+
+    for (var i = 0; i < bars; i++) {
+      final x = startX + (i * (barWidth + gap));
+      final wave = (math.sin((i * 0.47) + waveBase) + 1) * 0.5;
+      final amp = active ? (12 + (level * 30)) : 5;
+      final h = 8 + (amp * wave);
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, centerY - (h / 2), barWidth, h),
+        const Radius.circular(999),
+      );
+      final barPaint = Paint()
+        ..color = active
+            ? color.withValues(alpha: (0.35 + (wave * 0.65)).clamp(0.0, 1.0))
+            : mutedColor.withValues(alpha: 0.45);
+      canvas.drawRRect(rect, barPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CenterMicBarsPainter oldDelegate) {
+    return oldDelegate.level != level ||
+        oldDelegate.phase != phase ||
+        oldDelegate.active != active ||
+        oldDelegate.color != color ||
+        oldDelegate.mutedColor != mutedColor;
   }
 }
 
@@ -1835,11 +1874,14 @@ class _BottomFlowText extends StatefulWidget {
 
 class _BottomFlowTextState extends State<_BottomFlowText> {
   Timer? _timer;
-  int _lineIndex = 0;
+  late final ScrollController _scrollController;
+  List<String> _words = const <String>[];
+  int _visibleWords = 0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _restartTicker();
   }
 
@@ -1854,58 +1896,70 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
 
   void _restartTicker() {
     _timer?.cancel();
-    _lineIndex = 0;
-    if (widget.lines.length <= 1) return;
+    final merged = widget.lines
+        .join(' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    _words = merged.isEmpty ? const <String>[] : merged.split(' ');
+    _visibleWords = _words.isEmpty ? 0 : 1;
 
-    final intervalMs = (widget.lineDuration.inMilliseconds * 0.55)
-        .clamp(260, 1400)
-        .toInt();
-    _timer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      if (!mounted || widget.lines.isEmpty) return;
-      setState(() {
-        _lineIndex = (_lineIndex + 1) % widget.lines.length;
-      });
+    if (_words.length <= 1) {
+      setState(() {});
+      return;
+    }
+
+    final intervalMs =
+        (widget.lineDuration.inMilliseconds /
+                math.max(6, (_words.length / 2.0)))
+            .clamp(48, 130)
+            .toInt();
+
+    _timer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_visibleWords >= _words.length) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _visibleWords += 1);
+      _scrollToBottom();
+    });
+    setState(() {});
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final effectiveLines = widget.lines.isEmpty
-        ? const <String>['']
-        : widget.lines;
-    final line = effectiveLines[_lineIndex % effectiveLines.length];
-    final lineKey = ValueKey('${_lineIndex}_$line');
+    final safeCount = _visibleWords.clamp(0, _words.length).toInt();
+    final text = safeCount == 0 ? '' : _words.take(safeCount).join(' ');
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 520),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final isIncoming = child.key == lineKey;
-        final slide = Tween<Offset>(
-          begin: isIncoming ? const Offset(0, 0.45) : Offset.zero,
-          end: isIncoming ? Offset.zero : const Offset(0, -0.45),
-        ).animate(animation);
-        return ClipRect(
-          child: SlideTransition(position: slide, child: child),
-        );
-      },
-      child: Align(
-        key: lineKey,
-        alignment: Alignment.bottomCenter,
-        child: Text(
-          line,
-          textAlign: TextAlign.center,
-          maxLines: 5,
-          overflow: TextOverflow.fade,
-          style: widget.textStyle,
-        ),
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: Text(text, textAlign: TextAlign.left, style: widget.textStyle),
       ),
     );
   }

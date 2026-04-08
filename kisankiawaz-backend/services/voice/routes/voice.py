@@ -33,6 +33,15 @@ VOICE_TEXT_AGENT_TIMEOUT_SECONDS = max(
     float(os.getenv("VOICE_TEXT_AGENT_TIMEOUT_SECONDS", "9.0")),
 )
 VOICE_TEXT_AGENT_MAX_RETRIES = max(1, int(os.getenv("VOICE_TEXT_AGENT_MAX_RETRIES", "1")))
+VOICE_AGENT_FINALIZE_WAIT_SECONDS = max(
+    0.2,
+    min(30.0, float(os.getenv("VOICE_AGENT_FINALIZE_WAIT_SECONDS", "2.0"))),
+)
+VOICE_AGENT_FINALIZE_MAX_POLLS = max(1, int(os.getenv("VOICE_AGENT_FINALIZE_MAX_POLLS", "8")))
+VOICE_AGENT_FINALIZE_POLL_DELAY_SECONDS = max(
+    0.1,
+    float(os.getenv("VOICE_AGENT_FINALIZE_POLL_DELAY_SECONDS", "0.25")),
+)
 VOICE_MARKET_TIMEOUT_SECONDS = max(0.5, float(os.getenv("VOICE_MARKET_TIMEOUT_SECONDS", "1.8")))
 VOICE_TTS_TIMEOUT_SECONDS = max(6.0, float(os.getenv("VOICE_TTS_TIMEOUT_SECONDS", "25.0")))
 VOICE_MAX_TTS_CHARS = max(140, int(os.getenv("VOICE_MAX_TTS_CHARS", "420")))
@@ -213,6 +222,38 @@ def _localized_language_clarification_prompt(language: str) -> str:
     if lang.startswith("hinglish"):
         return "Awaz clear nahi aayi. Please wahi sawaal phir se thoda dheere aur clear bolo."
     return "I could not catch that clearly. Please repeat your question slowly and clearly."
+
+
+def _get_thinking_steps_for_transcript(transcript: str, language: str) -> list[str]:
+    """Return intent-aware thinking steps in the active language."""
+    txt = (transcript or "").lower()
+    lang = (language or "").lower()
+
+    if lang.startswith("hi"):
+        base = ["आपका सवाल पढ़ रहा हूँ", "भाषा और इरादा समझ रहा हूँ", "संदर्भ जाँच रहा हूँ"]
+        if any(k in txt for k in ["mandi", "price", "rate", "daam", "bhav"]):
+            base.append("मंडी डेटा देख रहा हूँ")
+        if any(k in txt for k in ["weather", "rain", "baarish"]):
+            base.append("मौसम जाँच रहा हूँ")
+        if any(k in txt for k in ["scheme", "subsidy"]):
+            base.append("योजना जानकारी खोज रहा हूँ")
+        return base
+
+    base = ["Reading your question", "Detecting language and intent", "Checking recent context"]
+    if any(k in txt for k in ["mandi", "price", "rate", "market"]):
+        base.append("Reviewing market signals")
+    if any(k in txt for k in ["weather", "rain", "forecast"]):
+        base.append("Checking weather data")
+    if any(k in txt for k in ["scheme", "subsidy"]):
+        base.append("Searching scheme eligibility")
+    return base
+
+
+def _get_final_thinking_step(language: str) -> str:
+    lang = (language or "").lower()
+    if lang.startswith("hi"):
+        return "जवाब तैयार कर रहा हूँ"
+    return "Composing your answer"
 
 
 def _is_low_confidence_stt(stt_result: dict | None) -> bool:
@@ -741,6 +782,40 @@ def _infer_ui_redirect_tag(transcript: str, agent_data: dict) -> str:
     return "home"
 
 
+def _infer_ui_action_cards_for_voice(transcript: str, agent_data: dict) -> list[str]:
+    redirect = _infer_ui_redirect_tag(transcript, agent_data)
+    txt = (transcript or "").lower()
+
+    seed_map = {
+        "weather": ["weather", "soil_moisture", "crop_doctor"],
+        "market": ["market_prices", "marketplace", "market_strategy"],
+        "schemes": ["documents", "document_builder", "credit_sources"],
+        "equipment": ["equipment_marketplace", "rental", "equipment_hub"],
+        "livestock": ["cattle", "weather", "calendar"],
+        "home": ["chat", "live_voice", "home"],
+    }
+
+    candidates = list(seed_map.get(redirect, ["chat", "live_voice", "home"]))
+
+    if any(k in txt for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "document"]):
+        candidates = ["documents", "document_builder"] + candidates
+    if any(k in txt for k in ["weather", "rain", "forecast", "soil", "moisture"]):
+        candidates = ["weather", "soil_moisture"] + candidates
+    if any(k in txt for k in ["market", "mandi", "price", "rate", "bhav", "daam"]):
+        candidates = ["market_prices", "marketplace"] + candidates
+
+    deduped: list[str] = []
+    for tag in candidates:
+        normalized = str(tag or "").strip().lower().replace("-", "_")
+        if not normalized or normalized in deduped:
+            continue
+        deduped.append(normalized)
+        if len(deduped) >= 3:
+            break
+
+    return deduped
+
+
 async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
     crop = _extract_crop(transcript)
 
@@ -866,17 +941,123 @@ async def _collect_tool_data_for_voice(token: str, transcript: str) -> dict:
     return results
 
 
+def _select_voice_response_text(chat_data: dict) -> str:
+    if not isinstance(chat_data, dict):
+        return ""
+
+    nested = chat_data.get("result")
+    if isinstance(nested, dict):
+        for key in ("response", "final_response", "merged_response", "partial_response"):
+            value = nested.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+    for key in ("final_response", "merged_response", "response", "partial_response"):
+        value = chat_data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return ""
+
+
+def _normalize_voice_agent_result(chat_data: dict, fallback_session_id: str | None) -> dict:
+    result: dict = {}
+    nested = chat_data.get("result")
+    if isinstance(nested, dict):
+        result.update(nested)
+
+    for key in ("suggestions", "ui_redirect_tag", "ui_action_cards", "source_provenance"):
+        if key not in result and key in chat_data:
+            result[key] = chat_data.get(key)
+
+    response_text = _select_voice_response_text(chat_data)
+    if response_text:
+        result["response"] = response_text
+
+    session_value = chat_data.get("session_id") or result.get("session_id") or fallback_session_id
+    if session_value:
+        result["session_id"] = session_value
+
+    return result
+
+
 async def _query_agent_fast(token: str, transcript: str, chat_lang: str, session_id: str | None):
-    payload = {
+    headers = {"Authorization": f"Bearer {token}"}
+    prepare_payload = {
         "message": transcript,
         "language": chat_lang,
         "session_id": session_id,
         "allow_fallback": True,
         "response_mode": "voice-friendly",
     }
-    headers = {"Authorization": f"Bearer {token}"}
+    direct_payload = dict(prepare_payload)
 
-    regular_response = await agent_client.post("/api/v1/agent/chat", json=payload, headers=headers)
+    try:
+        prepare_response = await agent_client.post(
+            "/api/v1/agent/chat/prepare",
+            json=prepare_payload,
+            headers=headers,
+        )
+        prepare_data = _as_mapping(prepare_response)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Voice chat/prepare failed; falling back to chat: {exc}")
+        regular_response = await agent_client.post("/api/v1/agent/chat", json=direct_payload, headers=headers)
+        return _as_mapping(regular_response)
+
+    request_id = str(prepare_data.get("request_id") or "").strip()
+    prepare_session = str(prepare_data.get("session_id") or session_id or "").strip() or session_id
+
+    if not request_id:
+        logger.warning("Voice chat/prepare returned no request_id; falling back to chat")
+        direct_payload["session_id"] = prepare_session
+        regular_response = await agent_client.post("/api/v1/agent/chat", json=direct_payload, headers=headers)
+        return _as_mapping(regular_response)
+
+    prepare_status = str(prepare_data.get("status") or "").lower()
+    if prepare_status == "completed":
+        normalized = _normalize_voice_agent_result(prepare_data, fallback_session_id=prepare_session)
+        if str(normalized.get("response") or "").strip():
+            return normalized
+
+    try:
+        for _ in range(VOICE_AGENT_FINALIZE_MAX_POLLS):
+            finalize_payload = {
+                "request_id": request_id,
+                "timeout_seconds": VOICE_AGENT_FINALIZE_WAIT_SECONDS,
+            }
+            finalize_response = await agent_client.post(
+                "/api/v1/agent/chat/finalize",
+                json=finalize_payload,
+                headers=headers,
+            )
+            finalize_data = _as_mapping(finalize_response)
+            finalize_status = str(finalize_data.get("status") or "pending").lower()
+
+            if finalize_status == "completed":
+                normalized = _normalize_voice_agent_result(
+                    finalize_data,
+                    fallback_session_id=prepare_session,
+                )
+                if str(normalized.get("response") or "").strip():
+                    return normalized
+                break
+
+            if finalize_status == "failed":
+                normalized = _normalize_voice_agent_result(
+                    finalize_data,
+                    fallback_session_id=prepare_session,
+                )
+                if str(normalized.get("response") or "").strip():
+                    normalized.setdefault("agent_used", "voice_finalize_failed")
+                    return normalized
+                break
+
+            await asyncio.sleep(VOICE_AGENT_FINALIZE_POLL_DELAY_SECONDS)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Voice chat/finalize failed; falling back to chat: {exc}")
+
+    direct_payload["session_id"] = prepare_session
+    regular_response = await agent_client.post("/api/v1/agent/chat", json=direct_payload, headers=headers)
     return _as_mapping(regular_response)
 
 
@@ -1012,8 +1193,6 @@ async def voice_command(
             transcript=transcript,
             chat_lang=chat_lang,
             session_id=session_id,
-            timeout_seconds=VOICE_TEXT_AGENT_TIMEOUT_SECONDS,
-            max_retries=VOICE_TEXT_AGENT_MAX_RETRIES,
         )
         agent_text = agent_data.get("response", "")
         agent_session = agent_data.get("session_id", session_id)
@@ -1128,8 +1307,6 @@ async def voice_command_text(
                 transcript=transcript,
                 chat_lang=chat_lang,
                 session_id=session_id,
-                timeout_seconds=VOICE_TEXT_AGENT_TIMEOUT_SECONDS,
-                max_retries=VOICE_TEXT_AGENT_MAX_RETRIES,
             )
             agent_text = agent_data.get("response", "")
             agent_session = agent_data.get("session_id", session_id)
@@ -1181,3 +1358,190 @@ async def voice_command_text(
         "ui_redirect_tag": ui_redirect_tag,
         "tool_evidence": tool_evidence,
     }
+
+
+@router.post("/text/stream")
+async def voice_command_text_stream(
+    file: UploadFile = File(...),
+    language: str = Form(default="auto"),
+    session_id: str = Form(default=None),
+    user: dict = Depends(get_current_user),
+):
+    """Streaming variant of /command/text using Server-Sent Events (SSE)."""
+    import base64
+    import json
+    from fastapi.responses import StreamingResponse
+
+    async def event_stream():
+        t0 = time.perf_counter()
+
+        audio_bytes = await file.read()
+        auto_detect = str(language or "").strip().lower() in {"", "auto", "unknown", "detect"}
+        stt_result = await STTService.transcribe(
+            audio_bytes,
+            language=language,
+            filename=file.filename or "audio.wav",
+            auto_detect=auto_detect,
+        )
+
+        transcript = stt_result["transcript"]
+        transcript_display = _ui_transcript_display(
+            transcript,
+            stt_language=stt_result.get("language_code"),
+            requested_language=language,
+        )
+        user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
+        chat_lang = _resolve_chat_language(
+            stt_result.get("language_code", language),
+            transcript,
+            requested_language=language,
+            user_preferred_language=user_pref_lang,
+        )
+        tts_lang = _resolve_tts_language_code(
+            stt_language_code=stt_result.get("language_code"),
+            requested_language=language,
+            chat_language=chat_lang,
+            user_preferred_language=user_pref_lang,
+        )
+        stt_ms = int((time.perf_counter() - t0) * 1000)
+
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "type": "stt_done",
+                    "transcript": transcript,
+                    "transcript_display": transcript_display,
+                    "elapsed_ms": stt_ms,
+                }
+            )
+            + "\n\n"
+        )
+
+        thinking_steps = _get_thinking_steps_for_transcript(transcript, chat_lang)
+        token = user.get("_token", "") if isinstance(user, dict) else getattr(user, "_token", "")
+
+        agent_text = ""
+        agent_session = session_id
+        agent_data: dict = {}
+        stt_low_confidence = _is_low_confidence_stt(stt_result)
+        response_origin = "agent"
+
+        if stt_low_confidence:
+            agent_text = _localized_language_clarification_prompt(chat_lang)
+            response_origin = "clarification"
+        elif _is_profile_intent(transcript):
+            profile = await _fetch_profile_snapshot(token)
+            agent_text = _build_profile_voice_response(profile, chat_lang)
+            agent_data = {"agent_used": "profile_snapshot", "provider": "voice-service", "model": "profile"}
+            response_origin = "profile_snapshot"
+        else:
+            agent_task = asyncio.create_task(
+                _query_agent_resilient(
+                    token=token,
+                    transcript=transcript,
+                    chat_lang=chat_lang,
+                    session_id=session_id,
+                )
+            )
+
+            total_steps = len(thinking_steps)
+            if total_steps > 0:
+                elapsed = int((time.perf_counter() - t0) * 1000)
+                yield (
+                    "data: "
+                    + json.dumps(
+                        {
+                            "type": "thinking",
+                            "step": thinking_steps[0],
+                            "step_index": 0,
+                            "total_steps": total_steps,
+                            "elapsed_ms": elapsed,
+                        }
+                    )
+                    + "\n\n"
+                )
+
+            step_delay = max(
+                0.45,
+                min(1.2, VOICE_AGENT_TIMEOUT_SECONDS / max(4, total_steps + 1)),
+            )
+            for i, step in enumerate(thinking_steps[1:], start=1):
+                await asyncio.sleep(step_delay)
+                if agent_task.done():
+                    break
+                elapsed = int((time.perf_counter() - t0) * 1000)
+                yield (
+                    "data: "
+                    + json.dumps(
+                        {
+                            "type": "thinking",
+                            "step": step,
+                            "step_index": i,
+                            "total_steps": total_steps,
+                            "elapsed_ms": elapsed,
+                        }
+                    )
+                    + "\n\n"
+                )
+
+            agent_data = await agent_task
+            agent_text = agent_data.get("response", "")
+            agent_session = agent_data.get("session_id", session_id)
+
+        if not agent_text.strip():
+            agent_text = _localized_retry_prompt(chat_lang)
+
+        agent_text = _sanitize_voice_response(agent_text, chat_lang)
+        agent_text = _tts_humanize_text(agent_text, chat_lang)
+        agent_text = _personalize_voice_text(agent_text, user, chat_lang)
+        ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
+
+        elapsed = int((time.perf_counter() - t0) * 1000)
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "type": "thinking",
+                    "step": _get_final_thinking_step(chat_lang),
+                    "step_index": len(thinking_steps),
+                    "total_steps": len(thinking_steps) + 1,
+                    "elapsed_ms": elapsed,
+                }
+            )
+            + "\n\n"
+        )
+
+        tts_audio = await _synthesize_voice_audio(agent_text, tts_lang)
+        audio_b64 = base64.b64encode(tts_audio).decode()
+        total_ms = int((time.perf_counter() - t0) * 1000)
+
+        ui_action_cards = _infer_ui_action_cards_for_voice(transcript, agent_data)
+
+        result_payload = {
+            "type": "result",
+            "transcript": transcript,
+            "transcript_display": transcript_display,
+            "response": agent_text,
+            "audio_base64": audio_b64,
+            "session_id": agent_session,
+            "language": chat_lang,
+            "stt_language": stt_result.get("language_code"),
+            "tts_language": tts_lang,
+            "ui_redirect_tag": ui_redirect_tag,
+            "ui_action_cards": ui_action_cards,
+            "tool_evidence": _build_tool_evidence({}),
+            "agent_metadata": {
+                "agent_used": agent_data.get("agent_used"),
+                "provider": agent_data.get("provider"),
+                "model": agent_data.get("model"),
+            },
+            "latency_ms": {"total": total_ms, "stt": stt_ms},
+            "stt_low_confidence": stt_low_confidence,
+            "fallback_used": False,
+            "response_origin": response_origin,
+        }
+        yield f"data: {json.dumps(result_payload)}\n\n"
+        yield "data: {\"type\": \"done\"}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
