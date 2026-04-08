@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -87,6 +88,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   Duration _responseRevealDuration = const Duration(milliseconds: 2800);
   bool _responseFlowCompleted = false;
 
+  Future<void> _playMicToggleFeedback({required bool activating}) async {
+    if (activating) {
+      Haptics.light();
+    } else {
+      Haptics.heavy();
+    }
+    try {
+      await SystemSound.play(SystemSoundType.click);
+    } catch (_) {
+      // Best-effort system click feedback.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -136,17 +150,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 
   Future<void> _onMicTap() async {
-    Haptics.medium();
     switch (_state) {
       case _VoiceState.idle:
+        await _playMicToggleFeedback(activating: true);
         await _startRecording();
         break;
       case _VoiceState.recording:
+        await _playMicToggleFeedback(activating: false);
         await _stopAndProcess();
         break;
       case _VoiceState.processing:
         break;
       case _VoiceState.playing:
+        await _playMicToggleFeedback(activating: true);
         await _audioPlayer.stop();
         if (!mounted) return;
         _stopPlayPulseIfNeeded();
@@ -218,12 +234,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _responseFlowCompleted = false;
       _thinkingExpanded = false;
     });
-
-    Haptics.light();
   }
 
   Future<void> _stopAndProcess() async {
-    Haptics.heavy();
     final seededThinking = SharedThinkingTemplates.buildThoughtTemplates(
       phase: 'Transcribing your speech',
       contextHint: _activeQuestion,
@@ -1476,12 +1489,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 78,
+                bottom: 96,
                 child: IgnorePointer(
                   child: SizedBox(
                     height: math.min(
-                      430,
-                      MediaQuery.of(context).size.height * 0.52,
+                      500,
+                      MediaQuery.of(context).size.height * 0.58,
                     ),
                     child: AnimatedBuilder(
                       animation: _hazeController,
@@ -2291,6 +2304,7 @@ class VoiceHazeOrb extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final amp = amplitude.clamp(0.0, 1.0).toDouble();
+    final ampBoost = math.pow(amp, 0.72).toDouble();
     final pulse = pulseValue.clamp(0.0, 1.0).toDouble();
     final t = pulse * math.pi * 2;
 
@@ -2305,8 +2319,8 @@ class VoiceHazeOrb extends CustomPainter {
         center: const Alignment(0, 1.08),
         radius: 1.12,
         colors: [
-          const Color(0xFF34D399).withValues(alpha: 0.14 + (0.18 * amp)),
-          const Color(0xFF22C58B).withValues(alpha: 0.06 + (0.08 * amp)),
+          const Color(0xFF34D399).withValues(alpha: 0.13 + (0.24 * ampBoost)),
+          const Color(0xFF22C58B).withValues(alpha: 0.05 + (0.11 * ampBoost)),
           Colors.transparent,
         ],
         stops: const [0.0, 0.58, 1.0],
@@ -2322,9 +2336,9 @@ class VoiceHazeOrb extends CustomPainter {
       required Color color,
       required double alphaMultiplier,
     }) {
-      final waveAmp = (7.0 + (18.0 * amp)) * ampFactor;
+      final waveAmp = (4.5 + (34.0 * ampBoost)) * ampFactor;
       final breathingLift =
-          math.sin((t * 0.55) + phaseShift) * (3.5 + (amp * 4.0));
+          math.sin((t * 0.55) + phaseShift) * (2.2 + (ampBoost * 12.0));
       final baseY = (size.height * baseLevel) - breathingLift;
       final step = math.max(6.0, size.width / 84);
 
@@ -2362,10 +2376,10 @@ class VoiceHazeOrb extends CustomPainter {
               end: Alignment.bottomCenter,
               colors: [
                 color.withValues(
-                  alpha: (0.18 + (0.26 * amp)) * alphaMultiplier,
+                  alpha: (0.16 + (0.38 * ampBoost)) * alphaMultiplier,
                 ),
                 color.withValues(
-                  alpha: (0.09 + (0.14 * amp)) * alphaMultiplier,
+                  alpha: (0.07 + (0.2 * ampBoost)) * alphaMultiplier,
                 ),
                 color.withValues(alpha: 0.0),
               ],
@@ -2382,18 +2396,18 @@ class VoiceHazeOrb extends CustomPainter {
       }
       final crest = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0 + (amp * 0.9)
+        ..strokeWidth = 1.0 + (ampBoost * 1.3)
         ..color = const Color(
           0xFFA7F3D0,
-        ).withValues(alpha: (0.08 + (0.16 * amp)) * alphaMultiplier)
+        ).withValues(alpha: (0.09 + (0.26 * ampBoost)) * alphaMultiplier)
         ..strokeCap = StrokeCap.round
         ..isAntiAlias = true;
       canvas.drawPath(crestPath, crest);
     }
 
     drawWaveLayer(
-      baseLevel: 0.90,
-      ampFactor: 1.05,
+      baseLevel: 0.82,
+      ampFactor: 1.15,
       freq: 1.15,
       speed: 1.0,
       phaseShift: 0.4,
@@ -2402,8 +2416,8 @@ class VoiceHazeOrb extends CustomPainter {
     );
 
     drawWaveLayer(
-      baseLevel: 0.86,
-      ampFactor: 0.78,
+      baseLevel: 0.78,
+      ampFactor: 0.9,
       freq: 1.55,
       speed: 1.22,
       phaseShift: 1.25,
@@ -2412,8 +2426,8 @@ class VoiceHazeOrb extends CustomPainter {
     );
 
     drawWaveLayer(
-      baseLevel: 0.82,
-      ampFactor: 0.56,
+      baseLevel: 0.74,
+      ampFactor: 0.7,
       freq: 1.95,
       speed: 1.4,
       phaseShift: 2.05,
