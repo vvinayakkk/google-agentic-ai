@@ -594,6 +594,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         : (transcript.isNotEmpty ? transcript : hintedQuestion);
     final previousQuestion = _activeQuestion;
 
+    _stopThinkingTicker();
+
     setState(() {
       _response = '';
       _activeQuestion = visibleQuestion;
@@ -601,6 +603,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _visibleCardCount = 0;
       _responseExpanded = true;
       _responseFlowCompleted = false;
+      _thinkingSteps.clear();
+      _thinkingElapsedSeconds = 0;
+      _thinkingTemplateCursor = 0;
+      _thinkingExpanded = false;
 
       if (effectiveResponse.isNotEmpty &&
           previousQuestion.isNotEmpty &&
@@ -615,13 +621,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         previousQuestion != visibleQuestion) {
       _questionFadeController.addStatusListener(_clearQuestionStatusListener);
     }
-
-    _responseFlowKeySeed += 1;
-
-    setState(() {
-      _response = responseForDisplay;
-    });
-    Haptics.selection();
 
     String audioToPlay = hasAppendedCardsHint ? '' : audioBase64;
     if (audioToPlay.trim().isEmpty && responseForSpeech.isNotEmpty) {
@@ -641,18 +640,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       }
     }
 
-    setState(() {
-      _responseRevealDuration = _deriveRevealDuration(
-        responseForDisplay,
-        audioToPlay,
-      );
-      _thinkingSteps.clear();
-      _thinkingElapsedSeconds = 0;
-      _thinkingTemplateCursor = 0;
-      _thinkingExpanded = false;
-    });
+    final revealDuration = _deriveRevealDuration(
+      responseForDisplay,
+      audioToPlay,
+    );
+    if (!mounted) return;
 
-    _stopThinkingTicker();
+    setState(() {
+      _responseRevealDuration = revealDuration;
+      _responseFlowCompleted = false;
+      _responseFlowKeySeed += 1;
+      _response = responseForDisplay;
+    });
+    Haptics.selection();
 
     if (audioToPlay.isNotEmpty) {
       _lastAudioBase64 = audioToPlay;
@@ -1891,7 +1891,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 
   Widget _buildThinkingPanel({required bool isDark, required bool compact}) {
-    if (_state != _VoiceState.processing && _thinkingSteps.isEmpty) {
+    if (_thinkingSteps.isEmpty) {
       final muted = isDark
           ? AppColors.darkTextSecondary
           : AppColors.lightTextSecondary;
@@ -2357,7 +2357,12 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
     _words = merged.isEmpty ? const <String>[] : merged.split(' ');
     _visibleWords = _words.isEmpty ? 0 : 1;
 
-    if (_words.length <= 1) {
+    if (_words.isEmpty) {
+      setState(() {});
+      return;
+    }
+
+    if (_words.length == 1) {
       setState(() {});
       _notifyRevealCompleteOnce();
       return;
