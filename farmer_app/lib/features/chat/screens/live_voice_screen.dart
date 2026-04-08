@@ -2,18 +2,21 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_cache.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/agent_service.dart';
@@ -41,14 +44,9 @@ class _VoiceActionCard {
 
 class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     with TickerProviderStateMixin {
-  static const _orbProcessing = Color(0xFF00D4FF);
-  static const _orbPlaying = Color(0xFF00E676);
-  static const _cardBg = Color(0xFF13131A);
-  static const _cardBorder = Color(0xFF252535);
-
   static const int _maxActionCards = 8;
-  static const Duration _cardsStaggerStep = Duration(milliseconds: 420);
-  static const Duration _cardPopDuration = Duration(milliseconds: 480);
+  static const Duration _cardsStaggerStep = Duration(milliseconds: 380);
+  static const Duration _cardPopDuration = Duration(milliseconds: 420);
 
   _VoiceState _state = _VoiceState.idle;
   String _response = '';
@@ -57,6 +55,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   String? _sessionId;
   String? _lastAudioBase64;
   bool _isPlaybackPaused = false;
+  bool _responseExpanded = false;
+  bool _thinkingExpanded = false;
 
   final List<String> _thinkingSteps = <String>[];
   int _thinkingElapsedSeconds = 0;
@@ -77,37 +77,39 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   late final AnimationController _playController;
   late final AnimationController _questionFadeController;
 
+  final ScrollController _thinkingScrollController = ScrollController();
+
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
 
   int _responseFlowKeySeed = 0;
   String _responseFlowSource = '';
+  Duration _responseRevealDuration = const Duration(milliseconds: 2800);
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1300),
     )..repeat(reverse: true);
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
+      duration: const Duration(milliseconds: 2100),
+    )..repeat();
     _playController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 850),
     );
     _questionFadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
       value: 1,
     );
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
-      _stopWaveIfNeeded();
       _stopPlayPulseIfNeeded();
       setState(() {
         _state = _VoiceState.idle;
@@ -137,6 +139,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _waveController.dispose();
     _playController.dispose();
     _questionFadeController.dispose();
+    _thinkingScrollController.dispose();
 
     _recorder.dispose();
     _audioPlayer.dispose();
@@ -211,10 +214,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _cardsStaggerTimer?.cancel();
     _stopPlayPulseIfNeeded();
 
-    if (!_waveController.isAnimating) {
-      _waveController.repeat();
-    }
-
     setState(() {
       _state = _VoiceState.recording;
       _isPlaybackPaused = false;
@@ -226,6 +225,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _actionCards = <_VoiceActionCard>[];
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
+      _responseExpanded = false;
+      _thinkingExpanded = false;
     });
 
     Haptics.light();
@@ -255,13 +256,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingElapsedSeconds = 0;
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
+      _thinkingExpanded = true;
     });
 
     _cardsStaggerTimer?.cancel();
     _startThinkingTicker();
-    if (!_waveController.isAnimating) {
-      _waveController.repeat();
-    }
+    _scheduleThinkingAutoScroll();
 
     final path = await _recorder.stop();
     if (path == null || path.isEmpty) {
@@ -289,6 +289,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           _appendThinkingStepInState(fallback);
         }
       });
+      _scheduleThinkingAutoScroll();
     });
   }
 
@@ -299,18 +300,18 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   String _thinkingFallbackForElapsed(int elapsed) {
     final isHindi = context.locale.languageCode.toLowerCase().startsWith('hi');
-    if (_thinkingSteps.length >= 5) return '';
-    if (elapsed >= 6) {
+    if (_thinkingSteps.length >= 8) return '';
+    if (elapsed >= 8) {
       return isHindi
           ? 'Final answer tayar kar raha hoon'
           : 'Preparing the final answer';
     }
-    if (elapsed >= 4) {
+    if (elapsed >= 5) {
       return isHindi
           ? 'Relevant context check kar raha hoon'
           : 'Checking relevant context';
     }
-    if (elapsed >= 2) {
+    if (elapsed >= 3) {
       return isHindi
           ? 'Sawal ka intent samajh raha hoon'
           : 'Understanding your intent';
@@ -326,9 +327,21 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return;
     }
     _thinkingSteps.add(clean);
-    if (_thinkingSteps.length > 16) {
-      _thinkingSteps.removeRange(0, _thinkingSteps.length - 16);
+    if (_thinkingSteps.length > 24) {
+      _thinkingSteps.removeRange(0, _thinkingSteps.length - 24);
     }
+  }
+
+  void _scheduleThinkingAutoScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_thinkingScrollController.hasClients) return;
+      final max = _thinkingScrollController.position.maxScrollExtent;
+      _thinkingScrollController.animateTo(
+        max,
+        duration: const Duration(milliseconds: 230),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   void _startSessionTickerIfNeeded() {
@@ -442,6 +455,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
               _appendThinkingStepInState(sttDoneStep);
             });
           }
+          _scheduleThinkingAutoScroll();
           continue;
         }
 
@@ -449,6 +463,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           final step = (event['step'] ?? '').toString().trim();
           if (step.isNotEmpty) {
             setState(() => _appendThinkingStepInState(step));
+            _scheduleThinkingAutoScroll();
           }
           continue;
         }
@@ -494,7 +509,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         await fallbackToNonStreaming();
       } catch (_) {
         _stopThinkingTicker();
-        _stopWaveIfNeeded();
         _cardsStaggerTimer?.cancel();
         if (!mounted) return;
         setState(() {
@@ -545,19 +559,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       cards = _mergePriorityCards(cards, const <String>['documents']);
     }
 
-    final attachCardsCue = cards.isNotEmpty && !retryStyleResponse;
-    final responseForDisplay = _withCardsCue(
-      effectiveResponse,
-      languageCode: languageCode,
-      hasCards: attachCardsCue,
-      forDisplay: true,
-    );
-    final responseForSpeech = _withCardsCue(
-      effectiveResponse,
-      languageCode: languageCode,
-      hasCards: attachCardsCue,
-      forDisplay: false,
-    );
+    final responseForDisplay = effectiveResponse.trim();
+    final responseForSpeech = effectiveResponse.trim();
 
     final nextSession = data['session_id'] as String?;
     _syncSession(nextSession ?? _sessionId);
@@ -572,6 +575,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _activeQuestion = visibleQuestion;
       _actionCards = cards;
       _visibleCardCount = 0;
+      _responseExpanded = false;
 
       if (effectiveResponse.isNotEmpty &&
           previousQuestion.isNotEmpty &&
@@ -598,7 +602,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     Haptics.selection();
 
     String audioToPlay = audioBase64;
-    if (attachCardsCue && responseForSpeech.trim().isNotEmpty) {
+    if (audioToPlay.trim().isEmpty && responseForSpeech.isNotEmpty) {
       try {
         final voice = ref.read(voiceServiceProvider);
         final regenerated = await voice.ttsBase64(
@@ -611,9 +615,16 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           audioToPlay = regeneratedAudio;
         }
       } catch (_) {
-        // Keep primary server audio.
+        // Keep empty audio fallback behavior.
       }
     }
+
+    setState(() {
+      _responseRevealDuration = _deriveRevealDuration(
+        responseForDisplay,
+        audioToPlay,
+      );
+    });
 
     _stopThinkingTicker();
 
@@ -621,15 +632,82 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _lastAudioBase64 = audioToPlay;
       final played = await _playAudioBase64(audioToPlay);
       if (!played && mounted) {
-        _stopWaveIfNeeded();
         setState(() => _state = _VoiceState.idle);
         _startCardsStagger();
       }
     } else {
       _lastAudioBase64 = null;
-      _stopWaveIfNeeded();
       setState(() => _state = _VoiceState.idle);
       _startCardsStagger();
+    }
+  }
+
+  Duration _deriveRevealDuration(String text, String audioBase64) {
+    final words = _wordCount(text);
+    if (words <= 0) {
+      return const Duration(milliseconds: 1200);
+    }
+
+    final audioDuration = _estimateWavDurationFromBase64(audioBase64);
+    if (audioDuration != null && audioDuration.inMilliseconds > 0) {
+      final minMs = words * 80;
+      final maxMs = words * 420;
+      final rawMs = audioDuration.inMilliseconds;
+      final boundedMs = rawMs < minMs ? minMs : (rawMs > maxMs ? maxMs : rawMs);
+      return Duration(milliseconds: boundedMs);
+    }
+
+    final fallbackMs = words * 170;
+    final boundedMs = fallbackMs < 1400
+        ? 1400
+        : (fallbackMs > 12000 ? 12000 : fallbackMs);
+    return Duration(milliseconds: boundedMs);
+  }
+
+  int _wordCount(String text) {
+    if (text.trim().isEmpty) return 0;
+    return text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.trim().isNotEmpty)
+        .length;
+  }
+
+  Duration? _estimateWavDurationFromBase64(String base64Audio) {
+    final raw = base64Audio.trim();
+    if (raw.isEmpty) return null;
+
+    try {
+      final bytes = base64Decode(raw);
+      if (bytes.length < 44) return null;
+
+      final byteData = ByteData.sublistView(bytes);
+      final byteRate = byteData.getUint32(28, Endian.little);
+      if (byteRate <= 0) return null;
+
+      var dataSize = bytes.length > 44 ? bytes.length - 44 : bytes.length;
+      for (var i = 12; i + 8 < bytes.length; i++) {
+        if (bytes[i] == 0x64 &&
+            bytes[i + 1] == 0x61 &&
+            bytes[i + 2] == 0x74 &&
+            bytes[i + 3] == 0x61) {
+          final dataChunk = ByteData.sublistView(
+            bytes,
+            i + 4,
+            i + 8,
+          ).getUint32(0, Endian.little);
+          if (dataChunk > 0) {
+            dataSize = dataChunk;
+          }
+          break;
+        }
+      }
+
+      final millis = ((dataSize / byteRate) * 1000).round();
+      if (millis <= 0) return null;
+      return Duration(milliseconds: millis);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -653,9 +731,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (!_playController.isAnimating) {
         _playController.repeat(reverse: true);
       }
-      if (!_waveController.isAnimating) {
-        _waveController.repeat();
-      }
 
       final bytes = base64Decode(base64Audio);
       final audioDir = await getTemporaryDirectory();
@@ -667,19 +742,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return true;
     } catch (_) {
       if (!mounted) return false;
-      _stopWaveIfNeeded();
       _stopPlayPulseIfNeeded();
       setState(() {
         _state = _VoiceState.idle;
         _isPlaybackPaused = false;
       });
       return false;
-    }
-  }
-
-  void _stopWaveIfNeeded() {
-    if (_waveController.isAnimating) {
-      _waveController.stop();
     }
   }
 
@@ -739,8 +807,153 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     }
   }
 
-  void _openChatDirect() {
+  void _openChatContinuation() {
+    final sid = (_sessionId ?? '').trim();
+    if (sid.isNotEmpty) {
+      final encodedSession = Uri.encodeQueryComponent(sid);
+      context.push('${RoutePaths.chat}?agent=general&session=$encodedSession');
+      return;
+    }
+
+    final q = _activeQuestion.trim();
+    if (q.isNotEmpty) {
+      final encodedQ = Uri.encodeQueryComponent(q);
+      context.push('${RoutePaths.chat}?agent=general&q=$encodedQ');
+      return;
+    }
     context.push('${RoutePaths.chat}?agent=general');
+  }
+
+  Future<void> _openResponseDetailsSheet() async {
+    if (_response.trim().isEmpty) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF111827) : Colors.white;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final links = _extractUrls(_response);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return FractionallySizedBox(
+          heightFactor: 0.84,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: textColor.withValues(alpha: 0.26),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Text(
+                          'Voice Response',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Spacer(),
+                        if ((_sessionId ?? '').trim().isNotEmpty)
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _openChatContinuation();
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline_rounded),
+                            label: const Text('Continue in Chat'),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: MarkdownBody(
+                          data: _response,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(
+                              color: textColor,
+                              fontSize: 15.5,
+                              height: 1.5,
+                            ),
+                          ),
+                          onTapLink: (text, href, title) {
+                            if (href == null) return;
+                            _openExternalLink(href);
+                          },
+                        ),
+                      ),
+                    ),
+                    if (links.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'References',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final link in links.take(5))
+                            ActionChip(
+                              label: Text(link),
+                              onPressed: () => _openExternalLink(link),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openExternalLink(String href) async {
+    final uri = Uri.tryParse(href);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  List<String> _extractUrls(String text) {
+    final matches = RegExp(r'https?:\/\/[^\s)]+').allMatches(text);
+    final out = <String>[];
+    for (final m in matches) {
+      final value = m.group(0);
+      if (value == null) continue;
+      if (!out.contains(value)) out.add(value);
+    }
+    return out;
   }
 
   List<String> _responseChunks(String text) {
@@ -756,7 +969,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final source = parts.isEmpty ? <String>[clean] : parts;
     for (final sentence in source) {
       final s = sentence.trim();
-      if (s.length <= 64) {
+      if (s.length <= 62) {
         chunks.add(s);
         continue;
       }
@@ -769,7 +982,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           continue;
         }
         final candidate = '${buffer.toString()} $word';
-        if (candidate.length > 64) {
+        if (candidate.length > 62) {
           chunks.add(buffer.toString());
           buffer
             ..clear()
@@ -1031,33 +1244,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
-  String _cardsCueForLanguage(String languageCode) {
-    final code = languageCode.toLowerCase();
-    if (code.startsWith('hi')) {
-      return 'Aap neeche diye gaye cards par tap karke turant action le sakte hain.';
-    }
-    return 'You can click on these cards to take action quickly.';
-  }
-
-  String _withCardsCue(
-    String text, {
-    required String languageCode,
-    required bool hasCards,
-    required bool forDisplay,
-  }) {
-    final clean = text.trim();
-    if (clean.isEmpty || !hasCards) return clean;
-
-    final hasCueAlready = RegExp(
-      r'click|tap|card',
-      caseSensitive: false,
-    ).hasMatch(clean);
-    if (hasCueAlready) return clean;
-
-    final cue = _cardsCueForLanguage(languageCode);
-    return forDisplay ? '$clean\n\n$cue' : '$clean. $cue';
-  }
-
   bool _isRetryStyleResponse(String text) {
     final s = text.toLowerCase();
     return s.contains('cannot complete your answer right now') ||
@@ -1119,146 +1305,244 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final visibleCards = _actionCards.take(_visibleCardCount).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgTop = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final bgBottom = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final visibleCards = _actionCards.take(_visibleCardCount).toList();
+    final showCards =
+        _state == _VoiceState.idle &&
+        _response.trim().isNotEmpty &&
+        visibleCards.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: bgTop,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [bgTop, bgBottom],
-          ),
+          gradient: isDark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF05070D),
+                    Color(0xFF0B1420),
+                    Color(0xFF101A2B),
+                  ],
+                )
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.lightBackground,
+                    AppColors.lightBackground.withValues(alpha: 0.96),
+                    const Color(0xFFDCF4E8),
+                  ],
+                ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Column(
-              children: [
-                _buildTopBar(),
-                Expanded(
+          child: Column(
+            children: [
+              _buildTopBar(isDark: isDark),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Column(
                     children: [
-                      const Spacer(flex: 1),
-                      _buildTranscriptChip(),
-                      const Spacer(flex: 1),
-                      _buildMicVisualizerSection(),
-                      const Spacer(flex: 1),
-                      _buildResponseArea(),
-                      const Spacer(flex: 1),
-                      _buildActionDeck(visibleCards),
+                      _buildCompactConversationStrip(
+                        isDark: isDark,
+                        compact: showCards,
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          child: showCards
+                              ? _buildActionCenterStage(
+                                  visibleCards,
+                                  isDark: isDark,
+                                  key: const ValueKey('action_stage'),
+                                )
+                              : _buildLiveWaveStage(
+                                  isDark: isDark,
+                                  key: const ValueKey('wave_stage'),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildThinkingPanel(isDark: isDark, compact: showCards),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
-                _buildBottomBar(),
-              ],
-            ),
+              ),
+              _buildBottomControlDock(isDark: isDark),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTopBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mutedText = isDark
+  Widget _buildTopBar({required bool isDark}) {
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final textMuted = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
-    return SizedBox(
-      height: 54,
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Row(
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: Icon(Icons.close_rounded, color: mutedText),
+            icon: Icon(Icons.close_rounded, color: textMuted),
           ),
-          const Spacer(),
-          if (_sessionId != null && _sessionId!.isNotEmpty)
-            _SessionTimer(label: _formatClock(_sessionElapsedSeconds)),
-          const Spacer(),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.multitrack_audio_rounded,
+                      size: 16,
+                      color: AppColors.primary.withValues(alpha: 0.95),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Live',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                if ((_sessionId ?? '').trim().isNotEmpty)
+                  Text(
+                    _formatClock(_sessionElapsedSeconds),
+                    style: TextStyle(
+                      color: textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           IconButton(
-            onPressed: _openChatDirect,
-            icon: Icon(Icons.chat_bubble_outline_rounded, color: mutedText),
+            onPressed: _openChatContinuation,
+            icon: Icon(Icons.chat_bubble_outline_rounded, color: textMuted),
+            tooltip: 'Continue in chat',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTranscriptChip() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildCompactConversationStrip({
+    required bool isDark,
+    required bool compact,
+  }) {
     final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
-    final mutedText = isDark
+    final textMuted = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
     final chipBg = isDark
-        ? const Color(0x3313131A)
-        : Colors.white.withValues(alpha: 0.66);
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.white.withValues(alpha: 0.7);
     final chipBorder = isDark
-        ? const Color(0x55252535)
-        : AppColors.lightBorder.withValues(alpha: 0.92);
+        ? AppColors.darkBorder.withValues(alpha: 0.7)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
 
-    final question = _activeQuestion.trim();
-    final hasAnyQuestion =
-        question.isNotEmpty || (_fadingQuestion ?? '').isNotEmpty;
-    if (!hasAnyQuestion) {
-      return const SizedBox(height: 18);
+    final hasQuestion = _activeQuestion.trim().isNotEmpty;
+    final hasResponse = _response.trim().isNotEmpty;
+    if (!hasQuestion && !hasResponse) {
+      return const SizedBox.shrink();
     }
 
-    final fade = CurvedAnimation(
-      parent: _questionFadeController,
-      curve: Curves.easeOutCubic,
-    );
+    final responseHeight = compact
+        ? (_responseExpanded ? 86.0 : 58.0)
+        : (_responseExpanded ? 168.0 : 94.0);
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
-      child: AnimatedBuilder(
-        animation: fade,
-        builder: (context, _) {
-          final dy = 12 * (1 - fade.value);
-          return Transform.translate(
-            offset: Offset(0, -dy),
-            child: Opacity(
-              opacity: fade.value,
+    return Column(
+      children: [
+        if (hasQuestion)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: chipBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: chipBorder),
+            ),
+            child: Text(
+              _activeQuestion,
+              maxLines: compact ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: compact ? 12.5 : 13.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        if (hasResponse)
+          GestureDetector(
+            onTap: () {
+              setState(() => _responseExpanded = !_responseExpanded);
+            },
+            onLongPress: _openResponseDetailsSheet,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: double.infinity,
+              constraints: BoxConstraints(maxHeight: responseHeight),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(
+                color: chipBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: chipBorder),
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if ((_fadingQuestion ?? '').isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        _fadingQuestion!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Text(
+                        'Response',
                         style: TextStyle(
-                          color: mutedText.withValues(alpha: 0.78),
-                          fontSize: 12,
+                          color: textMuted,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: chipBg,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: chipBorder),
-                    ),
-                    child: Text(
-                      question,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      const Spacer(),
+                      Icon(
+                        _responseExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: textMuted,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Expanded(
+                    child: _BottomFlowText(
+                      key: ValueKey(
+                        'flow_$_responseFlowKeySeed$_responseExpanded',
+                      ),
+                      lines: _responseChunks(_response),
+                      revealDuration: _responseRevealDuration,
+                      textStyle: TextStyle(
                         color: textPrimary,
-                        fontSize: 14,
-                        height: 1.35,
+                        fontSize: compact ? 12.5 : 13.5,
+                        height: 1.42,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -1266,309 +1550,114 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                 ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        if (hasResponse) ...[
+          const SizedBox(height: 6),
+          _buildReferenceRow(isDark: isDark),
+        ],
+      ],
     );
   }
 
-  Widget _buildMicVisualizerSection() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = AppColors.primary;
-    final centerFill = isDark
-        ? AppColors.darkCard.withValues(alpha: 0.92)
-        : Colors.white.withValues(alpha: 0.96);
-    final borderColor = isDark
-        ? AppColors.darkBorder.withValues(alpha: 0.9)
-        : AppColors.lightBorder.withValues(alpha: 0.95);
-    final iconColor = isDark ? AppColors.darkText : AppColors.lightText;
-    final isRecording = _state == _VoiceState.recording;
-    final isProcessing = _state == _VoiceState.processing;
-    final isPlaying = _state == _VoiceState.playing;
-    final isActive = isRecording || isProcessing || isPlaying;
-    final level = isRecording
-        ? _liveVoiceLevel.clamp(0.0, 1.0)
-        : isPlaying
-        ? (0.35 + (_playController.value * 0.4)).clamp(0.0, 1.0)
-        : isProcessing
-        ? (0.22 + (_pulseController.value * 0.28)).clamp(0.0, 1.0)
-        : 0.08;
-
-    return SizedBox(
-      width: 300,
-      height: 210,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([
-          _waveController,
-          _pulseController,
-          _playController,
-        ]),
-        builder: (context, _) {
-          final phase = _waveController.value;
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              for (var i = 0; i < 3; i++)
-                Transform.scale(
-                  scale:
-                      1 +
-                      (i * 0.22) +
-                      (isActive
-                          ? (math.sin((phase * math.pi * 2) + i) * 0.045)
-                          : 0),
-                  child: Container(
-                    width: 96 + (i * 28),
-                    height: 96 + (i * 28),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: accent.withValues(
-                          alpha: isActive
-                              ? (0.24 - (i * 0.06))
-                              : (0.1 - (i * 0.02)),
-                        ),
-                        width: 1.3,
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                bottom: 34,
-                child: CustomPaint(
-                  size: const Size(240, 82),
-                  painter: _CenterMicBarsPainter(
-                    level: level,
-                    phase: phase,
-                    active: isActive,
-                    color: accent,
-                    mutedColor: borderColor,
-                  ),
-                ),
-              ),
-              Container(
-                width: 84,
-                height: 84,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: centerFill,
-                  border: Border.all(color: borderColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: isActive ? 0.22 : 0.1),
-                      blurRadius: isActive ? 24 : 12,
-                      spreadRadius: isActive ? 1 : 0,
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  isRecording
-                      ? Icons.graphic_eq_rounded
-                      : isProcessing
-                      ? Icons.auto_awesome_rounded
-                      : isPlaying
-                      ? Icons.volume_up_rounded
-                      : Icons.mic_none_rounded,
-                  color: iconColor,
-                  size: 34,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildResponseArea() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
-    final mutedText = isDark
+  Widget _buildReferenceRow({required bool isDark}) {
+    final textMuted = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
-
-    if (_state == _VoiceState.processing) {
-      return _buildThinkingPanel();
-    }
-
-    final showResponse =
-        _response.trim().isNotEmpty || _state == _VoiceState.playing;
-    if (!showResponse) {
-      return Text(
-        'Tap mic below to speak',
-        style: TextStyle(color: mutedText, fontSize: 13, letterSpacing: 0.5),
+    final refs = _actionCards.take(3).toList();
+    if (refs.isEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Tap response to expand.',
+          style: TextStyle(color: textMuted, fontSize: 11.2),
+        ),
       );
     }
 
-    final glow = _state == _VoiceState.playing ? _orbPlaying : _orbProcessing;
-    final maxHeight = (MediaQuery.of(context).size.height * 0.30)
-        .clamp(130.0, 250.0)
-        .toDouble();
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 620, maxHeight: maxHeight),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: _state == _VoiceState.playing
-              ? Colors.transparent
-              : (isDark
-                    ? const Color(0x2213131A)
-                    : Colors.white.withValues(alpha: 0.42)),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: glow.withValues(alpha: 0.14),
-              blurRadius: 40,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: _BottomFlowText(
-          key: ValueKey('flow-${_responseFlowKeySeed.toString()}'),
-          lines: _responseChunks(_response),
-          lineDuration: const Duration(milliseconds: 460),
-          textStyle: TextStyle(
-            color: textPrimary,
-            fontSize: 18.5,
-            fontWeight: FontWeight.w400,
-            height: 1.55,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final ref in refs)
+          ActionChip(
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            label: Text(ref.label),
+            avatar: Icon(ref.icon, size: 16),
+            onPressed: () {
+              Haptics.selection();
+              context.push(ref.route);
+            },
           ),
-        ),
-      ),
+      ],
     );
   }
 
-  Widget _buildThinkingPanel() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textMuted = isDark
-        ? AppColors.darkTextSecondary
-        : AppColors.lightTextSecondary;
+  Widget _buildActionCenterStage(
+    List<_VoiceActionCard> cards, {
+    required bool isDark,
+    Key? key,
+  }) {
     final panelBg = isDark
-        ? const Color(0x2213131A)
-        : Colors.white.withValues(alpha: 0.66);
+        ? Colors.white.withValues(alpha: 0.05)
+        : Colors.white.withValues(alpha: 0.8);
     final panelBorder = isDark
-        ? const Color(0x55252535)
+        ? AppColors.darkBorder.withValues(alpha: 0.75)
         : AppColors.lightBorder.withValues(alpha: 0.95);
 
-    final steps = _thinkingSteps;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 560),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: panelBg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: panelBorder),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (steps.isEmpty)
-              Text(
-                'Listening to your request...',
-                style: TextStyle(color: textMuted, fontSize: 14),
-              ),
-            if (steps.isNotEmpty)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 170),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < steps.length; i++)
-                        AnimatedSlide(
-                          duration: const Duration(milliseconds: 280),
-                          curve: Curves.easeOutCubic,
-                          offset: Offset(0, (steps.length - 1 - i) * -0.02),
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 320),
-                            opacity: i == steps.length - 1 ? 1.0 : 0.62,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: _orbProcessing.withValues(
-                                        alpha: i == steps.length - 1 ? 1 : 0.62,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      steps[i],
-                                      style: TextStyle(
-                                        color: textMuted,
-                                        fontSize: 13.5,
-                                        height: 1.35,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+    return Container(
+      key: key,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: panelBg,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: panelBorder),
+      ),
+      child: cards.length == 1
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 340),
+                  child: _buildActionTile(
+                    cards.first,
+                    isDark: isDark,
+                    wide: true,
                   ),
                 ),
               ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                '${_thinkingElapsedSeconds}s',
-                style: TextStyle(
-                  color: textMuted.withValues(alpha: 0.78),
-                  fontSize: 12,
-                ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              physics: const BouncingScrollPhysics(),
+              itemCount: cards.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.58,
               ),
+              itemBuilder: (_, i) {
+                return _buildActionTile(cards[i], isDark: isDark, wide: true);
+              },
             ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildActionDeck(List<_VoiceActionCard> visibleCards) {
-    final shouldShow =
-        _state == _VoiceState.idle &&
-        _response.trim().isNotEmpty &&
-        visibleCards.isNotEmpty;
-    if (!shouldShow) {
-      return const SizedBox(height: 8);
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 210),
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final card in visibleCards)
-              SizedBox(width: 168, child: _buildActionTile(card)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionTile(_VoiceActionCard card) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildActionTile(
+    _VoiceActionCard card, {
+    required bool isDark,
+    required bool wide,
+  }) {
     final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
     final textMuted = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
-    final cardBg = isDark ? _cardBg : Colors.white.withValues(alpha: 0.9);
+    final cardBg = isDark
+        ? const Color(0xFF101827)
+        : Colors.white.withValues(alpha: 0.95);
     final cardBorder = isDark
-        ? _cardBorder
-        : AppColors.lightBorder.withValues(alpha: 0.95);
-
+        ? const Color(0xFF243244)
+        : AppColors.lightBorder.withValues(alpha: 0.98);
     final topic = _topicColor(card.route);
 
     return TweenAnimationBuilder<double>(
@@ -1580,7 +1669,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         final opacity = value.clamp(0.0, 1.0).toDouble();
         return Opacity(
           opacity: opacity,
-          child: Transform.scale(scale: 0.8 + (value * 0.2), child: child),
+          child: Transform.scale(scale: 0.84 + (value * 0.16), child: child),
         );
       },
       child: Material(
@@ -1601,22 +1690,27 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
             child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: wide ? 42 : 36,
+                  height: wide ? 42 : 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        topic.withValues(alpha: 0.92),
-                        topic.withValues(alpha: 0.35),
+                        topic.withValues(alpha: 0.95),
+                        topic.withValues(alpha: 0.36),
                       ],
                     ),
                   ),
-                  child: Icon(card.icon, size: 18, color: Colors.white),
+                  child: Icon(
+                    card.icon,
+                    size: wide ? 20 : 18,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -1625,19 +1719,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontSize: wide ? 14.5 : 13.5,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         _topicDescription(card.route),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: textMuted,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontSize: wide ? 11.8 : 11,
                         ),
                       ),
                     ],
@@ -1651,24 +1745,367 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     );
   }
 
+  Widget _buildLiveWaveStage({required bool isDark, Key? key}) {
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final textMuted = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+
+    final isRecording = _state == _VoiceState.recording;
+    final isProcessing = _state == _VoiceState.processing;
+    final isPlaying = _state == _VoiceState.playing;
+
+    final intensity = isRecording
+        ? _liveVoiceLevel.clamp(0.1, 1.0)
+        : isPlaying
+        ? (0.46 + (_playController.value * 0.45)).clamp(0.0, 1.0)
+        : isProcessing
+        ? (0.36 + (_pulseController.value * 0.28)).clamp(0.0, 1.0)
+        : 0.18;
+
+    return RepaintBoundary(
+      key: key,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          _waveController,
+          _pulseController,
+          _playController,
+        ]),
+        builder: (context, _) {
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GeminiGreenWavePainter(
+                    phase: _waveController.value,
+                    intensity: intensity,
+                    isDark: isDark,
+                  ),
+                ),
+              ),
+              Align(
+                alignment: const Alignment(0, -0.22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _statusLabel,
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Tap response to expand. Long press for full view.',
+                      style: TextStyle(
+                        color: textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildThinkingPanel({required bool isDark, required bool compact}) {
+    if (_state != _VoiceState.processing && _thinkingSteps.isEmpty) {
+      final muted = isDark
+          ? AppColors.darkTextSecondary
+          : AppColors.lightTextSecondary;
+      return SizedBox(
+        height: 24,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            _statusLabel,
+            style: TextStyle(color: muted, fontSize: 12.5),
+          ),
+        ),
+      );
+    }
+
+    final textPrimary = isDark ? AppColors.darkText : AppColors.lightText;
+    final textMuted = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final panelBg = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.white.withValues(alpha: 0.68);
+    final panelBorder = isDark
+        ? AppColors.darkBorder.withValues(alpha: 0.7)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+
+    final collapsedHeight = compact ? 92.0 : 130.0;
+    final expandedHeight = compact ? 170.0 : 230.0;
+    final boxHeight = _thinkingExpanded ? expandedHeight : collapsedHeight;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _thinkingExpanded = !_thinkingExpanded);
+        _scheduleThinkingAutoScroll();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        height: boxHeight,
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: panelBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: panelBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Thinking',
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${_thinkingElapsedSeconds}s',
+                  style: TextStyle(
+                    color: textMuted,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  _thinkingExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: textMuted,
+                  size: 18,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _thinkingScrollController,
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _thinkingSteps.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              margin: const EdgeInsets.only(top: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(
+                                  alpha: i == _thinkingSteps.length - 1
+                                      ? 1
+                                      : 0.55,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _thinkingSteps[i],
+                                style: TextStyle(
+                                  color: textMuted,
+                                  fontSize: compact ? 12 : 12.8,
+                                  fontWeight: i == _thinkingSteps.length - 1
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  height: 1.34,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControlDock({required bool isDark}) {
+    final dockBg = isDark
+        ? const Color(0xCC0B111B)
+        : Colors.white.withValues(alpha: 0.92);
+    final border = isDark
+        ? AppColors.darkBorder.withValues(alpha: 0.85)
+        : AppColors.lightBorder.withValues(alpha: 0.95);
+
+    final micColor = _state == _VoiceState.recording
+        ? AppColors.danger
+        : _state == _VoiceState.processing
+        ? AppColors.info
+        : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: dockBg,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          children: [
+            _dockButton(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Chat',
+              onTap: _openChatContinuation,
+            ),
+            const SizedBox(width: 8),
+            _dockButton(
+              icon: _state == _VoiceState.playing
+                  ? (_isPlaybackPaused
+                        ? Icons.play_arrow_rounded
+                        : Icons.pause_rounded)
+                  : Icons.replay_rounded,
+              label: _state == _VoiceState.playing ? 'Pause' : 'Replay',
+              onTap: _state == _VoiceState.playing
+                  ? _togglePauseResume
+                  : (_response.trim().isEmpty ? null : _replayLastResponse),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: _onMicTap,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? const Color(0xFF132033)
+                      : Colors.white.withValues(alpha: 0.98),
+                  border: Border.all(
+                    color: micColor.withValues(alpha: 0.95),
+                    width: 1.3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: micColor.withValues(alpha: 0.24),
+                      blurRadius: 20,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _state == _VoiceState.recording ||
+                          _state == _VoiceState.processing ||
+                          _state == _VoiceState.playing
+                      ? Icons.stop_rounded
+                      : Icons.mic_rounded,
+                  color: micColor,
+                  size: 32,
+                ),
+              ),
+            ),
+            const Spacer(),
+            _dockButton(
+              icon: Icons.close_rounded,
+              label: 'Close',
+              danger: true,
+              onTap: () => context.pop(),
+            ),
+            const SizedBox(width: 8),
+            _dockButton(
+              icon: Icons.expand_less_rounded,
+              label: 'Full',
+              onTap: _openResponseDetailsSheet,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dockButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+    bool danger = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fg = danger
+        ? Colors.white
+        : (isDark ? AppColors.darkText : AppColors.lightText);
+    final bg = danger
+        ? const Color(0xFFDC2626)
+        : (isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.04));
+
+    return Opacity(
+      opacity: onTap == null ? 0.42 : 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Tooltip(
+            message: label,
+            child: Icon(icon, color: fg, size: 24),
+          ),
+        ),
+      ),
+    );
+  }
+
   Color _topicColor(String route) {
     if (route == RoutePaths.weather || route == RoutePaths.soilMoisture) {
-      return const Color(0xFF00BFA5);
+      return const Color(0xFF06B6D4);
     }
     if (route == RoutePaths.marketplace || route == RoutePaths.marketPrices) {
-      return const Color(0xFF42A5F5);
+      return const Color(0xFF3B82F6);
     }
     if (route == RoutePaths.documents) {
-      return const Color(0xFFFFB74D);
+      return const Color(0xFFF59E0B);
     }
     if (route == RoutePaths.equipmentMarketplace ||
         route == RoutePaths.equipmentHub) {
-      return const Color(0xFF8BC34A);
+      return const Color(0xFF84CC16);
     }
     if (route == RoutePaths.cattle) {
-      return const Color(0xFFEF5350);
+      return const Color(0xFFEF4444);
     }
-    return const Color(0xFF9FA8DA);
+    return const Color(0xFF10B981);
   }
 
   String _topicDescription(String route) {
@@ -1686,88 +2123,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return 'Open related assistant tools';
   }
 
-  Widget _buildBottomBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textMuted = isDark
-        ? AppColors.darkTextSecondary
-        : AppColors.lightTextSecondary;
-    final isRecording = _state == _VoiceState.recording;
-    final isProcessing = _state == _VoiceState.processing;
-    final isPlaying = _state == _VoiceState.playing;
-    final activeColor = isRecording
-        ? AppColors.primary
-        : isProcessing
-        ? AppColors.info
-        : isPlaying
-        ? AppColors.warning
-        : AppColors.primary;
-    final buttonBg = isDark
-        ? AppColors.darkCard.withValues(alpha: 0.95)
-        : Colors.white.withValues(alpha: 0.98);
-    final buttonBorder = isDark
-        ? AppColors.darkBorder.withValues(alpha: 0.95)
-        : AppColors.lightBorder.withValues(alpha: 0.95);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 18),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: _onMicTap,
-            onLongPress: () {
-              if (_state == _VoiceState.playing) {
-                _togglePauseResume();
-                return;
-              }
-              if (_response.trim().isNotEmpty) {
-                _replayLastResponse();
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: buttonBg,
-                border: Border.all(color: buttonBorder, width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.28),
-                    blurRadius: isRecording || isProcessing ? 26 : 14,
-                    spreadRadius: isRecording || isProcessing ? 1.5 : 0,
-                  ),
-                ],
-              ),
-              child: Icon(
-                isRecording || isProcessing || isPlaying
-                    ? Icons.stop_rounded
-                    : Icons.mic_rounded,
-                color: activeColor,
-                size: 34,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _statusLabel,
-            style: TextStyle(
-              color: textMuted,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String get _statusLabel {
     switch (_state) {
       case _VoiceState.idle:
-        return 'Tap to speak';
+        return 'Tap mic to speak';
       case _VoiceState.recording:
         return 'Listening...';
       case _VoiceState.processing:
@@ -1778,93 +2137,109 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 }
 
-class _SessionTimer extends StatelessWidget {
-  final String label;
-
-  const _SessionTimer({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0x2213131A),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x55252535)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFFB7B7CC),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _CenterMicBarsPainter extends CustomPainter {
-  final double level;
+class _GeminiGreenWavePainter extends CustomPainter {
   final double phase;
-  final bool active;
-  final Color color;
-  final Color mutedColor;
+  final double intensity;
+  final bool isDark;
 
-  const _CenterMicBarsPainter({
-    required this.level,
+  const _GeminiGreenWavePainter({
     required this.phase,
-    required this.active,
-    required this.color,
-    required this.mutedColor,
+    required this.intensity,
+    required this.isDark,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const bars = 30;
-    const barWidth = 4.0;
-    const gap = 3.2;
-    final total = (bars * barWidth) + ((bars - 1) * gap);
-    final startX = (size.width - total) / 2;
-    final centerY = size.height * 0.5;
-    final waveBase = phase * math.pi * 2;
+    final centerX = size.width / 2;
+    final baseY = size.height * 0.94;
+    final t = phase * math.pi * 2;
 
-    for (var i = 0; i < bars; i++) {
-      final x = startX + (i * (barWidth + gap));
-      final wave = (math.sin((i * 0.47) + waveBase) + 1) * 0.5;
-      final amp = active ? (12 + (level * 30)) : 5;
-      final h = 8 + (amp * wave);
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, centerY - (h / 2), barWidth, h),
-        const Radius.circular(999),
+    final deepGlow = Paint()
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF10B981).withValues(alpha: 0.22 * intensity),
+              const Color(0xFF10B981).withValues(alpha: 0.02),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(centerX, baseY),
+              radius: size.width * 0.62,
+            ),
+          );
+    canvas.drawCircle(Offset(centerX, baseY), size.width * 0.64, deepGlow);
+
+    for (var i = 0; i < 5; i++) {
+      final spread = 0.36 + (i * 0.19);
+      final wave = math.sin(t + (i * 0.7)) * 0.018;
+      final width = size.width * (spread + wave);
+      final height = size.height * (0.18 + (i * 0.1));
+      final rect = Rect.fromCenter(
+        center: Offset(centerX, baseY),
+        width: width,
+        height: height,
       );
-      final barPaint = Paint()
-        ..color = active
-            ? color.withValues(alpha: (0.35 + (wave * 0.65)).clamp(0.0, 1.0))
-            : mutedColor.withValues(alpha: 0.45);
-      canvas.drawRRect(rect, barPaint);
+
+      final alpha = (0.48 - (i * 0.08)) * (0.45 + intensity * 0.7);
+      final stroke = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2 - (i * 0.2)
+        ..color = const Color(
+          0xFF10B981,
+        ).withValues(alpha: alpha.clamp(0.04, 0.5));
+      canvas.drawArc(rect, math.pi, math.pi, false, stroke);
     }
+
+    final bottomFill = Paint()
+      ..shader =
+          LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              const Color(0xFF10B981).withValues(alpha: isDark ? 0.3 : 0.22),
+              const Color(0xFF10B981).withValues(alpha: 0.0),
+            ],
+          ).createShader(
+            Rect.fromLTWH(
+              0,
+              size.height * 0.55,
+              size.width,
+              size.height * 0.45,
+            ),
+          );
+
+    final path = Path()
+      ..moveTo(0, size.height)
+      ..lineTo(0, size.height * 0.84)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * (0.7 + (math.sin(t) * 0.01)),
+        size.width,
+        size.height * 0.84,
+      )
+      ..lineTo(size.width, size.height)
+      ..close();
+    canvas.drawPath(path, bottomFill);
   }
 
   @override
-  bool shouldRepaint(covariant _CenterMicBarsPainter oldDelegate) {
-    return oldDelegate.level != level ||
-        oldDelegate.phase != phase ||
-        oldDelegate.active != active ||
-        oldDelegate.color != color ||
-        oldDelegate.mutedColor != mutedColor;
+  bool shouldRepaint(covariant _GeminiGreenWavePainter oldDelegate) {
+    return oldDelegate.phase != phase ||
+        oldDelegate.intensity != intensity ||
+        oldDelegate.isDark != isDark;
   }
 }
 
 class _BottomFlowText extends StatefulWidget {
   final List<String> lines;
-  final Duration lineDuration;
+  final Duration revealDuration;
   final TextStyle? textStyle;
 
   const _BottomFlowText({
     super.key,
     required this.lines,
-    required this.lineDuration,
+    required this.revealDuration,
     this.textStyle,
   });
 
@@ -1889,7 +2264,7 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
   void didUpdateWidget(covariant _BottomFlowText oldWidget) {
     super.didUpdateWidget(oldWidget);
     final sameLines = oldWidget.lines.join('\n') == widget.lines.join('\n');
-    if (!sameLines || oldWidget.lineDuration != widget.lineDuration) {
+    if (!sameLines || oldWidget.revealDuration != widget.revealDuration) {
       _restartTicker();
     }
   }
@@ -1908,11 +2283,12 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
       return;
     }
 
-    final intervalMs =
-        (widget.lineDuration.inMilliseconds /
-                math.max(6, (_words.length / 2.0)))
-            .clamp(48, 130)
-            .toInt();
+    final totalMs = widget.revealDuration.inMilliseconds <= 0
+        ? (_words.length * 170)
+        : widget.revealDuration.inMilliseconds;
+    var intervalMs = (totalMs / _words.length).round();
+    if (intervalMs < 36) intervalMs = 36;
+    if (intervalMs > 250) intervalMs = 250;
 
     _timer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (!mounted) {
@@ -1955,9 +2331,9 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         child: Text(text, textAlign: TextAlign.left, style: widget.textStyle),
       ),
