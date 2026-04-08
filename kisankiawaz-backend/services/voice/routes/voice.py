@@ -112,6 +112,35 @@ LANG_TO_BCP47 = {
     "telugu": "te-IN",
 }
 
+SCRIPT_RANGES = {
+    "hi": ("\u0900", "\u097F"),
+    "gu": ("\u0A80", "\u0AFF"),
+    "pa": ("\u0A00", "\u0A7F"),
+    "bn": ("\u0980", "\u09FF"),
+    "ta": ("\u0B80", "\u0BFF"),
+    "te": ("\u0C00", "\u0C7F"),
+    "kn": ("\u0C80", "\u0CFF"),
+    "ml": ("\u0D00", "\u0D7F"),
+    "od": ("\u0B00", "\u0B7F"),
+}
+
+KANNADA_ROMAN_MARKERS = {
+    "enu",
+    "yaake",
+    "yake",
+    "nanna",
+    "nanage",
+    "beku",
+    "illa",
+    "hige",
+    "ivattu",
+    "yavaga",
+    "mannu",
+    "bele",
+    "krishi",
+    "sahaya",
+}
+
 
 def _language_primary(lang_code: str | None) -> str:
     raw = str(lang_code or "").strip().lower().replace("_", "-")
@@ -142,6 +171,16 @@ def _normalize_tts_language_code(lang_code: str | None, fallback: str = "hi-IN")
     return fallback
 
 
+def _detect_script_language(text: str | None) -> str:
+    sample = str(text or "")
+    if not sample:
+        return ""
+    for lang_code, (lo, hi) in SCRIPT_RANGES.items():
+        if any(lo <= ch <= hi for ch in sample):
+            return lang_code
+    return ""
+
+
 def _resolve_chat_language(
     language_code: str,
     transcript: str,
@@ -155,14 +194,24 @@ def _resolve_chat_language(
     pref_lang = _language_primary(user_preferred_language)
     tokens = [t for t in re.split(r"[^a-zA-Z]+", txt_l) if t]
     hindi_hits = sum(1 for t in tokens if t in HINDI_ROMAN_MARKERS)
+    kannada_hits = sum(1 for t in tokens if t in KANNADA_ROMAN_MARKERS)
     en_hits = sum(1 for t in tokens if t in {"the", "and", "price", "market", "weather", "sell", "farm", "profit"})
 
-    if re.search(r"[\u0900-\u097F]", txt):
-        return "hi"
+    script_lang = _detect_script_language(txt)
+    if script_lang:
+        return script_lang
     if hindi_hits >= 2 and en_hits >= 1:
         return "hinglish"
     if hindi_hits >= 2:
         return "hi"
+    if kannada_hits >= 2:
+        return "kn"
+    if req_lang == "kn" and kannada_hits >= 1 and en_hits == 0:
+        return "kn"
+
+    strong_english_signal = en_hits >= 2 and hindi_hits == 0 and kannada_hits == 0
+    if stt_lang == "en" and req_lang and req_lang != "en" and not strong_english_signal:
+        return req_lang
 
     # Prefer STT-detected language, then explicit user preference, then request hint.
     for candidate in (stt_lang, pref_lang, req_lang):
@@ -199,7 +248,7 @@ def _resolve_tts_language_code(
     chat_language: str | None,
     user_preferred_language: str | None,
 ) -> str:
-    for candidate in (stt_language_code, chat_language, user_preferred_language, requested_language):
+    for candidate in (chat_language, stt_language_code, user_preferred_language, requested_language):
         normalized = _normalize_tts_language_code(candidate, fallback="")
         if normalized:
             return normalized
@@ -212,6 +261,8 @@ def _localized_retry_prompt(language: str) -> str:
         return "अभी उत्तर पूरा नहीं हो पाया। कृपया फसल, स्थान और लक्ष्य के साथ सवाल दोबारा पूछें।"
     if lang.startswith("hinglish"):
         return "Abhi answer complete nahi ho paya. Please crop, location aur goal ke saath sawaal dobara pucho."
+    if lang.startswith("kn"):
+        return "ಈಗ ಉತ್ತರವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ತಯಾರಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೆಳೆ, ಸ್ಥಳ ಮತ್ತು ಗುರಿಯೊಂದಿಗೆ ಪ್ರಶ್ನೆಯನ್ನು ಮತ್ತೆ ಕೇಳಿ."
     return "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
 
 
@@ -221,6 +272,8 @@ def _localized_language_clarification_prompt(language: str) -> str:
         return "आवाज साफ़ नहीं आई। कृपया वही सवाल फिर से थोड़ा धीरे और साफ़ बोलें।"
     if lang.startswith("hinglish"):
         return "Awaz clear nahi aayi. Please wahi sawaal phir se thoda dheere aur clear bolo."
+    if lang.startswith("kn"):
+        return "ಧ್ವನಿ ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಅದೇ ಪ್ರಶ್ನೆಯನ್ನು ನಿಧಾನವಾಗಿ ಮತ್ತು ಸ್ಪಷ್ಟವಾಗಿ ಮತ್ತೆ ಹೇಳಿ."
     return "I could not catch that clearly. Please repeat your question slowly and clearly."
 
 
@@ -426,6 +479,8 @@ def _sanitize_voice_response(text: str, language: str) -> str:
         return "अभी के सत्यापित डेटा के आधार पर फसल के लिए व्यावहारिक सलाह दे रहा हूँ।"
     if str(language).lower().startswith("hinglish"):
         return "Abhi ke verified data ke basis par practical farming advice de raha hoon."
+    if str(language).lower().startswith("kn"):
+        return "ಈಗ ಲಭ್ಯವಿರುವ ಪರಿಶೀಲಿತ ಡೇಟಾ ಆಧರಿಸಿ ಪ್ರಾಯೋಗಿಕ ಕೃಷಿ ಸಲಹೆ ನೀಡುತ್ತಿದ್ದೇನೆ."
     return "Using currently verified data to provide practical farm guidance."
 
 
@@ -442,6 +497,8 @@ def _remove_voice_noise(text: str) -> str:
     blocked_patterns = [
         r"^\s*(source|sources|स्रोत)\s*:\s*.*$",
         r"^\s*(timestamp|time\s*stamp|updated_at|as_of|as of)\s*[:=].*$",
+        r"^\s*note\s*:\s*.*(preferred\s+language\s+hint|script\s+hint|language\s+hint|auto-[a-z\-]+).*$",
+        r"^\s*(preferred\s+language\s+hint|script\s+hint|language\s+hint)\s*[:\-].*$",
         r"^\s*(action\s*plan|why\s*this\s*recommendation|confidence|source\s*snippets|what\s*changed\s*since\s*yesterday|follow-up\s*check|clarification\s*for\s*next\s*turn)\s*:\s*.*$",
         r"^\s*(action\s*now|next\s*steps|bulletins?|summary|overview|key\s*points?)\s*:\s*.*$",
         r"^\s*(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\s*.*$",
@@ -462,6 +519,14 @@ def _remove_voice_noise(text: str) -> str:
         # Remove explicit inline source/timestamp fragments.
         line_s = re.sub(r"\(\s*source\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\(\s*timestamp\s*:[^)]+\)", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(
+            r"\(\s*note\s*:\s*[^)]*(preferred\s+language\s+hint|script\s+hint|language\s+hint|auto-[a-z\-]+)[^)]*\)",
+            "",
+            line_s,
+            flags=re.IGNORECASE,
+        )
+        line_s = re.sub(r"\bauto-(latin|mixed|devanagari|gujarati|gurmukhi|bengali|tamil|telugu|kannada|malayalam|odia)\s+hint\b", "", line_s, flags=re.IGNORECASE)
+        line_s = re.sub(r"\b(preferred\s+language\s+hint|script\s+hint|language\s+hint)\b\s*[:\-]?\s*[^.;,\n]*", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\bsource\b\s*:\s*[^.;,\n]*", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\b(ref_[a-z0-9_\-]+|profile_[a-z0-9_\-]+)\b", "", line_s, flags=re.IGNORECASE)
         line_s = re.sub(r"\b(seed\s+farmer\s*\d*|farmer\s*\d*)\b\s*,?\s*", "", line_s, flags=re.IGNORECASE)
@@ -765,53 +830,227 @@ def _force_voice_brief(text: str) -> str:
     return _trim_voice_text(raw)
 
 
+def _normalize_ui_tag(raw_tag: str) -> str:
+    raw = str(raw_tag or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if not raw:
+        return ""
+
+    alias = {
+        "scheme": "documents",
+        "schemes": "documents",
+        "market": "marketplace",
+        "livestock": "cattle",
+        "soilmoisture": "soil_moisture",
+        "farmviz": "farm_viz",
+        "equipment": "equipment_marketplace",
+        "document_builder": "documents",
+        "credit_sources": "upi",
+    }
+    return alias.get(raw, raw)
+
+
+def _collect_ui_tags_from_agent_data(agent_data: dict) -> list[str]:
+    if not isinstance(agent_data, dict):
+        return []
+
+    tags: list[str] = []
+
+    def add_tag(value):
+        normalized = _normalize_ui_tag(str(value or ""))
+        if normalized and normalized not in tags:
+            tags.append(normalized)
+
+    def scan(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                lowered = str(key).lower()
+                if lowered in {"ui_redirect_tag", "redirect", "redirect_tag", "intent", "route"} or "action_card" in lowered:
+                    if isinstance(value, list):
+                        for item in value:
+                            add_tag(item)
+                    else:
+                        add_tag(value)
+                scan(value)
+        elif isinstance(node, list):
+            for item in node:
+                scan(item)
+
+    direct_cards = agent_data.get("ui_action_cards")
+    if isinstance(direct_cards, list):
+        for item in direct_cards:
+            add_tag(item)
+
+    add_tag(agent_data.get("ui_redirect_tag"))
+    scan(agent_data)
+    return tags
+
+
 def _infer_ui_redirect_tag(transcript: str, agent_data: dict) -> str:
-    txt = (transcript or "").lower()
+    txt_parts = [(transcript or "")]
+    if isinstance(agent_data, dict):
+        txt_parts.append(str(agent_data.get("response") or ""))
+        txt_parts.append(str(agent_data.get("final_response") or ""))
+        nested = agent_data.get("result")
+        if isinstance(nested, dict):
+            txt_parts.append(str(nested.get("response") or ""))
+            txt_parts.append(str(nested.get("final_response") or ""))
+
+    txt = " ".join(part for part in txt_parts if part).lower()
     agent_used = str((agent_data or {}).get("agent_used") or "").lower()
 
-    if "weather" in agent_used or any(k in txt for k in ["weather", "rain", "forecast", "temperature", "soil", "baarish"]):
+    agent_tags = _collect_ui_tags_from_agent_data(agent_data or {})
+    for tag in agent_tags:
+        if tag in {"weather", "soil_moisture", "crop_doctor"}:
+            return "weather"
+        if tag in {"market_prices", "marketplace"}:
+            return "market"
+        if tag in {"documents", "upi"}:
+            return "schemes"
+        if tag in {"equipment_marketplace", "rental", "equipment_hub"}:
+            return "equipment"
+        if tag in {"cattle"}:
+            return "livestock"
+
+    if "weather" in agent_used or any(
+        k in txt
+        for k in [
+            "weather",
+            "rain",
+            "forecast",
+            "temperature",
+            "soil",
+            "baarish",
+            "मौसम",
+            "बारिश",
+            "वर्षा",
+            "तापमान",
+            "मिट्टी",
+            "नमी",
+        ]
+    ):
         return "weather"
-    if "market" in agent_used or any(k in txt for k in ["mandi", "price", "rate", "market", "sell", "daam", "bhav"]):
+    if "market" in agent_used or any(
+        k in txt
+        for k in [
+            "mandi",
+            "price",
+            "rate",
+            "market",
+            "sell",
+            "daam",
+            "bhav",
+            "मंडी",
+            "बाजार",
+            "दाम",
+            "भाव",
+            "बेच",
+        ]
+    ):
         return "market"
-    if "scheme" in agent_used or any(k in txt for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "eligibility", "document"]):
+    if "scheme" in agent_used or any(
+        k in txt
+        for k in [
+            "scheme",
+            "subsidy",
+            "pm-kisan",
+            "kcc",
+            "pmfby",
+            "eligibility",
+            "document",
+            "योजना",
+            "सब्सिडी",
+            "पात्र",
+            "दस्तावेज",
+        ]
+    ):
         return "schemes"
-    if any(k in txt for k in ["equipment", "rental", "tractor", "harvester", "sprayer"]):
+    if any(
+        k in txt
+        for k in [
+            "equipment",
+            "rental",
+            "tractor",
+            "harvester",
+            "sprayer",
+            "उपकरण",
+            "किराया",
+            "ट्रैक्टर",
+            "मशीन",
+        ]
+    ):
         return "equipment"
-    if any(k in txt for k in ["livestock", "dairy", "cattle", "goat", "poultry"]):
+    if any(
+        k in txt
+        for k in [
+            "livestock",
+            "dairy",
+            "cattle",
+            "goat",
+            "poultry",
+            "पशु",
+            "डेयरी",
+            "गाय",
+            "भैंस",
+            "बकरी",
+            "मुर्गी",
+        ]
+    ):
         return "livestock"
     return "home"
 
 
 def _infer_ui_action_cards_for_voice(transcript: str, agent_data: dict) -> list[str]:
+    allowed_tags = {
+        "marketplace",
+        "market_prices",
+        "calendar",
+        "weather",
+        "soil_moisture",
+        "cattle",
+        "documents",
+        "crop_doctor",
+        "equipment_marketplace",
+        "rental",
+        "mental_health",
+        "equipment_hub",
+        "upi",
+        "waste",
+    }
+
+    explicit_tags = _collect_ui_tags_from_agent_data(agent_data or {})
     redirect = _infer_ui_redirect_tag(transcript, agent_data)
     txt = (transcript or "").lower()
 
     seed_map = {
         "weather": ["weather", "soil_moisture", "crop_doctor"],
-        "market": ["market_prices", "marketplace", "market_strategy"],
-        "schemes": ["documents", "document_builder", "credit_sources"],
+        "market": ["market_prices", "marketplace", "calendar"],
+        "schemes": ["documents", "upi", "calendar"],
         "equipment": ["equipment_marketplace", "rental", "equipment_hub"],
         "livestock": ["cattle", "weather", "calendar"],
-        "home": ["chat", "live_voice", "home"],
+        "home": ["weather", "documents", "marketplace"],
     }
 
-    candidates = list(seed_map.get(redirect, ["chat", "live_voice", "home"]))
+    candidates = list(explicit_tags)
+    candidates.extend(seed_map.get(redirect, ["weather", "documents", "marketplace"]))
 
-    if any(k in txt for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "document"]):
-        candidates = ["documents", "document_builder"] + candidates
-    if any(k in txt for k in ["weather", "rain", "forecast", "soil", "moisture"]):
+    if any(k in txt for k in ["scheme", "subsidy", "pm-kisan", "kcc", "pmfby", "document", "योजना", "सब्सिडी", "दस्तावेज"]):
+        candidates = ["documents", "upi"] + candidates
+    if any(k in txt for k in ["weather", "rain", "forecast", "soil", "moisture", "मौसम", "बारिश", "मिट्टी", "नमी"]):
         candidates = ["weather", "soil_moisture"] + candidates
-    if any(k in txt for k in ["market", "mandi", "price", "rate", "bhav", "daam"]):
+    if any(k in txt for k in ["market", "mandi", "price", "rate", "bhav", "daam", "मंडी", "बाजार", "दाम", "भाव"]):
         candidates = ["market_prices", "marketplace"] + candidates
 
     deduped: list[str] = []
     for tag in candidates:
-        normalized = str(tag or "").strip().lower().replace("-", "_")
-        if not normalized or normalized in deduped:
+        normalized = _normalize_ui_tag(str(tag or ""))
+        if not normalized or normalized not in allowed_tags or normalized in deduped:
             continue
         deduped.append(normalized)
         if len(deduped) >= 3:
             break
+
+    if not deduped:
+        deduped = ["weather", "documents", "marketplace"]
 
     return deduped
 

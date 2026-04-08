@@ -137,10 +137,24 @@ class ChatService:
             return lang
         if "-" in lang:
             lang = lang.split("-", 1)[0]
-        if lang in {"english"}:
-            return "en"
-        if lang in {"hindi"}:
-            return "hi"
+        alias_map = {
+            "english": "en",
+            "hindi": "hi",
+            "hinglish": "hinglish",
+            "kannada": "kn",
+            "telugu": "te",
+            "tamil": "ta",
+            "malayalam": "ml",
+            "gujarati": "gu",
+            "marathi": "mr",
+            "bengali": "bn",
+            "punjabi": "pa",
+            "odia": "od",
+            "oriya": "od",
+            "spanish": "es",
+        }
+        if lang in alias_map:
+            return alias_map[lang]
         return lang
 
     @staticmethod
@@ -639,6 +653,10 @@ class ChatService:
     def _detect_turn_language(self, user_message: str, requested_language: str | None, previous_language: str | None) -> str:
         text = (user_message or "").strip()
         lower = text.lower()
+        requested_hint = self._normalize_language_label(requested_language)
+        previous_hint = self._normalize_language_label(previous_language)
+        concrete_requested = requested_hint if requested_hint and not requested_hint.startswith("auto") else ""
+        concrete_previous = previous_hint if previous_hint and not previous_hint.startswith("auto") else ""
 
         if self._contains_script(text, "kannada"):
             return "kn"
@@ -674,10 +692,33 @@ class ChatService:
                 return "auto-latin"
             if any(t in EN_COMMON for t in tokens):
                 return "en"
+            if concrete_requested in {
+                "kn",
+                "te",
+                "ta",
+                "ml",
+                "gu",
+                "pa",
+                "bn",
+                "od",
+                "mr",
+                "hi",
+                "hinglish",
+                "es",
+            }:
+                return concrete_requested
             # Default Latin-script fallback is English unless strong Hindi/Hinglish cues exist.
             return "en"
 
-        return self._infer_script_mode(user_message)
+        script_mode = self._infer_script_mode(user_message)
+        if script_mode != "auto":
+            return script_mode
+
+        if concrete_requested:
+            return concrete_requested
+        if concrete_previous:
+            return concrete_previous
+        return "en"
 
     @staticmethod
     def _is_generic_query(user_message: str) -> bool:
@@ -965,16 +1006,19 @@ class ChatService:
             cleaned_lines.append(line)
         cleaned = _polish_market_disclaimer("\n".join(cleaned_lines).strip())
 
-        if str(language or "").lower().startswith("en"):
+        lang_norm = self._normalize_language_label(language)
+        if lang_norm.startswith("en"):
             prefix = (
                 "Using the closest verified nearby records and a practical action plan for your farm."
             )
-        elif str(language or "").lower().startswith("hinglish"):
+        elif lang_norm.startswith("hinglish") or lang_norm.startswith("auto-mixed"):
             prefix = (
                 "Closest verified nearby records ke saath practical action plan neeche diya hai."
             )
-        else:
+        elif lang_norm.startswith("hi") or lang_norm.startswith("auto-devanagari"):
             prefix = "नीचे सबसे नज़दीकी सत्यापित रिकॉर्ड और व्यावहारिक कार्ययोजना दी गई है।"
+        else:
+            return cleaned or txt
 
         return f"{prefix}\n\n{cleaned}" if cleaned else prefix
 
@@ -1017,13 +1061,15 @@ class ChatService:
         if not loc_label:
             return text
 
-        lang = str(language or "").lower()
-        if lang.startswith("hinglish"):
+        lang = self._normalize_language_label(language)
+        if lang.startswith("hinglish") or lang.startswith("auto-mixed"):
             prefix = f"Location context: {loc_label} ke hisaab se neeche guidance diya gaya hai."
-        elif lang.startswith("hi"):
+        elif lang.startswith("hi") or lang.startswith("auto-devanagari"):
             prefix = f"स्थान संदर्भ: नीचे दी गई सलाह {loc_label} के अनुसार है।"
-        else:
+        elif lang.startswith("en"):
             prefix = f"Location context: Guidance below is tailored to {loc_label}."
+        else:
+            return text
 
         return f"{prefix}\n\n{text}"
 
@@ -1163,10 +1209,13 @@ class ChatService:
         if not fact_hint:
             return response_text
 
-        if str(language or "").lower().startswith("en"):
+        lang = self._normalize_language_label(language)
+        if lang.startswith("en"):
             suffix = f"\n\nConsidering your earlier context ({fact_hint}), this recommendation is tailored for your farm situation."
-        else:
+        elif lang.startswith("hi") or lang.startswith("hinglish") or lang.startswith("auto-mixed") or lang.startswith("auto-devanagari"):
             suffix = f"\n\nआपके पहले साझा किए गए संदर्भ ({fact_hint}) के आधार पर यह सलाह आपके खेत की स्थिति के अनुसार है।"
+        else:
+            return response_text
         return response_text + suffix
 
     def _append_calendar_verification_block(self, response_text: str, agentic_plan: dict, language: str) -> str:
@@ -1201,12 +1250,19 @@ class ChatService:
         if not lines:
             return response_text
 
-        if str(language or "").lower().startswith("hi"):
+        lang_norm = self._normalize_language_label(language)
+        if lang_norm.startswith("hi") or lang_norm.startswith("auto-devanagari"):
             header = f"\n\nकैलेंडर सत्यापन ({action}):"
-        elif str(language or "").lower().startswith("hinglish"):
+        elif (
+            lang_norm.startswith("hinglish")
+            or lang_norm.startswith("en")
+            or lang_norm.startswith("auto-latin")
+            or lang_norm.startswith("auto-mixed")
+            or lang_norm == "auto"
+        ):
             header = f"\n\nCalendar verification ({action}):"
         else:
-            header = f"\n\nCalendar verification ({action}):"
+            return response_text
 
         unique_lines = []
         seen = set()
@@ -1300,17 +1356,19 @@ class ChatService:
         out = re.sub(r"\breference match\b", "nearest verified data", out, flags=re.IGNORECASE)
         out = re.sub(r"\bnearest verified data mode\b", "nearest verified data", out, flags=re.IGNORECASE)
         # Remove model-side meta commentary that leaks internal language-hint reasoning.
+        hint_patterns = [
+            r"\(\s*note:\s*[^)]*(preferred\s+language\s+hint|script\s+hint|language\s+hint|auto-[a-z\-]+)[^)]*\)",
+            r"^\s*note:\s*.*(?:preferred\s+language\s+hint|script\s+hint|language\s+hint|auto-[a-z\-]+).*$",
+            r"^\s*(?:preferred\s+language\s+hint|script\s+hint|language\s+hint)\s*[:\-].*$",
+            r"^\s*since the preferred language hint[^\n]*$",
+        ]
+        for pattern in hint_patterns:
+            out = re.sub(pattern, "", out, flags=re.IGNORECASE | re.MULTILINE)
         out = re.sub(
-            r"\(\s*note:\s*since the preferred language hint[\s\S]*?\)",
+            r"\bauto-(latin|mixed|devanagari|gujarati|gurmukhi|bengali|tamil|telugu|kannada|malayalam|odia)\s+hint\b",
             "",
             out,
             flags=re.IGNORECASE,
-        )
-        out = re.sub(
-            r"^\s*note:\s*since the preferred language hint[^\n]*$",
-            "",
-            out,
-            flags=re.IGNORECASE | re.MULTILINE,
         )
         out = re.sub(r"if the user wants the response in english or any other language,? please let me know\.?", "", out, flags=re.IGNORECASE)
         out = re.sub(r"\n{3,}", "\n\n", out)
@@ -2602,13 +2660,15 @@ class ChatService:
         if self._has_source_marker(response_text):
             return response_text
 
-        lang = str(language or "").lower()
-        if lang.startswith("en") or lang.startswith("auto-latin") or lang == "auto":
+        lang = self._normalize_language_label(language)
+        if lang.startswith("en"):
             note = "\n\nSource note: this answer is grounded in available service data."
         elif lang.startswith("hinglish") or lang.startswith("auto-mixed"):
             note = "\n\nSource note: yeh answer available service data par grounded hai."
-        else:
+        elif lang.startswith("hi") or lang.startswith("auto-devanagari"):
             note = "\n\nस्रोत नोट: यह उत्तर उपलब्ध सेवा डेटा पर आधारित है।"
+        else:
+            return response_text
         return response_text + note
 
     @staticmethod

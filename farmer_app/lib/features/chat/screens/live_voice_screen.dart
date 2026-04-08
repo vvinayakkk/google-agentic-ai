@@ -550,6 +550,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         .trim();
     final transcriptDisplay =
         (data['transcript_display'] as String? ?? transcript).trim();
+    final responseLanguage = (data['language'] as String? ?? '').trim();
+    final effectiveLanguageCode = responseLanguage.isNotEmpty
+        ? responseLanguage
+        : languageCode;
     final baseResponse = _cleanDisplayText(data['response'] as String? ?? '');
     final audioBase64 = data['audio_base64'] as String? ?? '';
 
@@ -566,20 +570,20 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
     var effectiveResponse = baseResponse;
     if (retryStyleResponse && weatherIntent) {
-      effectiveResponse = _weatherFallbackResponse(languageCode);
+      effectiveResponse = _weatherFallbackResponse(effectiveLanguageCode);
       cards = _mergePriorityCards(cards, const <String>[
         'weather',
         'soil_moisture',
       ]);
     } else if (retryStyleResponse && schemeIntent) {
-      effectiveResponse = _schemeFallbackResponse(languageCode);
+      effectiveResponse = _schemeFallbackResponse(effectiveLanguageCode);
       cards = _mergePriorityCards(cards, const <String>['documents']);
     }
 
     final responseWithCardsHint = _appendCardsHintIfNeeded(
       effectiveResponse.trim(),
       cards,
-      languageCode,
+      effectiveLanguageCode,
     );
     final hasAppendedCardsHint =
         responseWithCardsHint != effectiveResponse.trim();
@@ -628,7 +632,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         final voice = ref.read(voiceServiceProvider);
         final regenerated = await voice.ttsBase64(
           text: responseForSpeech,
-          language: languageCode,
+          language: effectiveLanguageCode,
         );
         final regeneratedAudio = (regenerated['audio_base64'] as String? ?? '')
             .trim();
@@ -1158,35 +1162,47 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (!out.contains(tag)) out.add(tag);
     }
 
-    if (RegExp(r'market|mandi|price|rate|buyer|sell|listing').hasMatch(s)) {
+    if (RegExp(
+      r'market|mandi|price|rate|buyer|sell|listing|मंडी|बाजार|दाम|भाव|बेच',
+    ).hasMatch(s)) {
       add('marketplace');
       add('market_prices');
     }
-    if (RegExp(r'weather|rain|forecast|temperature|humidity').hasMatch(s)) {
+    if (RegExp(
+      r'weather|rain|forecast|temperature|humidity|मौसम|बारिश|वर्षा|तापमान|आर्द्रता',
+    ).hasMatch(s)) {
       add('weather');
     }
-    if (RegExp(r'soil|moisture|irrigation').hasMatch(s)) {
+    if (RegExp(r'soil|moisture|irrigation|मिट्टी|नमी|सिंचाई').hasMatch(s)) {
       add('soil_moisture');
     }
-    if (RegExp(r'scheme|subsidy|eligibility|pm-kisan|kcc|pmfby').hasMatch(s)) {
+    if (RegExp(
+      r'scheme|subsidy|eligibility|pm-kisan|kcc|pmfby|योजना|सब्सिडी|पात्र|दस्तावेज',
+    ).hasMatch(s)) {
       add('documents');
     }
-    if (RegExp(r'disease|pest|leaf|crop doctor').hasMatch(s)) {
+    if (RegExp(r'disease|pest|leaf|crop doctor|रोग|कीट').hasMatch(s)) {
       add('crop_doctor');
     }
-    if (RegExp(r'equipment|tractor|harvester|sprayer|machine').hasMatch(s)) {
+    if (RegExp(
+      r'equipment|tractor|harvester|sprayer|machine|उपकरण|ट्रैक्टर|मशीन',
+    ).hasMatch(s)) {
       add('equipment_marketplace');
     }
-    if (RegExp(r'rent|rental|hire').hasMatch(s)) {
+    if (RegExp(r'rent|rental|hire|किराया|भाड़ा').hasMatch(s)) {
       add('rental');
     }
-    if (RegExp(r'calendar|schedule|reminder|task').hasMatch(s)) {
+    if (RegExp(
+      r'calendar|schedule|reminder|task|कैलेंडर|अनुसूची|रिमाइंडर|कार्य',
+    ).hasMatch(s)) {
       add('calendar');
     }
-    if (RegExp(r'cow|buffalo|dairy|cattle|goat|poultry').hasMatch(s)) {
+    if (RegExp(
+      r'cow|buffalo|dairy|cattle|goat|poultry|गाय|भैंस|डेयरी|पशु|बकरी|मुर्गी',
+    ).hasMatch(s)) {
       add('cattle');
     }
-    if (RegExp(r'stress|mental|anxiety|helpline').hasMatch(s)) {
+    if (RegExp(r'stress|mental|anxiety|helpline|तनाव|मानसिक').hasMatch(s)) {
       add('mental_health');
     }
     return out;
@@ -1300,18 +1316,32 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     ).hasMatch(s);
   }
 
+  String _languagePrimary(String languageCode) {
+    final raw = languageCode.trim().toLowerCase().replaceAll('_', '-');
+    if (raw.isEmpty) return '';
+    if (raw.startsWith('auto-')) return raw;
+    final parts = raw.split('-');
+    return parts.isEmpty ? raw : parts.first;
+  }
+
   String _weatherFallbackResponse(String languageCode) {
-    final code = languageCode.toLowerCase();
+    final code = _languagePrimary(languageCode);
     if (code.startsWith('hi')) {
       return 'Abhi direct weather answer lane mein issue aa raha hai. Neeche Weather ya Soil Moisture card par tap karke current update dekh lijiye.';
+    }
+    if (code.startsWith('kn')) {
+      return 'ಈಗ ಲೈವ್ ಹವಾಮಾನ ಉತ್ತರ ತರಲು ಸಮಸ್ಯೆ ಇದೆ. ಕೆಳಗಿನ Weather ಅಥವಾ Soil Moisture ಕಾರ್ಡ್ ತಟ್ಟಿ ತಕ್ಷಣದ ಮಾಹಿತಿ ನೋಡಿ.';
     }
     return 'I could not fetch the live weather answer right now. Tap Weather or Soil Moisture below to get current conditions quickly.';
   }
 
   String _schemeFallbackResponse(String languageCode) {
-    final code = languageCode.toLowerCase();
+    final code = _languagePrimary(languageCode);
     if (code.startsWith('hi')) {
       return 'Scheme details laane mein abhi thoda issue aa raha hai. Neeche Schemes card par tap karke turant yojana aur eligibility dekh lijiye.';
+    }
+    if (code.startsWith('kn')) {
+      return 'ಈಗ ಯೋಜನೆ ವಿವರಗಳನ್ನು ತರಲು ಸಮಸ್ಯೆ ಇದೆ. ಕೆಳಗಿನ Schemes ಕಾರ್ಡ್ ತಟ್ಟಿ ಅರ್ಹತೆ ಮತ್ತು ದಾಖಲೆ ಮಾಹಿತಿಯನ್ನು ತಕ್ಷಣ ನೋಡಿ.';
     }
     return 'I am having trouble fetching scheme details right now. Tap the Schemes card below for eligibility and document guidance.';
   }
@@ -1345,13 +1375,44 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         lower.contains('cards below') ||
         lower.contains('tap the card') ||
         lower.contains('tap on the card') ||
-        lower.contains('neeche card');
+        lower.contains('neeche card') ||
+        lower.contains('ಕೆಳಗಿನ ಕಾರ್ಡ್') ||
+        lower.contains('ಕಾರ್ಡ್ ತಟ್ಟಿ') ||
+        lower.contains('కార్డ్') ||
+        lower.contains('கார்டு');
     if (alreadyHasHint) return clean;
 
-    final hint = languageCode.toLowerCase().startsWith('hi')
-        ? ' Neeche cards par tap karke aur details dekh sakte hain.'
-        : ' You can click on the cards below to see more.';
+    final hint = _cardsHintForLanguage(languageCode);
     return '$clean$hint';
+  }
+
+  String _cardsHintForLanguage(String languageCode) {
+    final code = _languagePrimary(languageCode);
+    if (code.startsWith('hi')) {
+      return ' Neeche cards par tap karke aur details dekh sakte hain.';
+    }
+    if (code.startsWith('kn')) {
+      return ' ಹೆಚ್ಚಿನ ವಿವರಗಳಿಗೆ ಕೆಳಗಿನ ಕಾರ್ಡ್‌ಗಳನ್ನು ತಟ್ಟಬಹುದು.';
+    }
+    if (code.startsWith('te')) {
+      return ' మరిన్ని వివరాల కోసం క్రింద ఉన్న కార్డులను ట్యాప్ చేయండి.';
+    }
+    if (code.startsWith('ta')) {
+      return ' மேலும் விவரங்களுக்கு கீழே உள்ள கார்டுகளை தட்டலாம்.';
+    }
+    if (code.startsWith('mr')) {
+      return ' अधिक माहिती पाहण्यासाठी खालील कार्ड्सवर टॅप करा.';
+    }
+    if (code.startsWith('gu')) {
+      return ' વધુ માહિતી માટે નીચેના કાર્ડ પર ટૅપ કરો.';
+    }
+    if (code.startsWith('bn')) {
+      return ' আরও তথ্য দেখতে নিচের কার্ডগুলোতে ট্যাপ করুন.';
+    }
+    if (code.startsWith('ml')) {
+      return ' കൂടുതൽ വിവരങ്ങൾക്ക് താഴെയുള്ള കാർഡുകളിൽ ടാപ്പ് ചെയ്യാം.';
+    }
+    return ' You can click on the cards below to see more.';
   }
 
   String _formatClock(int seconds) {
