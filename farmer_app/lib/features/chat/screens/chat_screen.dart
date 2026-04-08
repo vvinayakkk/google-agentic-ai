@@ -366,6 +366,79 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  String _messageSignature(ChatMessage message) {
+    final normalizedContent = message.content
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .toLowerCase();
+    final stage = (message.stage ?? '').trim().toLowerCase();
+    return '${message.role}|$stage|$normalizedContent';
+  }
+
+  List<ChatMessage> _dedupeLoadedMessages(List<ChatMessage> input) {
+    if (input.length < 2) return input;
+
+    final byId = <ChatMessage>[];
+    final seenIds = <String>{};
+    for (final message in input) {
+      final id = (message.messageId ?? '').trim();
+      if (id.isNotEmpty && !seenIds.add(id)) {
+        continue;
+      }
+      byId.add(message);
+    }
+
+    if (byId.length < 2) return byId;
+
+    final noAdjacentDupes = <ChatMessage>[];
+    for (final message in byId) {
+      if (noAdjacentDupes.isNotEmpty &&
+          _messageSignature(noAdjacentDupes.last) ==
+              _messageSignature(message)) {
+        continue;
+      }
+      noAdjacentDupes.add(message);
+    }
+
+    if (noAdjacentDupes.length < 4) return noAdjacentDupes;
+
+    final out = <ChatMessage>[];
+    var i = 0;
+    while (i < noAdjacentDupes.length) {
+      if (i + 3 < noAdjacentDupes.length) {
+        final first = noAdjacentDupes[i];
+        final second = noAdjacentDupes[i + 1];
+        final sigFirst = _messageSignature(first);
+        final sigSecond = _messageSignature(second);
+
+        if (first.role != second.role) {
+          var j = i + 2;
+          var repeats = 1;
+          while (j + 1 < noAdjacentDupes.length &&
+              _messageSignature(noAdjacentDupes[j]) == sigFirst &&
+              _messageSignature(noAdjacentDupes[j + 1]) == sigSecond &&
+              noAdjacentDupes[j].role == first.role &&
+              noAdjacentDupes[j + 1].role == second.role) {
+            repeats += 1;
+            j += 2;
+          }
+
+          if (repeats > 1) {
+            out.add(first);
+            out.add(second);
+            i = j;
+            continue;
+          }
+        }
+      }
+
+      out.add(noAdjacentDupes[i]);
+      i += 1;
+    }
+
+    return out;
+  }
+
   // â”€â”€ Load existing session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _loadSession() async {
     if (_sessionId == null || _sessionId!.trim().isEmpty) return;
@@ -374,11 +447,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final agent = ref.read(agentServiceProvider);
       final data = await agent.getSession(_sessionId!);
-      final msgs =
+      final rawMsgs =
           (data['messages'] as List<dynamic>?)
               ?.map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
               .toList() ??
           [];
+      final msgs = _dedupeLoadedMessages(rawMsgs);
 
       if (mounted) {
         setState(() {
