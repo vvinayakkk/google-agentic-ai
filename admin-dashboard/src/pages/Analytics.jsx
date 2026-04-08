@@ -316,7 +316,7 @@ const getSchemeStates = (row) => {
   return ["Central"];
 };
 
-const Analytics = () => {
+const Analytics = ({ refreshToken = 0 }) => {
   const [windowDays, setWindowDays] = useState(30);
   const [overview, setOverview] = useState(null);
   const [schemeRows, setSchemeRows] = useState([]);
@@ -330,68 +330,85 @@ const Analytics = () => {
   const [farmerLoading, setFarmerLoading] = useState(false);
   const [mode, setMode] = useState({ trend: "line", states: "bars", opp: "bars", engagement: "donut", activity: "heat" });
   const [hoverText, setHoverText] = useState({});
+  const lastRefreshTokenRef = useRef(refreshToken);
+  const loadSeqRef = useRef(0);
 
-  const loadOverview = useCallback(async () => {
+  const fetchSchemes = useCallback(async (forceRefresh = false) => {
+    const perPage = 100;
+    let page = 1;
+    let totalPages = 1;
+    const all = [];
+
+    while (page <= totalPages && page <= 6) {
+      const payload = await apiTry([
+        withQuery("/api/v1/admin/data/schemes", { page, per_page: perPage, refresh: forceRefresh ? 1 : undefined }),
+        withQuery("/api/v1/schemes/", { page, per_page: perPage }),
+      ], {}, { forceRefresh });
+      const items = payload?.items || payload?.schemes || (Array.isArray(payload) ? payload : []);
+      all.push(...items);
+      totalPages = Number(payload?.total_pages || 1);
+      if (!items.length) break;
+      page += 1;
+    }
+
+    return all;
+  }, []);
+
+  const loadOverview = useCallback(async (forceRefresh = false) => {
+    const loadSeq = loadSeqRef.current + 1;
+    loadSeqRef.current = loadSeq;
     setLoading(true);
     setError(null);
+    setSourceStatus({ overview: "loading", schemes: "loading" });
     try {
-      const fetchSchemes = async () => {
-        const perPage = 100;
-        let page = 1;
-        let totalPages = 1;
-        const all = [];
+      const overviewPayload = await apiTry([
+        withQuery("/api/v1/analytics/overview", { days: windowDays, refresh: forceRefresh ? 1 : undefined }),
+      ], {}, { forceRefresh });
 
-        while (page <= totalPages && page <= 6) {
-          const payload = await apiTry([
-            withQuery("/api/v1/admin/data/schemes", { page, per_page: perPage }),
-            withQuery("/api/v1/schemes/", { page, per_page: perPage }),
-          ]);
-          const items = payload?.items || payload?.schemes || (Array.isArray(payload) ? payload : []);
-          all.push(...items);
-          totalPages = Number(payload?.total_pages || 1);
-          if (!items.length) break;
-          page += 1;
-        }
+      if (loadSeqRef.current !== loadSeq) return;
 
-        return all;
-      };
+      setOverview(overviewPayload);
+      setSourceStatus((prev) => ({ ...prev, overview: "ready" }));
+      setLoading(false);
 
-      const [overviewRes, schemesRes] = await Promise.allSettled([
-        apiTry([`/api/v1/analytics/overview?days=${windowDays}`]),
-        fetchSchemes(),
-      ]);
-
-      if (overviewRes.status === "fulfilled") {
-        setOverview(overviewRes.value);
-      } else {
-        throw overviewRes.reason;
-      }
-
-      const schemesPayload = schemesRes.status === "fulfilled" ? schemesRes.value : [];
-      setSchemeRows(Array.isArray(schemesPayload) ? schemesPayload : []);
-      setSchemeDocs([]);
-      setSourceStatus({
-        overview: "ready",
-        schemes: schemesRes.status === "fulfilled" ? "ready" : "unavailable",
-      });
+      // Load scheme catalog in background so heavy scheme pages do not block analytics render.
+      fetchSchemes(forceRefresh)
+        .then((schemesPayload) => {
+          if (loadSeqRef.current !== loadSeq) return;
+          setSchemeRows(Array.isArray(schemesPayload) ? schemesPayload : []);
+          setSchemeDocs([]);
+          setSourceStatus((prev) => ({ ...prev, schemes: "ready" }));
+        })
+        .catch(() => {
+          if (loadSeqRef.current !== loadSeq) return;
+          setSchemeRows([]);
+          setSchemeDocs([]);
+          setSourceStatus((prev) => ({ ...prev, schemes: "unavailable" }));
+        });
     } catch (err) {
+      if (loadSeqRef.current !== loadSeq) return;
       setError(err.message || "Failed to load analytics overview");
       setOverview(null);
       setSchemeRows([]);
       setSchemeDocs([]);
       setSourceStatus({ overview: "unavailable", schemes: "unavailable" });
-    } finally {
       setLoading(false);
     }
-  }, [windowDays]);
+  }, [fetchSchemes, windowDays]);
 
-  useEffect(() => { loadOverview(); }, [loadOverview]);
+  useEffect(() => { loadOverview(false); }, [loadOverview]);
+
+  useEffect(() => {
+    if (lastRefreshTokenRef.current === refreshToken) return;
+    lastRefreshTokenRef.current = refreshToken;
+    loadOverview(true);
+  }, [refreshToken, loadOverview]);
 
   const generateSnapshot = useCallback(async () => {
     setGenerating(true);
     try {
       await apiTry([`/api/v1/analytics/snapshots/generate?days=${windowDays}`], { method: "POST", body: JSON.stringify({}) });
-      await loadOverview();
+      await loadOverview(true);
     } finally {
       setGenerating(false);
     }

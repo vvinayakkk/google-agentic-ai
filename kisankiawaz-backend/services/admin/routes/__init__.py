@@ -1,6 +1,7 @@
 """Admin service routes — all routes require ADMIN or SUPER_ADMIN JWT."""
 
 import math
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -56,6 +57,23 @@ def _admin_browseable_collections() -> set[str]:
 
 
 ADMIN_BROWSEABLE_COLLECTIONS = _admin_browseable_collections()
+
+_ADMIN_ROUTE_CACHE: dict[str, tuple[float, dict]] = {}
+
+
+def _cache_get(key: str) -> Optional[dict]:
+    entry = _ADMIN_ROUTE_CACHE.get(key)
+    if not entry:
+        return None
+    expires_at, payload = entry
+    if time.time() >= expires_at:
+        _ADMIN_ROUTE_CACHE.pop(key, None)
+        return None
+    return payload
+
+
+def _cache_set(key: str, payload: dict, ttl_seconds: int) -> None:
+    _ADMIN_ROUTE_CACHE[key] = (time.time() + max(1, ttl_seconds), payload)
 
 
 # ── Auth ─────────────────────────────────────────────────────────
@@ -114,6 +132,7 @@ async def browse_collection(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=500),
     search: str = Query(None),
+    refresh: bool = Query(False),
     admin: dict = Depends(get_current_admin),
 ):
     """Generic collection browser for admin dashboard database explorer."""
@@ -123,6 +142,38 @@ async def browse_collection(
     db = get_async_db()
     docs = []
     query_text = (search or "").strip().lower()
+
+    # Fast path for pagination without search to avoid full scans on large collections.
+    if not query_text:
+        cache_key = f"browse:{collection_name}:{page}:{per_page}"
+        if not refresh:
+            cached = _cache_get(cache_key)
+            if cached is not None:
+                return cached
+
+        start = (page - 1) * per_page
+        query = db.collection(collection_name).order_by("updated_at", "DESCENDING").offset(start).limit(per_page)
+
+        async for doc in query.stream():
+            data = doc.to_dict() or {}
+            data["id"] = doc.id
+            if collection_name in {MongoCollections.USERS, MongoCollections.ADMIN_USERS}:
+                data.pop("password_hash", None)
+            docs.append(data)
+
+        total = start + len(docs)
+        total_pages = page + 1 if len(docs) == per_page else page
+        payload = {
+            "collection": collection_name,
+            "items": docs,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+        }
+        if payload["items"]:
+            _cache_set(cache_key, payload, ttl_seconds=300)
+        return payload
 
     async for doc in db.collection(collection_name).stream():
         data = doc.to_dict() or {}
@@ -270,7 +321,16 @@ async def delete_scheme(scheme_id: str, admin: dict = Depends(get_current_admin)
 
 
 @router.get("/data/equipment-providers", status_code=HttpStatus.OK)
-async def list_providers(admin: dict = Depends(get_current_admin)):
+async def list_providers(
+    refresh: bool = Query(False),
+    admin: dict = Depends(get_current_admin),
+):
+    cache_key = "equipment-providers:all"
+    if not refresh:
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return cached
+
     db = get_async_db()
     items = []
     async for doc in db.collection(MongoCollections.REF_EQUIPMENT_PROVIDERS).stream():
@@ -278,7 +338,10 @@ async def list_providers(admin: dict = Depends(get_current_admin)):
         data["id"] = doc.id
         data.setdefault("rental_id", doc.id)
         items.append(data)
-    return {"items": items, "total": len(items)}
+    payload = {"items": items, "total": len(items)}
+    if items:
+        _cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 @router.post("/data/equipment-providers", status_code=HttpStatus.CREATED)

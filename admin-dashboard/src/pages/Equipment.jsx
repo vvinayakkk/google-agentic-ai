@@ -315,7 +315,7 @@ const MiniSpark = ({ values = [] }) => {
   );
 };
 
-const Equipment = () => {
+const Equipment = ({ refreshToken = 0 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -348,13 +348,20 @@ const Equipment = () => {
     setTooltip((t) => (t.show ? { ...t, show: false } : t));
   }, []);
 
-  const fetchAllCollection = useCallback(async (collection, maxPages = 20, perPage = 200, search = "") => {
+  const fetchAllCollection = useCallback(async (collection, maxPages = 20, perPage = 200, search = "", forceRefresh = false) => {
     let page = 1;
     let totalPages = 1;
     const all = [];
     while (page <= totalPages && page <= maxPages) {
       try {
-        const payload = await apiTry([withQuery(`/api/v1/admin/data/collection/${collection}`, { page, per_page: perPage, search })]);
+        const payload = await apiTry([
+          withQuery(`/api/v1/admin/data/collection/${collection}`, {
+            page,
+            per_page: perPage,
+            search,
+            refresh: forceRefresh ? 1 : undefined,
+          }),
+        ], {}, { forceRefresh });
         const rows = payload?.items || [];
         all.push(...rows);
         totalPages = Number(payload?.total_pages || 1);
@@ -368,20 +375,22 @@ const Equipment = () => {
     return all;
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false, allowRetry = true) => {
     setLoading(true);
     setError(null);
     try {
       let providerPayload = null;
       try {
-        providerPayload = await apiTry(["/api/v1/admin/data/equipment-providers"]);
+        providerPayload = await apiTry([
+          withQuery("/api/v1/admin/data/equipment-providers", { refresh: forceRefresh ? 1 : undefined }),
+        ], {}, { forceRefresh });
       } catch {
         providerPayload = null;
       }
 
       const safeFetchCollection = async (collection, pages = 20, pageSize = 200) => {
         try {
-          return await fetchAllCollection(collection, pages, pageSize);
+          return await fetchAllCollection(collection, pages, pageSize, "", forceRefresh);
         } catch {
           return [];
         }
@@ -441,6 +450,10 @@ const Equipment = () => {
       });
 
       if (!normalizedProviders.length && !normalizedHistories.length) {
+        if (!forceRefresh && allowRetry) {
+          await load(true, false);
+          return;
+        }
         setError("Equipment data source reachable but no mappable rows found");
       }
     } catch (e) {
@@ -454,7 +467,7 @@ const Equipment = () => {
     }
   }, [fetchAllCollection]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(refreshToken > 0); }, [load, refreshToken]);
 
   useEffect(() => {
     if (!selectedEquipment) return;
@@ -472,7 +485,9 @@ const Equipment = () => {
       let rows = [];
 
       try {
-        const payload = await apiTry([withQuery("/api/v1/equipment/rental-rates/rate-history", { equipment_name: selectedLabel })]);
+        const payload = await apiTry([
+          withQuery("/api/v1/equipment/rental-rates/rate-history", { equipment_name: selectedLabel }),
+        ]);
         rows = extractRows(payload);
       } catch {
         rows = [];
@@ -727,7 +742,7 @@ const Equipment = () => {
           <h2 style={{ margin: 0, fontSize: 18, color: "var(--text)", fontWeight: 700 }}>Equipment Market Intelligence</h2>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Stock-market view for equipment rates, liquidity, momentum, and booking pulse.</div>
         </div>
-        <button type="button" className="btn-ghost" onClick={load} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <button type="button" className="btn-ghost" onClick={() => load(true)} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <RefreshCw size={13} className={loading ? "mkt-spin" : ""} />
           {loading ? "Refreshing..." : "Refresh Feed"}
         </button>

@@ -489,9 +489,9 @@ def init_mongodb() -> MongoClient:
     settings = get_settings()
     mongo_kwargs: dict[str, Any] = {
         "retryWrites": True,
-        "connectTimeoutMS": 30000,
-        "serverSelectionTimeoutMS": 30000,
-        "socketTimeoutMS": 60000,
+        "connectTimeoutMS": 45000,
+        "serverSelectionTimeoutMS": 45000,
+        "socketTimeoutMS": 180000,
     }
 
     # Atlas/DNS SRV deployments are TLS by default; pin CA bundle explicitly for container stability.

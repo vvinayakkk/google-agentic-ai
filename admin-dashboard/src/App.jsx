@@ -8,6 +8,7 @@ import { PAGE_KEYS, NAV_ITEMS } from "./utils/constants";
 import Login from "./pages/Login";
 import TopBar from "./components/layout/TopBar";
 import GTranslate from "./components/GTranslate";
+import { clearApiCache } from "./api/client";
 
 const Overview = lazy(() => import("./pages/Overview"));
 const Farmers = lazy(() => import("./pages/Farmers"));
@@ -41,15 +42,19 @@ const Dashboard = () => {
   const [services, setServices] = useState([]);
   const [lastSync, setLastSync] = useState(new Date().toISOString());
   const [exportRows, setExportRows] = useState([]);
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const ActivePage = pageMap[activePage] || Market;
 
   const onRefresh = () => {
+    clearApiCache();
     setLastSync(new Date().toISOString());
+    setRefreshNonce((n) => n + 1);
     push("Dashboard refresh triggered", "info");
   };
 
   const pageProps = useMemo(() => {
     return {
+      refreshToken: refreshNonce,
       onStatsChange: (data) => {
         setLastSync(new Date().toISOString());
         if (Array.isArray(data?.service_health)) {
@@ -63,7 +68,7 @@ const Dashboard = () => {
         setLiveActivity(Array.isArray(events) ? events : []);
       },
     };
-  }, [setLiveActivity]);
+  }, [refreshNonce, setLiveActivity]);
 
   const pageName = NAV_ITEMS.find((i) => i.key === activePage)?.label || "Overview";
   useEffect(() => {
@@ -78,7 +83,7 @@ const Dashboard = () => {
       <main className="app-main">
         <ErrorBoundary>
           <Suspense fallback={<div className="panel card-pad muted">Loading page...</div>}>
-            <ActivePage {...pageProps} onRefresh={onRefresh} />
+            <ActivePage key={`${activePage}-${refreshNonce}`} {...pageProps} onRefresh={onRefresh} />
           </Suspense>
         </ErrorBoundary>
       </main>
