@@ -65,10 +65,7 @@ class AgentService {
   }) async {
     final res = await _client.post(
       ApiEndpoints.agentChatFinalize,
-      data: {
-        'request_id': requestId,
-        'timeout_seconds': timeoutSeconds,
-      },
+      data: {'request_id': requestId, 'timeout_seconds': timeoutSeconds},
     );
     return res.data as Map<String, dynamic>;
   }
@@ -196,19 +193,13 @@ class VoiceService {
   // ── STT ───────────────────────────────────────────────────
 
   /// POST /api/v1/voice/stt → multipart file + language → {transcript, language_code}.
-  Future<Map<String, dynamic>> stt(
-    String filePath, {
-    String? language,
-  }) async {
+  Future<Map<String, dynamic>> stt(String filePath, {String? language}) async {
     final normalizedLanguage = _normalizeVoiceLanguage(language);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
       'language': normalizedLanguage,
     });
-    final res = await _client.upload(
-      ApiEndpoints.voiceStt,
-      formData: formData,
-    );
+    final res = await _client.upload(ApiEndpoints.voiceStt, formData: formData);
     return res.data as Map<String, dynamic>;
   }
 
