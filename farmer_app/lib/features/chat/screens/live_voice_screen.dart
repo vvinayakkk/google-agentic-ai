@@ -1622,14 +1622,19 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       key: key,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          const spacing = 12.0;
+          final stageHeight = math.max(120.0, constraints.maxHeight * 0.9);
+
           if (cards.length == 1) {
-            return Center(
+            final singleHeight = stageHeight.clamp(132.0, 250.0).toDouble();
+            return Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: math.min(480.0, constraints.maxWidth).toDouble(),
+                  maxWidth: math.min(520.0, constraints.maxWidth).toDouble(),
                 ),
                 child: SizedBox(
-                  height: 190,
+                  height: singleHeight,
                   child: _buildActionTile(
                     cards.first,
                     isDark: isDark,
@@ -1641,13 +1646,14 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           }
 
           if (cards.length == 2) {
-            return Padding(
-              padding: const EdgeInsets.only(top: 6),
+            final dualHeight = stageHeight.clamp(136.0, 220.0).toDouble();
+            return Align(
+              alignment: Alignment.topCenter,
               child: Row(
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 176,
+                      height: dualHeight,
                       child: _buildActionTile(
                         cards[0],
                         isDark: isDark,
@@ -1658,7 +1664,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: SizedBox(
-                      height: 176,
+                      height: dualHeight,
                       child: _buildActionTile(
                         cards[1],
                         isDark: isDark,
@@ -1672,20 +1678,42 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
           }
 
           final crossAxisCount = constraints.maxWidth > 680 ? 3 : 2;
-          final ratio = cards.length <= 4 ? 1.65 : 1.48;
-          return GridView.builder(
-            padding: const EdgeInsets.only(top: 6),
-            physics: const BouncingScrollPhysics(),
-            itemCount: cards.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: ratio,
+          final usableWidth =
+              constraints.maxWidth - ((crossAxisCount - 1) * spacing);
+          final tileWidth = usableWidth / crossAxisCount;
+          final rowCount = (cards.length / crossAxisCount).ceil();
+          final targetGridHeight = stageHeight.clamp(
+            220.0,
+            constraints.maxHeight,
+          );
+          final tileHeight =
+              ((targetGridHeight - ((rowCount - 1) * spacing)) / rowCount)
+                  .clamp(122.0, 230.0)
+                  .toDouble();
+          final ratio = tileWidth / tileHeight;
+          final gridHeight =
+              (rowCount * tileHeight) + ((rowCount - 1) * spacing);
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              height: gridHeight,
+              child: GridView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: cards.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: spacing,
+                  crossAxisSpacing: spacing,
+                  childAspectRatio: ratio,
+                ),
+                itemBuilder: (_, i) {
+                  return _buildActionTile(cards[i], isDark: isDark, wide: true);
+                },
+              ),
             ),
-            itemBuilder: (_, i) {
-              return _buildActionTile(cards[i], isDark: isDark, wide: true);
-            },
           );
         },
       ),
@@ -1701,12 +1729,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final textMuted = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
-    final cardBg = isDark
-        ? const Color(0xFF101827)
-        : Colors.white.withValues(alpha: 0.95);
+    final cardBg = isDark ? const Color(0xFF101827) : const Color(0xFFF1F8F4);
     final cardBorder = isDark
         ? const Color(0xFF243244)
-        : AppColors.lightBorder.withValues(alpha: 0.98);
+        : AppColors.primary.withValues(alpha: 0.26);
     final topic = _topicColor(card.route);
 
     return TweenAnimationBuilder<double>(
@@ -1731,7 +1757,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
             context.push(card.route);
           },
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: cardBorder),
@@ -1739,8 +1765,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
             child: Row(
               children: [
                 Container(
-                  width: wide ? 42 : 36,
-                  height: wide ? 42 : 36,
+                  width: wide ? 44 : 36,
+                  height: wide ? 44 : 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -1769,18 +1795,18 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                         style: TextStyle(
                           color: textPrimary,
                           fontWeight: FontWeight.w700,
-                          fontSize: wide ? 14.5 : 13.5,
+                          fontSize: wide ? 18 : 13.5,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         _topicDescription(card.route),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: textMuted,
                           fontWeight: FontWeight.w500,
-                          fontSize: wide ? 11.8 : 11,
+                          fontSize: wide ? 13.2 : 11,
                         ),
                       ),
                     ],
@@ -2145,7 +2171,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return const Color(0xFF3B82F6);
     }
     if (route == RoutePaths.documents) {
-      return const Color(0xFFF59E0B);
+      return AppColors.primary;
     }
     if (route == RoutePaths.equipmentMarketplace ||
         route == RoutePaths.equipmentHub) {
