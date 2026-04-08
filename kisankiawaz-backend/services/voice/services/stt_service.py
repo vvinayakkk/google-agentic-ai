@@ -5,7 +5,9 @@ from shared.errors import bad_request
 from loguru import logger
 
 SARVAM_STT_URL = os.getenv("SARVAM_STT_URL", "https://api.sarvam.ai/speech-to-text")
-SARVAM_STT_LEGACY_URL = os.getenv("SARVAM_STT_LEGACY_URL", "https://api.sarvam.ai/speech-to-text-translate")
+# Optional legacy fallback endpoint. Leave empty by default to avoid unintended
+# translation behavior when the primary transcription endpoint is unavailable.
+SARVAM_STT_LEGACY_URL = os.getenv("SARVAM_STT_LEGACY_URL", "").strip()
 STT_MODEL = os.getenv("VOICE_STT_MODEL", "saaras:v3")
 STT_MODE = os.getenv("VOICE_STT_MODE", "transcribe")
 STT_LEGACY_MODEL = os.getenv("VOICE_STT_LEGACY_MODEL", "saaras:v2.5")

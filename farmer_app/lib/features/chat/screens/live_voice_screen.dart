@@ -410,6 +410,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     String? sourcePrompt,
   }) async {
     final languageCode = context.locale.languageCode;
+    const requestLanguage = 'auto';
     final hintedQuestion = (sourcePrompt ?? '').trim();
     final voice = ref.read(voiceServiceProvider);
     var handledResult = false;
@@ -417,7 +418,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     Future<void> fallbackToNonStreaming() async {
       final data = await voice.voiceCommandText(
         path,
-        language: languageCode,
+        language: requestLanguage,
         sessionId: _sessionId,
       );
       if (!mounted) return;
@@ -431,7 +432,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     try {
       final stream = voice.voiceCommandTextStream(
         path,
-        language: languageCode,
+        language: requestLanguage,
         sessionId: _sessionId,
       );
 
@@ -558,7 +559,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final audioBase64 = data['audio_base64'] as String? ?? '';
 
     final actionTags = _extractActionTags(data);
-    var cards = _buildVoiceActionCards(actionTags);
+    final actionCardLabels = _extractActionCardLabels(data);
+    var cards = _buildVoiceActionCards(
+      actionTags,
+      actionCardLabels: actionCardLabels,
+    );
 
     final retryStyleResponse = _isRetryStyleResponse(baseResponse);
     final weatherIntent = _isWeatherIntent(
@@ -574,28 +579,50 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       cards = _mergePriorityCards(cards, const <String>[
         'weather',
         'soil_moisture',
-      ]);
+      ], actionCardLabels: actionCardLabels);
     } else if (retryStyleResponse && schemeIntent) {
       effectiveResponse = _schemeFallbackResponse(effectiveLanguageCode);
-      cards = _mergePriorityCards(cards, const <String>['documents']);
+      cards = _mergePriorityCards(cards, const <String>[
+        'documents',
+      ], actionCardLabels: actionCardLabels);
     }
 
-    final responseWithCardsHint = _appendCardsHintIfNeeded(
-      effectiveResponse.trim(),
-      cards,
-      effectiveLanguageCode,
-    );
-    final hasAppendedCardsHint =
-        responseWithCardsHint != effectiveResponse.trim();
-    final responseForDisplay = responseWithCardsHint;
-    final responseForSpeech = responseWithCardsHint;
+    final responseForDisplay = effectiveResponse.trim();
+    final responseForSpeech = responseForDisplay;
 
     final nextSession = data['session_id'] as String?;
     _syncSession(nextSession ?? _sessionId);
 
+    final requestedLang = effectiveLanguageCode.trim().toLowerCase();
+    final requestedIndic = <String>{
+      'hi',
+      'mr',
+      'bn',
+      'gu',
+      'kn',
+      'ml',
+      'od',
+      'or',
+      'pa',
+      'ta',
+      'te',
+      'as',
+    }.contains(requestedLang);
+    final transcriptHasLatin = RegExp(r'[A-Za-z]').hasMatch(transcript);
+    final transcriptHasIndicScript = RegExp(
+      r'[\u0900-\u0D7F]',
+    ).hasMatch(transcript);
+    final allowTranscriptFallback =
+        !(requestedIndic &&
+            transcriptDisplay.isEmpty &&
+            transcriptHasLatin &&
+            !transcriptHasIndicScript);
+
     final visibleQuestion = transcriptDisplay.isNotEmpty
         ? transcriptDisplay
-        : (transcript.isNotEmpty ? transcript : hintedQuestion);
+        : (allowTranscriptFallback && transcript.isNotEmpty
+              ? transcript
+              : hintedQuestion);
     final previousQuestion = _activeQuestion;
 
     _stopThinkingTicker();
@@ -626,7 +653,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _questionFadeController.addStatusListener(_clearQuestionStatusListener);
     }
 
-    String audioToPlay = hasAppendedCardsHint ? '' : audioBase64;
+    String audioToPlay = audioBase64;
     if (audioToPlay.trim().isEmpty && responseForSpeech.isNotEmpty) {
       try {
         final voice = ref.read(voiceServiceProvider);
@@ -1154,6 +1181,48 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
+  Map<String, String> _extractActionCardLabels(Map<String, dynamic> data) {
+    final out = <String, String>{};
+    const alias = <String, String>{
+      'market': 'marketplace',
+      'scheme': 'documents',
+      'schemes': 'documents',
+      'equipment': 'equipment_marketplace',
+      'livestock': 'cattle',
+      'live-voice': 'live_voice',
+      'livevoice': 'live_voice',
+      'chat-history': 'chat_history',
+      'soilmoisture': 'soil_moisture',
+      'farmviz': 'farm_viz',
+    };
+
+    String normalizeTag(String? rawTag) {
+      var key = (rawTag ?? '').trim().toLowerCase();
+      if (key.isEmpty) return '';
+      key = key.replaceAll('-', '_').replaceAll(' ', '_');
+      return alias[key] ?? key;
+    }
+
+    void collectFrom(dynamic node) {
+      if (node is! Map) return;
+      for (final entry in node.entries) {
+        final tag = normalizeTag(entry.key.toString());
+        final label = (entry.value ?? '').toString().trim();
+        if (tag.isNotEmpty && label.isNotEmpty) {
+          out[tag] = label;
+        }
+      }
+    }
+
+    collectFrom(data['ui_action_card_labels']);
+    if (data['agent_metadata'] is Map<String, dynamic>) {
+      final meta = data['agent_metadata'] as Map<String, dynamic>;
+      collectFrom(meta['ui_action_card_labels']);
+    }
+
+    return out;
+  }
+
   List<String> _inferActionTagsFromText(String text) {
     final s = text.toLowerCase();
     final out = <String>[];
@@ -1208,7 +1277,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
-  List<_VoiceActionCard> _buildVoiceActionCards(List<String> tags) {
+  List<_VoiceActionCard> _buildVoiceActionCards(
+    List<String> tags, {
+    Map<String, String> actionCardLabels = const <String, String>{},
+  }) {
     const actionsByTag = <String, _VoiceActionCard>{
       'marketplace': _VoiceActionCard(
         label: 'Marketplace',
@@ -1287,8 +1359,16 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     for (final tag in tags) {
       final action = actionsByTag[tag];
       if (action == null) continue;
+      final localized = (actionCardLabels[tag] ?? '').trim();
+      final resolved = localized.isEmpty
+          ? action
+          : _VoiceActionCard(
+              label: localized,
+              icon: action.icon,
+              route: action.route,
+            );
       if (seenRoutes.add(action.route)) {
-        out.add(action);
+        out.add(resolved);
       }
       if (out.length >= _maxActionCards) break;
     }
@@ -1348,9 +1428,13 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   List<_VoiceActionCard> _mergePriorityCards(
     List<_VoiceActionCard> current,
-    List<String> tags,
-  ) {
-    final priority = _buildVoiceActionCards(tags);
+    List<String> tags, {
+    Map<String, String> actionCardLabels = const <String, String>{},
+  }) {
+    final priority = _buildVoiceActionCards(
+      tags,
+      actionCardLabels: actionCardLabels,
+    );
     final out = <_VoiceActionCard>[];
     final seen = <String>{};
     for (final card in <_VoiceActionCard>[...priority, ...current]) {
@@ -1360,59 +1444,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (out.length >= _maxActionCards) break;
     }
     return out;
-  }
-
-  String _appendCardsHintIfNeeded(
-    String text,
-    List<_VoiceActionCard> cards,
-    String languageCode,
-  ) {
-    final clean = text.trim();
-    if (clean.isEmpty || cards.isEmpty) return clean;
-
-    final lower = clean.toLowerCase();
-    final alreadyHasHint =
-        lower.contains('cards below') ||
-        lower.contains('tap the card') ||
-        lower.contains('tap on the card') ||
-        lower.contains('neeche card') ||
-        lower.contains('ಕೆಳಗಿನ ಕಾರ್ಡ್') ||
-        lower.contains('ಕಾರ್ಡ್ ತಟ್ಟಿ') ||
-        lower.contains('కార్డ్') ||
-        lower.contains('கார்டு');
-    if (alreadyHasHint) return clean;
-
-    final hint = _cardsHintForLanguage(languageCode);
-    return '$clean$hint';
-  }
-
-  String _cardsHintForLanguage(String languageCode) {
-    final code = _languagePrimary(languageCode);
-    if (code.startsWith('hi')) {
-      return ' Neeche cards par tap karke aur details dekh sakte hain.';
-    }
-    if (code.startsWith('kn')) {
-      return ' ಹೆಚ್ಚಿನ ವಿವರಗಳಿಗೆ ಕೆಳಗಿನ ಕಾರ್ಡ್‌ಗಳನ್ನು ತಟ್ಟಬಹುದು.';
-    }
-    if (code.startsWith('te')) {
-      return ' మరిన్ని వివరాల కోసం క్రింద ఉన్న కార్డులను ట్యాప్ చేయండి.';
-    }
-    if (code.startsWith('ta')) {
-      return ' மேலும் விவரங்களுக்கு கீழே உள்ள கார்டுகளை தட்டலாம்.';
-    }
-    if (code.startsWith('mr')) {
-      return ' अधिक माहिती पाहण्यासाठी खालील कार्ड्सवर टॅप करा.';
-    }
-    if (code.startsWith('gu')) {
-      return ' વધુ માહિતી માટે નીચેના કાર્ડ પર ટૅપ કરો.';
-    }
-    if (code.startsWith('bn')) {
-      return ' আরও তথ্য দেখতে নিচের কার্ডগুলোতে ট্যাপ করুন.';
-    }
-    if (code.startsWith('ml')) {
-      return ' കൂടുതൽ വിവരങ്ങൾക്ക് താഴെയുള്ള കാർഡുകളിൽ ടാപ്പ് ചെയ്യാം.';
-    }
-    return ' You can click on the cards below to see more.';
   }
 
   String _formatClock(int seconds) {

@@ -237,6 +237,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ].join('\n');
   }
 
+  Map<String, String>? _parseActionCardLabels(dynamic raw) {
+    if (raw is! Map) return null;
+    final out = <String, String>{};
+    for (final entry in raw.entries) {
+      final key = entry.key.toString().trim();
+      final value = entry.value.toString().trim();
+      if (key.isEmpty || value.isEmpty) continue;
+      out[key] = value;
+    }
+    return out.isEmpty ? null : out;
+  }
+
   Future<bool> _pollFinalizeAndRender(
     AgentService agent,
     String requestId,
@@ -254,6 +266,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             (payload['result'] as Map<String, dynamic>?) ?? <String, dynamic>{};
         List<String>? suggestions;
         List<String>? uiActionCards;
+        Map<String, String>? uiActionCardLabels;
         if (finalResult['suggestions'] is List) {
           suggestions = (finalResult['suggestions'] as List)
               .whereType<String>()
@@ -276,6 +289,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .where((e) => e.trim().isNotEmpty)
               .toList(growable: false);
         }
+        uiActionCardLabels =
+            _parseActionCardLabels(finalResult['ui_action_card_labels']) ??
+            _parseActionCardLabels(payload['ui_action_card_labels']);
         final finalText =
             (payload['final_response'] ??
                     finalResult['response'] ??
@@ -311,6 +327,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 suggestions: suggestions,
                 uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
                 uiActionCards: uiActionCards,
+                uiActionCardLabels: uiActionCardLabels,
               ),
             );
           }
@@ -568,12 +585,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .toString()
               .trim();
           List<String>? uiActionCards;
+          Map<String, String>? uiActionCardLabels;
           if (prepare['ui_action_cards'] is List) {
             uiActionCards = (prepare['ui_action_cards'] as List)
                 .whereType<String>()
                 .where((e) => e.trim().isNotEmpty)
                 .toList(growable: false);
           }
+          uiActionCardLabels = _parseActionCardLabels(
+            prepare['ui_action_card_labels'],
+          );
           setState(() {
             if (_messages.isNotEmpty && _messages.first.isLoading) {
               _messages.removeAt(0);
@@ -587,6 +608,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 stage: 'final',
                 uiRedirectTag: uiRedirectTag.isEmpty ? null : uiRedirectTag,
                 uiActionCards: uiActionCards,
+                uiActionCardLabels: uiActionCardLabels,
               ),
             );
           });
@@ -754,7 +776,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final voice = ref.read(voiceServiceProvider);
-      final data = await voice.stt(path, language: languageCode);
+      final data = await voice.stt(path, language: 'auto');
 
       if (!mounted) return;
 
@@ -1436,6 +1458,22 @@ class _ChatBubble extends StatefulWidget {
             route: RoutePaths.splash,
           ),
         };
+
+    final localizedLabels =
+        message.uiActionCardLabels ?? const <String, String>{};
+    if (localizedLabels.isNotEmpty) {
+      for (final entry in localizedLabels.entries) {
+        final tag = entry.key.trim();
+        final localized = entry.value.trim();
+        final action = actionsByTag[tag];
+        if (tag.isEmpty || localized.isEmpty || action == null) continue;
+        actionsByTag[tag] = (
+          label: localized,
+          icon: action.icon,
+          route: action.route,
+        );
+      }
+    }
 
     final out = <({String label, IconData icon, String route})>[];
     final seen = <String>{};

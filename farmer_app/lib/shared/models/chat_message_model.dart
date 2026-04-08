@@ -13,6 +13,7 @@ class ChatMessage {
   final List<String>? suggestions;
   final String? uiRedirectTag;
   final List<String>? uiActionCards;
+  final Map<String, String>? uiActionCardLabels;
 
   const ChatMessage({
     this.messageId,
@@ -29,6 +30,7 @@ class ChatMessage {
     this.suggestions,
     this.uiRedirectTag,
     this.uiActionCards,
+    this.uiActionCardLabels,
   });
 
   bool get isUser => role == 'user';
@@ -37,6 +39,7 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     List<String>? sugg;
     List<String>? actionCards;
+    Map<String, String>? actionCardLabels;
     if (json['suggestions'] is List) {
       sugg = (json['suggestions'] as List).whereType<String>().toList(
         growable: false,
@@ -47,6 +50,19 @@ class ChatMessage {
           .whereType<String>()
           .where((e) => e.trim().isNotEmpty)
           .toList(growable: false);
+    }
+    if (json['ui_action_card_labels'] is Map) {
+      final raw = json['ui_action_card_labels'] as Map;
+      actionCardLabels = <String, String>{};
+      for (final entry in raw.entries) {
+        final key = entry.key.toString().trim();
+        final value = entry.value.toString().trim();
+        if (key.isEmpty || value.isEmpty) continue;
+        actionCardLabels[key] = value;
+      }
+      if (actionCardLabels.isEmpty) {
+        actionCardLabels = null;
+      }
     }
     return ChatMessage(
       messageId: json['message_id'] as String?,
@@ -64,6 +80,7 @@ class ChatMessage {
       suggestions: sugg,
       uiRedirectTag: json['ui_redirect_tag'] as String?,
       uiActionCards: actionCards,
+      uiActionCardLabels: actionCardLabels,
     );
   }
 

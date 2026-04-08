@@ -103,6 +103,10 @@ _ENABLE_RUNNER_TRANSLATION = str(
     os.getenv("AGENT_ENABLE_RUNNER_TRANSLATION", "0")
 ).strip().lower() in {"1", "true", "yes"}
 
+_ENABLE_ENGLISH_PIVOT_TRANSLATION = str(
+    os.getenv("AGENT_ENABLE_ENGLISH_PIVOT_TRANSLATION", "1")
+).strip().lower() in {"1", "true", "yes"}
+
 
 class ChatService:
     def __init__(self):
@@ -149,6 +153,7 @@ class ChatService:
             "marathi": "mr",
             "bengali": "bn",
             "punjabi": "pa",
+            "assamese": "as",
             "odia": "od",
             "oriya": "od",
             "spanish": "es",
@@ -156,6 +161,107 @@ class ChatService:
         if lang in alias_map:
             return alias_map[lang]
         return lang
+
+    @staticmethod
+    def _language_label_for_prompt(language: str) -> str:
+        labels = {
+            "en": "English",
+            "hi": "Hindi",
+            "hinglish": "Hinglish",
+            "kn": "Kannada",
+            "te": "Telugu",
+            "ta": "Tamil",
+            "ml": "Malayalam",
+            "gu": "Gujarati",
+            "mr": "Marathi",
+            "bn": "Bengali",
+            "as": "Assamese",
+            "pa": "Punjabi",
+            "od": "Odia",
+            "es": "Spanish",
+        }
+        return labels.get(language, language or "target language")
+
+    @staticmethod
+    def _is_probably_english(text: str) -> bool:
+        sample = str(text or "").strip()
+        if not sample:
+            return False
+        latin_tokens = re.findall(r"[A-Za-z]{2,}", sample)
+        if not latin_tokens:
+            return False
+        if re.search(r"[\u0900-\u0D7F]", sample):
+            return False
+        english_hits = sum(1 for t in latin_tokens if t.lower() in EN_COMMON)
+        return english_hits >= 2 or len(latin_tokens) >= 8
+
+    async def _translate_to_english_pivot(self, user_message: str, source_language: str) -> str:
+        text = str(user_message or "").strip()
+        if not text:
+            return text
+
+        normalized = self._normalize_language_label(source_language)
+        if normalized == "en" or self._is_probably_english(text):
+            return text
+
+        prompt = (
+            "Translate the user message to English for internal intent routing. "
+            "Preserve domain entities exactly: crop names, place names, scheme names, units, prices, dates, IDs, and acronyms. "
+            "Do not add explanations. Return only translated English text.\n\n"
+            f"Original message:\n{text}"
+        )
+        try:
+            translated = await asyncio.to_thread(
+                lambda: generate_groq_reply(message=prompt, language="en").get("response", "")
+            )
+            clean = str(translated or "").strip()
+            return clean if clean else text
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"English pivot translation failed: {exc}")
+            return text
+
+    async def _prepare_turn_language_and_message(
+        self,
+        *,
+        user_message: str,
+        requested_language: str | None,
+        previous_language: str | None,
+    ) -> tuple[str, str]:
+        requested_norm = self._normalize_language_label(requested_language)
+        turn_language = self._detect_turn_language(
+            user_message=user_message,
+            requested_language=requested_language,
+            previous_language=previous_language,
+        )
+
+        # Guardrail: if client passes English but the actual input message is in another
+        # script/language (for example Tamil), preserve message language for final output.
+        detected_from_message = self._detect_turn_language(
+            user_message=user_message,
+            requested_language=None,
+            previous_language=previous_language,
+        )
+        if (
+            requested_norm == "en"
+            and detected_from_message
+            and detected_from_message not in {"auto", "en"}
+        ):
+            turn_language = detected_from_message
+
+        if not _ENABLE_ENGLISH_PIVOT_TRANSLATION:
+            return turn_language, user_message
+
+        normalized = self._normalize_language_label(turn_language)
+        if normalized == "en":
+            return turn_language, user_message
+        if normalized.startswith("auto") and self._is_probably_english(user_message):
+            return turn_language, user_message
+
+        pivot_message = await self._translate_to_english_pivot(
+            user_message=user_message,
+            source_language=turn_language,
+        )
+        return turn_language, (pivot_message or user_message)
 
     @staticmethod
     def _infer_script_mode(text: str) -> str:
@@ -658,6 +764,10 @@ class ChatService:
         concrete_requested = requested_hint if requested_hint and not requested_hint.startswith("auto") else ""
         concrete_previous = previous_hint if previous_hint and not previous_hint.startswith("auto") else ""
 
+        # If caller explicitly asks a concrete language, use it as the output contract.
+        if concrete_requested:
+            return concrete_requested
+
         if self._contains_script(text, "kannada"):
             return "kn"
         if self._contains_script(text, "telugu"):
@@ -700,6 +810,7 @@ class ChatService:
                 "gu",
                 "pa",
                 "bn",
+                "as",
                 "od",
                 "mr",
                 "hi",
@@ -714,8 +825,6 @@ class ChatService:
         if script_mode != "auto":
             return script_mode
 
-        if concrete_requested:
-            return concrete_requested
         if concrete_previous:
             return concrete_previous
         return "en"
@@ -1611,6 +1720,34 @@ class ChatService:
                 except Exception as exc:  # noqa: BLE001
                     logger.warning(f"Non-latin script normalization failed: {exc}")
 
+        # Final guardrail: for any concrete non-English language, force a strict rewrite
+        # so output language matches the user's requested/input language contract.
+        if (
+            normalized_lang
+            and normalized_lang not in {"auto", "en", "hinglish"}
+            and not normalized_lang.startswith("auto")
+        ):
+            target_label = self._language_label_for_prompt(normalized_lang)
+            try:
+                rewritten = await asyncio.to_thread(
+                    lambda: generate_groq_reply(
+                        message=(
+                            f"Rewrite the answer in {target_label} only. "
+                            "Preserve all facts, numbers, named entities, units, locations, and actions exactly. "
+                            "Do not mix with English unless unavoidable for names/acronyms. "
+                            "Return only the rewritten answer.\n\n"
+                            f"User message (for language/script reference):\n{user_message}\n\n"
+                            f"Answer:\n{response_text}"
+                        ),
+                        language=normalized_lang,
+                    ).get("response", "")
+                )
+                clean = str(rewritten or "").strip()
+                if clean:
+                    response_text = clean
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"Universal language enforcement failed for {normalized_lang}: {exc}")
+
         return self._sanitize_internal_source_labels(response_text)
 
     async def _polish_farmer_response(self, response_text: str, user_message: str, language: str) -> str:
@@ -1951,8 +2088,9 @@ class ChatService:
         db = get_async_db()
         session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
         session_data = session_doc.to_dict() if session_doc.exists else {}
-        turn_language = self._detect_turn_language(
-            user_message=message,
+        original_message = message
+        turn_language, reasoning_message = await self._prepare_turn_language_and_message(
+            user_message=original_message,
             requested_language=language,
             previous_language=session_data.get("language") if isinstance(session_data, dict) else None,
         )
@@ -1968,12 +2106,13 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
-        if self._is_generic_query(message):
-            generic = await self._build_generic_response(message, turn_language)
+        if self._is_generic_query(reasoning_message):
+            generic = await self._build_generic_response(original_message, turn_language)
             return {
                 "session_id": session_id,
                 "partial_response": generic,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "sources": ["generic_guard"],
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -1984,12 +2123,13 @@ class ChatService:
                 },
             }
 
-        if not await self._is_farming_domain_query(message):
-            guarded = await self._build_out_of_scope_response(message, turn_language)
+        if not await self._is_farming_domain_query(reasoning_message):
+            guarded = await self._build_out_of_scope_response(original_message, turn_language)
             return {
                 "session_id": session_id,
                 "partial_response": guarded,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "sources": ["domain_guard"],
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -2001,18 +2141,18 @@ class ChatService:
             }
 
         state_hint, district_hint, _ = self._extract_geo_hints(
-            user_message=message,
+            user_message=reasoning_message,
             farmer_facts=effective_farmer_facts,
             profile_geo=profile_geo,
         )
-        crop_hint = self._extract_primary_crop(message, effective_farmer_facts) or "Wheat"
+        crop_hint = self._extract_primary_crop(reasoning_message, effective_farmer_facts) or "Wheat"
 
         partial_blocks: list[str] = []
         source_tags: list[str] = []
 
-        if self._is_scheme_intent(message):
+        if self._is_scheme_intent(reasoning_message):
             direct = self._render_scheme_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2021,9 +2161,9 @@ class ChatService:
                 partial_blocks.append(direct)
                 source_tags.append("scheme_db")
 
-        if self._is_equipment_intent(message):
+        if self._is_equipment_intent(reasoning_message):
             direct = self._render_equipment_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2033,7 +2173,7 @@ class ChatService:
                 source_tags.append("equipment_db")
 
         try:
-            if self._intent_has_any(message, MARKET_INTENT_MARKERS):
+            if self._intent_has_any(reasoning_message, MARKET_INTENT_MARKERS):
                 from tools.market_tools import get_nearby_mandis, search_market_prices
 
                 market_data = await asyncio.to_thread(
@@ -2058,7 +2198,7 @@ class ChatService:
             logger.warning(f"Partial market snapshot failed: {exc}")
 
         try:
-            if self._intent_has_any(message, WEATHER_INTENT_MARKERS):
+            if self._intent_has_any(reasoning_message, WEATHER_INTENT_MARKERS):
                 from tools.weather_tools import get_seasonal_advisory
 
                 month = datetime.now(timezone.utc).month
@@ -2082,7 +2222,7 @@ class ChatService:
         partial_text = await self._enforce_language(
             response_text=partial_text,
             language=turn_language,
-            user_message=message,
+            user_message=original_message,
         )
         partial_text = self._strip_timestamp_details(partial_text)
 
@@ -2090,13 +2230,14 @@ class ChatService:
             "session_id": session_id,
             "language": turn_language,
             "partial_response": partial_text,
+            "pivot_message_en": reasoning_message,
             "sources": sorted(set(source_tags)),
             "source_provenance": self._build_source_provenance(
                 agentic_plan={},
                 static_sources=sorted(set(source_tags)),
             ),
-            "requires_live_fetch": self._requires_live_fetch(message),
-            "agentic_primary_agent": self._choose_primary_agent_hint(message, agent_type),
+            "requires_live_fetch": self._requires_live_fetch(reasoning_message),
+            "agentic_primary_agent": self._choose_primary_agent_hint(reasoning_message, agent_type),
             "agentic_trace": {
                 "parallel_tools": [],
                 "sequential_tools": [],
@@ -2216,8 +2357,9 @@ class ChatService:
 
         session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
         session_data = session_doc.to_dict() if session_doc.exists else {}
-        turn_language = self._detect_turn_language(
-            user_message=message,
+        original_message = message
+        turn_language, reasoning_message = await self._prepare_turn_language_and_message(
+            user_message=original_message,
             requested_language=language,
             previous_language=session_data.get("language") if isinstance(session_data, dict) else None,
         )
@@ -2229,15 +2371,15 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
-        if self._is_generic_query(message):
-            generic = await self._build_generic_response(message, turn_language)
+        if self._is_generic_query(reasoning_message):
+            generic = await self._build_generic_response(original_message, turn_language)
             await self._persist_turn(
                 db=db,
                 user_id=user_id,
                 session_id=session_id,
                 language=turn_language,
                 agent_type=agent_type,
-                user_message=message,
+                user_message=original_message,
                 assistant_message=generic,
                 agent_used="generic_guard",
                 previous_summary=rolling_summary,
@@ -2247,6 +2389,7 @@ class ChatService:
                 "session_id": session_id,
                 "response": generic,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "agent_used": "generic_guard",
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -2256,15 +2399,15 @@ class ChatService:
                 },
             }
 
-        if not await self._is_farming_domain_query(message):
-            guarded = await self._build_out_of_scope_response(message, turn_language)
+        if not await self._is_farming_domain_query(reasoning_message):
+            guarded = await self._build_out_of_scope_response(original_message, turn_language)
             await self._persist_turn(
                 db=db,
                 user_id=user_id,
                 session_id=session_id,
                 language=turn_language,
                 agent_type=agent_type,
-                user_message=message,
+                user_message=original_message,
                 assistant_message=guarded,
                 agent_used="domain_guard",
                 previous_summary=rolling_summary,
@@ -2274,6 +2417,7 @@ class ChatService:
                 "session_id": session_id,
                 "response": guarded,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "agent_used": "domain_guard",
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -2287,15 +2431,15 @@ class ChatService:
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
                 user_id=user_id,
-                user_message=message,
+                user_message=reasoning_message,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
                 explicit_agent_type=agent_type,
             )
 
-        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(message):
+        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(reasoning_message):
             direct = self._render_scheme_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2304,23 +2448,23 @@ class ChatService:
                 direct = await self._enforce_language(
                     response_text=direct,
                     language=turn_language,
-                    user_message=message,
+                    user_message=original_message,
                 )
                 direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
                 direct = self._enforce_source_freshness_note(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     language=turn_language,
                 )
                 direct = self._enforce_memory_reference(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     farmer_facts=effective_farmer_facts,
                     language=turn_language,
                 )
                 direct = self._ensure_location_grounding(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     profile_geo=profile_geo,
                     language=turn_language,
                 )
@@ -2331,12 +2475,12 @@ class ChatService:
                 )
                 direct = self._append_topic_checklist(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     language=turn_language,
                 )
                 direct = await self._polish_farmer_response(
                     response_text=direct,
-                    user_message=message,
+                    user_message=original_message,
                     language=turn_language,
                 )
                 direct = self._strip_timestamp_details(direct)
@@ -2346,7 +2490,7 @@ class ChatService:
                     session_id=session_id,
                     language=turn_language,
                     agent_type=agent_type,
-                    user_message=message,
+                    user_message=original_message,
                     assistant_message=direct,
                     agent_used="scheme_direct",
                     previous_summary=rolling_summary,
@@ -2356,6 +2500,7 @@ class ChatService:
                     "session_id": session_id,
                     "response": direct,
                     "language": turn_language,
+                    "pivot_message_en": reasoning_message,
                     "agent_used": "scheme_direct",
                     "provider": "database",
                     "model": "deterministic",
@@ -2370,9 +2515,9 @@ class ChatService:
                     },
                 }
 
-        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(message):
+        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(reasoning_message):
             direct = self._render_equipment_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2381,23 +2526,23 @@ class ChatService:
                 direct = await self._enforce_language(
                     response_text=direct,
                     language=turn_language,
-                    user_message=message,
+                    user_message=original_message,
                 )
                 direct = self._sanitize_unhelpful_response(response_text=direct, language=turn_language)
                 direct = self._enforce_source_freshness_note(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     language=turn_language,
                 )
                 direct = self._enforce_memory_reference(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     farmer_facts=effective_farmer_facts,
                     language=turn_language,
                 )
                 direct = self._ensure_location_grounding(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     profile_geo=profile_geo,
                     language=turn_language,
                 )
@@ -2408,12 +2553,12 @@ class ChatService:
                 )
                 direct = self._append_topic_checklist(
                     response_text=direct,
-                    user_message=message,
+                    user_message=reasoning_message,
                     language=turn_language,
                 )
                 direct = await self._polish_farmer_response(
                     response_text=direct,
-                    user_message=message,
+                    user_message=original_message,
                     language=turn_language,
                 )
                 direct = self._strip_timestamp_details(direct)
@@ -2423,7 +2568,7 @@ class ChatService:
                     session_id=session_id,
                     language=turn_language,
                     agent_type=agent_type,
-                    user_message=message,
+                    user_message=original_message,
                     assistant_message=direct,
                     agent_used="equipment_direct",
                     previous_summary=rolling_summary,
@@ -2433,6 +2578,7 @@ class ChatService:
                     "session_id": session_id,
                     "response": direct,
                     "language": turn_language,
+                    "pivot_message_en": reasoning_message,
                     "agent_used": "equipment_direct",
                     "provider": "database",
                     "model": "deterministic",
@@ -2462,7 +2608,7 @@ class ChatService:
 
         grounded_context = await asyncio.to_thread(
             self._build_grounded_fallback_context,
-            user_message=message,
+            user_message=reasoning_message,
             farmer_facts=effective_farmer_facts,
             profile_geo=profile_geo,
         )
@@ -2472,7 +2618,8 @@ class ChatService:
             f"{context_block}\n\n"
             f"{agentic_context_block}\n\n"
             f"Grounded domain data (authoritative tool outputs):\n{grounded_context}\n\n"
-            f"Current user message:\n{message}\n\n"
+            f"Current user message (original):\n{original_message}\n\n"
+            f"English pivot for internal reasoning:\n{reasoning_message}\n\n"
             "Respond with farmer-first practical advice using ONLY the grounded domain data above. "
             "Never say unavailable/not found/unable. "
             "If exact local match is missing, provide nearest verified records and clearly label them as nearest match. "
@@ -2485,35 +2632,63 @@ class ChatService:
             "Output must be in the REQUIRED output language above."
         )
 
-        fallback = await asyncio.to_thread(
-            generate_groq_reply,
-            message=augmented_message,
-            language=turn_language,
-        )
+        try:
+            fallback = await asyncio.to_thread(
+                generate_groq_reply,
+                message=augmented_message,
+                language=turn_language,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Groq fallback generation failed in process_message_with_groq_fallback: {exc}")
+            fallback = {
+                "response": "",
+                "provider": "groq_unavailable",
+                "model": "unavailable",
+            }
         response_text = (fallback.get("response", "") or "").strip()
         if not response_text:
-            response_text = "Here is a practical farmer action plan based on currently available verified data and nearest market references."
+            localized_degraded = {
+                "en": "I could not fetch the full model response right now. Here is a practical farmer action plan based on currently verified data and nearest references.",
+                "hi": "अभी पूरा मॉडल उत्तर उपलब्ध नहीं हो सका। फिलहाल सत्यापित डेटा और नज़दीकी संदर्भों के आधार पर व्यावहारिक किसान कार्ययोजना दी जा रही है।",
+                "hinglish": "Abhi full model response available nahi ho paya. Filhal verified data aur nearest references ke basis par practical farmer action plan de raha hoon.",
+                "ta": "இப்போது முழு மாடல் பதிலை பெற முடியவில்லை. தற்போது சரிபார்க்கப்பட்ட தரவு மற்றும் அருகிலுள்ள குறிப்புகளை அடிப்படையாகக் கொண்டு நடைமுறை விவசாய செயல் திட்டம் வழங்கப்படுகிறது.",
+                "kn": "ಈಗ ಸಂಪೂರ್ಣ ಮಾದರಿ ಉತ್ತರ ಲಭ್ಯವಾಗಲಿಲ್ಲ. ಪ್ರಸ್ತುತ ಪರಿಶೀಲಿತ ಡೇಟಾ ಮತ್ತು ಸಮೀಪದ ಉಲ್ಲೇಖಗಳ ಆಧಾರದ ಮೇಲೆ ಪ್ರಾಯೋಗಿಕ ರೈತ ಕಾರ್ಯಯೋಜನೆ ನೀಡಲಾಗುತ್ತಿದೆ.",
+                "te": "ప్రస్తుతం పూర్తి మోడల్ సమాధానం అందుబాటులో లేదు. ఈలోగా ధృవీకరించిన డేటా మరియు సమీప సూచనల ఆధారంగా ప్రాయోగిక రైతు కార్యాచరణ ప్రణాళిక ఇస్తున్నాను.",
+                "ml": "ഇപ്പോൾ പൂർണ്ണ മോഡൽ മറുപടി ലഭ്യമല്ല. നിലവിൽ ശരിവെച്ച ഡാറ്റയും സമീപ റഫറൻസുകളും അടിസ്ഥാനമാക്കി പ്രായോഗിക കർഷക പ്രവർത്തന പദ്ധതി നൽകുന്നു.",
+                "bn": "এই মুহূর্তে সম্পূর্ণ মডেল উত্তর পাওয়া যায়নি। আপাতত যাচাইকৃত তথ্য ও নিকটবর্তী রেফারেন্সের ভিত্তিতে বাস্তবমুখী কৃষক কর্মপরিকল্পনা দেওয়া হচ্ছে।",
+                "gu": "હમણાં પૂર્ણ મોડેલ જવાબ ઉપલબ્ધ નથી. હાલ ચકાસેલ માહિતી અને નજીકના સંદર્ભોના આધારે વ્યવહારુ ખેડૂત કાર્યયોજના આપી રહ્યો છું.",
+                "mr": "सध्या पूर्ण मॉडेल प्रतिसाद उपलब्ध नाही. आत्ता पडताळलेल्या माहिती आणि जवळच्या संदर्भांवर आधारित व्यावहारिक शेतकरी कृती आराखडा देत आहे.",
+                "pa": "ਹੁਣੇ ਪੂਰਾ ਮਾਡਲ ਜਵਾਬ ਉਪਲਬਧ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਫਿਲਹਾਲ ਪ੍ਰਮਾਣਿਤ ਡਾਟਾ ਅਤੇ ਨਜ਼ਦੀਕੀ ਸੰਦਰਭਾਂ ਦੇ ਆਧਾਰ 'ਤੇ ਵਰਤੋਂਯੋਗ ਕਿਸਾਨ ਕਾਰਵਾਈ ਯੋਜਨਾ ਦਿੱਤੀ ਜਾ ਰਹੀ ਹੈ।",
+                "as": "এই মুহূর্তত সম্পূৰ্ণ মডেল উত্তৰ উপলব্ধ নহ'ল। এতিয়া যাচাইকৃত ডাটা আৰু নিকটৱৰ্তী ৰেফাৰেন্সৰ ভিত্তিত ব্যৱহাৰিক কৃষক কাৰ্য পৰিকল্পনা দিয়া হৈছে।",
+                "od": "ଏହି ମୁହୂର୍ତ୍ତରେ ପୂର୍ଣ୍ଣ ମୋଡେଲ୍ ଉତ୍ତର ଉପଲବ୍ଧ ହୋଇନି। ବର୍ତ୍ତମାନ ସତ୍ୟାପିତ ତଥ୍ୟ ଏବଂ ନିକଟସ୍ଥ ସନ୍ଦର୍ଭ ଆଧାରରେ ବ୍ୟବହାରିକ ଚାଷୀ କାର୍ଯ୍ୟଯୋଜନା ଦେଉଛି।",
+                "es": "No pude obtener la respuesta completa del modelo en este momento. Mientras tanto, aquí tienes un plan práctico para el agricultor basado en datos verificados y referencias cercanas.",
+            }
+            normalized_lang = self._normalize_language_label(turn_language)
+            response_text = localized_degraded.get(
+                normalized_lang,
+                localized_degraded["en"],
+            )
 
         response_text = await self._enforce_language(
             response_text=response_text,
             language=turn_language,
-            user_message=message,
+            user_message=original_message,
         )
         response_text = self._sanitize_unhelpful_response(response_text=response_text, language=turn_language)
         response_text = self._enforce_source_freshness_note(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             language=turn_language,
         )
         response_text = self._enforce_memory_reference(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             farmer_facts=effective_farmer_facts,
             language=turn_language,
         )
         response_text = self._ensure_location_grounding(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             profile_geo=profile_geo,
             language=turn_language,
         )
@@ -2524,12 +2699,12 @@ class ChatService:
         )
         response_text = self._append_topic_checklist(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             language=turn_language,
         )
         response_text = await self._polish_farmer_response(
             response_text=response_text,
-            user_message=message,
+            user_message=original_message,
             language=turn_language,
         )
         response_text = self._strip_timestamp_details(response_text)
@@ -2540,7 +2715,7 @@ class ChatService:
             session_id=session_id,
             language=turn_language,
             agent_type=agent_type,
-            user_message=message,
+            user_message=original_message,
             assistant_message=response_text,
             agent_used="assistant",
             previous_summary=rolling_summary,
@@ -2551,6 +2726,7 @@ class ChatService:
             "session_id": session_id,
             "response": response_text,
             "language": turn_language,
+            "pivot_message_en": reasoning_message,
             "agent_used": "assistant",
             "provider": fallback.get("provider", "groq"),
             "model": fallback.get("model", "unknown"),
@@ -2701,8 +2877,9 @@ class ChatService:
 
         session_doc = await db.collection(MongoCollections.AGENT_SESSIONS).document(session_id).get()
         session_data = session_doc.to_dict() if session_doc.exists else {}
-        turn_language = self._detect_turn_language(
-            user_message=message,
+        original_message = message
+        turn_language, reasoning_message = await self._prepare_turn_language_and_message(
+            user_message=original_message,
             requested_language=language,
             previous_language=session_data.get("language") if isinstance(session_data, dict) else None,
         )
@@ -2714,15 +2891,15 @@ class ChatService:
             self._profile_geo_facts(profile_geo),
         )
 
-        if self._is_generic_query(message):
-            generic = await self._build_generic_response(message, turn_language)
+        if self._is_generic_query(reasoning_message):
+            generic = await self._build_generic_response(original_message, turn_language)
             await self._persist_turn(
                 db=db,
                 user_id=user_id,
                 session_id=session_id,
                 language=turn_language,
                 agent_type=agent_type,
-                user_message=message,
+                user_message=original_message,
                 assistant_message=generic,
                 agent_used="generic_guard",
                 previous_summary=rolling_summary,
@@ -2732,6 +2909,7 @@ class ChatService:
                 "session_id": session_id,
                 "response": generic,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "agent_used": "generic_guard",
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -2741,15 +2919,15 @@ class ChatService:
                 },
             }
 
-        if not await self._is_farming_domain_query(message):
-            guarded = await self._build_out_of_scope_response(message, turn_language)
+        if not await self._is_farming_domain_query(reasoning_message):
+            guarded = await self._build_out_of_scope_response(original_message, turn_language)
             await self._persist_turn(
                 db=db,
                 user_id=user_id,
                 session_id=session_id,
                 language=turn_language,
                 agent_type=agent_type,
-                user_message=message,
+                user_message=original_message,
                 assistant_message=guarded,
                 agent_used="domain_guard",
                 previous_summary=rolling_summary,
@@ -2759,6 +2937,7 @@ class ChatService:
                 "session_id": session_id,
                 "response": guarded,
                 "language": turn_language,
+                "pivot_message_en": reasoning_message,
                 "agent_used": "domain_guard",
                 "source_provenance": [],
                 "agentic_primary_agent": "general",
@@ -2772,15 +2951,15 @@ class ChatService:
         if self._agentic_mode_enabled:
             agentic_plan = await self._execute_agentic_tool_plan(
                 user_id=user_id,
-                user_message=message,
+                user_message=reasoning_message,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
                 explicit_agent_type=agent_type,
             )
 
-        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(message):
+        if self._prefer_direct_scheme_equipment and self._is_scheme_intent(reasoning_message):
             direct = self._render_scheme_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2789,7 +2968,7 @@ class ChatService:
                 direct = await self._enforce_language(
                     response_text=direct,
                     language=turn_language,
-                    user_message=message,
+                    user_message=original_message,
                 )
                 await self._persist_turn(
                     db=db,
@@ -2797,7 +2976,7 @@ class ChatService:
                     session_id=session_id,
                     language=turn_language,
                     agent_type=agent_type,
-                    user_message=message,
+                    user_message=original_message,
                     assistant_message=direct,
                     agent_used="scheme_direct",
                     previous_summary=rolling_summary,
@@ -2807,6 +2986,7 @@ class ChatService:
                     "session_id": session_id,
                     "response": direct,
                     "language": turn_language,
+                    "pivot_message_en": reasoning_message,
                     "agent_used": "scheme_direct",
                     "provider": "database",
                     "model": "deterministic",
@@ -2821,9 +3001,9 @@ class ChatService:
                     },
                 }
 
-        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(message):
+        if self._prefer_direct_scheme_equipment and self._is_equipment_intent(reasoning_message):
             direct = self._render_equipment_detail_response(
-                message=message,
+                message=reasoning_message,
                 language=turn_language,
                 farmer_facts=effective_farmer_facts,
                 profile_geo=profile_geo,
@@ -2832,7 +3012,7 @@ class ChatService:
                 direct = await self._enforce_language(
                     response_text=direct,
                     language=turn_language,
-                    user_message=message,
+                    user_message=original_message,
                 )
                 await self._persist_turn(
                     db=db,
@@ -2840,7 +3020,7 @@ class ChatService:
                     session_id=session_id,
                     language=turn_language,
                     agent_type=agent_type,
-                    user_message=message,
+                    user_message=original_message,
                     assistant_message=direct,
                     agent_used="equipment_direct",
                     previous_summary=rolling_summary,
@@ -2850,6 +3030,7 @@ class ChatService:
                     "session_id": session_id,
                     "response": direct,
                     "language": turn_language,
+                    "pivot_message_en": reasoning_message,
                     "agent_used": "equipment_direct",
                     "source_provenance": self._build_source_provenance(
                         agentic_plan=agentic_plan,
@@ -2889,7 +3070,8 @@ class ChatService:
         augmented_message = (
             f"{context_block}\n\n"
             f"{agentic_context_block}\n\n"
-            f"Current user message:\n{message}\n\n"
+            f"Current user message (original):\n{original_message}\n\n"
+            f"English pivot for internal reasoning:\n{reasoning_message}\n\n"
             "Respond with farmer-first practical advice and reference specific data when available. "
             "Never use refusal-style wording (cannot, unavailable, not found). "
             "If exact local data is limited, show nearest verified alternatives with clear labeling. "
@@ -2923,23 +3105,23 @@ class ChatService:
         response_text = await self._enforce_language(
             response_text=response_text,
             language=turn_language,
-            user_message=message,
+            user_message=original_message,
         )
         response_text = self._sanitize_unhelpful_response(response_text=response_text, language=turn_language)
         response_text = self._enforce_source_freshness_note(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             language=turn_language,
         )
         response_text = self._enforce_memory_reference(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             farmer_facts=effective_farmer_facts,
             language=turn_language,
         )
         response_text = self._ensure_location_grounding(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             profile_geo=profile_geo,
             language=turn_language,
         )
@@ -2950,12 +3132,12 @@ class ChatService:
         )
         response_text = self._append_topic_checklist(
             response_text=response_text,
-            user_message=message,
+            user_message=reasoning_message,
             language=turn_language,
         )
         response_text = await self._polish_farmer_response(
             response_text=response_text,
-            user_message=message,
+            user_message=original_message,
             language=turn_language,
         )
         response_text = self._strip_timestamp_details(response_text)
@@ -2966,7 +3148,7 @@ class ChatService:
             session_id=session_id,
             language=turn_language,
             agent_type=agent_type,
-            user_message=message,
+            user_message=original_message,
             assistant_message=response_text,
             agent_used=agent_used,
             previous_summary=rolling_summary,
@@ -2977,6 +3159,7 @@ class ChatService:
             "session_id": session_id,
             "response": response_text,
             "language": turn_language,
+            "pivot_message_en": reasoning_message,
             "agent_used": agent_used,
             "source_provenance": self._build_source_provenance(agentic_plan=agentic_plan),
             "agentic_primary_agent": agentic_plan.get("primary_agent"),

@@ -76,6 +76,7 @@ def generate_groq_reply(message: str, language: str = "hi") -> dict[str, Any]:
         if not ready_now:
             remaining_wait = wait_deadline - time.time()
             if remaining_wait <= 0:
+                last_error = RuntimeError("all_groq_keys_in_cooldown")
                 break
             sleep_s = min(
                 max(_GROQ_RATE_LIMIT_POLL_SECONDS, 0.2),

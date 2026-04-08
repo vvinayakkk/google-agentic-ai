@@ -133,25 +133,36 @@ class VoiceService {
 
   VoiceService(this._client);
 
+  static const Map<String, String> _voiceLangMap = {
+    'en': 'en-IN',
+    'hi': 'hi-IN',
+    'bn': 'bn-IN',
+    'gu': 'gu-IN',
+    'kn': 'kn-IN',
+    'ml': 'ml-IN',
+    'mr': 'mr-IN',
+    'od': 'od-IN',
+    'or': 'od-IN',
+    'pa': 'pa-IN',
+    'ta': 'ta-IN',
+    'te': 'te-IN',
+    'as': 'as-IN',
+  };
+
   String _normalizeVoiceLanguage(String? language) {
     if (language == null || language.trim().isEmpty) return 'hi-IN';
     final raw = language.trim();
     if (raw.contains('-')) return raw;
+    return _voiceLangMap[raw.toLowerCase()] ?? 'hi-IN';
+  }
 
-    const mapping = {
-      'en': 'en-IN',
-      'hi': 'hi-IN',
-      'bn': 'bn-IN',
-      'gu': 'gu-IN',
-      'kn': 'kn-IN',
-      'ml': 'ml-IN',
-      'mr': 'mr-IN',
-      'od': 'od-IN',
-      'pa': 'pa-IN',
-      'ta': 'ta-IN',
-      'te': 'te-IN',
-    };
-    return mapping[raw.toLowerCase()] ?? 'hi-IN';
+  String _normalizeVoiceInputLanguage(String? language) {
+    final raw = (language ?? '').trim();
+    if (raw.isEmpty) return 'auto';
+    final low = raw.toLowerCase();
+    if (low == 'auto' || low == 'unknown' || low == 'detect') return 'auto';
+    if (raw.contains('-')) return raw;
+    return _voiceLangMap[low] ?? low;
   }
 
   // ── TTS ───────────────────────────────────────────────────
@@ -197,7 +208,7 @@ class VoiceService {
 
   /// POST /api/v1/voice/stt → multipart file + language → {transcript, language_code}.
   Future<Map<String, dynamic>> stt(String filePath, {String? language}) async {
-    final normalizedLanguage = _normalizeVoiceLanguage(language);
+    final normalizedLanguage = _normalizeVoiceInputLanguage(language);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
       'language': normalizedLanguage,
@@ -214,7 +225,7 @@ class VoiceService {
     String? language,
     String? sessionId,
   }) async {
-    final normalizedLanguage = _normalizeVoiceLanguage(language);
+    final normalizedLanguage = _normalizeVoiceInputLanguage(language);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
       'language': normalizedLanguage,
@@ -238,7 +249,7 @@ class VoiceService {
     String? language,
     String? sessionId,
   }) async {
-    final normalizedLanguage = _normalizeVoiceLanguage(language);
+    final normalizedLanguage = _normalizeVoiceInputLanguage(language);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
       'language': normalizedLanguage,
@@ -262,7 +273,7 @@ class VoiceService {
     required String language,
     String? sessionId,
   }) async* {
-    final normalizedLanguage = _normalizeVoiceLanguage(language);
+    final normalizedLanguage = _normalizeVoiceInputLanguage(language);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(audioPath),
       'language': normalizedLanguage,

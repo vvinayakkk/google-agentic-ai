@@ -95,6 +95,8 @@ LANG_TO_BCP47 = {
     "marathi": "mr-IN",
     "bn": "bn-IN",
     "bengali": "bn-IN",
+    "as": "as-IN",
+    "assamese": "as-IN",
     "gu": "gu-IN",
     "gujarati": "gu-IN",
     "kn": "kn-IN",
@@ -198,6 +200,10 @@ def _resolve_chat_language(
     en_hits = sum(1 for t in tokens if t in {"the", "and", "price", "market", "weather", "sell", "farm", "profit"})
 
     script_lang = _detect_script_language(txt)
+
+    explicit_req = bool(req_lang and req_lang not in {"auto", "default", "unknown", "detect"})
+    explicit_non_english_req = bool(explicit_req and req_lang != "en")
+
     if script_lang:
         return script_lang
     if hindi_hits >= 2 and en_hits >= 1:
@@ -210,10 +216,19 @@ def _resolve_chat_language(
         return "kn"
 
     strong_english_signal = en_hits >= 2 and hindi_hits == 0 and kannada_hits == 0
+
+    # Keep explicit non-English contract unless user clearly spoke English.
+    if explicit_non_english_req and not strong_english_signal:
+        return req_lang
+
+    # If client sends English but STT detects non-English speech, trust speech turn.
+    if req_lang == "en" and stt_lang and stt_lang != "en" and not strong_english_signal:
+        return stt_lang
+
     if stt_lang == "en" and req_lang and req_lang != "en" and not strong_english_signal:
         return req_lang
 
-    # Prefer STT-detected language, then explicit user preference, then request hint.
+    # Prefer spoken-turn signal over profile/request defaults.
     for candidate in (stt_lang, pref_lang, req_lang):
         if candidate:
             return candidate
@@ -248,7 +263,14 @@ def _resolve_tts_language_code(
     chat_language: str | None,
     user_preferred_language: str | None,
 ) -> str:
-    for candidate in (chat_language, stt_language_code, user_preferred_language, requested_language):
+    req_primary = _language_primary(requested_language)
+    if req_primary and req_primary not in {"", "auto", "unknown", "detect", "default", "en"}:
+        candidates = (requested_language, chat_language, stt_language_code, user_preferred_language)
+    else:
+        # Do not force English TTS just because client locale/request was English.
+        candidates = (chat_language, stt_language_code, user_preferred_language, requested_language)
+
+    for candidate in candidates:
         normalized = _normalize_tts_language_code(candidate, fallback="")
         if normalized:
             return normalized
@@ -263,6 +285,10 @@ def _localized_retry_prompt(language: str) -> str:
         return "Abhi answer complete nahi ho paya. Please crop, location aur goal ke saath sawaal dobara pucho."
     if lang.startswith("kn"):
         return "ಈಗ ಉತ್ತರವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ತಯಾರಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೆಳೆ, ಸ್ಥಳ ಮತ್ತು ಗುರಿಯೊಂದಿಗೆ ಪ್ರಶ್ನೆಯನ್ನು ಮತ್ತೆ ಕೇಳಿ."
+    if lang.startswith("pa"):
+        return "ਹੁਣੇ ਪੂਰਾ ਜਵਾਬ ਨਹੀਂ ਆ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਫਸਲ, ਥਾਂ ਅਤੇ ਮਕਸਦ ਨਾਲ ਸਵਾਲ ਮੁੜ ਪੁੱਛੋ।"
+    if lang.startswith("as"):
+        return "এই মুহূর্তত সম্পূৰ্ণ উত্তৰ দিব পৰা নগ'ল। অনুগ্ৰহ কৰি ফচল, ঠাই আৰু লক্ষ্যসহ প্ৰশ্নটো পুনৰ সোধক।"
     return "I could not complete the answer right now. Please repeat your question with crop, location, and goal."
 
 
@@ -274,6 +300,10 @@ def _localized_language_clarification_prompt(language: str) -> str:
         return "Awaz clear nahi aayi. Please wahi sawaal phir se thoda dheere aur clear bolo."
     if lang.startswith("kn"):
         return "ಧ್ವನಿ ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಅದೇ ಪ್ರಶ್ನೆಯನ್ನು ನಿಧಾನವಾಗಿ ಮತ್ತು ಸ್ಪಷ್ಟವಾಗಿ ಮತ್ತೆ ಹೇಳಿ."
+    if lang.startswith("pa"):
+        return "ਆਵਾਜ਼ ਸਾਫ਼ ਨਹੀਂ ਆਈ। ਕਿਰਪਾ ਕਰਕੇ ਓਹੀ ਸਵਾਲ ਹੌਲੀ ਤੇ ਸਪਸ਼ਟ ਤਰੀਕੇ ਨਾਲ ਦੁਬਾਰਾ ਬੋਲੋ।"
+    if lang.startswith("as"):
+        return "শব্দ স্পষ্টকৈ পোৱা নগ'ল। অনুগ্ৰহ কৰি সেইটোেই প্ৰশ্ন লাহে লাহে আৰু স্পষ্টকৈ পুনৰ কওক।"
     return "I could not catch that clearly. Please repeat your question slowly and clearly."
 
 
@@ -440,12 +470,23 @@ def _build_profile_voice_response(profile: dict, language: str) -> str:
     return f"From your profile: {place_line} {land_line}".strip()
 
 
-def _ui_transcript_display(transcript: str, stt_language: str | None, requested_language: str | None) -> str:
+def _ui_transcript_display(
+    transcript: str,
+    stt_language: str | None,
+    requested_language: str | None,
+    resolved_language: str | None = None,
+) -> str:
     txt = str(transcript or "").strip()
     if not txt:
         return txt
 
-    target_lang = _language_primary(stt_language) or _language_primary(requested_language)
+    # For UI display, honor explicit request first to avoid showing romanized fallback text
+    # when user asked for an Indic language (for example Tamil).
+    target_lang = (
+        _language_primary(resolved_language)
+        or _language_primary(requested_language)
+        or _language_primary(stt_language)
+    )
     is_indic_target = target_lang in {"hi", "mr", "bn", "gu", "kn", "ml", "od", "pa", "ta", "te"}
     has_indic_script = bool(re.search(r"[\u0900-\u0D7F]", txt))
     has_latin = bool(re.search(r"[A-Za-z]", txt))
@@ -888,10 +929,12 @@ def _collect_ui_tags_from_agent_data(agent_data: dict) -> list[str]:
 def _infer_ui_redirect_tag(transcript: str, agent_data: dict) -> str:
     txt_parts = [(transcript or "")]
     if isinstance(agent_data, dict):
+        txt_parts.append(str(agent_data.get("pivot_message_en") or ""))
         txt_parts.append(str(agent_data.get("response") or ""))
         txt_parts.append(str(agent_data.get("final_response") or ""))
         nested = agent_data.get("result")
         if isinstance(nested, dict):
+            txt_parts.append(str(nested.get("pivot_message_en") or ""))
             txt_parts.append(str(nested.get("response") or ""))
             txt_parts.append(str(nested.get("final_response") or ""))
 
@@ -1019,7 +1062,8 @@ def _infer_ui_action_cards_for_voice(transcript: str, agent_data: dict) -> list[
 
     explicit_tags = _collect_ui_tags_from_agent_data(agent_data or {})
     redirect = _infer_ui_redirect_tag(transcript, agent_data)
-    txt = (transcript or "").lower()
+    pivot_message = str((agent_data or {}).get("pivot_message_en") or "")
+    txt = f"{transcript or ''} {pivot_message}".lower()
 
     seed_map = {
         "weather": ["weather", "soil_moisture", "crop_doctor"],
@@ -1053,6 +1097,27 @@ def _infer_ui_action_cards_for_voice(transcript: str, agent_data: dict) -> list[
         deduped = ["weather", "documents", "marketplace"]
 
     return deduped
+
+
+def _extract_ui_action_card_labels_for_voice(agent_data: dict, ui_action_cards: list[str]) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    if not isinstance(agent_data, dict):
+        return labels
+
+    raw_labels = agent_data.get("ui_action_card_labels")
+    if not isinstance(raw_labels, dict):
+        nested = agent_data.get("result")
+        if isinstance(nested, dict):
+            raw_labels = nested.get("ui_action_card_labels")
+
+    if not isinstance(raw_labels, dict):
+        return labels
+
+    for tag in ui_action_cards:
+        value = str(raw_labels.get(tag) or "").strip()
+        if value:
+            labels[tag] = value
+    return labels
 
 
 async def _fetch_market_snapshot(token: str, transcript: str) -> dict:
@@ -1205,7 +1270,14 @@ def _normalize_voice_agent_result(chat_data: dict, fallback_session_id: str | No
     if isinstance(nested, dict):
         result.update(nested)
 
-    for key in ("suggestions", "ui_redirect_tag", "ui_action_cards", "source_provenance"):
+    for key in (
+        "suggestions",
+        "ui_redirect_tag",
+        "ui_action_cards",
+        "ui_action_card_labels",
+        "pivot_message_en",
+        "source_provenance",
+    ):
         if key not in result and key in chat_data:
             result[key] = chat_data.get(key)
 
@@ -1506,17 +1578,18 @@ async def voice_command_text(
     stt_ms = int((time.perf_counter() - t0_stt) * 1000)
 
     transcript = stt_result["transcript"]
-    transcript_display = _ui_transcript_display(
-        transcript,
-        stt_language=stt_result.get("language_code"),
-        requested_language=language,
-    )
     user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
     chat_lang = _resolve_chat_language(
         stt_result.get("language_code", language),
         transcript,
         requested_language=language,
         user_preferred_language=user_pref_lang,
+    )
+    transcript_display = _ui_transcript_display(
+        transcript,
+        stt_language=stt_result.get("language_code"),
+        requested_language=language,
+        resolved_language=chat_lang,
     )
     tts_lang = _resolve_tts_language_code(
         stt_language_code=stt_result.get("language_code"),
@@ -1562,6 +1635,7 @@ async def voice_command_text(
     agent_text = _personalize_voice_text(agent_text, user, chat_lang)
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
     ui_action_cards = _infer_ui_action_cards_for_voice(transcript, agent_data)
+    ui_action_card_labels = _extract_ui_action_card_labels_for_voice(agent_data, ui_action_cards)
     tool_evidence = _build_tool_evidence({})
     
     t0_tts = time.perf_counter()
@@ -1597,6 +1671,7 @@ async def voice_command_text(
         },
         "ui_redirect_tag": ui_redirect_tag,
         "ui_action_cards": ui_action_cards,
+        "ui_action_card_labels": ui_action_card_labels,
         "tool_evidence": tool_evidence,
     }
 
@@ -1626,17 +1701,18 @@ async def voice_command_text_stream(
         )
 
         transcript = stt_result["transcript"]
-        transcript_display = _ui_transcript_display(
-            transcript,
-            stt_language=stt_result.get("language_code"),
-            requested_language=language,
-        )
         user_pref_lang = _normalize_user_language(user if isinstance(user, dict) else None)
         chat_lang = _resolve_chat_language(
             stt_result.get("language_code", language),
             transcript,
             requested_language=language,
             user_preferred_language=user_pref_lang,
+        )
+        transcript_display = _ui_transcript_display(
+            transcript,
+            stt_language=stt_result.get("language_code"),
+            requested_language=language,
+            resolved_language=chat_lang,
         )
         tts_lang = _resolve_tts_language_code(
             stt_language_code=stt_result.get("language_code"),
@@ -1758,6 +1834,7 @@ async def voice_command_text_stream(
         total_ms = int((time.perf_counter() - t0) * 1000)
 
         ui_action_cards = _infer_ui_action_cards_for_voice(transcript, agent_data)
+        ui_action_card_labels = _extract_ui_action_card_labels_for_voice(agent_data, ui_action_cards)
 
         result_payload = {
             "type": "result",
@@ -1771,6 +1848,7 @@ async def voice_command_text_stream(
             "tts_language": tts_lang,
             "ui_redirect_tag": ui_redirect_tag,
             "ui_action_cards": ui_action_cards,
+            "ui_action_card_labels": ui_action_card_labels,
             "tool_evidence": _build_tool_evidence({}),
             "agent_metadata": {
                 "agent_used": agent_data.get("agent_used"),

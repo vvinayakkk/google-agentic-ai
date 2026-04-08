@@ -137,6 +137,128 @@ _UI_ACTION_TAG_ALIASES = {
     "languageselect": "language_select",
 }
 
+_UI_ACTION_DEFAULT_LABELS = {
+    "home": "Home",
+    "featured": "Featured",
+    "chat": "Chat",
+    "live_voice": "Live Voice",
+    "chat_history": "Chat History",
+    "profile": "Profile",
+    "crop_cycle": "Crop Cycle",
+    "crop_intelligence": "Crop Intelligence",
+    "crop_doctor": "Crop Doctor",
+    "contract_farming": "Contract Farming",
+    "credit_sources": "Credit Sources",
+    "crop_insurance": "Crop Insurance",
+    "market_strategy": "Market Strategy",
+    "power_supply": "Power Supply",
+    "soil_health": "Soil Health",
+    "marketplace": "Marketplace",
+    "market_prices": "Mandi Prices",
+    "add_listing": "Add Listing",
+    "rental": "Rental Hub",
+    "equipment_hub": "Equipment Hub",
+    "equipment_marketplace": "Equipment",
+    "rental_ticket": "Rental Ticket",
+    "rental_rate_detail": "Rental Rate Detail",
+    "my_equipment": "My Equipment",
+    "listing_details": "Listing Details",
+    "my_bookings": "My Bookings",
+    "earnings": "Earnings",
+    "weather": "Weather",
+    "soil_moisture": "Soil Moisture",
+    "cattle": "Cattle",
+    "calendar": "Calendar",
+    "notifications": "Notifications",
+    "upi": "Finance",
+    "documents": "Schemes",
+    "document_builder": "Documents",
+    "document_build": "Document Build",
+    "document_vault": "Document Vault",
+    "document_agent": "Document Agent",
+    "equipment_rental_rates": "Equipment Rates",
+    "waste": "Best Out Of Waste",
+    "mental_health": "Mental Health",
+    "farm_viz": "Farm Viz",
+    "language_select": "Language",
+    "login": "Login",
+    "fetching_location": "Location Setup",
+    "splash": "Splash",
+}
+
+
+def _normalize_action_label_language(language: str | None) -> str:
+    raw = str(language or "").strip().lower().replace("_", "-")
+    if not raw:
+        return "en"
+    if raw.startswith("auto-"):
+        return "en"
+    if "-" in raw:
+        raw = raw.split("-", 1)[0]
+    alias = {
+        "english": "en",
+        "hindi": "hi",
+        "kannada": "kn",
+        "telugu": "te",
+        "tamil": "ta",
+        "malayalam": "ml",
+        "gujarati": "gu",
+        "marathi": "mr",
+        "bengali": "bn",
+        "assamese": "as",
+        "punjabi": "pa",
+        "odia": "od",
+        "oriya": "od",
+        "spanish": "es",
+    }
+    return alias.get(raw, raw)
+
+
+async def _build_ui_action_card_labels(tags: list[str], language: str | None) -> dict[str, str]:
+    normalized_tags = _sanitize_ui_action_cards(tags, fallback_redirect=None)
+    if not normalized_tags:
+        return {}
+
+    defaults = {
+        tag: _UI_ACTION_DEFAULT_LABELS.get(tag, tag.replace("_", " ").title())
+        for tag in normalized_tags
+    }
+    target_language = _normalize_action_label_language(language)
+    if target_language in {"", "auto", "en", "hinglish"}:
+        return defaults
+
+    prompt = (
+        "Translate short UI action-card labels into the target language. "
+        "Return ONLY valid JSON object where keys are the same action tags and values are localized short labels (1-3 words). "
+        "Do not change keys. Preserve product names/acronyms like UPI, PM-KISAN, KCC.\n\n"
+        f"Target language code: {target_language}\n"
+        f"Tags: {normalized_tags}\n"
+        f"English labels JSON: {json.dumps(defaults, ensure_ascii=False)}"
+    )
+    try:
+        raw = await asyncio.to_thread(
+            lambda: generate_groq_reply(message=prompt, language=target_language).get("response", "")
+        )
+        text = str(raw or "").strip()
+        obj = None
+        try:
+            obj = json.loads(text)
+        except Exception:
+            m = re.search(r"\{[\s\S]*\}", text)
+            if m:
+                obj = json.loads(m.group(0))
+        if not isinstance(obj, dict):
+            return defaults
+
+        localized: dict[str, str] = {}
+        for tag in normalized_tags:
+            value = str(obj.get(tag) or "").strip()
+            localized[tag] = value if value else defaults[tag]
+        return localized
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Action-card label localization failed: {exc}")
+        return defaults
+
 
 def _normalize_ui_action_tag(tag: str | None) -> str:
     raw = str(tag or "").strip().lower()
@@ -298,12 +420,14 @@ async def _infer_ui_action_cards_with_llm(message: str, result: dict) -> list[st
     if not isinstance(result, dict):
         return []
 
+    intent_message = str((result or {}).get("pivot_message_en") or message or "").strip() or str(message or "")
+
     fallback_redirect = str((result or {}).get("ui_redirect_tag") or "")
     existing = result.get("ui_action_cards")
     if isinstance(existing, list):
         sanitized_existing = _filter_ui_action_cards_for_intent(
             [str(x) for x in existing],
-            message=message,
+            message=intent_message,
             fallback_redirect=fallback_redirect,
         )
         if sanitized_existing:
@@ -326,7 +450,7 @@ async def _infer_ui_action_cards_with_llm(message: str, result: dict) -> list[st
         "- Prefer concrete destination screens over generic home.\n"
         "- If multiple intents exist (e.g., schemes + calendar), include both.\n"
         "- Never include unrelated cards.\n\n"
-        f"User message:\n{message}\n\n"
+        f"User message:\n{intent_message}\n\n"
         f"Assistant response:\n{response_text}\n\n"
         f"Assistant suggestions:\n{suggestions_text}\n\n"
         f"Fallback redirect tag: {fallback_redirect or 'none'}"
@@ -340,7 +464,7 @@ async def _infer_ui_action_cards_with_llm(message: str, result: dict) -> list[st
         logger.warning(f"Action-card LLM selection failed: {exc}")
         return _filter_ui_action_cards_for_intent(
             [],
-            message=message,
+            message=intent_message,
             fallback_redirect=fallback_redirect,
         )
 
@@ -374,7 +498,7 @@ async def _infer_ui_action_cards_with_llm(message: str, result: dict) -> list[st
 
     return _filter_ui_action_cards_for_intent(
         parsed_cards,
-        message=message,
+        message=intent_message,
         fallback_redirect=fallback_redirect,
     )
 
@@ -418,15 +542,29 @@ def _resolve_effective_language(
     requested_language: str | None,
     preferred_language: str | None,
 ) -> str | None:
-    # Ignore profile/request hints and always infer from current message.
-    detected = _chat_service._detect_turn_language(
+    req = _chat_service._normalize_language_label(requested_language)
+    pref = _chat_service._normalize_language_label(preferred_language)
+
+    # Detect from message first without request override so input script can win.
+    detected_from_message = _chat_service._detect_turn_language(
         user_message=message,
         requested_language=None,
-        previous_language=None,
+        previous_language=pref,
     )
-    detected = str(detected or "").strip().lower() or None
+    detected = str(detected_from_message or "").strip().lower() or None
+
+    # If message itself is non-English, do not let a stale client hint force English output.
+    if detected and detected not in {"auto", "en"}:
+        return detected
+
+    if req and req != "auto":
+        return req
+
     if detected and detected != "auto":
         return detected
+
+    if pref and pref != "auto":
+        return pref
     return None
 
 
@@ -502,6 +640,9 @@ def _is_retryable_capacity_error(exc: Exception) -> bool:
         or "unavailable" in err_str
         or "high demand" in err_str
         or "try again later" in err_str
+        or "cooldown" in err_str
+        or "failed after retries" in err_str
+        or "rate limit" in err_str
     )
 
 
@@ -740,7 +881,8 @@ async def _run_finalize_job(
                 )
 
         if isinstance(result, dict):
-            result["ui_redirect_tag"] = _infer_ui_redirect_tag(message, result)
+            redirect_source = str(result.get("pivot_message_en") or message)
+            result["ui_redirect_tag"] = _infer_ui_redirect_tag(redirect_source, result)
             result = await _enhance_chat_result(
                 user_id=user_id,
                 session_id=session_id,
@@ -1069,25 +1211,39 @@ async def _enhance_chat_result(
 
     mode = _normalize_response_mode(response_mode)
     enriched = _apply_response_mode(response_text, mode)
+    target_language = str(result.get("language") or "").strip() or "en"
+    message_for_inference = str(result.get("pivot_message_en") or message or "")
 
     if str(result.get("agent_used") or "").strip().lower() == "domain_guard":
         result["response"] = enriched
         result["response_mode"] = mode
-        result["suggestions"] = _build_followup_suggestions(message, result)
-        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
+        result["suggestions"] = _build_followup_suggestions(message_for_inference, result)
+        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message_for_inference, result)
+        result["ui_action_card_labels"] = await _build_ui_action_card_labels(
+            result.get("ui_action_cards") or [],
+            target_language,
+        )
         return result
 
     if mode == "voice-friendly":
         result["response"] = enriched
         result["response_mode"] = mode
-        result["suggestions"] = _build_followup_suggestions(message, result)
-        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
+        result["suggestions"] = _build_followup_suggestions(message_for_inference, result)
+        result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message_for_inference, result)
+        result["ui_action_card_labels"] = await _build_ui_action_card_labels(
+            result.get("ui_action_cards") or [],
+            target_language,
+        )
         return result
 
     result["response"] = enriched
     result["response_mode"] = mode
-    result["suggestions"] = _build_followup_suggestions(message, result)
-    result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message, result)
+    result["suggestions"] = _build_followup_suggestions(message_for_inference, result)
+    result["ui_action_cards"] = await _infer_ui_action_cards_with_llm(message_for_inference, result)
+    result["ui_action_card_labels"] = await _build_ui_action_card_labels(
+        result.get("ui_action_cards") or [],
+        target_language,
+    )
     return result
 
 
@@ -1217,7 +1373,8 @@ async def chat(body: ChatRequest, request: Request, user=Depends(get_current_use
             )
 
         if isinstance(result, dict):
-            result["ui_redirect_tag"] = _infer_ui_redirect_tag(msg_text, result)
+            redirect_source = str(result.get("pivot_message_en") or msg_text)
+            result["ui_redirect_tag"] = _infer_ui_redirect_tag(redirect_source, result)
             result = await _enhance_chat_result(
                 user_id=user["id"],
                 session_id=session_id,
@@ -1245,6 +1402,14 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
 
     pref_result = await _maybe_handle_preference_command(user_id=user["id"], message=body.message)
     if pref_result is not None:
+        pref_cards = _sanitize_ui_action_cards(
+            pref_result.get("ui_action_cards") if isinstance(pref_result.get("ui_action_cards"), list) else [],
+            fallback_redirect=str(pref_result.get("ui_redirect_tag") or "home"),
+        )
+        pref_labels = await _build_ui_action_card_labels(
+            pref_cards,
+            pref_result.get("language") or body.language,
+        )
         request_id = uuid4().hex
         async with _CHAT_JOBS_LOCK:
             _CHAT_JOBS[request_id] = {
@@ -1281,10 +1446,8 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
             "response_mode": "detailed",
             "suggestions": pref_result.get("suggestions") or [],
             "ui_redirect_tag": pref_result.get("ui_redirect_tag") or "home",
-            "ui_action_cards": _sanitize_ui_action_cards(
-                pref_result.get("ui_action_cards") if isinstance(pref_result.get("ui_action_cards"), list) else [],
-                fallback_redirect=str(pref_result.get("ui_redirect_tag") or "home"),
-            ),
+            "ui_action_cards": pref_cards,
+            "ui_action_card_labels": pref_labels,
             "sources": [],
             "requires_live_fetch": False,
             "agentic_primary_agent": None,
@@ -1362,8 +1525,14 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
     )
 
     prepare_redirect = _infer_ui_redirect_tag(
-        msg_text,
+        str(partial.get("pivot_message_en") or msg_text),
         {"agent_used": partial.get("agentic_primary_agent")},
+    )
+
+    prepare_action_cards = _sanitize_ui_action_cards([], fallback_redirect=prepare_redirect)
+    prepare_labels = await _build_ui_action_card_labels(
+        prepare_action_cards,
+        partial.get("language") or effective_language,
     )
 
     return {
@@ -1377,7 +1546,8 @@ async def chat_prepare(body: ChatPrepareRequest, request: Request, user=Depends(
         "response_mode": effective_mode,
         "suggestions": _build_followup_suggestions(msg_text, {"ui_redirect_tag": "home"}),
         "ui_redirect_tag": prepare_redirect,
-        "ui_action_cards": _sanitize_ui_action_cards([], fallback_redirect=prepare_redirect),
+        "ui_action_cards": prepare_action_cards,
+        "ui_action_card_labels": prepare_labels,
         "sources": partial.get("sources") or [],
         "requires_live_fetch": requires_live_fetch,
         "agentic_primary_agent": partial.get("agentic_primary_agent"),
@@ -1419,6 +1589,7 @@ async def chat_finalize(body: ChatFinalizeRequest, user=Depends(get_current_user
                     "suggestions": (live_payload or {}).get("suggestions") or [],
                     "ui_redirect_tag": (live_payload or {}).get("ui_redirect_tag") or "",
                     "ui_action_cards": (live_payload or {}).get("ui_action_cards") or [],
+                    "ui_action_card_labels": (live_payload or {}).get("ui_action_card_labels") or {},
                     "source_provenance": job.get("source_provenance") or [],
                     "result": live_payload,
                     "request_state": {
