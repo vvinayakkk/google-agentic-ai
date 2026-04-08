@@ -1322,6 +1322,7 @@ async def voice_command_text(
     agent_text = _tts_humanize_text(agent_text, chat_lang)
     agent_text = _personalize_voice_text(agent_text, user, chat_lang)
     ui_redirect_tag = _infer_ui_redirect_tag(transcript, agent_data)
+    ui_action_cards = _infer_ui_action_cards_for_voice(transcript, agent_data)
     tool_evidence = _build_tool_evidence({})
     
     t0_tts = time.perf_counter()
@@ -1356,6 +1357,7 @@ async def voice_command_text(
             "model": agent_data.get("model"),
         },
         "ui_redirect_tag": ui_redirect_tag,
+        "ui_action_cards": ui_action_cards,
         "tool_evidence": tool_evidence,
     }
 

@@ -20,6 +20,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_cache.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/agent_service.dart';
+import 'shared_thinking_templates.dart';
 
 class LiveVoiceScreen extends ConsumerStatefulWidget {
   const LiveVoiceScreen({super.key});
@@ -60,6 +61,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   final List<String> _thinkingSteps = <String>[];
   int _thinkingElapsedSeconds = 0;
+  int _thinkingTemplateCursor = 0;
   Timer? _thinkingTimer;
 
   Timer? _sessionTimer;
@@ -84,8 +86,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   String? _recordingPath;
 
   int _responseFlowKeySeed = 0;
-  String _responseFlowSource = '';
   Duration _responseRevealDuration = const Duration(milliseconds: 2800);
+  bool _responseFlowCompleted = false;
 
   @override
   void initState() {
@@ -115,7 +117,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         _state = _VoiceState.idle;
         _isPlaybackPaused = false;
       });
-      _startCardsStagger();
     });
 
     _audioPlayer.onPlayerStateChanged.listen((playerState) {
@@ -222,10 +223,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _fadingQuestion = null;
       _thinkingSteps.clear();
       _thinkingElapsedSeconds = 0;
+      _thinkingTemplateCursor = 0;
       _actionCards = <_VoiceActionCard>[];
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
       _responseExpanded = false;
+      _responseFlowCompleted = false;
       _thinkingExpanded = false;
     });
 
@@ -234,7 +237,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   Future<void> _stopAndProcess() async {
     Haptics.heavy();
-    final isHindi = context.locale.languageCode.toLowerCase().startsWith('hi');
+    final seededThinking = SharedThinkingTemplates.buildThoughtTemplates(
+      phase: 'Transcribing your speech',
+      contextHint: _activeQuestion,
+    );
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
 
@@ -245,15 +251,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _response = '';
       _thinkingSteps
         ..clear()
-        ..addAll(
-          isHindi
-              ? <String>[
-                  'Awaaz process kar raha hoon',
-                  'Speech ko text mein badal raha hoon',
-                ]
-              : <String>['Processing your voice', 'Transcribing your speech'],
-        );
+        ..addAll(seededThinking.take(2));
       _thinkingElapsedSeconds = 0;
+      _thinkingTemplateCursor = _thinkingSteps.length;
       _visibleCardCount = 0;
       _liveVoiceLevel = 0;
       _thinkingExpanded = true;
@@ -299,22 +299,27 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }
 
   String _thinkingFallbackForElapsed(int elapsed) {
-    final isHindi = context.locale.languageCode.toLowerCase().startsWith('hi');
-    if (_thinkingSteps.length >= 8) return '';
-    if (elapsed >= 8) {
-      return isHindi
-          ? 'Final answer tayar kar raha hoon'
-          : 'Preparing the final answer';
-    }
-    if (elapsed >= 5) {
-      return isHindi
-          ? 'Relevant context check kar raha hoon'
-          : 'Checking relevant context';
-    }
-    if (elapsed >= 3) {
-      return isHindi
-          ? 'Sawal ka intent samajh raha hoon'
-          : 'Understanding your intent';
+    if (elapsed < 2 || elapsed.isOdd || _thinkingSteps.length >= 24) return '';
+    return _nextSharedThinkingStep(
+      phase: 'Analyzing your voice request',
+      contextHint: _activeQuestion,
+    );
+  }
+
+  String _nextSharedThinkingStep({required String phase, String? contextHint}) {
+    final templates = SharedThinkingTemplates.buildThoughtTemplates(
+      phase: phase,
+      contextHint: contextHint,
+    );
+    while (_thinkingTemplateCursor < templates.length) {
+      final candidate = templates[_thinkingTemplateCursor];
+      _thinkingTemplateCursor += 1;
+      final duplicate = _thinkingSteps.any(
+        (step) => step.toLowerCase() == candidate.toLowerCase(),
+      );
+      if (!duplicate) {
+        return candidate;
+      }
     }
     return '';
   }
@@ -364,10 +369,17 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   void _startCardsStagger() {
     _cardsStaggerTimer?.cancel();
-    if (!mounted || _actionCards.isEmpty || _state != _VoiceState.idle) {
+    final blockedState =
+        _state == _VoiceState.processing || _state == _VoiceState.recording;
+
+    if (!mounted || _actionCards.isEmpty || blockedState) {
       if (mounted) {
         setState(() => _visibleCardCount = 0);
       }
+      return;
+    }
+
+    if (_visibleCardCount >= _actionCards.length && _visibleCardCount > 0) {
       return;
     }
 
@@ -377,7 +389,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         timer.cancel();
         return;
       }
-      if (_state != _VoiceState.idle) {
+      if (_state == _VoiceState.processing || _state == _VoiceState.recording) {
         timer.cancel();
         return;
       }
@@ -432,14 +444,17 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
               (event['transcript_display'] ?? event['transcript'] ?? '')
                   .toString()
                   .trim();
-          final sttDoneStep = languageCode.toLowerCase().startsWith('hi')
-              ? 'Transcription complete, query samajh liya'
-              : 'Transcription complete, understood your query';
+          final sttDoneStep = _nextSharedThinkingStep(
+            phase: 'Transcription complete',
+            contextHint: display,
+          );
           if (display.isNotEmpty) {
             final previousQuestion = _activeQuestion;
             setState(() {
               _activeQuestion = display;
-              _appendThinkingStepInState(sttDoneStep);
+              if (sttDoneStep.isNotEmpty) {
+                _appendThinkingStepInState(sttDoneStep);
+              }
               if (previousQuestion.isNotEmpty && previousQuestion != display) {
                 _fadingQuestion = previousQuestion;
               }
@@ -452,7 +467,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
             }
           } else {
             setState(() {
-              _appendThinkingStepInState(sttDoneStep);
+              if (sttDoneStep.isNotEmpty) {
+                _appendThinkingStepInState(sttDoneStep);
+              }
             });
           }
           _scheduleThinkingAutoScroll();
@@ -559,8 +576,15 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       cards = _mergePriorityCards(cards, const <String>['documents']);
     }
 
-    final responseForDisplay = effectiveResponse.trim();
-    final responseForSpeech = effectiveResponse.trim();
+    final responseWithCardsHint = _appendCardsHintIfNeeded(
+      effectiveResponse.trim(),
+      cards,
+      languageCode,
+    );
+    final hasAppendedCardsHint =
+        responseWithCardsHint != effectiveResponse.trim();
+    final responseForDisplay = responseWithCardsHint;
+    final responseForSpeech = responseWithCardsHint;
 
     final nextSession = data['session_id'] as String?;
     _syncSession(nextSession ?? _sessionId);
@@ -575,7 +599,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _activeQuestion = visibleQuestion;
       _actionCards = cards;
       _visibleCardCount = 0;
-      _responseExpanded = false;
+      _responseExpanded = true;
+      _responseFlowCompleted = false;
 
       if (effectiveResponse.isNotEmpty &&
           previousQuestion.isNotEmpty &&
@@ -591,17 +616,14 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _questionFadeController.addStatusListener(_clearQuestionStatusListener);
     }
 
-    if (_responseFlowSource != responseForDisplay) {
-      _responseFlowSource = responseForDisplay;
-      _responseFlowKeySeed += 1;
-    }
+    _responseFlowKeySeed += 1;
 
     setState(() {
       _response = responseForDisplay;
     });
     Haptics.selection();
 
-    String audioToPlay = audioBase64;
+    String audioToPlay = hasAppendedCardsHint ? '' : audioBase64;
     if (audioToPlay.trim().isEmpty && responseForSpeech.isNotEmpty) {
       try {
         final voice = ref.read(voiceServiceProvider);
@@ -624,6 +646,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
         responseForDisplay,
         audioToPlay,
       );
+      _thinkingSteps.clear();
+      _thinkingElapsedSeconds = 0;
+      _thinkingTemplateCursor = 0;
+      _thinkingExpanded = false;
     });
 
     _stopThinkingTicker();
@@ -633,12 +659,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       final played = await _playAudioBase64(audioToPlay);
       if (!played && mounted) {
         setState(() => _state = _VoiceState.idle);
-        _startCardsStagger();
       }
     } else {
       _lastAudioBase64 = null;
       setState(() => _state = _VoiceState.idle);
-      _startCardsStagger();
     }
   }
 
@@ -716,6 +740,17 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _questionFadeController.removeStatusListener(_clearQuestionStatusListener);
     if (!mounted) return;
     setState(() => _fadingQuestion = null);
+  }
+
+  void _onResponseRevealComplete() {
+    if (!mounted || _responseFlowCompleted) return;
+    setState(() {
+      _responseFlowCompleted = true;
+      if (_responseExpanded) {
+        _responseExpanded = false;
+      }
+    });
+    _startCardsStagger();
   }
 
   Future<bool> _playAudioBase64(String base64Audio) async {
@@ -1297,6 +1332,28 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     return out;
   }
 
+  String _appendCardsHintIfNeeded(
+    String text,
+    List<_VoiceActionCard> cards,
+    String languageCode,
+  ) {
+    final clean = text.trim();
+    if (clean.isEmpty || cards.isEmpty) return clean;
+
+    final lower = clean.toLowerCase();
+    final alreadyHasHint =
+        lower.contains('cards below') ||
+        lower.contains('tap the card') ||
+        lower.contains('tap on the card') ||
+        lower.contains('neeche card');
+    if (alreadyHasHint) return clean;
+
+    final hint = languageCode.toLowerCase().startsWith('hi')
+        ? ' Neeche cards par tap karke aur details dekh sakte hain.'
+        : ' You can click on the cards below to see more.';
+    return '$clean$hint';
+  }
+
   String _formatClock(int seconds) {
     final mins = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
@@ -1308,7 +1365,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final visibleCards = _actionCards.take(_visibleCardCount).toList();
     final showCards =
-        _state == _VoiceState.idle &&
+        _responseFlowCompleted &&
+        _state != _VoiceState.processing &&
+        _state != _VoiceState.recording &&
         _response.trim().isNotEmpty &&
         visibleCards.isNotEmpty;
 
@@ -1465,8 +1524,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     }
 
     final responseHeight = compact
-        ? (_responseExpanded ? 86.0 : 58.0)
-        : (_responseExpanded ? 168.0 : 94.0);
+        ? (_responseExpanded ? 96.0 : 64.0)
+        : (_responseExpanded ? 270.0 : 176.0);
 
     return Column(
       children: [
@@ -1534,11 +1593,10 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   const SizedBox(height: 6),
                   Expanded(
                     child: _BottomFlowText(
-                      key: ValueKey(
-                        'flow_$_responseFlowKeySeed$_responseExpanded',
-                      ),
+                      key: ValueKey('flow_$_responseFlowKeySeed'),
                       lines: _responseChunks(_response),
                       revealDuration: _responseRevealDuration,
+                      onRevealComplete: _onResponseRevealComplete,
                       textStyle: TextStyle(
                         color: textPrimary,
                         fontSize: compact ? 12.5 : 13.5,
@@ -1551,43 +1609,6 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
               ),
             ),
           ),
-        if (hasResponse) ...[
-          const SizedBox(height: 6),
-          _buildReferenceRow(isDark: isDark),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildReferenceRow({required bool isDark}) {
-    final textMuted = isDark
-        ? AppColors.darkTextSecondary
-        : AppColors.lightTextSecondary;
-    final refs = _actionCards.take(3).toList();
-    if (refs.isEmpty) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          'Tap response to expand.',
-          style: TextStyle(color: textMuted, fontSize: 11.2),
-        ),
-      );
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final ref in refs)
-          ActionChip(
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            label: Text(ref.label),
-            avatar: Icon(ref.icon, size: 16),
-            onPressed: () {
-              Haptics.selection();
-              context.push(ref.route);
-            },
-          ),
       ],
     );
   }
@@ -1597,27 +1618,18 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     required bool isDark,
     Key? key,
   }) {
-    final panelBg = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.white.withValues(alpha: 0.8);
-    final panelBorder = isDark
-        ? AppColors.darkBorder.withValues(alpha: 0.75)
-        : AppColors.lightBorder.withValues(alpha: 0.95);
-
-    return Container(
+    return KeyedSubtree(
       key: key,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: panelBg,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: panelBorder),
-      ),
-      child: cards.length == 1
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 340),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (cards.length == 1) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: math.min(480.0, constraints.maxWidth).toDouble(),
+                ),
+                child: SizedBox(
+                  height: 190,
                   child: _buildActionTile(
                     cards.first,
                     isDark: isDark,
@@ -1625,21 +1637,58 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                   ),
                 ),
               ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              physics: const BouncingScrollPhysics(),
-              itemCount: cards.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.58,
+            );
+          }
+
+          if (cards.length == 2) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 176,
+                      child: _buildActionTile(
+                        cards[0],
+                        isDark: isDark,
+                        wide: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 176,
+                      child: _buildActionTile(
+                        cards[1],
+                        isDark: isDark,
+                        wide: true,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              itemBuilder: (_, i) {
-                return _buildActionTile(cards[i], isDark: isDark, wide: true);
-              },
+            );
+          }
+
+          final crossAxisCount = constraints.maxWidth > 680 ? 3 : 2;
+          final ratio = cards.length <= 4 ? 1.65 : 1.48;
+          return GridView.builder(
+            padding: const EdgeInsets.only(top: 6),
+            physics: const BouncingScrollPhysics(),
+            itemCount: cards.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: ratio,
             ),
+            itemBuilder: (_, i) {
+              return _buildActionTile(cards[i], isDark: isDark, wide: true);
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -2235,12 +2284,14 @@ class _BottomFlowText extends StatefulWidget {
   final List<String> lines;
   final Duration revealDuration;
   final TextStyle? textStyle;
+  final VoidCallback? onRevealComplete;
 
   const _BottomFlowText({
     super.key,
     required this.lines,
     required this.revealDuration,
     this.textStyle,
+    this.onRevealComplete,
   });
 
   @override
@@ -2252,6 +2303,7 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
   late final ScrollController _scrollController;
   List<String> _words = const <String>[];
   int _visibleWords = 0;
+  bool _didNotifyComplete = false;
 
   @override
   void initState() {
@@ -2271,6 +2323,7 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
 
   void _restartTicker() {
     _timer?.cancel();
+    _didNotifyComplete = false;
     final merged = widget.lines
         .join(' ')
         .replaceAll(RegExp(r'\s+'), ' ')
@@ -2280,15 +2333,16 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
 
     if (_words.length <= 1) {
       setState(() {});
+      _notifyRevealCompleteOnce();
       return;
     }
 
     final totalMs = widget.revealDuration.inMilliseconds <= 0
         ? (_words.length * 170)
         : widget.revealDuration.inMilliseconds;
-    var intervalMs = (totalMs / _words.length).round();
+    var intervalMs = (totalMs / (_words.length - 1)).round();
     if (intervalMs < 36) intervalMs = 36;
-    if (intervalMs > 250) intervalMs = 250;
+    if (intervalMs > 900) intervalMs = 900;
 
     _timer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (!mounted) {
@@ -2297,13 +2351,24 @@ class _BottomFlowTextState extends State<_BottomFlowText> {
       }
       if (_visibleWords >= _words.length) {
         timer.cancel();
+        _notifyRevealCompleteOnce();
         return;
       }
       setState(() => _visibleWords += 1);
+      if (_visibleWords >= _words.length) {
+        timer.cancel();
+        _notifyRevealCompleteOnce();
+      }
       _scrollToBottom();
     });
     setState(() {});
     _scrollToBottom();
+  }
+
+  void _notifyRevealCompleteOnce() {
+    if (_didNotifyComplete) return;
+    _didNotifyComplete = true;
+    widget.onRevealComplete?.call();
   }
 
   void _scrollToBottom() {
