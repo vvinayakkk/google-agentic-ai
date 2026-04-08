@@ -72,7 +72,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   List<_VoiceActionCard> _actionCards = <_VoiceActionCard>[];
   int _visibleCardCount = 0;
 
-  double _hazeAmplitude = 0;
+  final ValueNotifier<double> _hazeAmplitudeNotifier = ValueNotifier<double>(0);
   StreamSubscription<Amplitude>? _amplitudeSub;
 
   late final AnimationController _hazeController;
@@ -82,11 +82,94 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _uiSfxPlayer = AudioPlayer();
+  late final Uint8List _micTapSfxBytes;
   String? _recordingPath;
 
   int _responseFlowKeySeed = 0;
   Duration _responseRevealDuration = const Duration(milliseconds: 2800);
   bool _responseFlowCompleted = false;
+
+  void _resetHazeAmplitude() {
+    if (_hazeAmplitudeNotifier.value.abs() < 0.0005) return;
+    _hazeAmplitudeNotifier.value = 0;
+  }
+
+  Uint8List _buildPcm16MonoWavHeader({
+    required int sampleRate,
+    required int sampleCount,
+  }) {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    final blockAlign = numChannels * bitsPerSample ~/ 8;
+    final byteRate = sampleRate * blockAlign;
+    final dataChunkSize = sampleCount * blockAlign;
+    final riffChunkSize = 36 + dataChunkSize;
+
+    final header = ByteData(44);
+
+    header.setUint8(0, 0x52); // R
+    header.setUint8(1, 0x49); // I
+    header.setUint8(2, 0x46); // F
+    header.setUint8(3, 0x46); // F
+    header.setUint32(4, riffChunkSize, Endian.little);
+    header.setUint8(8, 0x57); // W
+    header.setUint8(9, 0x41); // A
+    header.setUint8(10, 0x56); // V
+    header.setUint8(11, 0x45); // E
+
+    header.setUint8(12, 0x66); // f
+    header.setUint8(13, 0x6D); // m
+    header.setUint8(14, 0x74); // t
+    header.setUint8(15, 0x20); // ' '
+    header.setUint32(16, 16, Endian.little); // PCM chunk size
+    header.setUint16(20, 1, Endian.little); // PCM format
+    header.setUint16(22, numChannels, Endian.little);
+    header.setUint32(24, sampleRate, Endian.little);
+    header.setUint32(28, byteRate, Endian.little);
+    header.setUint16(32, blockAlign, Endian.little);
+    header.setUint16(34, bitsPerSample, Endian.little);
+
+    header.setUint8(36, 0x64); // d
+    header.setUint8(37, 0x61); // a
+    header.setUint8(38, 0x74); // t
+    header.setUint8(39, 0x61); // a
+    header.setUint32(40, dataChunkSize, Endian.little);
+
+    return header.buffer.asUint8List();
+  }
+
+  Uint8List _buildMicTapWav({
+    Duration duration = const Duration(milliseconds: 46),
+    int sampleRate = 24000,
+    double volume = 0.86,
+  }) {
+    final sampleCount = (duration.inMilliseconds * sampleRate / 1000)
+        .round()
+        .clamp(1, 200000);
+    final pcmData = ByteData(sampleCount * 2);
+    final random = math.Random(17);
+
+    for (var i = 0; i < sampleCount; i++) {
+      final t = sampleCount == 1 ? 0.0 : i / (sampleCount - 1);
+      final noise = (random.nextDouble() * 2 - 1) * math.exp(-38 * t);
+      final clickSnap = math.sin(2 * math.pi * 1820 * t) * math.exp(-55 * t);
+      final clickBody = math.sin(2 * math.pi * 320 * t) * math.exp(-12 * t);
+      final sample =
+          ((noise * 0.78) + (clickSnap * 0.52) + (clickBody * 0.18)) * volume;
+      final clamped = sample.clamp(-1.0, 1.0);
+      pcmData.setInt16(i * 2, (clamped * 32767).round(), Endian.little);
+    }
+
+    final header = _buildPcm16MonoWavHeader(
+      sampleRate: sampleRate,
+      sampleCount: sampleCount,
+    );
+    final bytes = BytesBuilder(copy: false)
+      ..add(header)
+      ..add(pcmData.buffer.asUint8List());
+    return bytes.toBytes();
+  }
 
   Future<void> _playMicToggleFeedback({required bool activating}) async {
     if (activating) {
@@ -95,15 +178,25 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       Haptics.heavy();
     }
     try {
-      await SystemSound.play(SystemSoundType.click);
+      await _uiSfxPlayer.stop();
+      await _uiSfxPlayer.setVolume(activating ? 0.98 : 0.9);
+      await _uiSfxPlayer.play(BytesSource(_micTapSfxBytes));
     } catch (_) {
-      // Best-effort system click feedback.
+      try {
+        await SystemSound.play(SystemSoundType.click);
+      } catch (_) {
+        // Best-effort mic toggle feedback.
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
+    _micTapSfxBytes = _buildMicTapWav();
+
+    unawaited(_uiSfxPlayer.setReleaseMode(ReleaseMode.stop));
+
     _hazeController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -141,10 +234,12 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
     _amplitudeSub?.cancel();
 
     _hazeController.dispose();
+    _hazeAmplitudeNotifier.dispose();
     _questionFadeController.dispose();
     _thinkingScrollController.dispose();
 
     _recorder.dispose();
+    _uiSfxPlayer.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -198,20 +293,26 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
 
     _amplitudeSub?.cancel();
     _amplitudeSub = _recorder
-        .onAmplitudeChanged(const Duration(milliseconds: 70))
+        .onAmplitudeChanged(const Duration(milliseconds: 32))
         .listen((amp) {
           if (!mounted || _state != _VoiceState.recording) return;
           final db = amp.current;
           final rawAmp = db.isFinite
               ? ((db + 60) / 60).clamp(0.0, 1.0).toDouble()
               : 0.0;
-          final smoothedAmp = (_hazeAmplitude * 0.75) + (rawAmp * 0.25);
-          if ((_hazeAmplitude - smoothedAmp).abs() < 0.01) {
+
+          final prevAmp = _hazeAmplitudeNotifier.value;
+          // Fast attack for speech onset, slower release for smooth decay.
+          final smoothing = rawAmp >= prevAmp ? 0.44 : 0.22;
+          final smoothedAmp =
+              (prevAmp * (1 - smoothing)) + (rawAmp * smoothing);
+          final emphasizedAmp = ((smoothedAmp * 0.85) + (rawAmp * 0.15))
+              .clamp(0.0, 1.0)
+              .toDouble();
+          if ((prevAmp - emphasizedAmp).abs() < 0.002) {
             return;
           }
-          setState(() {
-            _hazeAmplitude = smoothedAmp;
-          });
+          _hazeAmplitudeNotifier.value = emphasizedAmp;
         });
 
     _stopThinkingTicker();
@@ -229,11 +330,11 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingTemplateCursor = 0;
       _actionCards = <_VoiceActionCard>[];
       _visibleCardCount = 0;
-      _hazeAmplitude = 0;
       _responseExpanded = false;
       _responseFlowCompleted = false;
       _thinkingExpanded = false;
     });
+    _resetHazeAmplitude();
   }
 
   Future<void> _stopAndProcess() async {
@@ -255,9 +356,9 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       _thinkingElapsedSeconds = 0;
       _thinkingTemplateCursor = _thinkingSteps.length;
       _visibleCardCount = 0;
-      _hazeAmplitude = 0;
       _thinkingExpanded = true;
     });
+    _resetHazeAmplitude();
 
     _cardsStaggerTimer?.cancel();
     _startThinkingTicker();
@@ -269,8 +370,8 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       if (!mounted) return;
       setState(() {
         _state = _VoiceState.idle;
-        _hazeAmplitude = 0;
       });
+      _resetHazeAmplitude();
       context.showSnack('voice_assistant.no_speech'.tr(), isError: true);
       return;
     }
@@ -1497,11 +1598,14 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                       MediaQuery.of(context).size.height * 0.58,
                     ),
                     child: AnimatedBuilder(
-                      animation: _hazeController,
+                      animation: Listenable.merge([
+                        _hazeController,
+                        _hazeAmplitudeNotifier,
+                      ]),
                       builder: (context, _) {
                         return CustomPaint(
                           painter: VoiceHazeOrb(
-                            amplitude: _hazeAmplitude,
+                            amplitude: _hazeAmplitudeNotifier.value,
                             pulseValue: _hazeController.value,
                           ),
                         );
@@ -2304,7 +2408,7 @@ class VoiceHazeOrb extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final amp = amplitude.clamp(0.0, 1.0).toDouble();
-    final ampBoost = math.pow(amp, 0.72).toDouble();
+    final ampBoost = math.pow(amp, 0.6).toDouble();
     final pulse = pulseValue.clamp(0.0, 1.0).toDouble();
     final t = pulse * math.pi * 2;
 
@@ -2336,21 +2440,24 @@ class VoiceHazeOrb extends CustomPainter {
       required Color color,
       required double alphaMultiplier,
     }) {
-      final waveAmp = (4.5 + (34.0 * ampBoost)) * ampFactor;
+      final waveAmp = (3.5 + (40.0 * ampBoost)) * ampFactor;
       final breathingLift =
-          math.sin((t * 0.55) + phaseShift) * (2.2 + (ampBoost * 12.0));
+          math.sin((t * 0.55) + phaseShift) * (1.8 + (ampBoost * 13.0));
       final baseY = (size.height * baseLevel) - breathingLift;
       final step = math.max(6.0, size.width / 84);
+      final effectiveSpeed = speed * (1.0 + (ampBoost * 0.42));
 
       double waveY(double x) {
         final nx = x / size.width;
         final a =
-            math.sin((nx * freq * math.pi * 2) + (t * speed) + phaseShift) *
+            math.sin(
+              (nx * freq * math.pi * 2) + (t * effectiveSpeed) + phaseShift,
+            ) *
             waveAmp;
         final b =
             math.sin(
               (nx * (freq * 1.85) * math.pi * 2) -
-                  (t * speed * 0.62) +
+                  (t * effectiveSpeed * 0.62) +
                   (phaseShift * 0.45),
             ) *
             (waveAmp * 0.34);
@@ -2396,7 +2503,7 @@ class VoiceHazeOrb extends CustomPainter {
       }
       final crest = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0 + (ampBoost * 1.3)
+        ..strokeWidth = 1.0 + (ampBoost * 1.6)
         ..color = const Color(
           0xFFA7F3D0,
         ).withValues(alpha: (0.09 + (0.26 * ampBoost)) * alphaMultiplier)
