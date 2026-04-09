@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/किसान_की_आवाज़-🌾-16a34a?style=for-the-badge&labelColor=052e16" alt="KisanKiAwaaz"/>
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/6acb0975-34e3-4fa6-ba6d-e01f7add9934" />
+
 
 # 🌾 KisanKiAwaaz — किसान की आवाज़
 
