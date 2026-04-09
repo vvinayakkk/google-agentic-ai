@@ -1,0 +1,632 @@
+{
+  "base_dir": "/scheme_documents/fillable_official",
+  "schemes_with_fillable_docs": 20,
+  "total_links_attempted": 43,
+  "total_downloaded": 35,
+  "total_failed": 8,
+  "scheme_results": [
+    {
+      "scheme_id": "acabc",
+      "scheme_name": "ACABC",
+      "fillable_docs": [
+        "Project proposal"
+      ],
+      "links": [
+        "https://acabcmis.gov.in",
+        "https://acabcmis.gov.in/TraineeRegistration.aspx"
+      ],
+      "results": [
+        {
+          "url": "https://acabcmis.gov.in",
+          "final_url": "https://acabcmis.gov.in",
+          "status": "downloaded",
+          "filename": "document_76734f4b56e5.html",
+          "bytes": 38456,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://acabcmis.gov.in/TraineeRegistration.aspx",
+          "status": "http_404"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "aif",
+      "scheme_name": "AIF",
+      "fillable_docs": [
+        "Entity registration documents",
+        "GST registration (if applicable)",
+        "Project report/DPR"
+      ],
+      "links": [
+        "https://agriinfra.dac.gov.in"
+      ],
+      "results": [
+        {
+          "url": "https://agriinfra.dac.gov.in",
+          "final_url": "https://agriinfra.dac.gov.in",
+          "status": "downloaded",
+          "filename": "document_6d0c64fc0024.html",
+          "bytes": 49526,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "deds/npdd",
+      "scheme_name": "DEDS/NPDD",
+      "fillable_docs": [
+        "Project report"
+      ],
+      "links": [
+        "https://www.nabard.org/content.aspx?id=591",
+        "https://dahd.nic.in/related-links/dairy-entrepreneurship-development-scheme"
+      ],
+      "results": [
+        {
+          "url": "https://www.nabard.org/content.aspx?id=591",
+          "final_url": "https://www.nabard.org/content.aspx?id=591",
+          "status": "downloaded",
+          "filename": "content.aspx_46cc540d7c79.aspx",
+          "bytes": 62112,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://dahd.nic.in/related-links/dairy-entrepreneurship-development-scheme",
+          "status": "error",
+          "error": "[Errno -2] Name or service not known"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "drone_didi",
+      "scheme_name": "Drone Didi",
+      "fillable_docs": [
+        "SHG registration certificate"
+      ],
+      "links": [
+        "https://nrlm.gov.in",
+        "https://nrlm.gov.in/outerReportAction.do?methodName=showIndex"
+      ],
+      "results": [
+        {
+          "url": "https://nrlm.gov.in",
+          "final_url": "https://nrlm.gov.in/outerReportAction.do?methodName=showIndex",
+          "status": "downloaded",
+          "filename": "outerreportaction.do_f10a378b454a.do",
+          "bytes": 170022,
+          "content_type": "text/html;charset=UTF-8"
+        },
+        {
+          "url": "https://nrlm.gov.in/outerReportAction.do?methodName=showIndex",
+          "final_url": "https://nrlm.gov.in/outerReportAction.do?methodName=showIndex",
+          "status": "downloaded",
+          "filename": "outerreportaction.do_ad3ed0e1fa27.do",
+          "bytes": 136,
+          "content_type": "text/html;charset=UTF-8"
+        }
+      ],
+      "downloaded_count": 2,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "enam",
+      "scheme_name": "eNAM",
+      "fillable_docs": [
+        "Mandi registration (from nearest APMC/regulated mandi)"
+      ],
+      "links": [
+        "https://enam.gov.in",
+        "https://enam.gov.in/web/stakeholder-registration/farmer",
+        "https://enam.gov.in/web/resources/user-manual"
+      ],
+      "results": [
+        {
+          "url": "https://enam.gov.in",
+          "final_url": "https://enam.gov.in/web/",
+          "status": "downloaded",
+          "filename": "document_5ae9a2ced9b1.html",
+          "bytes": 61274,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://enam.gov.in/web/stakeholder-registration/farmer",
+          "final_url": "https://enam.gov.in/web/stakeholder-registration/farmer",
+          "status": "downloaded",
+          "filename": "farmer_dc944d397524.html",
+          "bytes": 26153,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://enam.gov.in/web/resources/user-manual",
+          "final_url": "https://enam.gov.in/web/resources/user-manual",
+          "status": "downloaded",
+          "filename": "user-manual_71d68dc8f3cc.html",
+          "bytes": 26153,
+          "content_type": "text/html; charset=UTF-8"
+        }
+      ],
+      "downloaded_count": 3,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "fpo_scheme",
+      "scheme_name": "FPO Scheme",
+      "fillable_docs": [
+        "FPO registration certificate"
+      ],
+      "links": [
+        "https://enam.gov.in/web/FPO",
+        "https://enam.gov.in/web/resources/guidelines"
+      ],
+      "results": [
+        {
+          "url": "https://enam.gov.in/web/FPO",
+          "final_url": "https://enam.gov.in/web/FPO",
+          "status": "downloaded",
+          "filename": "fpo_4e6c8a1c95fa.html",
+          "bytes": 26153,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://enam.gov.in/web/resources/guidelines",
+          "final_url": "https://enam.gov.in/web/resources/guidelines",
+          "status": "downloaded",
+          "filename": "guidelines_7ee23c2e8b02.html",
+          "bytes": 26153,
+          "content_type": "text/html; charset=UTF-8"
+        }
+      ],
+      "downloaded_count": 2,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "iss",
+      "scheme_name": "ISS",
+      "fillable_docs": [
+        "KCC or crop loan application"
+      ],
+      "links": [
+        "https://www.rbi.org.in"
+      ],
+      "results": [
+        {
+          "url": "https://www.rbi.org.in",
+          "final_url": "https://www.rbi.org.in",
+          "status": "downloaded",
+          "filename": "document_d05668188a64.html",
+          "bytes": 204092,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "kcc",
+      "scheme_name": "KCC",
+      "fillable_docs": [
+        "Affidavit for non-willful defaulter declaration",
+        "Application form (available at bank)"
+      ],
+      "links": [
+        "https://pmkisan.gov.in/KCCForm.aspx",
+        "https://www.sbi.co.in/documents/KCC_Application_Form.pdf",
+        "https://www.pnbindia.in/KCC-Scheme.html",
+        "https://rbi.org.in/commonperson/English/Scripts/Notification.aspx?Id=208"
+      ],
+      "results": [
+        {
+          "url": "https://pmkisan.gov.in/KCCForm.aspx",
+          "final_url": "https://pmkisan.gov.in/ErrorPage.aspx?status=404",
+          "status": "downloaded",
+          "filename": "errorpage.aspx_a4af5cc8cfac.aspx",
+          "bytes": 1473,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://www.sbi.co.in/documents/KCC_Application_Form.pdf",
+          "status": "http_500"
+        },
+        {
+          "url": "https://www.pnbindia.in/KCC-Scheme.html",
+          "final_url": "https://pnb.bank.in/Page-Not-Found.html",
+          "status": "downloaded",
+          "filename": "page-not-found.html_6e546fbee22b.html",
+          "bytes": 223967,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://rbi.org.in/commonperson/English/Scripts/Notification.aspx?Id=208",
+          "final_url": "https://rbi.org.in/commonperson/English/Scripts/Notification.aspx?Id=208",
+          "status": "downloaded",
+          "filename": "notification.aspx_0e78093a67ee.aspx",
+          "bytes": 71739,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 3,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "midh",
+      "scheme_name": "MIDH",
+      "fillable_docs": [
+        "Project proposal (for infrastructure)"
+      ],
+      "links": [
+        "https://midh.gov.in",
+        "https://midh.gov.in/PDF/MIDH_Guidelines.pdf"
+      ],
+      "results": [
+        {
+          "url": "https://midh.gov.in",
+          "final_url": "https://midh.gov.in",
+          "status": "downloaded",
+          "filename": "document_b73e00e85857.html",
+          "bytes": 25176,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://midh.gov.in/PDF/MIDH_Guidelines.pdf",
+          "final_url": "https://midh.gov.in/PDF/MIDH_Guidelines.pdf",
+          "status": "downloaded",
+          "filename": "midh_guidelines.pdf_e3d617fa68b5.pdf",
+          "bytes": 25176,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 2,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "mkky",
+      "scheme_name": "MKKY",
+      "fillable_docs": [
+        "PM-KISAN registration"
+      ],
+      "links": [
+        "https://mpkrishi.mp.gov.in"
+      ],
+      "results": [
+        {
+          "url": "https://mpkrishi.mp.gov.in",
+          "final_url": "https://mpkrishi.mp.gov.in/hindisite_New/indexhindi_New.aspx",
+          "status": "downloaded",
+          "filename": "indexhindi_new.aspx_bfca4f61f8a1.aspx",
+          "bytes": 51487,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "namo_shetkari",
+      "scheme_name": "Namo Shetkari",
+      "fillable_docs": [
+        "PM-KISAN registration"
+      ],
+      "links": [
+        "https://pmkisan.gov.in"
+      ],
+      "results": [
+        {
+          "url": "https://pmkisan.gov.in",
+          "final_url": "https://pmkisan.gov.in",
+          "status": "downloaded",
+          "filename": "document_1399033a05ab.html",
+          "bytes": 66105,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "nbhm",
+      "scheme_name": "NBHM",
+      "fillable_docs": [
+        "SHG/FPO registration (if applicable)"
+      ],
+      "links": [
+        "https://nbb.gov.in",
+        "https://nbb.gov.in/NBHM.html"
+      ],
+      "results": [
+        {
+          "url": "https://nbb.gov.in",
+          "final_url": "https://nbb.gov.in",
+          "status": "downloaded",
+          "filename": "document_6182be4a732a.html",
+          "bytes": 8240,
+          "content_type": "text/html"
+        },
+        {
+          "url": "https://nbb.gov.in/NBHM.html",
+          "final_url": "https://nbb.gov.in/NBHM.html",
+          "status": "downloaded",
+          "filename": "nbhm.html_c4fd3d861c12.html",
+          "bytes": 8240,
+          "content_type": "text/html"
+        }
+      ],
+      "downloaded_count": 2,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "nlm",
+      "scheme_name": "NLM",
+      "fillable_docs": [
+        "Project proposal"
+      ],
+      "links": [
+        "https://nlm.udyamimitra.in",
+        "https://dahd.nic.in/related-links/national-livestock-mission"
+      ],
+      "results": [
+        {
+          "url": "https://nlm.udyamimitra.in",
+          "final_url": "https://nlm.udyamimitra.in",
+          "status": "downloaded",
+          "filename": "document_79b1ee5b96a6.html",
+          "bytes": 67825,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://dahd.nic.in/related-links/national-livestock-mission",
+          "status": "error",
+          "error": "[Errno -2] Name or service not known"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "pkvy",
+      "scheme_name": "PKVY",
+      "fillable_docs": [
+        "Farmer group/cluster registration"
+      ],
+      "links": [
+        "https://pgsindia-ncof.gov.in",
+        "https://pgsindia-ncof.gov.in/PGS_manual.html",
+        "https://pgsindia-ncof.gov.in/PDF/PGS-India-Manual.pdf"
+      ],
+      "results": [
+        {
+          "url": "https://pgsindia-ncof.gov.in",
+          "final_url": "https://pgsindia-ncof.gov.in",
+          "status": "downloaded",
+          "filename": "document_ec14f07b1fae.html",
+          "bytes": 64555,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://pgsindia-ncof.gov.in/PGS_manual.html",
+          "final_url": "https://pgsindia-ncof.gov.in/PGS_manual.html",
+          "status": "downloaded",
+          "filename": "pgs_manual.html_5fb2ff7153e0.html",
+          "bytes": 22509,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://pgsindia-ncof.gov.in/PDF/PGS-India-Manual.pdf",
+          "final_url": "https://pgsindia-ncof.gov.in/PDF/PGS-India-Manual.pdf",
+          "status": "downloaded",
+          "filename": "pgs-india-manual.pdf_3a14819399f9.pdf",
+          "bytes": 22509,
+          "content_type": "text/html; charset=UTF-8"
+        }
+      ],
+      "downloaded_count": 3,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "pm-aasha",
+      "scheme_name": "PM-AASHA",
+      "fillable_docs": [
+        "Mandi registration (if selling in mandi)"
+      ],
+      "links": [
+        "https://farmer.gov.in"
+      ],
+      "results": [
+        {
+          "url": "https://farmer.gov.in",
+          "status": "error",
+          "error": "[Errno -2] Name or service not known"
+        }
+      ],
+      "downloaded_count": 0,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "pm-kisan",
+      "scheme_name": "PM-KISAN",
+      "fillable_docs": [
+        "Self-declaration form"
+      ],
+      "links": [
+        "https://pmkisan.gov.in",
+        "https://pmkisan.gov.in/Documents/RevisedPM-KISANOperationalGuidelines.pdf",
+        "https://pmkisan.gov.in/Documents/SelfDeclaration.pdf"
+      ],
+      "results": [
+        {
+          "url": "https://pmkisan.gov.in",
+          "final_url": "https://pmkisan.gov.in",
+          "status": "downloaded",
+          "filename": "document_1399033a05ab.html",
+          "bytes": 66105,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://pmkisan.gov.in/Documents/RevisedPM-KISANOperationalGuidelines.pdf",
+          "status": "http_404"
+        },
+        {
+          "url": "https://pmkisan.gov.in/Documents/SelfDeclaration.pdf",
+          "status": "http_404"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 2
+    },
+    {
+      "scheme_id": "pmfby",
+      "scheme_name": "PMFBY",
+      "fillable_docs": [
+        "Crop details declaration"
+      ],
+      "links": [
+        "https://pmfby.gov.in",
+        "https://pmfby.gov.in/ext/enrolment-form",
+        "https://pmfby.gov.in/pdf/Revised_Operational_Guidelines.pdf",
+        "https://pmfby.gov.in/ext/claim-form"
+      ],
+      "results": [
+        {
+          "url": "https://pmfby.gov.in",
+          "final_url": "https://pmfby.gov.in",
+          "status": "downloaded",
+          "filename": "document_59f266b57184.html",
+          "bytes": 13038,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://pmfby.gov.in/ext/enrolment-form",
+          "final_url": "https://pmfby.gov.in/ext/enrolment-form",
+          "status": "downloaded",
+          "filename": "enrolment-form_3a3b3c40c1a2.html",
+          "bytes": 13038,
+          "content_type": "text/html; charset=UTF-8"
+        },
+        {
+          "url": "https://pmfby.gov.in/pdf/Revised_Operational_Guidelines.pdf",
+          "final_url": "https://pmfby.gov.in/pdf/Revised_Operational_Guidelines.pdf",
+          "status": "downloaded",
+          "filename": "revised_operational_guidelines.pdf_f80f07633f0e.pdf",
+          "bytes": 1233411,
+          "content_type": "application/pdf"
+        },
+        {
+          "url": "https://pmfby.gov.in/ext/claim-form",
+          "final_url": "https://pmfby.gov.in/ext/claim-form",
+          "status": "downloaded",
+          "filename": "claim-form_b56f1a6f0c55.html",
+          "bytes": 13038,
+          "content_type": "text/html; charset=UTF-8"
+        }
+      ],
+      "downloaded_count": 4,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "pmmsy",
+      "scheme_name": "PMMSY",
+      "fillable_docs": [
+        "Project proposal"
+      ],
+      "links": [
+        "https://pmmsy.dof.gov.in",
+        "https://pmmsy.dof.gov.in/apply"
+      ],
+      "results": [
+        {
+          "url": "https://pmmsy.dof.gov.in",
+          "final_url": "https://pmmsy.dof.gov.in",
+          "status": "downloaded",
+          "filename": "document_f959d621dd70.html",
+          "bytes": 2263,
+          "content_type": "text/html"
+        },
+        {
+          "url": "https://pmmsy.dof.gov.in/apply",
+          "final_url": "https://pmmsy.dof.gov.in/apply",
+          "status": "downloaded",
+          "filename": "apply_e12f292d532e.html",
+          "bytes": 2263,
+          "content_type": "text/html"
+        }
+      ],
+      "downloaded_count": 2,
+      "failed_count": 0
+    },
+    {
+      "scheme_id": "rkvy",
+      "scheme_name": "RKVY",
+      "fillable_docs": [
+        "FPO registration certificate",
+        "Project proposal/Detailed Project Report (DPR)"
+      ],
+      "links": [
+        "https://rkvy.nic.in",
+        "https://rkvy.nic.in/static/download/pdf/RKVY-RAFTAAR-Guidelines.pdf"
+      ],
+      "results": [
+        {
+          "url": "https://rkvy.nic.in",
+          "final_url": "https://rkvy.nic.in",
+          "status": "downloaded",
+          "filename": "document_d5c8a0c5c88e.html",
+          "bytes": 251,
+          "content_type": "text/html"
+        },
+        {
+          "url": "https://rkvy.nic.in/static/download/pdf/RKVY-RAFTAAR-Guidelines.pdf",
+          "status": "http_404"
+        }
+      ],
+      "downloaded_count": 1,
+      "failed_count": 1
+    },
+    {
+      "scheme_id": "smam",
+      "scheme_name": "SMAM",
+      "fillable_docs": [
+        "For FPOs: Registration certificate and list of members",
+        "Self-declaration of not receiving similar benefit before"
+      ],
+      "links": [
+        "https://agrimachinery.nic.in",
+        "https://agrimachinery.nic.in/Farmer/DFarmerRegistration",
+        "https://agrimachinery.nic.in/Files/Guidelines/SMAMGuidelines.pdf"
+      ],
+      "results": [
+        {
+          "url": "https://agrimachinery.nic.in",
+          "final_url": "https://agrimachinery.nic.in",
+          "status": "downloaded",
+          "filename": "document_1d2740f23a51.html",
+          "bytes": 23433,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://agrimachinery.nic.in/Farmer/DFarmerRegistration",
+          "final_url": "https://agrimachinery.nic.in/Error/NotFound?aspxerrorpath=/Farmer/DFarmerRegistration",
+          "status": "downloaded",
+          "filename": "notfound_3f36dd796286.html",
+          "bytes": 20026,
+          "content_type": "text/html; charset=utf-8"
+        },
+        {
+          "url": "https://agrimachinery.nic.in/Files/Guidelines/SMAMGuidelines.pdf",
+          "final_url": "https://agrimachinery.nic.in/Error/NotFound?aspxerrorpath=/Files/Guidelines/SMAMGuidelines.pdf",
+          "status": "downloaded",
+          "filename": "notfound_a7d08ce8e774.html",
+          "bytes": 20026,
+          "content_type": "text/html; charset=utf-8"
+        }
+      ],
+      "downloaded_count": 3,
+      "failed_count": 0
+    }
+  ]
+}

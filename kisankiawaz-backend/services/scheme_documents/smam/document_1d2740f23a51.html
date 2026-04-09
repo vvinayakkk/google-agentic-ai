@@ -1,0 +1,548 @@
+
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Performance Testing of Farm Machinery (FMTTI)" />
+    <meta name="description" content="Department Of Agriculture and Farmers Welfare, Ministry Of Agriculture & Farmers Welfare" />
+    <meta name="author" content="NIC | DAC" />
+    <link rel="icon" href="../favicon.ico" />
+    <meta charset="utf-8" />
+    <title> Digital Platform for Farm Mechanization and Technology | Govt of India  </title>
+    <link href="/Css/bootstrap/css/bootstrap.css" rel="stylesheet"/>
+
+    <link href="/Css/bootstrap/css/bootstrap-theme.css" rel="stylesheet"/>
+
+    <link href="/Css/scrolling.css" rel="stylesheet"/>
+
+    <link href="/Css/Layout.css" rel="stylesheet"/>
+
+    <script src="/Scripts/jquery-1.12.4.js"></script>
+
+    <script src="/Css/bootstrap/js/bootstrap.js"></script>
+
+    <script src="/Scripts/global.js"></script>
+
+    <script src="/AngulerJs/angular.js"></script>
+
+    <link href="/Css/bootstrapmodified.css" rel="stylesheet"/>
+
+    <link href="/Css/AdminLTE.css" rel="stylesheet"/>
+
+    <link href="/Css/ionicons.min.css" rel="stylesheet"/>
+
+    <link href="/Css/style.css" rel="stylesheet"/>
+
+
+    <script src="/js/jquery-2.2.3.min.js"></script>
+
+    <link href="/Css/websitelaunch.css" rel="stylesheet"/>
+
+    <script src="/GraphReport/jquery.min.js"></script>
+
+    <script src="/AngulerJs/FMTTI/Controller/FmttiDashboardController.js"></script>
+
+    <script src="/Highcharts/code/highcharts.js"></script>
+
+    <link href="/Css/jquery.modal.min.css" rel="stylesheet"/>
+
+    <script src="/js/jquery.modal.min.js"></script>
+
+
+    <style>
+        .popup a {
+            text-decoration: none;
+        }
+
+        .popup-onload {
+            width: 100%;
+            margin: 0 auto;
+            position: fixed;
+            z-index: 10;
+            background-color: #000000a3;
+        }
+
+        .popup {
+            min-width: 450px;
+            width: 45%;
+            min-height: 150px;
+            margin: 20px auto;
+            background: #fff;
+            opacity: 1;
+            position: relative;
+            z-index: 10;
+            border: 6px double #03a5db;
+            padding: 15px 35px;
+            box-shadow: 0 2px 5px #000;
+        }
+
+            .popup p {
+                color: #fff;
+                /* text-align: justify; */
+                font-size: 1.25rem;
+                line-height: 1.6;
+                font-weight: 400;
+                font-family: "Nunito Sans", sans-serif;
+            }
+
+                .popup p a {
+                    color: #b18d73;
+                    font-weight: 400;
+                }
+
+        .x {
+            color: #b18d73;
+            font-size: 2rem;
+            line-height: 1.6;
+            font-weight: 400;
+            font-family: "Nunito Sans", sans-serif;
+            text-decoration: none;
+            position: absolute;
+            right: 15px;
+            top: 0;
+        }
+
+            .x:hover {
+                cursor: pointer;
+            }
+
+        .popup-wrapper {
+            width: 100vw;
+            height: 100vh;
+            background-color: #efefef;
+            color: #b18d73;
+            font-size: 2rem;
+            line-height: 1.6;
+            font-weight: 400;
+            font-family: "Nunito Sans", sans-serif;
+            text-align: center;
+        }
+
+        .chat-float {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+            .chat-float img {
+                width: 65px;
+                height: 65px;
+                cursor: pointer;
+                transition: 0.3s;
+            }
+
+                .chat-float img:hover {
+                    transform: scale(1.1);
+                }
+
+    </style>
+</head>
+
+
+<body ng-app="myApp" ng-controller="FMTTI_Dashboard">
+
+    <header>
+        <div class="navbar navbar-default bg-blue-active" style="margin-bottom:0px;">
+            <div class="row">
+                <div class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav navbar-right col-lg-12">
+                        <li class="col-lg-6"><a href="#" class="text-maroon"></a></li>
+
+                        <li class="border-right text-right col-lg-3"><a href="#MainContent"> SKIP TO MAIN CONTENT</a></li>
+
+                        <li class="col-lg-3"><a href="index/ScreenReader"> SCREEN READER ACCESS</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+     
+        <div class='popup-onload'>
+                <div class='popup'>
+                    <a href='' class="x">x</a>
+
+                    <img src="/Images/SliderImages/PM_KISAN_Creative_2.jpeg" class="img-responsive" />
+                </div>
+            </div>
+
+
+
+        <div class="overPopup"></div>
+        <div class="alert">
+
+            <div class="row logo-header">
+                <div class="col-sm-1 center-image hidden-xs">
+                    <img src='/Images/Layout/Emblem_of_India.svg' class="img logo" />
+                </div>
+                <div class="col-sm-8 text-justify">
+                    <a href="..">
+
+                        <h1 class="logoheading">
+                            Digital Platform for Farm Mechanization and Technology
+                        </h1>
+                        <p class="punchline"> <b> Department of Agriculture and Farmers Welfare<br /> Ministry of Agriculture & Farmers Welfare, Govt.of India  </b></p>
+                    </a>
+                </div>
+
+                <div class="col-sm-2 center-image hidden-xs" style="padding-right:0px; padding-left:0px;">
+                    <a href="https://digitalindia.gov.in" target="_blank"><img src='/Images/logoDigitalIndia.png' style="height:7vw; width:14vw;" class="img" /></a>
+                </div>
+                <div class="col-sm-1 center-image hidden-xs" style="padding-right:0px; padding-left:0px;">
+                    <a href="https://g20.org/en" target="_blank"> <img src='/Images/Layout/logo_G20.jpg' style="height:auto;  margin-top:2vw; width:8vw;" class="img" /></a>
+
+                </div>
+            </div>
+        </div>
+        <div class="alert">
+            <div class="navbar navbar-inverse">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                        <span class="sr-only"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    
+                    <a class="navbar-brand" href="" style="color: white; display: none;">DBT Farm Machinery</a>
+                </div>
+
+                <div id="navbar" class="navbar-collapse collapse bg-blue-active text-capitalize">
+
+                    <ul class="nav navbar-nav" style="margin-left: auto;">
+                        <li class="menu-top-active"><a href="LOGIN.aspx"><span class="sr-only"></span></a></li>
+                        <li> <a href="/">HOME</a></li>
+                        <li> <a href="/index/ContactUsHome">CONTACT US</a></li>
+                    </ul>
+
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+
+    <div class="alert">
+        <div class="body" id="MainContent" style="padding-top: 0px; margin-top:0px;">
+            <div class="alert">
+                <div class="row bg-gray-light" style="margin-top:auto;">
+                    <div class="col-md-4 col-lg-12 col-sm-6 col-xs-12">
+                        <div class="row bg-gray-light" style="margin-top:auto;margin-right:auto;">
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="slidebox">
+                                        <div id="myCarousel" class="carousel ui-slider-horizontal" data-ride="carousel" data-interval="2000" style="opacity:1!important; image-resolution:from-image;">
+                                            <!-- Indicators -->
+                                            <ol class="carousel-indicators">
+                                                <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+                                                <li data-target="#myCarousel" data-slide-to="1"></li>
+                                            </ol>
+
+                                            <!-- Wrapper for slides -->
+                                            <div class="carousel-inner">
+                                                <div class="item active">
+                                                    <a href="https://amritmahotsav.nic.in/" target="_blank"><img src="/Images/SliderImages/azadi-ka-mahotsav-banner1.jpg" alt="img" class="slideimgSize" /></a>
+                                                </div>
+                                                <div class="item">
+                                                    <img src="/Images/SliderImages/1.jpg" alt="img" class="slideimgSize" />/>
+                                                </div>
+
+
+
+
+                                            </div>
+
+                                            <a class="left carousel-control" href="#myCarousel" data-slide="prev">
+                                                <span class="glyphicon glyphicon-chevron-left"></span>
+                                                <span class="sr-only">Previous</span>
+                                            </a>
+                                            <a class="right carousel-control" href="#myCarousel" data-slide="next">
+                                                <span class="glyphicon glyphicon-chevron-right"></span>
+                                                <span class="sr-only">Next</span>
+                                            </a>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <br />
+                        <div class="row bg-gray-light" style="margin-top:auto;margin-right:auto;">
+
+                            <p class="maintxt">
+
+                                Farm mechanization plays a critical role in increasing agricultural productivity. Mechanization has been well received in India as one of the important elements of modernization of agriculture, enhancing the agricultural productivity and consequently rural prosperity.
+                                In this regard various initiatives have been taken by the Government and in particular, the Department of Agriculture and Farmers Welfare (DA&FW), Ministry of Agriculture.
+                                To ensure the quality of  Farms Machinery and Implements, the performance testing is being done at the Farm Machinery Training and Testing Institutes (FMTTIs), designated State Agricultural Universities (SAUs) and ICAR institutions.
+                                The Government is helping farmers by providing subsidy to procure machinery to improve farm input and farm power availability.
+
+                            </p>
+                        </div>
+                        <div class="row bg-gray-light">
+                            <div class="col-md-4 col-lg-6 col-sm-6 col-xs-12">
+                                <a href="/Index/Index" target="_blank">
+
+
+                                    <div class="info-box">
+                                        <span class="info-box-icon">
+                                            <i class="fa fa-tasks">
+                                                <img src="/Images/dbt.png" height="90" width="90" />
+                                            </i>
+                                        </span>
+                                        <div class="info-box-content1">
+                                            <span class="boxtxt">
+                                                Direct Benefit Transfer In Agriculture Mechanization
+                                            </span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+
+                            <div class="col-md-4 col-lg-6 col-sm-6 col-xs-12">
+                                <a href="/FMTTI/Management/Index" target="_blank">
+                                    <div class="info-box2">
+                                        <span class="info-box-icon" style="background: white;">
+                                            <i class="fa fa-tasks">
+                                                <img src="/Images/fmtti.png" height="90" width="90" />
+                                            </i>
+                                        </span>
+                                        <div class="info-box-content1">
+                                            <span class="boxtxt">
+                                                Centralized Farm Machinery Performance Testing Portal
+                                            </span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="row bg-gray-light" style="margin-top:auto">
+                            <div class="col-md-4 col-lg-6 col-sm-6 col-xs-12">
+                                <a href="/Index/farmsapp" target="_blank">
+                                    <div class="info-box3">
+                                        <span class="info-box-icon" style="background: white !important;">
+                                            <i class="fa fa-tasks">
+                                                <img src="https://agrimachinery.nic.in/Images/CHCAppLogo.png" height="90" width="90" />
+                                            </i>
+                                        </span>
+                                        <div class="info-box-content1">
+                                            <span class="boxtxt">
+                                                FARMS (Farm Machinery Solutions) Mobile App
+                                            </span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-4 col-lg-6 col-sm-6 col-xs-12">
+                                <a href="https://farmech.dac.gov.in/" target="_blank">
+                                    <div class="info-box4">
+                                        <span class="info-box-icon">
+                                            <i class="fa fa-tasks">
+                                                <img src="/Images/m_t.png" height="90" width="90" />
+                                            </i>
+                                        </span>
+                                        <div class="info-box-content1">
+                                            <span class="boxtxt">
+
+                                                M&T Division Website
+                                            </span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                        <br />
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+
+    <div id="footerPanel" class="alert  text-center navbar-default" style="margin-top:10px">
+        <div id="footer">
+
+            <div class="row text-white">
+
+                <div class="col-md-3"></div>
+
+                <div class="col-md-8 text-white" style="text-align:center!important; margin-left:auto;margin-right:auto">
+
+                    <ul class="nav navbar-nav navbar-default">
+
+                        <li class="first"><a href="/">HOME</a></li>
+
+                        <li><a href="../Files/FAQFMDBT.pdf" target="_blank">FAQ FOR DBT AGRICULTURE MECHANIZATION </a></li>
+                        <li><a href="../Files/FAQ_CHC_MobAPP.pdf" target="_blank">FAQ FOR FARMS APP</a></li>
+                        <li class="first"><a href="/index/DisclaimerHome">DISCLAIMER</a></li>
+
+                    </ul>
+
+                </div>
+                <div class="col-md-1"></div>
+
+
+                <div class="col-md-12">
+                    <p style="text-align:center!important;" class="text-white">
+                        For Any Query and Suggestions Please Write to Helpdesk :
+                        <span style="text-decoration:underline">  <i class="fa fa-envelope"></i> support-agrimech[at]gov[dot]in</span>
+                    </p>
+                    <p style="text-align:center;">
+                        Website Content Managed by Mechanization & Training Division, Department of Agriculture & Farmers Welfare | MoA&FW |
+                        GoI Designed and Developed by DAD/IT, DA & FW, Ministry of Agriculture. GoI
+                    </p>
+                </div>
+
+
+
+
+
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    
+    <!-- Chat Icon -->
+    <a href="https://chat-vistaar.da.gov.in/chat" target="_blank" class="chat-float">
+        <img src="/Images/Chatbox.jpg" alt="Chat" />
+    </a>
+    <div id="ex1" class="modal">
+        <div style="width:100%;overflow:scroll;height:500px;">
+            <table border='1' style="width: 100%;" id="my-table" class="table-responsive table-bordered table-condensed">
+
+                <thead>
+                    <tr class="text-info">
+                        <td colspan="100%"> Application Details - </td>
+                    </tr>
+                    <tr class="text-info">
+                        <td colspan="2">
+                            Institute :<span style="color:green"> {{InstNM}}</span>
+                        </td>
+                        <td>Financial Year: <span style="color:green">{{FinanialYear}}</span> </td>
+                        <td>Status: <span style="color:green">{{StatusText}}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Sl No.</th>
+                        <th>Application Details</th>
+                        <th>Manufacture Details</th>
+                        <th>Implement Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <img id="spinner" ng-src="../Highcharts/throbber_12.gif"
+                         ng-if="!ApplicationDetails" style="width: 50px; margin-top: 98px; margin-left: 236px;" />
+                    <tr ng-repeat="x in ApplicationDetails|orderBy:column:reverse|filter:query">
+                        <td>{{$index + 1}}</td>
+                        <td>
+                            <table style="width: 100%;" class="table-responsive table-bordered">
+                                <tr><td><b>ApplicationNumber</b></td><td>{{x.ApplicationNumber}}</td></tr>
+                                <tr><td><b>Registration Date</b></td><td>{{x.ApplicationRegistrationDate}}</td></tr>
+                            </table>
+                        </td>
+                        <td>
+                            <table style="width: 100%;" class="table-responsive  table-bordered">
+                                <tr><td><b>Manufacyure Name</b></td><td>{{x.CName}}</td></tr>
+                                <tr><td><b>State</b></td><td>{{x.StateName}} </td></tr>
+                                <tr><td><b>District</b></td><td>{{x.DistrictName}}</td></tr>
+                                <tr><td><b>Address</b></td><td>{{x.CAddress}}</td></tr>
+                            </table>
+                        <td>
+                            <table style="width: 100%;" class="table-responsive table-bordered">
+                                <tr><td><b>Implement Name</b></td>/<td>{{x.ImplementName}}</td></tr>
+                                <tr><td><b>Category</b></td><td>{{x.CategoryNM}}</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+        </div>
+
+
+
+
+    </div>
+    <link href="/Content/themes/base/jquery-ui.css" rel="stylesheet"/>
+
+    <script src="/Scripts/jquery-ui.js"></script>
+
+
+    <style>
+        .highcharts-credits {
+            visibility: hidden !important;
+        }
+    </style>
+    <script type="text/javascript">
+        $(function () {
+            //    $.browser.chrome=$.browser.webkit;
+            showDatePicker();
+            $("#dtFrom").attr('readonly', 'true');
+            $("#dtTo").attr('readonly', 'true');
+            $('#dtTo').datepicker('setDate', 'today');
+            $('#dtFrom').datepicker('setDate', '04/01/2020');
+        });
+
+
+        function showDatePicker() {
+            var textFrom = $("#dtFrom");
+            var textTo = $("#dtTo");
+            $(textFrom).datepicker({
+                dateFormat: 'dd/mm/yy',
+                changeMonth: true,
+                numberOfMonths: 1,
+                minDate: '01/04/2020',
+                onClose: function (selectedDate) {
+                    $(textTo).datepicker("option", "minDate", selectedDate);
+                }
+            });
+            $(textFrom).focus(function (e) {
+                e.preventDefault();
+                $(textFrom).datepicker("show");
+            });
+            $(textTo).datepicker({
+                dateFormat: 'dd/mm/yy',
+                changeMonth: true,
+                numberOfMonths: 1,
+                maxDate: new Date(),
+                onClose: function (selectedDate) {
+                    $(textFrom).datepicker("option", "maxDate", selectedDate);
+                }
+            });
+            $(textTo).focus(function () {
+                $(textTo).datepicker("show");
+            });
+
+        }
+
+        $(function () {
+            $(".popup-onload").show();
+            $(".close").click(function () {
+                $(".popup-onload").hide();
+                return false;
+            });
+            $(".x").click(function () {
+                $(".popup-onload").hide();
+                return false;
+            });
+            $(".popup-wrapper").click(function () {
+                $(".popup-onload").hide();
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>

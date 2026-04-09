@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-shot launcher for backend (Docker), admin dashboard (Vite), and Flutter app.
-# Installs project dependencies when missing and writes background logs under .logs/.
+# One-shot launcher for backend (Docker), admin dashboard (Vite), Flutter app,
+# and an optional public tunnel for Twilio/local webhooks.
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$ROOT/.logs"
 mkdir -p "$LOG_DIR"
 
 info() { printf "[deploy] %s\n" "$*"; }
+warn() { printf "[deploy][warn] %s\n" "$*"; }
 fail() { printf "[deploy][error] %s\n" "$*" >&2; exit 1; }
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+TUNNEL_URL=""
+
+load_backend_env() {
+  local env_file="$ROOT/kisankiawaz-backend/.env"
+  if [ -f "$env_file" ]; then
+    # shellcheck disable=SC1090
+    set -a; . "$env_file"; set +a
+    info "Loaded backend environment from kisankiawaz-backend/.env"
+  fi
+}
 
 choose_compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -63,6 +75,103 @@ start_admin_dashboard() {
   fi
 }
 
+wait_for_tunnel_url() {
+  local log_file="$1" domain_pattern="$2" timeout_s="${3:-25}"
+  local i=0
+  while [ "$i" -lt "$timeout_s" ]; do
+    if [ -f "$log_file" ]; then
+      local detected
+      detected="$(grep -Eo "https://[a-zA-Z0-9.-]+${domain_pattern}" "$log_file" | head -n 1 || true)"
+      if [ -n "$detected" ]; then
+        printf "%s" "$detected"
+        return 0
+      fi
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  return 1
+}
+
+start_tunnel() {
+  local enabled="${ENABLE_TUNNEL:-1}"
+  if [ "$enabled" = "0" ] || [ "$enabled" = "false" ] || [ "$enabled" = "False" ]; then
+    info "Tunnel disabled (ENABLE_TUNNEL=${enabled})."
+    return
+  fi
+
+  local provider="${TUNNEL_PROVIDER:-auto}"
+  local port="${TUNNEL_PORT:-8000}"
+  local pid_file="$LOG_DIR/tunnel.pid"
+  local log_file="$LOG_DIR/tunnel.log"
+  local url_file="$LOG_DIR/tunnel-url.txt"
+
+  if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+    info "Tunnel already running (pid $(cat "$pid_file"))."
+    if [ -f "$url_file" ]; then
+      TUNNEL_URL="$(cat "$url_file")"
+    fi
+    return
+  fi
+
+  rm -f "$pid_file" "$url_file" "$log_file"
+
+  if [ "$provider" = "auto" ]; then
+    if command_exists ngrok && [ -n "${NGROK_AUTHTOKEN:-}" ]; then
+      provider="ngrok"
+    else
+      provider="localtunnel"
+    fi
+  fi
+
+  if [ "$provider" = "ngrok" ]; then
+    if ! command_exists ngrok; then
+      warn "ngrok not found; falling back to localtunnel."
+      provider="localtunnel"
+    elif [ -z "${NGROK_AUTHTOKEN:-}" ]; then
+      warn "NGROK_AUTHTOKEN missing; falling back to localtunnel."
+      provider="localtunnel"
+    else
+      local cfg="$LOG_DIR/ngrok.yml"
+      {
+        echo "version: '2'"
+        echo "authtoken: ${NGROK_AUTHTOKEN}"
+      } > "$cfg"
+      info "Starting ngrok tunnel on port ${port}..."
+      nohup ngrok http "$port" --config "$cfg" --log stdout > "$log_file" 2>&1 & echo $! > "$pid_file"
+      if TUNNEL_URL="$(wait_for_tunnel_url "$log_file" 'ngrok\.[a-z]+' 25)"; then
+        printf "%s" "$TUNNEL_URL" > "$url_file"
+      else
+        warn "ngrok did not produce a public URL; stopping tunnel process."
+        kill "$(cat "$pid_file")" 2>/dev/null || true
+        rm -f "$pid_file"
+        provider="localtunnel"
+      fi
+    fi
+  fi
+
+  if [ "$provider" = "localtunnel" ]; then
+    if ! command_exists npx; then
+      warn "npx not found; tunnel will not start."
+      return
+    fi
+    info "Starting localtunnel on port ${port}..."
+    nohup npx -y localtunnel --port "$port" > "$log_file" 2>&1 & echo $! > "$pid_file"
+    if TUNNEL_URL="$(wait_for_tunnel_url "$log_file" '\.loca\.lt' 25)"; then
+      printf "%s" "$TUNNEL_URL" > "$url_file"
+    else
+      warn "localtunnel did not return a URL in time. Check $log_file"
+      TUNNEL_URL=""
+    fi
+  fi
+
+  if [ -n "$TUNNEL_URL" ]; then
+    local webhook_path="${TWILIO_WEBHOOK_PATH:-/api/v1/notifications/whatsapp/twilio/webhook}"
+    info "Public tunnel URL: ${TUNNEL_URL}"
+    info "Twilio webhook URL: ${TUNNEL_URL}${webhook_path}"
+  fi
+}
+
 start_flutter_app() {
   if ! command_exists flutter; then
     info "Flutter SDK not found; skipping farmer app launch. Install Flutter to enable."
@@ -97,18 +206,23 @@ start_flutter_app() {
 
 main() {
   info "Workspace: $ROOT"
+  load_backend_env
   command_exists docker || fail "Docker is required. Install Docker Desktop."
   local compose_cmd
   compose_cmd="$(choose_compose)"
 
   start_backend "$compose_cmd"
   start_admin_dashboard
+  start_tunnel
   start_flutter_app
 
   info "Backend gateway: http://localhost:8000"
   info "Admin dashboard: http://localhost:${ADMIN_PORT:-5173} (logs: $LOG_DIR/admin-dashboard.log)"
+  if [ -n "$TUNNEL_URL" ]; then
+    info "Tunnel URL: $TUNNEL_URL (logs: $LOG_DIR/tunnel.log)"
+  fi
   info "Farmer app: http://localhost:${FLUTTER_PORT:-5175} (logs: $LOG_DIR/farmer-app.log)"
-  info "To stop: $compose_cmd down, kill \$(cat $LOG_DIR/admin-dashboard.pid), kill \$(cat $LOG_DIR/farmer-app.pid)"
+  info "To stop everything: ./stop.sh"
 }
 
 main "$@"

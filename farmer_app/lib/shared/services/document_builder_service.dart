@@ -17,13 +17,34 @@ class DocumentBuilderService {
   static const String _localVaultKey = 'document_vault_v1';
   static const int _ttlSchemes = 1800;
   static const int _ttlSchemeForm = 1800;
+  static const int _ttlSchemeDocs = 21600;
+  static const String _allSchemeDocsCacheKey = 'doc_builder:scheme_docs:all';
+  static final Map<String, GeneratedDocumentFile> _filePreviewCache =
+      <String, GeneratedDocumentFile>{};
 
   DocumentBuilderService(this._client);
 
   String _schemeFormCacheKey(String schemeId) =>
       'doc_builder:scheme_form:${schemeId.toLowerCase()}';
 
-  String _normalizeSchemeKey(String value) => value.trim().toLowerCase();
+  String _schemeDocsCacheKey(String schemeKey) {
+    final normalized = _normalizeSchemeKey(schemeKey).replaceAll(' ', '_');
+    return 'doc_builder:scheme_docs:$normalized';
+  }
+
+  String _schemeDocFileCacheKey(String schemeKey, String docName) {
+    final s = _normalizeSchemeKey(schemeKey).replaceAll(' ', '_');
+    final d = _normalizeSchemeKey(docName).replaceAll(' ', '_');
+    return '$s::$d';
+  }
+
+  String _normalizeSchemeKey(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim();
+  }
 
   Future<String?> _resolveCanonicalSchemeId(String schemeId) async {
     final target = _normalizeSchemeKey(schemeId);
@@ -42,10 +63,23 @@ class DocumentBuilderService {
       );
       if (!isMatch) continue;
 
-      final canonical = (scheme['id'] ?? scheme['scheme_id'] ?? '')
-          .toString()
-          .trim();
-      if (canonical.isNotEmpty) return canonical;
+      final routeSafeCandidates = <String>[
+        (scheme['short_name'] ?? '').toString().trim(),
+        (scheme['scheme_id'] ?? '').toString().trim(),
+        (scheme['id'] ?? '').toString().trim(),
+        (scheme['name'] ?? '').toString().trim(),
+      ];
+
+      for (final candidate in routeSafeCandidates) {
+        if (candidate.isEmpty) continue;
+        if (!candidate.contains('/')) return candidate;
+      }
+
+      final fallback = routeSafeCandidates.firstWhere(
+        (candidate) => candidate.isNotEmpty,
+        orElse: () => '',
+      );
+      if (fallback.isNotEmpty) return fallback;
     }
     return null;
   }
@@ -61,6 +95,93 @@ class DocumentBuilderService {
   Map<String, dynamic>? _mapFromCache(dynamic cached) {
     if (cached is! Map) return null;
     return Map<String, dynamic>.from(cached.cast<dynamic, dynamic>());
+  }
+
+  bool _schemeKeysMatch(String left, String right) {
+    final a = _normalizeSchemeKey(left);
+    final b = _normalizeSchemeKey(right);
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+
+    final aCompact = a.replaceAll(' ', '');
+    final bCompact = b.replaceAll(' ', '');
+    if (aCompact == bCompact) return true;
+
+    return a.contains(b) || b.contains(a);
+  }
+
+  List<Map<String, dynamic>> _flattenAllSchemeDocsPayload(dynamic data) {
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
+          .toList(growable: false);
+    }
+
+    if (data is! Map) return const <Map<String, dynamic>>[];
+
+    final map = Map<String, dynamic>.from(data.cast<dynamic, dynamic>());
+    final out = <Map<String, dynamic>>[];
+
+    if (map['documents'] is List) {
+      out.addAll(
+        (map['documents'] as List)
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>())),
+      );
+    }
+
+    if (map['by_scheme'] is Map) {
+      final byScheme = Map<String, dynamic>.from(
+        (map['by_scheme'] as Map).cast<dynamic, dynamic>(),
+      );
+      byScheme.forEach((schemeKey, value) {
+        if (value is! Map) return;
+        final bucket = Map<String, dynamic>.from(value.cast<dynamic, dynamic>());
+        final docs = bucket['documents'];
+        if (docs is! List) return;
+
+        for (final rawDoc in docs) {
+          if (rawDoc is! Map) continue;
+          final doc = Map<String, dynamic>.from(rawDoc.cast<dynamic, dynamic>());
+          out.add(<String, dynamic>{
+            ...doc,
+            'scheme': (doc['scheme'] ?? schemeKey).toString(),
+            'scheme_name': (doc['scheme_name'] ?? schemeKey).toString(),
+            'scheme_count': bucket['count'],
+            'scheme_size': bucket['size'],
+            'exists': doc['exists'] ?? true,
+          });
+        }
+      });
+    }
+
+    if (map['documents'] is Map) {
+      final docsMap = Map<String, dynamic>.from(
+        (map['documents'] as Map).cast<dynamic, dynamic>(),
+      );
+      docsMap.forEach((docId, value) {
+        if (value is! Map) return;
+        final doc = Map<String, dynamic>.from(value.cast<dynamic, dynamic>());
+        out.add(<String, dynamic>{
+          ...doc,
+          'doc_id': docId,
+          'exists': doc['exists'] ?? true,
+        });
+      });
+    }
+
+    return out;
+  }
+
+  List<Map<String, dynamic>> _filterDocsByScheme(
+    List<Map<String, dynamic>> docs,
+    String schemeKey,
+  ) {
+    return docs.where((doc) {
+      final docScheme = (doc['scheme'] ?? doc['scheme_name'] ?? '').toString();
+      return _schemeKeysMatch(docScheme, schemeKey);
+    }).toList(growable: false);
   }
 
   /// GET /document-builder/schemes → list all schemes with form templates.
@@ -234,14 +355,32 @@ class DocumentBuilderService {
   }
 
   /// GET /document-builder/scheme-docs → list downloadable scheme PDFs.
-  Future<List<Map<String, dynamic>>> listSchemeDocs() async {
-    final res = await _client.get(ApiEndpoints.docBuilderSchemeDocs);
-    final data = res.data;
-    if (data is Map && data['documents'] is List) {
-      return (data['documents'] as List).cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> getCachedSchemeDocs() async {
+    final cached = _listFromCache(await AppCache.get(_allSchemeDocsCacheKey));
+    return cached ?? const <Map<String, dynamic>>[];
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedSchemeDocumentsByScheme(
+    String schemeKey,
+  ) async {
+    final key = _schemeDocsCacheKey(schemeKey);
+    final cached = _listFromCache(await AppCache.get(key));
+    return cached ?? const <Map<String, dynamic>>[];
+  }
+
+  Future<List<Map<String, dynamic>>> listSchemeDocs({
+    bool preferCache = true,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && preferCache) {
+      final cached = await getCachedSchemeDocs();
+      if (cached.isNotEmpty) return cached;
     }
-    if (data is List) return data.cast<Map<String, dynamic>>();
-    return [];
+
+    final res = await _client.get(ApiEndpoints.docBuilderSchemeDocs);
+    final out = _flattenAllSchemeDocsPayload(res.data);
+    await AppCache.put(_allSchemeDocsCacheKey, out, ttlSeconds: _ttlSchemeDocs);
+    return out;
   }
 
   /// POST /document-builder/download-scheme-docs/{scheme}.
@@ -250,6 +389,34 @@ class DocumentBuilderService {
     final res = await _client.post(
       ApiEndpoints.docBuilderDownloadSchemeDocs(encoded),
     );
+    await AppCache.invalidate(_schemeDocsCacheKey(schemeKey));
+    await AppCache.invalidate(_allSchemeDocsCacheKey);
+    return Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
+  }
+
+  /// POST /document-builder/download-all-scheme-docs.
+  Future<Map<String, dynamic>> downloadAllSchemeDocuments() async {
+    final res = await _client.post(
+      '${ApiEndpoints.docBuilderDownloadAllSchemeDocs}?wait=false',
+      options: Options(
+        sendTimeout: const Duration(minutes: 2),
+        receiveTimeout: const Duration(minutes: 8),
+      ),
+    );
+    await AppCache.invalidate(_allSchemeDocsCacheKey);
+    await AppCache.invalidatePrefix('doc_builder:scheme_docs:');
+    return Map<String, dynamic>.from(
+      (res.data as Map).cast<dynamic, dynamic>(),
+    );
+  }
+
+  /// GET /document-builder/download-all-scheme-docs/status.
+  Future<Map<String, dynamic>> getDownloadAllSchemeDocumentsStatus() async {
+    final res = await _client.get(
+      '${ApiEndpoints.docBuilderDownloadAllSchemeDocs}/status',
+    );
     return Map<String, dynamic>.from(
       (res.data as Map).cast<dynamic, dynamic>(),
     );
@@ -257,20 +424,41 @@ class DocumentBuilderService {
 
   /// GET /document-builder/scheme-docs/{scheme}.
   Future<List<Map<String, dynamic>>> listSchemeDocumentsByScheme(
-    String schemeKey,
-  ) async {
+    String schemeKey, {
+    bool preferCache = true,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = _schemeDocsCacheKey(schemeKey);
+    if (!forceRefresh && preferCache) {
+      final cached = _listFromCache(await AppCache.get(cacheKey));
+      if (cached != null && cached.isNotEmpty) return cached;
+    }
+
     final encoded = Uri.encodeComponent(schemeKey);
-    final res = await _client.get(
-      ApiEndpoints.docBuilderSchemeDocsByName(encoded),
-    );
-    final data = res.data;
-    if (data is Map && data['documents'] is List) {
-      return (data['documents'] as List)
+    List<Map<String, dynamic>> docs = const <Map<String, dynamic>>[];
+    try {
+      final res = await _client.get(ApiEndpoints.docBuilderSchemeDocsByName(encoded));
+      final data = res.data;
+      if (data is Map && data['documents'] is List) {
+        docs = (data['documents'] as List)
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
           .toList(growable: false);
+      }
+    } catch (_) {
+      docs = const <Map<String, dynamic>>[];
     }
-    return const <Map<String, dynamic>>[];
+
+    if (docs.isEmpty) {
+      final all = await listSchemeDocs(
+        preferCache: true,
+        forceRefresh: forceRefresh,
+      );
+      docs = _filterDocsByScheme(all, schemeKey);
+    }
+
+    await AppCache.put(cacheKey, docs, ttlSeconds: _ttlSchemeDocs);
+    return docs;
   }
 
   String schemeDocumentFileUrl({
@@ -282,6 +470,57 @@ class DocumentBuilderService {
     return _resolveDocumentUrl(
       ApiEndpoints.docBuilderSchemeDocFile(scheme, doc),
     );
+  }
+
+  Future<GeneratedDocumentFile?> downloadSchemeDocumentFile({
+    required String schemeKey,
+    required String docName,
+  }) async {
+    final scheme = Uri.encodeComponent(schemeKey);
+    final doc = Uri.encodeComponent(docName);
+    final cacheKey = _schemeDocFileCacheKey(schemeKey, docName);
+
+    final cached = _filePreviewCache[cacheKey];
+    if (cached != null && await cached.file.exists()) {
+      return cached;
+    }
+
+    try {
+      final response = await _client.get<List<int>>(
+        ApiEndpoints.docBuilderSchemeDocFile(scheme, doc),
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      final bytes = response.data;
+      if (bytes == null || bytes.isEmpty) return null;
+
+      final contentType =
+          response.headers.value('content-type')?.toLowerCase() ?? '';
+      final disposition = response.headers.value('content-disposition') ?? '';
+      final serverFilename = _extractFilename(disposition);
+
+      final extension = _extensionForContentType(contentType, serverFilename);
+      final tempDir = await getTemporaryDirectory();
+      final fallbackName =
+          docName.trim().isEmpty ? 'scheme_document$extension' : docName.trim();
+      final filename = serverFilename.isNotEmpty
+          ? serverFilename
+          : (fallbackName.toLowerCase().endsWith(extension)
+                ? fallbackName
+                : '$fallbackName$extension');
+      final file = File('${tempDir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+
+      final generated = GeneratedDocumentFile(
+        file: file,
+        contentType: contentType,
+        fromServer: true,
+      );
+      _filePreviewCache[cacheKey] = generated;
+      return generated;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<SavedDocument>> listSavedDocuments() async {
@@ -458,11 +697,33 @@ class DocumentBuilderService {
     if (lowerName.endsWith('.pdf')) {
       return '.pdf';
     }
+    if (lowerName.endsWith('.docx')) {
+      return '.docx';
+    }
+    if (lowerName.endsWith('.doc')) {
+      return '.doc';
+    }
+    if (lowerName.endsWith('.xlsx')) {
+      return '.xlsx';
+    }
+    if (lowerName.endsWith('.xls')) {
+      return '.xls';
+    }
     if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) {
       return '.html';
     }
     if (contentType.contains('application/pdf')) {
       return '.pdf';
+    }
+    if (contentType.contains('officedocument.wordprocessingml.document')) {
+      return '.docx';
+    }
+    if (contentType.contains('application/msword')) {
+      return '.doc';
+    }
+    if (contentType.contains('spreadsheet') ||
+        contentType.contains('application/vnd.ms-excel')) {
+      return '.xlsx';
     }
     if (contentType.contains('text/html')) {
       return '.html';

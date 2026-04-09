@@ -80,6 +80,8 @@ abstract final class ApiEndpoints {
       '/api/v1/market/document-builder/scheme-docs/$schemeName';
   static String docBuilderDownloadSchemeDocs(String schemeName) =>
       '/api/v1/market/document-builder/download-scheme-docs/$schemeName';
+  static const docBuilderDownloadAllSchemeDocs =
+      '/api/v1/market/document-builder/download-all-scheme-docs';
   static String docBuilderSchemeDocFile(String schemeName, String docName) =>
       '/api/v1/market/document-builder/scheme-docs/$schemeName/file/$docName';
 

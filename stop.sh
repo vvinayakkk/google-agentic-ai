@@ -61,7 +61,9 @@ main() {
 
   stop_backend
   stop_pid_process "Admin dashboard" "$LOG_DIR/admin-dashboard.pid"
+  stop_pid_process "Tunnel" "$LOG_DIR/tunnel.pid"
   stop_pid_process "Farmer app" "$LOG_DIR/farmer-app.pid"
+  rm -f "$LOG_DIR/tunnel-url.txt"
 
   info "Stop complete. Logs remain in $LOG_DIR."
 }

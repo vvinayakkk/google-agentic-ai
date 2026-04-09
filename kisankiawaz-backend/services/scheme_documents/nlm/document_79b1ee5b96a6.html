@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="NLM">
+    <meta name="author" content="">
+
+    <title>National Livestock Mission</title>
+
+
+
+<link rel="icon" href="/Images/favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="/Content/css/chosen.min.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/Sitenew.min.css?_=9feb29db-175620852760624" />
+
+<link rel="stylesheet" href="/Content/fontello/css/fontello.css?_=9feb29db-175620852760624" />
+<!--[if IE 7]><link rel="stylesheet" href="/Content/fontello/css/" + font.fontname + "-ie7.css?_=" + EpochTime><![endif]-->
+<link rel="stylesheet" href="/Content/css/thickbox.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/font-awesome.min.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/fullcalendar.min.css?_=9feb29db-175620852760624" />
+
+<link rel="stylesheet" href="/Content/css/jquery.qtip.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/jquery-ui.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/jquery-ui-timepicker-addon.css?_=9feb29db-175620852760624" />
+<link rel="stylesheet" href="/Content/css/toastr.min.css?_=9feb29db-175620852760624" />
+
+
+
+<script src="/Scripts/modernizr-2.8.3.js?_=9feb29db-175620852760624"></script>
+
+<script src="/Scripts/jquery-3.5.0.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/jquery.validate.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/jquery.validate.unobtrusive.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/Common.js?_=9feb29db-175620852760624"></script>
+
+<script src="/Scripts/jquery-ui-1.12.1.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/jquery-ui-timepicker-addon.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/jquery-ui-sliderAccess.js?_=9feb29db-175620852760624"></script>
+<script src="/Scripts/chosen.jquery.min.js?_=9feb29db-175620852760624"></script>
+
+<script src="/Content/plugins/bootstrap/js/bootstrap.bundle.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Content/plugins/slimScroll/jquery.slimscroll.min.js?_=9feb29db-175620852760624"></script>
+<script src="/Content/js/Site.min.js?_=9feb29db-175620852760624"></script>
+
+<script src="/Content/js/wizard-custom.js?_=9feb29db-175620852760624"></script>
+<script src="/Content/js/toastr.min.js?_=9feb29db-175620852760624"></script>
+
+<script src="/Scripts/swiper.min.js?_=9feb29db-175620852760624"></script>
+<link href="/css/swiper.css?_=9feb29db-175620852760624" rel="stylesheet" />
+<link href="/css/style.css?_=9feb29db-175620852760624" rel="stylesheet" />
+<script src="/Scripts/aes.js?_=9feb29db-175620852760624"></script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIBNyXP2bOot4wHg4RqmpRKwZLVI7gjgk&callback=initMap&v=weekly&channel=2" async></script>
+
+
+<script type="text/JavaScript">
+    var ProjectTitle = 'National Livestock Mission';
+        var currPageNo = "1";
+        var maxPageNo = "0";
+        var ServerPath = 'https://nlm.udyamimitra.in/';
+        var AllowedFiles = [{"AllowedFileId":1,"FileType":"image","MIMEType":"image/jpeg,image/png,image/bmp,image/pjpeg","Extensions":"png,jpg,jpeg,bmp","Size":2,"MinSize":0},{"AllowedFileId":2,"FileType":"pdf","MIMEType":"application/pdf,application/x-pdf","Extensions":"pdf","Size":10,"MinSize":0},{"AllowedFileId":3,"FileType":"doc","MIMEType":"application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document","Extensions":"doc,docx","Size":10,"MinSize":0},{"AllowedFileId":4,"FileType":"xls","MIMEType":"text/csv,application/excel,application/x-excel,application/x-msexcel","Extensions":"xls,xlsx,csv","Size":10,"MinSize":0},{"AllowedFileId":5,"FileType":"cshtml","MIMEType":"application/octet-stream","Extensions":"cshtml","Size":1,"MinSize":0},{"AllowedFileId":6,"FileType":"all","MIMEType":"application/x-zip-compressed,application/octet-stream,application/x-tar","Extensions":"zip,rar,tar,pdf,doc,docx,xls,xlsx,csv,png,jpg,jpeg,bmp","Size":10,"MinSize":0},{"AllowedFileId":7,"FileType":"image/pdf","MIMEType":"application/pdf,application/x-pdf,image/jpeg,image/png,image/bmp,image/pjpeg","Extensions":"png,jpg,jpeg,bmp,pdf","Size":5,"MinSize":0},{"AllowedFileId":8,"FileType":"pdf/doc","MIMEType":"application/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document","Extensions":"pdf,doc,docx","Size":10,"MinSize":0},{"AllowedFileId":9,"FileType":"bigimage","MIMEType":"image/jpeg,image/png,image/bmp,image/pjpeg","Extensions":"png,jpg,jpeg,bmp","Size":13,"MinSize":1},{"AllowedFileId":10,"FileType":"image/pdf","MIMEType":"application/pdf,application/x-pdf,image/jpeg,image/png,image/bmp,image/pjpeg","Extensions":"png,jpg,jpeg,bmp,pdf","Size":0.25,"MinSize":0},{"AllowedFileId":11,"FileType":"image","MIMEType":"image/jpeg,image/png,image/bmp,image/pjpeg","Extensions":"png,jpg,jpeg,bmp","Size":0.25,"MinSize":0},{"AllowedFileId":12,"FileType":"pdf/doc/image","MIMEType":"image/jpeg,application/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document","Extensions":"pdf,doc,docx,jpg","Size":10,"MinSize":0},{"AllowedFileId":13,"FileType":"image/pdf","MIMEType":"application/pdf,application/x-pdf,image/jpeg,image/png,image/pjpeg","Extensions":"png,jpg,jpeg,pdf","Size":1,"MinSize":0},{"AllowedFileId":14,"FileType":"xml","MIMEType":"text/octet-stream","Extensions":"application/xml,text/xml","Size":1,"MinSize":0},{"AllowedFileId":15,"FileType":"scf/pdf","MIMEType":"application/pdf,application/x-pdf","Extensions":"pdf","Size":25,"MinSize":0},{"AllowedFileId":16,"FileType":"pdf/doc/image","MIMEType":"image/jpeg,application/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document","Extensions":"pdf,doc,docx,jpg","Size":5,"MinSize":0},{"AllowedFileId":17,"FileType":"pdf/doc/image/ppt","MIMEType":"officedocument.presentationml.presentation","Extensions":"pdf,doc,docx,jpg,ppt,pptx","Size":10,"MinSize":0}];
+</script>
+
+</head>
+<body>
+    <div id="lightbox1" class="leightbox">
+        <img alt="Please wait while loading.." src="/images/loader.gif" />
+    </div>
+    <div id="overlay">
+    </div>
+    <header class="head-wrap">
+        <div class="container" style="max-width:100%!important">
+
+
+            <div class="row">
+
+                <div class="col-sm-9  logo-flex">
+
+                    <a href="/">
+
+                        <img src="/images/logo.svg" class="logo-flex-item" alt="Animal Husbandry" title="Animal Husbandry">
+                    </a>
+                    <img src="/images/75thazadilogo.jpg" class="logo-flex-item" alt="" title="">
+                    <img src="/images/login-swatchbharat.svg" class="logo-flex-item" alt="" title="">
+                    <img src="/images/digital-india-logo.svg" class="logo-flex-item" alt="" title="">
+                </div>
+
+                <div class="login-block col-sm-3">
+
+                    <ul class="navbar-nav ml-auto" style="display:-webkit-box;">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Login/Login">Login </a>
+                            </li>
+
+                    </ul>
+                </div>
+            </div>
+            <div class="row" style="background-color: #FFFFFF; border-top: 1px solid #CCCCCC;">
+                <div class="container">
+                    <nav class="navbar navbar-expand-lg" style="justify-content:space-between !important;">
+
+                        <!-- <a class="navbar-brand" href="#">Navbar</a> -->
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon">
+                                <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M20 2V0H0V2H20ZM20 6V8H0V6H20ZM20 12V14H0V12H20Z" fill="#ffffff"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="collapse navbar-collapse DFC" id="navbarSupportedContent">
+                            <div class="top-nav-links">
+                                    <ul class="navbar-nav nav-wrap ml-auto ">
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="/">Home</a>
+                                        </li>
+
+                                        
+                                        <li class="nav-item dropdown ">
+                                            <a class="nav-link dropdown-toggle scheme-toggle" style=" white-space: nowrap" href="#" id="navbarDropdown"
+                                               role="button" data-bs-toggle="dropdown" aria-haspopup="true"
+                                               aria-expanded="false">Schemes Instructions</a>
+                                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                                <a class="dropdown-item" href="/Home/SchemePage">Scheme Details</a>
+                                                <a class="dropdown-item" href="/Home/OperationalGuidelines">Operational Guidelines</a>
+                                                <a class="dropdown-item" href="/Home/DetailedGuidelines">Detailed guidelines for Sub-Mission</a>
+
+                                                <a class="dropdown-item" href="/Home/ListOfSuppliers">List of Suppliers for various Inputs</a>
+                                                <a class="dropdown-item" href="/Home/PreApplication">
+                                                    Application Steps
+                                                </a>
+                                                
+                                                <a class="dropdown-item" href="/Home/Documents">Document Formats</a>
+                                                
+                                                
+                                                
+                                            </div>
+                                        </li>
+                                        
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="/Home/LenderInstructions">Lender Instructions</a>
+                                        </li>
+
+                                        <li class="nav-item ">
+                                            <a class="nav-link" href="/FAQ">FAQ</a>
+                                        </li>
+                                        <li class="nav-item  active-link">
+                                            <a class="nav-link" href="/Home/WhatsNew"> What's New</a>
+                                        </li>
+
+                                        <li class="nav-item ">
+                                            <a class="nav-link" href="/Home/Contact">Contact Us</a>
+                                        </li>
+                                        
+
+
+
+
+
+                                    </ul>
+
+
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+
+            </div>
+
+
+        </div>
+    </header>
+
+    
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<div class="white-box">
+    <section class="banner-main">
+        <div class="banner-wrap">
+            <div class="swiper-container">
+                <div class="swiper-wrapper">
+
+                    <div class="swiper-slide">
+                        <div class="banner-silde-wrap">
+                            <img class="banner-img img-fluid" src="/images/back-img.png" alt="" title="" />
+
+                            <div class="container banner-text-wrap">
+
+                                <div class="row">
+
+                                    <div class="col-sm-12 ">
+
+                                        <div class="banner-text">
+                                            <div class="ml-auto col-12 col-sm-7 col-md-7 col-lg-6 pd-l80" style="padding-left: 37px;">
+
+                                                <p class="d-flex justify-content-center" style="text-align: justify;">
+                                                    
+                                                    An initiative by Department of Animal Husbandry & Dairying for the development of livestock sector with the objectives of employment generation through entrepreneurship development
+                                                </p>
+                                                <div class="mt-4">
+                                                    <b>  <a href="/Login/Login" class="applyforfunding-btn mr-r10 glow-btn">Apply Here</a></b>
+                                                    <b>  <a href="/Home/PowerBIDashboard" class="applyforfunding-btn mr-r10 glow-btn">View Dashboard</a></b>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="swiper-slide">
+                        <div class="banner-silde-wrap">
+                            <img class="banner-img img-fluid" src="/images/Banner-Image-2.png" alt="" title="" />
+                            <div class="container banner-text-wrap">
+                                <div class="row">
+
+                                    <div class="col-sm-12 ">
+
+                                        <div class="banner-text">
+                                            <div class="ml-auto col-12 col-sm-7 col-md-7 col-lg-6 pd-l80" style="padding-left: 37px;">
+
+                                                <p style="text-align: justify;">
+                                                    
+                                                    An initiative by Department of Animal Husbandry & Dairying for the development of livestock sector with the objectives of employment generation through entrepreneurship development
+                                                </p>
+
+                                                <div class="mt-4">
+                                                    <b><a href="/Login/Login" class="applyforfunding-btn mr-r10 glow-btn">Apply Here</a></b>
+                                                    <b>  <a href="/Home/PowerBIDashboard" class="applyforfunding-btn mr-r10 glow-btn">View Dashboard</a></b>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="swiper-slide">
+                        <div class="banner-silde-wrap">
+                            <img class="banner-img img-fluid" src="/images/Banner-Image-3.png" alt="" title="" />
+                            <div class="container banner-text-wrap">
+                                <div class="row">
+
+                                    <div class="col-sm-12 ">
+
+                                        <div class="banner-text">
+                                            <div class="ml-auto col-12 col-sm-7 col-md-7 col-lg-6 pd-l80" style="padding-left: 37px;">
+
+                                                <p style="text-align: justify;">
+                                                    
+                                                    An initiative by Department of Animal Husbandry & Dairying for the development of livestock sector with the objectives of employment generation through entrepreneurship development
+                                                </p>
+                                                <div class="mt-4">
+                                                    
+                                                    <b><a href="/Login/Login" class="applyforfunding-btn mr-r10 glow-btn">Apply Here</a></b>
+                                                    <b>  <a href="/Home/PowerBIDashboard" class="applyforfunding-btn mr-r10 glow-btn">View Dashboard</a></b>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="swiper-pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-12" style="background-color:#FFFFFF">
+                    <marquee direction="left" style="width:100%; height:50px; padding-top: 18px">
+                        <ul style="display: table;">
+                            <li style="display: table-cell;">
+                            <a class="homepage-striptext" style="font-size: 20px;">
+                                <span class="blink" style="color:red;font-weight:bold;margin-right:15px">NEW</span>Beneficiaries should not respond to any favours or transfer any money to any person seeking any favors in response to the project getting approved. | The portal is temporarily not accepting new applications until further notice. | Please refer the Amendment in the Operational Guidelines of National Livestock Mission (NLM) under Operational guidelines Document tab. | Model DPRs of Poultry/Piggery/Sheep or Goat/Feed & Fodder are available under Document Formats tab.
+                            </a>
+                            </li>
+
+                        </ul>
+                    </marquee>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div style="background-color: #F3ECE5;">
+        <div class="homepage-howtoapply">
+            
+            Application Workflow
+        </div>
+        <div class="row howtoapply" style="background-color: #F3ECE5;">
+            <div class="">
+                <div class=" statement-block  h-100 ">
+                    <div class="col-sm-12 text-center">
+                        <img src="/images/Applicationworkflow.png" style="padding:20px;" class="img-fluid processimg" alt="loan step1" />
+                    </div>
+                    <div class="col-sm-12">
+                        <a href="/Home/PreApplication" style="padding-right:50px;" class="pull-right loanprocessa">Read More</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+    </div>
+
+    <div class="white-box">
+        <div class="row">
+            <div class="col-sm-12 homepage-missiontext">
+                <h2 style=" font-family: SF-Pro-Text;font-size: 45px">Mission</h2>
+            </div>
+
+        </div>
+        <div style="padding-top:5px; background-color:#FFFFFF">
+            <div class="" style="padding-top:5px;">
+                <p style="padding: 10px; padding-bottom: 0px; text-align: justify;">
+                    National Livestock Mission intends to achieve the objectives of employment generation through entrepreneurship development in small ruminant, poultry and piggery sector & Fodder sector, increase of per animal productivity through breed improvement, increase in production of meat, egg, goat milk, wool and fodder.
+                </p>
+                <div class="col-sm-12" style="height:25px">
+                    <a href="/Home/Mission" class="pull-right missiona">Read More</a>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-left: 50px;padding-right: 50px;padding-bottom: 50px;">
+
+
+            <div class="col-sm-12 col-md-3 col-lg-3" style="padding-left:0px !important; padding-right:0px !important; padding-top:0px !important;padding-bottom:10px !important;">
+                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    
+                    <a class="nav-link homepage-missiondiv active show" style="margin-bottom:15px !important; margin-right:15px" id="v-pills-profile-tab" data-bs-toggle="pill" href="#v-pills-profile" role="tab" aria-controls="v-pills-profile" aria-selected="false">1. Breed Development of Livestock and Poultry</a>
+                    <a class="nav-link homepage-missiondiv" style="margin-bottom:15px !important; margin-right:15px" id="v-pills-messages-tab" data-bs-toggle="pill" href="#v-pills-messages" role="tab" aria-controls="v-pills-messages" aria-selected="false">2. Feed and Fodder Development</a>
+                    <a class="nav-link homepage-missiondiv" style="margin-bottom:15px !important; margin-right:15px" id="v-pills-settings-tab" data-bs-toggle="pill" href="#v-pills-settings" role="tab" aria-controls="v-pills-settings" aria-selected="false">3. Innovation and Extension</a>
+                </div>
+            </div>
+            <div class=" col-sm-12 col-md-9 col-lg-9" style="background-color: #F3ECE5;">
+                <div class="tab-content" id="v-pills-tabContent">
+
+                    
+                    <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+                        <div class="row">
+                            <div class="col-sm-12 col-md-8 col-lg-8 homepage-divmissiontext" style="padding: 35px;">
+                                <span style="font-family: SF-Pro-Text !important;font-style: normal !important;font-weight: 800 !important;font-size: 27.0028px !important;line-height: 32px !important;color: #000000 !important;">
+                                    1. Breed Development of Livestock and Poultry
+                                </span>
+                                <br />
+                                <br />
+                                <p style="text-align:justify">
+                                    This sub-mission proposes to bring sharp focus on entrepreneurship development and breed improvement in poultry, sheep, goat and piggery by providing the incentivization to the Individual, FPOs, FCOs JLGs, SHGs, Section 8 companies for entrepreneurship development and also to the State Government for breed improvement infrastructure.
+                                </p>
+                            </div>
+                            <div class="col-sm-12 col-md-4 col-lg-4 missiondiv">
+                                <img class="homepage-missionimage missionimg" src="/images/Breed.png" />
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">
+                        <div class="row">
+                            <div class="col-sm-8 homepage-divmissiontext" style="padding: 35px;">
+                                <span style="font-family: SF-Pro-Text !important; font-style: normal !important;font-weight: 800 !important;font-size: 27.0028px !important;line-height: 32px !important;color: #000000 !important;">
+                                    2. Feed and Fodder Development
+                                </span>
+                                <br />
+                                <br />
+                                <p style="text-align:justify">
+                                    This Sub-Mission aims towards strengthening of fodder seed chain to improve availability of certified fodder seed required for fodder production and encouraging entrepreneurs for establishment of fodder Block/Hay Bailing/Silage Making Units through incentivisation.
+                                </p>
+                            </div>
+                            <div class="col-sm-4 missiondiv">
+                                <img class="homepage-missionimage missionimg" src="/images/feed.png" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">
+                        <div class="row">
+                            <div class="col-sm-8 homepage-divmissiontext" style="padding: 35px;">
+                                <span style="font-family: SF-Pro-Text !important;font-style: normal !important;font-weight: 800 !important;font-size: 27.0028px !important;line-height: 32px !important;color: #000000 !important;">
+                                    3. Innovation and Extension
+                                </span>
+                                <br />
+                                <br />
+                                <p style="text-align:justify">
+                                    The sub-mission aims to incentivize the Institutes, Universities, Organizations carrying out research and development related to sheep, goat, pig and feed and fodder sector, extension activities, livestock insurance and innovation. Under this sub-mission, assistance will be provided to the central Agencies, ICAR Institutes and University farms for applied research required for development of the sector, extension services including promotional activities for animal husbandry and schemes, seminars, conferences, demonstration activities and other IEC activities for awareness generation. Assistance will also be provided for livestock insurance and innovations.
+                                </p>
+                            </div>
+                            <div class="col-sm-4 missiondiv">
+                                <img class="homepage-missionimage missionimg" src="/images/Innovation.png" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="">
+        <div class="row">
+            <div class="col-sm-12 col-md-12 col-lg-12 pillsdiv" style="padding-left:80px; padding-right:80px">
+                <ul class="nav nav-pills events mb-3" id="pills-tab" role="tablist" style="padding-left: 36%;">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" id="pills-home-tab" data-bs-toggle="pill" href="#pills-home" role="tab" aria-controls="pills-home" aria-selected="true">Events</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="pills-profile-tab" data-bs-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false">Videos</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="pills-contact-tab" data-bs-toggle="pill" href="#pills-contact" role="tab" aria-controls="pills-contact" aria-selected="false">Photos</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent">
+                    <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+                        
+                        
+                        
+                        <div id="carouselExampleControls1" class="carousel slide" data-ride="carousel">
+                            <div class="carousel-inner">
+                                <div class="carousel-item active">
+                                    <div class="cards-wrapper">
+                                        <div class="col-sm-12 col-md-4 col-md-4" style=" line-height: 23px; ">
+                                            <div class="card" style=" border-radius: 12px;">
+                                                
+                                                <div class="card-body" style="background-color:#F3ECE5">
+                                                    <h5 style="text-align:center;font-weight:800;font-family: SF-Pro-Text;" class="card-title">Live demonstration of NLM portal</h5>
+                                                    <p class="card-text mt-5" style="text-align:justify">
+                                                        Dept of Animal Husbandry and Dairying organizes an awareness Programme on Entrepreneurship schemes of the Department through Common Service Centres network by holding 2000 village level camps across 8 Union Territories and Goa
+                                                    </p>
+                                                    <center>
+                                                        <a href="https://pib.gov.in/PressReleasePage.aspx?PRID=1767038" target="_blank" style="color:#8C4200" class="nav-link">Read More</a>
+                                                    </center>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12 col-md-4 col-md-4" style=" line-height: 26px; ">
+                                            <div class="card" style=" border-radius: 12px;">
+                                                
+                                                <div class="card-body" style="background-color:#F3ECE5">
+                                                    <h5 style="text-align:center;font-weight:800;font-family: SF-Pro-Text;" class="card-title">Awareness programme on NLM</h5>
+                                                    <p class="card-text mt-5" style="text-align:justify;">
+                                                        Addressing the awareness programme on #NationalLivestockMission, Shri Parshottam Rupala Hon'ble Minister of Fisheries, Animal Husbandry & Dairying, Govt. of India, discussed how the scheme is fostering entrepreneurship in rural India!
+                                                    </p>
+                                                    <center>
+                                                        <a href="http://bit.ly/3zx7Kiz" target="_blank" style="color:#8C4200" class="nav-link">Read More</a>
+                                                    </center>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12 col-md-4 col-md-4">
+                                            <div class="card" style=" border-radius: 12px;">
+                                                
+                                                <div class="card-body" style="background-color:#F3ECE5">
+                                                    <h5 style="text-align:center;font-weight:800;font-family: SF-Pro-Text;" class="card-title">Inauguration Of Online Portal for NLM</h5>
+                                                    <p class="card-text mt-3" style="text-align:justify">
+                                                        A National Level Meeting with all State Animal Husbandry/Veterinary Ministers was convened today through virtual mode under the chairmanship of Shri Parshottam Rupala, Union Minister for Fisheries, Animal Husbandry and Dairying.This National Level consultation with State Ministers was held after a gap of more than 5 years.
+                                                    </p>
+                                                    <center>
+                                                        <a href="https://pib.gov.in/PressReleasePage.aspx?PRID=1752636" target="_blank" style="color:#8C4200" class="nav-link">Read More</a>
+                                                    </center>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <div class="cards-wrapper">
+                                        <div class="col-sm-12 col-md-4 col-md-4" style="line-height: 23px;">
+                                            <div class="card" style=" border-radius: 12px;">
+                                                <img src="/images/Events3.png" class="card-img-top" style="height: 183px;" alt="...">
+                                                <div class="card-body" style="background-color:#F3ECE5">
+                                                    <h5 style="text-align:center;font-weight:800;font-family: SF-Pro-Text;" class="card-title">
+                                                        Interaction with upcoming entrepreneurs on NLM
+                                                    </h5>
+
+                                                    <p class="card-text mt-5" style="text-align:justify">
+                                                        Interacted with successful upcoming entrepreneurs under "Entrepreneurship schemes of #NationalLivestockMission" along with Shri Parshottam Rupala Ji.
+                                                        Leadership of PM Shri Narendra ModiJi has immensely boosted entrepreneurial culture in India.!
+                                                    </p>
+                                                    <center>
+                                                        <a href="#" target="_blank" style="color:#8C4200" class="nav-link">Read More</a>
+                                                    </center>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12 col-md-4 col-md-4" style=" line-height: 23px; ">
+                                            <div class="card" style=" border-radius: 12px;">
+                                                <img src="/images/Events2.png" class="card-img-top" style="height: 183px;" alt="...">
+                                                <div class="card-body" style="background-color:#F3ECE5">
+                                                    <h5 style="text-align:center;font-weight:800;font-family: SF-Pro-Text;" class="card-title">Interaction with farmers on NLM</h5>
+                                                    <p class="card-text mt-5" style="text-align:justify">
+                                                        Dept of Animal Husbandry and Dairying, Min of FAHD successfully organised an awareness programme and interacted with farmers through CSC network to raise awareness about rural entrepreneurship schemes available  under the #NationalLivestockMission as part of #AzadiKaAmritMahostav
+                                                    </p>
+                                                    <center>
+                                                        <a href="https://bit.ly/3ktAdj3" target="_blank" style="color:#8C4200" class="nav-link">Read More</a>
+                                                    </center>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselExampleControls1" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true">
+                                    <svg width="9" height="16" viewBox="0 0 7 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6.75 1.5C6.75 0.796875 5.89062 0.445312 5.38281 0.953125L0.382812 5.95312C0.0703125 6.26562 0.0703125 6.77344 0.382812 7.08594L5.38281 12.0859C5.89062 12.5938 6.75 12.2422 6.75 11.5391V1.5Z" fill="#8C4200" />
+                                    </svg>
+                                </span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselExampleControls1" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true">
+                                    <svg width="9" height="16" viewBox="0 0 9 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 8L0.75 15.7942L0.750001 0.205771L9 8Z" fill="#8C4200"></path>
+                                    </svg>
+                                </span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                            
+                        </div>
+                        
+                    </div>
+                    <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+                        <div style="text-align:center; font-size: 25px;padding: 50px">
+                            No media available.
+                        </div>
+                        
+                        
+                        
+                    </div>
+                    <div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab">
+                        
+                        
+                        <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">
+                            <div class="carousel-inner">
+                                <div class="carousel-item active">
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image8.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(1)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image9.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(2)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image10.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(3)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image11.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(4)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image12.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(5)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image13.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(6)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image14.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(7)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image15.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(8)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image16.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(9)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image17.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(10)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image18.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(11)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image19.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(12)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image20.jpg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(13)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image1.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(14)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image2.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(15)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/Image3.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(16)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image4.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(17)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image5.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(18)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                    <div class="cards-wrapper">
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image6.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(19)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/Image7.jpeg" style="height: 207px; width: 360px" onclick="openModal();currentSlide(20)" class="hover-shadow cursor">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <div class="cards-wrapper">
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/4.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(4)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery1.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(5)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery4.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(6)" class="hover-shadow cursor">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <div class="cards-wrapper">
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery9.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(7)" class="hover-shadow cursor">
+                                        </div>
+
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery2.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(8)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery5.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(9)" class="hover-shadow cursor">
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <div class="cards-wrapper">
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery6.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(10)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery7.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(11)" class="hover-shadow cursor">
+                                        </div>
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery8.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(12)" class="hover-shadow cursor">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <div class="cards-wrapper">
+                                        <div class="card d-none d-md-block" style="margin: 10px;">
+                                            <img src="/images/PhotoGallery3.JPG" style="height: 207px; width: 360px" onclick="openModal();currentSlide(13)" class="hover-shadow cursor">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true">
+                                    <svg width="9" height="16" viewBox="0 0 7 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6.75 1.5C6.75 0.796875 5.89062 0.445312 5.38281 0.953125L0.382812 5.95312C0.0703125 6.26562 0.0703125 6.77344 0.382812 7.08594L5.38281 12.0859C5.89062 12.5938 6.75 12.2422 6.75 11.5391V1.5Z" fill="#8C4200" />
+                                    </svg>
+                                </span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true">
+                                    <svg width="9" height="16" viewBox="0 0 9 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 8L0.75 15.7942L0.750001 0.205771L9 8Z" fill="#8C4200"></path>
+                                    </svg>
+                                </span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+
+                        <div id="myModal" class="modal">
+                            <span class="close cursor" onclick="closeModal()">&times;</span>
+                            <div class="modal-content" style="width: 75%; background-color: #fefefe00;">
+                                <div class="mySlides">
+                                    <img src="/images/Image8.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image9.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image10.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image11.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image12.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image13.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image14.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image15.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image16.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image17.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image18.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image19.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image20.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image1.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image2.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image3.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image4.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image5.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image6.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/Image7.JPEG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/4.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery1.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery4.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery9.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery2.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery5.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery6.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery7.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery8.JPG" style="width:100%">
+                                </div>
+                                <div class="mySlides">
+                                    <img src="/images/PhotoGallery3.JPG" style="width:100%">
+                                </div>
+                                <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+                                <a class="next" onclick="plusSlides(1)">&#10095;</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <section class="img">
+            <div class="container">
+                <div class="row" style="margin-bottom:0px">
+                    <div class="col-sm-12 pl-0 pr-0 text-center">
+                        <img src="/images/footerImage1.png" class="img-fluid pb-3" alt="scheme">
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="modal fade" id="applyLoanPopUp" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body pt-3 pb-3">
+                        <div class="col-sm-12">  <span class="popupformat">Submission of online loan application shall be started soon.The date shall be shared on the portal.</span></div><br />
+                        <div class="col-sm-12"><center> <button type="button" class="btn btn-default pt-2 popupbtn" style="margin:0 auto" data-dismiss="modal">Close</button></center></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $('#carouselExampleControls1').carousel({
+                pause: true,
+                interval: false
+            });
+        });
+        var swiper = new Swiper('.swiper-container', {
+            //spaceBetween: 30,
+            centeredSlides: true,
+            autoplay: {
+                delay: 5500,
+                disableOnInteraction: false,
+            },
+            pagination: {
+                el: '.swiper-pagination'
+            },
+            //mousewheel: true,
+            //keyboard: true,
+        });
+
+
+        function openModal() {
+            document.getElementById("myModal").style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("myModal").style.display = "none";
+        }
+
+        var slideIndex = 1;
+        showSlides(slideIndex);
+
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        function showSlides(n) {
+            var i;
+            var slides = document.getElementsByClassName("mySlides");
+            //var dots = document.getElementsByClassName("demo");
+            //var captionText = document.getElementById("caption");
+            if (n > slides.length) { slideIndex = 1 }
+            if (n < 1) { slideIndex = slides.length }
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            //for (i = 0; i < dots.length; i++) {
+            //    dots[i].className = dots[i].className.replace(" active", "");
+            //}
+            slides[slideIndex - 1].style.display = "block";
+            //    dots[slideIndex - 1].className += " active";
+            //    captionText.innerHTML = dots[slideIndex - 1].alt;
+        }
+    </script>
+
+    <style>
+        .swiper-pagination-bullet {
+            height: 15px !important;
+            width: 15px !important;
+            color: black !important;
+        }
+
+        .swiper-pagination-bullet-active {
+            background-color: #8C4200;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .row1 > .column1 {
+            padding: 0 8px;
+        }
+
+        .row1:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .column1 {
+            float: left;
+            width: 25%;
+        }
+        /* The Modal (background) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            padding-top: 30px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Modal Content */
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: auto;
+            padding: 0;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        /* The Close Button */
+        .close {
+            color: white;
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            font-size: 35px;
+            font-weight: bold;
+        }
+
+            .close:hover,
+            .close:focus {
+                color: #999;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+        .mySlides {
+            display: none;
+        }
+
+        .cursor {
+            cursor: pointer;
+        }
+
+        /* Next & previous buttons */
+        .prev,
+        .next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 16px;
+            margin-top: -50px;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Position the "next button" to the right */
+        .next {
+            right: 0;
+            border-radius: 3px 0 0 3px;
+        }
+
+            /* On hover, add a black background color with a little bit see-through */
+            .prev:hover,
+            .next:hover {
+                background-color: rgba(0, 0, 0, 0.8);
+            }
+
+        /* Number text (1/3 etc) */
+        .numbertext {
+            color: #f2f2f2;
+            font-size: 12px;
+            padding: 8px 12px;
+            position: absolute;
+            top: 0;
+        }
+
+        /*img {
+            margin-bottom: -4px;
+        }*/
+
+        .caption-container {
+            text-align: center;
+            background-color: black;
+            padding: 2px 16px;
+            color: white;
+        }
+
+        .demo {
+            opacity: 0.6;
+        }
+
+            .active,
+            .demo:hover {
+                opacity: 1;
+            }
+
+        img.hover-shadow {
+            transition: 0.3s;
+        }
+
+        .hover-shadow:hover {
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        }
+    </style>
+
+
+
+<footer class="footer-wrap">
+    <div class="container">
+        <div class="row mt-0 mb-0">
+            <div class="col-sm-12" >
+                <div class="row">
+                    <div class="footer-link col-md-12 col-sm-12">
+                            <ul class="DFC footerlist mt-2 mb-2">
+                                
+                                <li> <a href="/Home/Disclaimer" class="footerText">Disclaimer</a></li>
+                                <li> <a href="/Home/PrivacyPolicy" class="footerText">Privacy policy</a></li>
+                                
+                                <li> <a href="/Home/TnC" class="footerText">Terms and Conditions</a></li>
+                                <li>
+                                    <a class="footerText">  Visitors Count:<strong class="count">8240808</strong></a>
+                                </li>
+                                <li>
+                                    <a href="http://udyamimitra.in/" class="footerText" target="_blank">
+                                        <span>Powered by : Udyamimitra Portal</span>
+                                        <span>
+                                            <img src="/images/sidbi.png" style="vertical-align: middle; height:25px; border-style: none;" class="img-fluid" />
+                                        </span>
+                                    </a>
+                                </li>
+
+                            </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script type="text/javascript">
+
+
+        $(function () {
+
+            HideWait();
+            window.addEventListener("beforeunload", function (e) {
+                //$('#lightbox1, #overlay').show();
+            });
+
+            //for (i = 0; i < history.length; i++);
+            //{
+            //    history.pushState({ page: i + 1 }, "title 1", "#NoBack");
+            //}
+
+            //window.onhashchange = function (event) {
+            //    window.location.hash = "#NoBack";
+            //};
+
+
+            window.history.forward();
+            function noBack() {
+                window.history.forward();
+            }
+
+        });
+
+
+        function GoBack() {
+            window.location = '/Login/LogOut';
+        }
+
+        //function ChangeLanguage(lang) {
+        //    debugger
+        //    $.ajax({
+        //        url: ServerPath + 'Home/ChangeLanguage',
+        //        data: { lang: lang },
+        //        async: true,
+        //        type: 'POST',
+        //        success: function (response) {
+        //            if (response.success == true) {
+        //                location.reload();
+        //                return;
+        //            }
+        //        }
+        //    });
+        //}
+
+    </script>
+    
+</body>
+</html>

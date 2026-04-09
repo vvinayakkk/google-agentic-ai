@@ -4,7 +4,9 @@ Interactive form-filling system that guides farmers to complete government schem
 """
 
 import base64
+import asyncio
 from typing import Optional
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
@@ -380,6 +382,63 @@ async def seed_schemes_to_mongo(
 # ── Scheme Document Downloads ────────────────────────────────────
 
 downloader = SchemeDocumentDownloader()
+_download_all_task: Optional[asyncio.Task] = None
+_download_all_status: dict = {
+    "state": "idle",
+    "started_at": None,
+    "finished_at": None,
+    "summary": None,
+    "error": None,
+}
+
+
+async def _execute_download_all(force: bool, reset_existing: bool) -> dict:
+    db = get_async_db()
+    schemes = await _load_db_schemes(db)
+    source = "db"
+
+    if not schemes:
+        schemes = get_all_schemes()
+        source = "builtin_fallback"
+
+    reset_info = None
+    if reset_existing:
+        reset_info = downloader.reset_storage()
+
+    result = await downloader.download_all_schemes(force=force, schemes=schemes)
+    result["scheme_source"] = source
+    result["input_scheme_count"] = len(schemes)
+    if reset_info is not None:
+        result["reset"] = reset_info
+    return result
+
+
+async def _run_download_all_in_background(force: bool, reset_existing: bool) -> None:
+    global _download_all_status
+    _download_all_status = {
+        "state": "running",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "finished_at": None,
+        "summary": None,
+        "error": None,
+    }
+    try:
+        result = await _execute_download_all(force=force, reset_existing=reset_existing)
+        _download_all_status = {
+            "state": "completed",
+            "started_at": _download_all_status.get("started_at"),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "summary": result,
+            "error": None,
+        }
+    except Exception as exc:
+        _download_all_status = {
+            "state": "failed",
+            "started_at": _download_all_status.get("started_at"),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "summary": None,
+            "error": str(exc),
+        }
 
 
 @router.post("/download-scheme-docs/{scheme_name}", status_code=HttpStatus.OK)
@@ -402,11 +461,46 @@ async def download_scheme_documents(
 
 @router.post("/download-all-scheme-docs", status_code=HttpStatus.OK)
 async def download_all_scheme_documents(
+    force: bool = Query(default=False, description="Force re-download even if cached"),
+    reset_existing: bool = Query(default=False, description="Delete existing stored docs before downloading"),
+    wait: bool = Query(default=False, description="If false, start in background and return immediately"),
     user: dict = Depends(get_current_user),
 ):
-    """Download documents for ALL government schemes (forms, guidelines, PDFs)."""
-    result = await downloader.download_all_schemes()
-    return result
+    """Download documents for all DB schemes (built-in list used only as fallback)."""
+    global _download_all_task
+
+    if wait:
+        result = await _execute_download_all(force=force, reset_existing=reset_existing)
+        return result
+
+    if _download_all_task is not None and not _download_all_task.done():
+        return {
+            "state": "running",
+            "message": "Bulk sync already running",
+            "status": _download_all_status,
+        }
+
+    _download_all_task = asyncio.create_task(
+        _run_download_all_in_background(force=force, reset_existing=reset_existing)
+    )
+    return {
+        "state": "started",
+        "message": "Bulk sync started in background",
+        "status": _download_all_status,
+    }
+
+
+@router.get("/download-all-scheme-docs/status", status_code=HttpStatus.OK)
+async def get_download_all_status(
+    user: dict = Depends(get_current_user),
+):
+    """Get status/result for background bulk scheme document sync."""
+    global _download_all_task
+    running = _download_all_task is not None and not _download_all_task.done()
+    return {
+        "running": running,
+        "status": _download_all_status,
+    }
 
 
 @router.get("/scheme-docs/{scheme_name}", status_code=HttpStatus.OK)

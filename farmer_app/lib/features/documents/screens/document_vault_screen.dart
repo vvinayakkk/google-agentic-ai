@@ -6,9 +6,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../shared/models/document_builder_model.dart';
 import '../../../shared/services/document_builder_service.dart';
 import '../../../shared/services/farmer_service.dart';
+import 'official_form_preview_page.dart';
 
 class DocumentVaultScreen extends ConsumerStatefulWidget {
   const DocumentVaultScreen({super.key});
@@ -22,6 +24,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   bool _loading = true;
   Map<String, dynamic> _profile = <String, dynamic>{};
   List<SavedDocument> _savedDocs = <SavedDocument>[];
+  List<Map<String, dynamic>> _downloadedSchemeDocs = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -32,16 +35,20 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final docService = ref.read(documentBuilderServiceProvider);
       final profile = await ref
           .read(farmerServiceProvider)
-          .getMyProfile(preferCache: true);
-      final docs = await ref
-          .read(documentBuilderServiceProvider)
-          .listSavedDocuments();
+          .getMyProfile(preferCache: false);
+      final docs = await docService.listSavedDocuments();
+      final downloaded = await docService.listSchemeDocs(
+        preferCache: true,
+        forceRefresh: true,
+      );
       if (!mounted) return;
       setState(() {
         _profile = profile;
         _savedDocs = docs;
+        _downloadedSchemeDocs = downloaded;
         _loading = false;
       });
     } catch (_) {
@@ -50,6 +57,81 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
         _loading = false;
       });
     }
+  }
+
+  String _downloadedDocName(Map<String, dynamic> doc) {
+    return (doc['filename'] ?? doc['name'] ?? 'Document').toString();
+  }
+
+  String _downloadedDocScheme(Map<String, dynamic> doc) {
+    return (doc['scheme_name'] ?? doc['scheme'] ?? 'Scheme').toString();
+  }
+
+  String _downloadedDocType(Map<String, dynamic> doc) {
+    final fileName = _downloadedDocName(doc).toLowerCase();
+    final contentType = (doc['content_type'] ?? '').toString().toLowerCase();
+    if (fileName.endsWith('.pdf') || contentType.contains('pdf')) return 'PDF';
+    if (fileName.endsWith('.docx') || contentType.contains('wordprocessingml')) {
+      return 'DOCX';
+    }
+    if (fileName.endsWith('.doc') || contentType.contains('msword')) return 'DOC';
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) return 'XLS';
+    if (fileName.endsWith('.html') || contentType.contains('html')) return 'HTML';
+    return 'FILE';
+  }
+
+  Future<void> _openExternalUrl(String raw) async {
+    final uri = Uri.tryParse(raw.trim());
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _shareSchemeDocFile(GeneratedDocumentFile file) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Official form downloaded from KisanKiAwaaz',
+        files: <XFile>[XFile(file.file.path)],
+      ),
+    );
+  }
+
+  Future<void> _previewDownloadedSchemeDoc(Map<String, dynamic> doc) async {
+    final schemeKey =
+        (doc['scheme'] ?? doc['scheme_name'] ?? '').toString().trim();
+    final docName = _downloadedDocName(doc).trim();
+    if (schemeKey.isEmpty || docName.isEmpty) {
+      context.showSnack('Document details missing.', isError: true);
+      return;
+    }
+
+    final service = ref.read(documentBuilderServiceProvider);
+    final file = await service.downloadSchemeDocumentFile(
+      schemeKey: schemeKey,
+      docName: docName,
+    );
+    if (!mounted) return;
+    if (file == null) {
+      context.showSnack('Could not open this file right now.', isError: true);
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OfficialFormPreviewPage(
+          title: docName,
+          typeLabel: _downloadedDocType(doc),
+          file: file,
+          onDownload: () => _shareSchemeDocFile(file),
+          onOpenExternal: () async {
+            final url = service.schemeDocumentFileUrl(
+              schemeKey: schemeKey,
+              docName: docName,
+            );
+            await _openExternalUrl(url);
+          },
+        ),
+      ),
+    );
   }
 
   bool _readyAadhaar() {
@@ -158,6 +240,26 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                       )
                     else
                       ..._savedDocs.map((doc) => _docCard(doc, cardColor)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Downloaded Official Forms',
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_downloadedSchemeDocs.isEmpty)
+                      _glassCard(
+                        cardColor,
+                        Text(
+                          'No downloaded scheme forms yet. Sync from Official Forms Hub to populate this vault.',
+                          style: context.textTheme.bodyMedium,
+                        ),
+                      )
+                    else
+                      ..._downloadedSchemeDocs
+                          .take(40)
+                          .map((doc) => _downloadedDocCard(doc, cardColor)),
                   ],
                 ),
               ),
@@ -255,6 +357,53 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _downloadedDocCard(Map<String, dynamic> doc, Color cardColor) {
+    final name = _downloadedDocName(doc);
+    final scheme = _downloadedDocScheme(doc);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: _glassCard(
+        cardColor,
+        Row(
+          children: <Widget>[
+            const Icon(Icons.description_outlined, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    scheme,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.appColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => _previewDownloadedSchemeDoc(doc),
+              icon: const Icon(Icons.visibility_outlined),
+              tooltip: 'Preview',
             ),
           ],
         ),

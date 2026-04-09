@@ -72,18 +72,45 @@ function Get-TrackedFilesInTarget {
 }
 
 $DefaultExcludes = @(
-    '.git', '.gitignore', '.gitmodules',
-    'node_modules','bin','obj','build','dist','target',
-    '.env','.env.*','*.env','*.pyc','*.class','.DS_Store','Thumbs.db'
+    # VCS and editor
+    '.git', '.gitignore', '.gitmodules', '.github', '.vscode', '.idea',
+
+    # Secrets and env
+    '.env', '.env.*', '*.env', '*.pem', '*.key', '*.p12', '*.pfx',
+
+    # Python
+    '__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache', '.tox', '.nox',
+    '.venv', 'venv', '.coverage', '*.pyc', '*.pyo', '*.pyd',
+
+    # Node/web
+    'node_modules', '.npm', '.pnpm-store', '.yarn', '.next',
+
+    # Flutter/Dart
+    '.dart_tool', '.flutter-plugins', '.flutter-plugins-dependencies',
+
+    # Build outputs and temp
+    'bin', 'obj', 'build', 'dist', 'target', '.cache', '.tmp', 'tmp',
+
+    # Logs and OS artifacts
+    '*.log', '.DS_Store', 'Thumbs.db'
 )
 
 function Is-Excluded-ByDefault {
     param([string]$FullPath)
+    $normalized = $FullPath.Replace('/','\')
+    $leaf = Split-Path $normalized -Leaf
+    $segments = $normalized -split '\\+'
+
     foreach ($e in $DefaultExcludes) {
         if ($e.Contains('*')) {
-            if ((Split-Path $FullPath -Leaf) -like $e) { return $true }
-        } else {
-            if ($FullPath -like "*\\$e\\*" -or (Split-Path $FullPath -Leaf) -eq $e) { return $true }
+            if ($leaf -like $e) { return $true }
+            if ($normalized -like "*$e*") { return $true }
+            continue
+        }
+
+        if ($leaf -ieq $e) { return $true }
+        foreach ($seg in $segments) {
+            if ($seg -ieq $e) { return $true }
         }
     }
     return $false
@@ -100,7 +127,15 @@ foreach ($t in $Targets) {
 
     if ($gitAvailable -and $UseGit) {
         $files = Get-TrackedFilesInTarget -RepoRootParam $RepoRoot -TargetParam $t
-        if ($files -and $files.Count -gt 0) { $files | ForEach-Object { $AllFilesToAdd.Add((Resolve-Path $_).Path) }; continue }
+        if ($files -and $files.Count -gt 0) {
+            $files | ForEach-Object {
+                $resolved = (Resolve-Path $_).Path
+                if (-not (Is-Excluded-ByDefault $resolved)) {
+                    $AllFilesToAdd.Add($resolved)
+                }
+            }
+            continue
+        }
     }
 
     Get-ChildItem -Path $targetPath -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {

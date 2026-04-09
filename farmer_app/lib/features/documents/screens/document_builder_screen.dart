@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
@@ -10,6 +11,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/document_builder_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import 'official_form_preview_page.dart';
+import 'preview_download_screen.dart';
 import 'scheme_details_page.dart';
 import '../utils/document_scheme_map.dart';
 
@@ -23,12 +26,15 @@ class DocumentBuilderScreen extends ConsumerStatefulWidget {
 
 class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   bool _loading = true;
+  bool _syncingAllForms = false;
   String _search = '';
   String _selectedCategory = 'All';
   bool _highestBenefit = false;
+  bool _loadingFormPreviews = false;
 
   Map<String, dynamic> _profile = <String, dynamic>{};
   List<Map<String, dynamic>> _schemes = <Map<String, dynamic>>[];
+  List<_FormPreviewCardData> _formPreviewCards = <_FormPreviewCardData>[];
 
   static const List<String> _categories = <String>[
     'All',
@@ -71,11 +77,13 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         _schemes = ranked;
         _loading = false;
       });
+      await _loadFormPreviewCards();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _profile = <String, dynamic>{};
         _schemes = <Map<String, dynamic>>[];
+        _formPreviewCards = <_FormPreviewCardData>[];
         _loading = false;
       });
     }
@@ -192,6 +200,76 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     return crops;
   }
 
+  String _normalizeSchemeLookup(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim();
+  }
+
+  Map<String, dynamic>? _findSchemeForDownloadedKey(String rawKey) {
+    final target = _normalizeSchemeLookup(rawKey);
+    if (target.isEmpty) return null;
+
+    for (final scheme in _schemes) {
+      final keys = <String>[
+        (scheme['id'] ?? '').toString(),
+        (scheme['scheme_id'] ?? '').toString(),
+        (scheme['short_name'] ?? '').toString(),
+        (scheme['name'] ?? '').toString(),
+      ];
+
+      final matches = keys.any((key) {
+        final normalized = _normalizeSchemeLookup(key);
+        return normalized.isNotEmpty && normalized == target;
+      });
+      if (matches) return scheme;
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _findSchemeForPreviewItem(_FormPreviewCardData item) {
+    final byId = _findSchemeForDownloadedKey(item.schemeId);
+    if (byId != null) return byId;
+    return _findSchemeForDownloadedKey(item.schemeLookupKey);
+  }
+
+  String _firstOfficialUrlForScheme(Map<String, dynamic> scheme) {
+    final appUrl = (scheme['application_url'] ?? '').toString().trim();
+    if (appUrl.isNotEmpty) return appUrl;
+
+    final links = _formDownloadItems(scheme);
+    if (links.isNotEmpty) {
+      return (links.first['url'] ?? '').trim();
+    }
+
+    return '';
+  }
+
+  Future<void> _openSchemePortalForPreviewItem(_FormPreviewCardData item) async {
+    final scheme = _findSchemeForPreviewItem(item);
+    if (scheme == null) {
+      context.showSnack('Official portal link not available for this scheme.');
+      return;
+    }
+
+    await _hydrateSchemeDetailsInPlace(scheme);
+    final link = _firstOfficialUrlForScheme(scheme);
+    await _openExternalUrl(link);
+  }
+
+  Future<void> _sharePreviewFile(GeneratedDocumentFile file) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Official form downloaded from KisanKiAwaaz',
+        files: <XFile>[XFile(file.file.path)],
+      ),
+    );
+    if (!mounted) return;
+    context.showSnack('Document is ready to save/share from this sheet.');
+  }
+
   List<Map<String, dynamic>> get _recommendedSchemes {
     final scored =
         _schemes
@@ -199,6 +277,250 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
             .toList(growable: false)
           ..sort((a, b) => b.score.compareTo(a.score));
     return scored.take(8).map((e) => e.scheme).toList(growable: false);
+  }
+
+  String _docTypeLabel(String name) {
+    final value = name.toLowerCase();
+    if (value.endsWith('.pdf')) return 'PDF';
+    if (value.endsWith('.docx')) return 'DOCX';
+    if (value.endsWith('.doc')) return 'DOC';
+    if (value.endsWith('.xlsx') || value.endsWith('.xls')) return 'XLS';
+    if (value.endsWith('.html') || value.endsWith('.htm')) return 'HTML';
+    return 'FILE';
+  }
+
+  Future<void> _openOfficialFormsHub([
+    _FormPreviewCardData? preferred,
+  ]) async {
+    _FormPreviewCardData? selected = preferred;
+    if (selected == null && _formPreviewCards.isNotEmpty) {
+      selected = _formPreviewCards.first;
+    }
+
+    if (selected == null && _recommendedSchemes.isNotEmpty) {
+      final scheme = _recommendedSchemes.first;
+      final id = _schemeId(scheme);
+      final name = (scheme['name'] ?? scheme['short_name'] ?? id).toString();
+      final lookup = (scheme['short_name'] ?? scheme['name'] ?? id).toString();
+      selected = _FormPreviewCardData(
+        schemeId: id,
+        schemeName: name,
+        schemeLookupKey: lookup,
+        documentName: '',
+        documentSizeKb: 0,
+        typeLabel: 'FILE',
+      );
+    }
+
+    final target = selected;
+    if (target == null) {
+      context.showSnack('No scheme available right now.', isError: true);
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PreviewDownloadScreen(
+          sessionId: 'preview-${DateTime.now().millisecondsSinceEpoch}',
+          schemeId: target.schemeId,
+          schemeName: target.schemeName,
+          initialDocumentName: target.documentName,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDirectPreview(_FormPreviewCardData item) async {
+    final docName = item.documentName.trim();
+    if (docName.isEmpty) {
+      await _openOfficialFormsHub(item);
+      return;
+    }
+
+    final service = ref.read(documentBuilderServiceProvider);
+    final file = await service.downloadSchemeDocumentFile(
+      schemeKey: item.schemeLookupKey,
+      docName: docName,
+    );
+
+    if (!mounted) return;
+    if (file == null) {
+      context.showSnack(
+        'Could not open instant preview. Opening forms hub instead.',
+      );
+      await _openOfficialFormsHub(item);
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OfficialFormPreviewPage(
+          title: item.documentName,
+          typeLabel: item.typeLabel,
+          file: file,
+          onAutofill: () async {
+            context.showSnack(
+              'Autofill helper is available in Official Forms Hub.',
+            );
+          },
+          onDownload: () async {
+            await _sharePreviewFile(file);
+          },
+          onOpenExternal: () async {
+            await _openSchemePortalForPreviewItem(item);
+          },
+          onOpenHub: () {
+            Navigator.of(context).pop();
+            _openOfficialFormsHub(item);
+          },
+        ),
+      ),
+    );
+  }
+
+  List<_FormPreviewCardData> _buildPreviewCardsFromDocs(
+    List<Map<String, dynamic>> allDownloaded, {
+    int limit = 20,
+  }) {
+    final previews = <_FormPreviewCardData>[];
+    final seen = <String>{};
+
+    for (final doc in allDownloaded) {
+      final exists = doc['exists'];
+      if (exists is bool && !exists) continue;
+
+      final docName = (doc['filename'] ?? doc['name'] ?? '').toString().trim();
+      if (docName.isEmpty) continue;
+
+      final rawSchemeKey =
+          (doc['scheme'] ?? doc['scheme_name'] ?? '').toString().trim();
+      final mappedScheme = _findSchemeForDownloadedKey(rawSchemeKey);
+
+      final schemeId = mappedScheme != null
+          ? _schemeId(mappedScheme)
+          : rawSchemeKey;
+      if (schemeId.trim().isEmpty) continue;
+
+      final schemeName = mappedScheme != null
+          ? (mappedScheme['name'] ?? mappedScheme['short_name'] ?? schemeId)
+                .toString()
+          : (rawSchemeKey.isEmpty ? 'Official Scheme Form' : rawSchemeKey);
+
+      final lookupKey = mappedScheme != null
+          ? (mappedScheme['short_name'] ?? mappedScheme['name'] ?? schemeId)
+            .toString()
+          : (rawSchemeKey.isEmpty ? schemeId : rawSchemeKey);
+
+      final dedupeKey = '${schemeId.toLowerCase()}::${docName.toLowerCase()}';
+      if (!seen.add(dedupeKey)) continue;
+
+      final sizeRaw = doc['size'];
+      final sizeBytes = sizeRaw is num ? sizeRaw.toDouble() : 0;
+
+      previews.add(
+        _FormPreviewCardData(
+          schemeId: schemeId,
+          schemeName: schemeName,
+          schemeLookupKey: lookupKey,
+          documentName: docName,
+          documentSizeKb: sizeBytes > 0 ? (sizeBytes / 1024) : 0,
+          typeLabel: _docTypeLabel(docName),
+        ),
+      );
+
+      if (previews.length >= limit) break;
+    }
+
+    return previews;
+  }
+
+  Future<void> _loadFormPreviewCards() async {
+    if (_schemes.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _formPreviewCards = <_FormPreviewCardData>[];
+          _loadingFormPreviews = false;
+        });
+      }
+      return;
+    }
+
+    if (mounted) setState(() => _loadingFormPreviews = true);
+
+    try {
+      final docService = ref.read(documentBuilderServiceProvider);
+      final cached = await docService.getCachedSchemeDocs();
+      final cachedPreviews = _buildPreviewCardsFromDocs(cached);
+      if (mounted && cachedPreviews.isNotEmpty) {
+        setState(() {
+          _formPreviewCards = cachedPreviews;
+        });
+      }
+
+      final allDownloaded = await docService.listSchemeDocs(
+        preferCache: true,
+        forceRefresh: cachedPreviews.isEmpty,
+      );
+      final previews = _buildPreviewCardsFromDocs(allDownloaded);
+
+      if (previews.isEmpty) {
+        for (final scheme in _recommendedSchemes) {
+          final schemeId = _schemeId(scheme);
+          if (schemeId.trim().isEmpty) continue;
+
+          final schemeName = (scheme['name'] ?? scheme['short_name'] ?? schemeId)
+              .toString();
+          final schemeKey =
+              (scheme['short_name'] ?? scheme['name'] ?? schemeId).toString();
+
+          var docs = await docService.listSchemeDocumentsByScheme(
+            schemeKey,
+            preferCache: true,
+            forceRefresh: false,
+          );
+          if (docs.isEmpty && schemeKey != schemeId) {
+            docs = await docService.listSchemeDocumentsByScheme(
+              schemeId,
+              preferCache: true,
+              forceRefresh: false,
+            );
+          }
+
+          if (docs.isEmpty) continue;
+
+          for (final doc in docs.take(2)) {
+            final docName = (doc['filename'] ?? doc['name'] ?? 'Document')
+                .toString();
+            final size =
+                (doc['size'] is num) ? (doc['size'] as num).toDouble() : 0;
+            previews.add(
+              _FormPreviewCardData(
+                schemeId: schemeId,
+                schemeName: schemeName,
+                schemeLookupKey: schemeKey,
+                documentName: docName,
+                documentSizeKb: (size / 1024),
+                typeLabel: _docTypeLabel(docName),
+              ),
+            );
+            if (previews.length >= 12) break;
+          }
+
+          if (previews.length >= 12) break;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _formPreviewCards = previews;
+        _loadingFormPreviews = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingFormPreviews = false;
+      });
+    }
   }
 
   List<Map<String, dynamic>> get _filteredSchemes {
@@ -733,12 +1055,104 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       );
       return;
     }
-    final uri = Uri.tryParse(link);
-    if (uri == null) {
+    Uri? uri = Uri.tryParse(link);
+    if (uri != null && !uri.hasScheme) {
+      uri = Uri.tryParse('https://$link');
+    }
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
       context.showSnack('Invalid scheme URL.', isError: true);
       return;
     }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        context.showSnack('Could not open this website right now.', isError: true);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      context.showSnack('Could not open this website right now.', isError: true);
+    }
+  }
+
+  Future<void> _syncAllOfficialForms() async {
+    if (_syncingAllForms) return;
+    setState(() => _syncingAllForms = true);
+    try {
+      final docService = ref.read(documentBuilderServiceProvider);
+      final trigger = await docService.downloadAllSchemeDocuments();
+
+      final state = (trigger['state'] ?? '').toString().toLowerCase();
+      if (state == 'started' || state == 'running') {
+        if (!mounted) return;
+        context.showSnack('Bulk sync started. Fetching documents in background...');
+
+        final polled = await _pollBulkSyncStatus(docService);
+        if (!mounted) return;
+
+        if (polled == null) {
+          context.showSnack(
+            'Bulk sync is still running. Forms will keep appearing as sync completes.',
+          );
+        } else if ((polled['state'] ?? '').toString().toLowerCase() == 'failed') {
+          final msg = (polled['error'] ?? 'Bulk sync failed.').toString();
+          context.showSnack(msg, isError: true);
+        } else {
+          final summary = (polled['summary'] is Map)
+              ? Map<String, dynamic>.from(
+                  (polled['summary'] as Map).cast<dynamic, dynamic>(),
+                )
+              : <String, dynamic>{};
+          final downloaded = (summary['total_downloaded'] ?? 0).toString();
+          final cached = (summary['total_cached'] ?? 0).toString();
+          final failed = (summary['total_failed'] ?? 0).toString();
+          context.showSnack(
+            'Official forms sync complete. Downloaded: $downloaded, Cached: $cached, Failed: $failed',
+          );
+        }
+      } else {
+        final downloaded = (trigger['total_downloaded'] ?? 0).toString();
+        final cached = (trigger['total_cached'] ?? 0).toString();
+        final failed = (trigger['total_failed'] ?? 0).toString();
+        if (!mounted) return;
+        context.showSnack(
+          'Official forms sync complete. Downloaded: $downloaded, Cached: $cached, Failed: $failed',
+        );
+      }
+
+      await _loadFormPreviewCards();
+    } catch (_) {
+      if (!mounted) return;
+      context.showSnack(
+        'Could not sync all official forms right now.',
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _syncingAllForms = false);
+    }
+  }
+
+  Future<Map<String, dynamic>?> _pollBulkSyncStatus(
+    DocumentBuilderService docService,
+  ) async {
+    for (var attempt = 0; attempt < 40; attempt++) {
+      if (!mounted) return null;
+      await Future<void>.delayed(const Duration(seconds: 2));
+      final statusResp = await docService.getDownloadAllSchemeDocumentsStatus();
+      final status = (statusResp['status'] is Map)
+          ? Map<String, dynamic>.from(
+              (statusResp['status'] as Map).cast<dynamic, dynamic>(),
+            )
+          : <String, dynamic>{};
+
+      final state = (status['state'] ?? '').toString().toLowerCase();
+      if (state == 'completed' || state == 'failed') {
+        return status;
+      }
+    }
+    return null;
   }
 
   void _openBuildScreen({required String schemeId, required String docType}) {
@@ -766,6 +1180,22 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         surfaceTintColor: Colors.transparent,
         actions: <Widget>[
           IconButton(
+            onPressed: () => _openOfficialFormsHub(),
+            icon: const Icon(Icons.dashboard_customize_outlined),
+            tooltip: 'Go to Forms Hub',
+          ),
+          IconButton(
+            onPressed: _syncingAllForms ? null : _syncAllOfficialForms,
+            icon: _syncingAllForms
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.cloud_download_outlined),
+            tooltip: 'Sync Official Forms',
+          ),
+          IconButton(
             onPressed: () => context.push(RoutePaths.documentVault),
             icon: const Icon(Icons.folder_copy_outlined),
             tooltip: 'Document Vault',
@@ -791,6 +1221,109 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                   children: <Widget>[
                     _readinessBanner(cardColor, textColor, subColor),
                     const SizedBox(height: 16),
+                    _sectionHeader('Forms You Can Preview'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 210,
+                      child: _loadingFormPreviews && _formPreviewCards.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : _formPreviewCards.isEmpty
+                          ? _glassCard(
+                              cardColor: cardColor,
+                              child: Center(
+                                child: Text(
+                                  'No local forms yet. Use Sync Official Forms once.',
+                                  style: TextStyle(color: subColor),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _formPreviewCards.length,
+                                separatorBuilder: (_, index) =>
+                                  const SizedBox(width: 12),
+                              itemBuilder: (_, i) {
+                                final item = _formPreviewCards[i];
+                                return SizedBox(
+                                  width: 240,
+                                  child: _glassCard(
+                                    cardColor: cardColor,
+                                    child: InkWell(
+                                      onTap: () => _openDirectPreview(item),
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Row(
+                                            children: <Widget>[
+                                              Expanded(
+                                                child: Text(
+                                                  item.documentName,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: textColor,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              _DocStatusChip(
+                                                label: item.typeLabel,
+                                                color: AppColors.primary,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            item.schemeName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: subColor,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Ready to preview before filling',
+                                            style: TextStyle(color: subColor),
+                                          ),
+                                          const Spacer(),
+                                          Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                Icons.remove_red_eye_outlined,
+                                                size: 16,
+                                                color: AppColors.primary,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  '${item.documentSizeKb.toStringAsFixed(1)} KB',
+                                                  style: TextStyle(
+                                                    color: subColor,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.chevron_right,
+                                                color: AppColors.primary,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(height: 18),
                     _sectionHeader('Best Schemes for You'),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -907,7 +1440,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => context.push(RoutePaths.profile),
+                onPressed: () => _openOfficialFormsHub(),
                 child: const Text('Complete Profile'),
               ),
             ],
@@ -1169,6 +1702,24 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       ),
     );
   }
+}
+
+class _FormPreviewCardData {
+  const _FormPreviewCardData({
+    required this.schemeId,
+    required this.schemeName,
+    required this.schemeLookupKey,
+    required this.documentName,
+    required this.documentSizeKb,
+    required this.typeLabel,
+  });
+
+  final String schemeId;
+  final String schemeName;
+  final String schemeLookupKey;
+  final String documentName;
+  final double documentSizeKb;
+  final String typeLabel;
 }
 
 enum _ReadinessState { ready, partial, missing }

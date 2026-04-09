@@ -1,0 +1,816 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+
+</title>
+        <meta http-equiv="X-Frame-Options" content="deny" />
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" type="text/css" href="Content/bootstrap.min.css" />
+        
+        <link href="Content/themes/base/jquery-ui.css" rel="stylesheet" />
+        <link href="Content/bootstrap-theme.css" rel="stylesheet" />
+        <link href="Content/bootstrap.css" rel="stylesheet" />
+        <link href="Content/style.css" rel="stylesheet" />
+        <link href="Content/StyleOld.css" rel="stylesheet" />
+        <script src="Scripts/jquery.min.js"></script>
+        
+        <script src="Scripts/bootstrap.min.js"></script>
+        
+        <script src="Scripts/jquery-1.12.4.js"></script>
+        <script src="Scripts/jquery-ui.js"></script>
+        <script src="Scripts/ie10-viewport-bug-workaround.js"></script>
+        <link href="Content/jquery-ui.min.css" rel="stylesheet" />
+
+
+        <style>
+            .HeadPara1 {
+                text-align: left;
+                color: #000;
+                font-size: 25px;
+                font: bold;
+                margin-top: 10px;
+                margin: 0 0 0px 0;
+                font-variant: small-caps;
+            }
+
+            .HeadPara2 {
+                text-align: left;
+                color: #000;
+                font-size: 14px;
+                font-style: italic;
+                vertical-align: top;
+                margin: 0 0 0px 0;
+            }
+
+            .HeadPara3 {
+                text-align: left;
+                color: #000;
+                font-size: 12px;
+                margin: 0 0 0px 0;
+            }
+
+            html {
+                display: none;
+            }
+
+            .bgHeaderPanel {
+                text-align: center;
+            }
+
+            html {
+                display: none;
+            }
+
+            .bgHeaderPanel {
+                text-align: center;
+            }
+
+            .hide {
+                display: none;
+            }
+
+            .myDIV:hover + .hide {
+                display: block;
+                color: black;
+                width: 500px;
+                text-align: justify;
+                padding: 20px;
+                z-index: 2;
+                position: relative;
+            }
+            /*Added by Ritesh on 16-06-2025*/
+            #footer {
+                background: url(../images/bg-footer.jpg) repeat-x 0 0 #464646;
+                padding: 14px 0 50px 0;
+                text-align: center;
+            }
+        </style>
+        <script>
+
+
+            if (self == top) {
+                document.documentElement.style.display = 'block';
+            } else {
+                top.location = self.location;
+            }
+
+            function noBack() {
+                window.history.forward()
+            }
+            noBack();
+            window.onload = noBack;
+            window.onpageshow = function (evt) { if (evt.persisted) noBack() }
+            window.onunload = function () { void (0) }
+        </script>
+    </head>
+<body>
+    <form method="post" action="./" id="aspnetForm">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="ASdz//95BkjhK2tEkcymzCbsfme98h6AEb+gO6oh462xZfetvt7Qs27of0q0K3YJ1+it4PpI8x9p9xopk3DvB1CHyvl8bYpvNo176IMSmMkjOazFHI8PFQZiXtU2P5/si1l7R4qMhzq3EXwp+m8y0EvmtARlSZPxdXG46if65s3SDADlnzC/HWfmOPev3Wm3f4DxKMLGAfZWEaZnQGmsESCviHfIdgoahmYA7Hxx7G0cSv9I0F0Ta9PYmd9K6PbUtgfKFIyBmHjeM4gMZjbc0WlN3X180f4Dd92gp2iKAaj8/d6VlsEKsxgIiUsLQhidmscztFPTzcgIytDC3h4b9UYp0+FvGZbx6HAQ5GtY84qUR6In2QfCj8pjK+SSSrZhDV2mAWgvoifc+lomuOxwh+8e8q1H6fyNhX1/5/r1ujXFYg57XYK9xNrTgykKP90b6P1x7CPouYtCwksGccVAYA==" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=SnNxBn2KZSPeZjDikTVRDBbvCQCHDsVazJ4TXgY8oLYe5PpvhUbJvxGUX4MbuGXLZGgs0uee8wUxAj-wGmh1eYU2vz6DZNlR_OlKV2zj-Eg1&amp;t=638628422640000000" type="text/javascript"></script>
+
+
+<script src="Scripts/WebForms/MsAjax/MicrosoftAjax.js" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<script src="Scripts/WebForms/MsAjax/MicrosoftAjaxWebForms.js" type="text/javascript"></script>
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="8D0E13E6" />
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+</div>
+        <div>
+            
+                <header>
+                    <div class="container">
+
+                        <div class="col-md-12 text-right skipContent">
+                            <ul class="list-unstyled list-inline font-zoom" style="color: white !important">
+                                <li><a href="#mainContentTag">Skip to main content</a></li>
+                                <li class="divider">|</li>
+                                <li><a href="#">Screen reader access</a></li>
+                                <li class="divider">|</li>
+                                <li class="round-icons"><a href="#" class="small round-icons a-minus clsDecrease">A</a></li>
+                                <li class="round-icons"><a href="#" class="normal round-icons a-normal clsNormal">A</a></li>
+                                <li class="round-icons"><a href="#" class="large round-icons a-plus clsIncrease" id="btnFontIncrease">A</a></li>
+                                <li class="divider">|</li>
+                                <li><a href="#" class="colorNormal">A</a></li>
+                                <li><a href="#" class="colorBliend" name="colorBliendg">A</a></li>
+                                <li class="divider">|</li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </header>
+                <!-- HEADER END-->
+
+                <div class="col-lg-12" style="background-color: #FFF;">
+                    <div class="bgHeaderPanel">
+                        <div class="row">
+                            <div>
+                                <img style="max-width: 100%;" src="img/SiteBanner.jpg" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                    </div>
+
+                </div>
+                <!-- /.container-fluid -->
+
+                <section id="ctl00_ContentPlaceHolderHeader_staticMenuSection" class="menu-section">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="navbar-collapse collapse ">
+                                    <ul id="menu-top" class="nav navbar-nav navbar-left">
+                                        <li><a href="home.aspx">Home</a></li>
+                                        <li><a href="AboutUs.aspx">About Us</a></li>
+                                        <li><a href="Scheme.aspx">Schemes</a></li>
+                                        
+                                        <li><a href="#" data-toggle="dropdown">DashBoard<span class="caret"></span></a>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="DashboardGeoTagged.aspx" target="_blank">DashBoard Agriventures(Geo-Tagged)</a></li>
+                                                <li><a href="DashboardGeoTagged_NTI.aspx" target="_blank">DashBoard Agriventures -NTI-Wise(Geo-Tagged)</a></li>
+                                                <li><a href="Dashboard_NTI_Geotagged.aspx" target="_blank">DashBoard NTI(Geo-Tagged)</a></li>
+                                                <li><a href="ACABC_dashboard_Chart.aspx" target="_blank">DashBoard</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="Institute.aspx">Nodal Institute</a></li>
+                                        <li><a href="#" data-toggle="dropdown">Progress Reports <span class="caret"></span></a>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="Outer_TrainedApplicants.aspx">Trained Candidates</a></li>
+                                                <li><a href="Outer_AgriventuresApplicants.aspx">Agriventures Established</a></li>
+                                                <li><a href="loansubsudymodule.aspx">Loan and Subsidy Report</a></li>
+                                                <li><a href="ApplicationStatus_new.aspx">Know Application Status</a></li>
+                                                <li><a href="Trained_Status.aspx">Trained Candidate Status</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="#" data-toggle="dropdown">Apply Online <span class="caret"></span></a>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="ApplicantReg.aspx">Apply for Training</a></li>
+                                                
+                                                
+                                                <li><a href="AgriventureEstablishmnentRpt.aspx">Agriventure Establishment Reporting</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="Contact.aspx">Contact Us</a></li>
+                                        
+                                        <li><a class="myDIV" href="https://www.jansamarth.in/home" title="The National Portal for Credit Linked Government Schemes, under the name of Jansamarth Portal (www.jansamarth.in), connects all stakeholders like beneficiaries,financial institutions, Central/State Government Agencies, & Nodal Agencies on a common platform. It has Integration with Unique Identification Authority of India (UIDAI), National Securities Depository Limited (NSDL), Central Board of Direct Taxes (CBDT), Credit Bureau, Udyam Portal and National E-Governance Services Limited (NeSL) for digital verification." onclick="return confirm('This is External Link, Are You Sure to Want to Continue ???')">Jan Samarth</a></li>
+                                    </ul>
+                                    <ul class="nav navbar-right">
+                                        <li>
+                                            <a style="color: white" href="Login.aspx" onclick="Login">LOGIN</a>
+                                        </li>
+                                    </ul>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <div class="hide">
+                    The National Portal for Credit Linked Government Schemes, under the name of
+                                            Jansamarth Portal (www.jansamarth.in), connects all stakeholders like beneficiaries,
+                                            financial institutions, Central/State Government Agencies, & Nodal Agencies on a
+                                            common platform. It has Integration with Unique Identification Authority of India (UIDAI),
+                                            National Securities Depository Limited (NSDL), Central Board of Direct Taxes (CBDT),
+                                            Credit Bureau, Udyam Portal and National E-Governance Services Limited (NeSL) for
+                                            digital verification. All the mandatory checks are carried out online thus reducing the risk
+                                            of any fraudulent activity to a large extent.
+                </div>
+                
+                <hr style="margin-top: 1px; margin-bottom: 1px" />
+
+
+
+            
+
+            
+    
+    
+    <script src="js/jssor.slider-27.1.0.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        jQuery(document).ready(function ($) {
+
+            var jssor_1_SlideshowTransitions = [
+              { $Duration: 800, $Opacity: 2 }
+            ];
+
+            var jssor_1_options = {
+                $AutoPlay: 1,
+                $SlideshowOptions: {
+                    $Class: $JssorSlideshowRunner$,
+                    $Transitions: jssor_1_SlideshowTransitions,
+                    $TransitionsOrder: 1
+                },
+                $ArrowNavigatorOptions: {
+                    $Class: $JssorArrowNavigator$
+                },
+                $BulletNavigatorOptions: {
+                    $Class: $JssorBulletNavigator$
+                }
+            };
+
+            var jssor_1_slider = new $JssorSlider$("jssor_1", jssor_1_options);
+
+            /*#region responsive code begin*/
+
+            var MAX_WIDTH = 3000;
+
+            function ScaleSlider() {
+                var containerElement = jssor_1_slider.$Elmt.parentNode;
+                var containerWidth = containerElement.clientWidth;
+
+                if (containerWidth) {
+
+                    var expectedWidth = Math.min(MAX_WIDTH || containerWidth, containerWidth);
+
+                    jssor_1_slider.$ScaleWidth(expectedWidth);
+                }
+                else {
+                    window.setTimeout(ScaleSlider, 30);
+                }
+            }
+            ScaleSlider();
+            $(window).bind("load", ScaleSlider);
+            $(window).bind("resize", ScaleSlider);
+            $(window).bind("orientationchange", ScaleSlider);
+            /*#endregion responsive code end*/
+        });
+    </script>
+
+    <style>
+        /*jssor slider loading skin spin css*/
+        .jssorl-009-spin img {
+            animation-name: jssorl-009-spin;
+            animation-duration: 1.6s;
+            animation-iteration-count: infinite;
+            animation-timing-function: linear;
+        }
+
+        @keyframes jssorl-009-spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /*jssor slider bullet skin 051 css*/
+        .jssorb051 .i {
+            position: absolute;
+            cursor: pointer;
+        }
+
+            .jssorb051 .i .b {
+                fill: #fff;
+                fill-opacity: 0.5;
+            }
+
+            .jssorb051 .i:hover .b {
+                fill-opacity: .7;
+            }
+
+        .jssorb051 .iav .b {
+            fill-opacity: 1;
+        }
+
+        .jssorb051 .i.idn {
+            opacity: .3;
+        }
+
+        /*jssor slider arrow skin 051 css*/
+        .jssora051 {
+            display: block;
+            position: absolute;
+            cursor: pointer;
+        }
+
+            .jssora051 .a {
+                fill: none;
+                stroke: #fff;
+                stroke-width: 360;
+                stroke-miterlimit: 10;
+            }
+
+            .jssora051:hover {
+                opacity: .8;
+            }
+
+            .jssora051.jssora051dn {
+                opacity: .5;
+            }
+
+            .jssora051.jssora051ds {
+                opacity: .3;
+                pointer-events: none;
+            }
+    </style>
+
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js">
+
+    </script>
+    <script type='text/javascript'>
+        $(function () {
+            var overlay = $('<div id="overlay"></div>');
+            overlay.show();
+            overlay.appendTo(document.body);
+            $('.popup').show();
+            $('.close').click(function () {
+                $('.popup').hide();
+                overlay.appendTo(document.body).remove();
+                return false;
+            });
+
+            $('.x').click(function () {
+                $('.popup').hide();
+                overlay.appendTo(document.body).remove();
+                return false;
+            });
+        });
+    </script>
+    <style type="text/css">
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            filter: alpha(opacity=70);
+            -moz-opacity: 0.7;
+            -khtml-opacity: 0.7;
+            opacity: 0.7;
+            z-index: 80;
+            display: none;
+        }
+
+        .img a {
+            text-decoration: none;
+        }
+
+        .popup {
+            width: 100%;
+            margin: 0 auto;
+            display: none;
+            position: fixed;
+            z-index: 101;
+            margin-top: -448px;
+        }
+
+        .img {
+            min-width: 700px;
+            width: 564px;
+            margin-top: -500px;
+            min-height: 150px;
+            height: 340px;
+            margin: 80px auto;
+            background: #f3f3f3;
+            position: relative;
+            z-index: 103;
+            padding: 1px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px #000;
+        }
+
+            .img p {
+                clear: both;
+                color: #555555;
+                text-align: justify;
+            }
+
+                .img p a {
+                    color: #d91900;
+                    font-weight: bold;
+                }
+
+            .img .x {
+                float: right;
+                height: 35px;
+                left: 22px;
+                position: relative;
+                top: -25px;
+                width: 34px;
+            }
+
+                .img .x:hover {
+                    cursor: pointer;
+                }
+    </style>
+    <link href="Content/AdminLTE.css" rel="stylesheet" />
+
+    <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$ContentPlaceHolderMain$ScriptManager1', 'aspnetForm', [], [], [], 90, 'ctl00');
+//]]>
+</script>
+
+    
+    <div class="container-fluid">
+
+        <div id="jssor_1" style="position: relative; margin: 0 auto; top: 0px; left: 0px;
+            width: 1000px; height: 210px; overflow: hidden; visibility: hidden;">
+            <!-- Loading Screen -->
+            <div data-u="loading" class="jssorl-009-spin" style="position: absolute; top: 0px;
+                left: 0px; width: 100%; height: 100%; text-align: center; background-color: rgba(0,0,0,0.7);">
+                <img style="margin-top: -19px; position: relative; top: 50%; width: 38px; height: 38px;"
+                    src="img/spin.svg" />
+            </div>
+            <div data-u="slides" style="cursor: default; position: relative; top: 0px; left: 0px;
+                width: 980px; height: 210px; overflow: hidden;">
+                
+                <div data-p="170.00"><img data-u="image" src="img/JS2.jpeg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/1.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/2.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/3.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/4.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/5.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/6.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/7.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/8.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/9.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/10.png" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/009.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0010.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0010.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0011.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0012.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0013.jpg" /></div>
+                <div data-p="170.00"><img data-u="image" src="img/0014.jpg" /></div>
+            </div>
+            <!-- Bullet Navigator -->
+            <div data-u="navigator" class="jssorb051" style="position: absolute; bottom: 12px;
+                right: 12px;" data-autocenter="1" data-scale="0.5" data-scale-bottom="0.75">
+                <div data-u="prototype" class="i" style="width: 16px; height: 16px;">
+                    <svg viewbox="0 0 16000 16000" style="position: absolute; top: 0; left: 0; width: 100%;
+                        height: 100%;">
+                        <circle class="b" cx="8000" cy="8000" r="5800"></circle>
+                    </svg>
+                </div>
+            </div>
+            <!-- Arrow Navigator -->
+            <div data-u="arrowleft" class="jssora051" style="width: 55px; height: 55px; top: 0px;
+                left: 25px;" data-autocenter="2" data-scale="0.75" data-scale-left="0.75">
+                <svg viewbox="0 0 16000 16000" style="position: absolute; top: 0; left: 0; width: 100%;
+                    height: 100%;">
+                    <polyline class="a" points="11040,1920 4960,8000 11040,14080 "></polyline>
+                </svg>
+            </div>
+            <div data-u="arrowright" class="jssora051" style="width: 55px; height: 55px; top: 0px;
+                right: 25px;" data-autocenter="2" data-scale="0.75" data-scale-right="0.75">
+                <svg viewbox="0 0 16000 16000" style="position: absolute; top: 0; left: 0; width: 100%;
+                    height: 100%;">
+                    <polyline class="a" points="4960,1920 11040,8000 4960,14080 "></polyline>
+                </svg>
+            </div>
+        </div>
+        <!-- #endregion Jssor Slider End -->
+
+        <div class="col-sm-12">
+            <div class="row">
+                <div class="col-sm-4">
+                    <div style="width: 90%; background-color: #5b90c6; padding: 10px; margin: 25px; text-align: center;
+                        height: 150px">
+                        <strong style="color: white; font-size: 14px"><b>Registered Candidates</b></strong>
+                        <br />
+                        <br />
+
+                        
+                        
+                        <strong style="color: white; font-size: 14px">Current Year (2025-26) =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_lblRegisteredCandidates" style="color:White;font-size:16px;font-weight:bold;">6917</span>
+                        <br />
+                        <br />
+                        <strong style="color: white; font-size: 14px">Cumulative Since (January, 2018) MIS Launched =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_lblregcand" style="color:White;font-size:16px;font-weight:bold;">79160</span>
+
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div style="width: 90%; background-color: #F39C0E; padding: 10px; margin: 25px; text-align: center;
+                        height: 150px">
+                        <strong style="color: white; font-size: 14px"><b>Applicantions Approved by MANAGE</b></strong>
+                        <br />
+                        <br />
+
+                        
+                        
+                        <strong style="color: white; font-size: 14px">Current Year (2025-26) =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_lblApplicantionsApprovedMANAGE" style="color:White;font-size:16px;font-weight:bold;">2900</span>
+                        <br />
+                        <br />
+
+                        <strong style="color: white; font-size: 14px">Cumulative Since (January, 2018) MIS Launched =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_lblappmanage" style="color:White;font-size:16px;font-weight:bold;">41209</span><br />
+                        <br />
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div style="width: 90%; background-color: #dd4b39; padding: 10px; margin: 25px; text-align: center;
+                        height: 150px">
+                        <strong style="color: white; font-size: 14px;text-decoration:underline;"><b>Trained Candidates</b></strong>
+                        <br />
+                        <table style="width:100%">
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Approved and Trained in Current Financial Year </td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_lbltrcand" style="color:White;font-size:16px;font-weight:bold;">2620</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Approved in Previous Financial Year but Trained in Current Financial Year </td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_lblTotalTrainedCandidates201920" style="color:White;font-size:16px;font-weight:bold;">274</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Trained during the period (2002 to 2017) (A)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_mtrianed" style="color:White;font-size:16px;font-weight:bold;">56543</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Trained Since (January, 2018) MIS Launched (B)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_lblTrainedCandidates" style="color:White;font-size:16px;font-weight:bold;">39740</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Cumulative Since Scheme Launched (A+B)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_LblTotTrained" style="color:White;font-size:16px;font-weight:bold;">96283</span></td>
+                            </tr>
+                        </table>
+                        
+                        
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div style="width: 90%; background-color: #001F3E; padding: 10px; margin: 25px; text-align: center;
+                        height: 150px">
+
+                        <strong style="color: white; font-size: 14px;text-decoration:underline;"><b>Agriventures Established</b></strong>
+                        <br />
+
+                         <table style="width:100%">
+                            <tr>
+                                
+                                
+                                <td style="text-align:left;color:white;font-weight:bold;">Current Year (2025-26)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_lblAgriventuresEstablished" style="color:White;font-size:16px;font-weight:bold;">459</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Agriventures during the period (2002 to 2017) (A)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_magriventure" style="color:White;font-size:16px;font-weight:bold;">25748</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Agriventures Since (January, 2018) MIS Launched (B)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_lblagestb" style="color:White;font-size:16px;font-weight:bold;">16939</span></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:left;color:white;font-weight:bold;">Cumulative Since Scheme Launched (A+B)</td>
+                                <td style="text-align:right"><span id="ctl00_ContentPlaceHolderMain_LblTotAgri" style="color:White;font-size:16px;font-weight:bold;">42687</span></td>
+                            </tr>                            
+                        </table>
+
+                        
+
+                        
+                    </div>
+                </div>
+
+
+                <div class="col-sm-4">
+                    <div style="width: 90%; background-color: #547a0b; padding: 10px; margin: 25px; text-align: center;
+                        height: 150px">
+
+                        <strong style="color: white; font-size: 14px"><b>Subsidy Number</b></strong>
+                        <br />
+                        <br />
+
+                        
+                        
+                        <strong style="color: white; font-size: 14px">Current Year (2025-26) =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_lblSunsidy" style="color:White;font-size:16px;font-weight:bold;">49</span>
+                        <br />
+                        <br />
+
+                        <strong style="color: white; font-size: 14px">Cumulative Since (January, 2018) MIS Launched =</strong>
+                        <span id="ctl00_ContentPlaceHolderMain_Subsidycomu" style="color:White;font-size:16px;font-weight:bold;">514</span><br />
+                        <br />
+                    </div>
+                </div>
+                
+
+            </div>
+        </div>
+        
+        <div class="col-md-12" style="height: 100px">
+            <div class="row">
+                <div class="col-sm-7">
+                    <div class="table-responsive">
+                        <table class="table" visible="false">
+                            <tr>
+                                <td>
+                                    
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                
+            </div>
+        </div>
+
+
+        <div class="col-md-12" style="width: 100%; height: 120px">
+             <marquee  scrollamount="10"   onmouseover="this.stop();" onmouseout="this.start();" "
+                 loop="150" behavior="scroll"  direction="left">
+            <div class="row ">
+                <div class="col-md-1" style="width: 110px; text-align: left;">
+                    <a target="_blank" href="https://www.mygov.in" title="MAN Ki Bat">
+                        <img src="Images/mygov.png" width="180px" />
+                    </a>
+                </div>
+                <div class="col-md-1" style="width: 140px; text-align: center;">
+                    <a target="_blank" href="http://www.makeinindia.com/home" title="Make In India">
+                        <img src="Images/makeinindia.png" width="180px" />
+                    </a>
+                </div>
+                <div class="col-md-1" style="width: 170px; text-align: center;">
+                    <a target="_blank" href="https://evisitors.nic.in/public/Home.aspx" title="E Vissitor">
+                        <img src="Images/myvisit-logo.png" width="180px" />
+                    </a>
+                </div>
+                <div class="col-md-1" style="width: 150px; text-align: center; margin-top: 25px">
+                    <a target="_blank" href="https://www.mygov.in/group/digital-india/" title="Digital India">
+                        <img src="Images/DigitalIndia.png" width="140px" />
+                    </a>
+                </div>
+                <div class="col-md-1" style="width: 180px; text-align: center;">
+                    <a target="_blank" href="https://agriwelfare.gov.in/" title="DEPARTMENT OF AGRICULTURE COOPERATION & FARMERS WELFARE">
+                        <img src="Images/DAC.jpeg" width="180px" height="100px" />
+                    </a>
+                </div>
+                
+                <div class="col-md-1" style="width: 180px; margin-top: 40px">
+                    <a target="_blank" href="http://www.nabard.org" title="NABARD">
+                        <img src="Images/NABARDlogo.png" width="190px" />
+                    </a>
+                </div>
+                
+                <div class="col-md-1" style="width: 150px; margin-top: 10px">
+                    <a target="_blank" href="http://www.manage.gov.in" title="MANAGE">
+                        <img src="Images/MANAGElogo.jpg" width="120px" />
+                    </a>
+                </div>
+                <div class="col-md-1" style="width: 50px; margin-top: 10px">
+                    <a target="_blank" href="https://soilhealth.dac.gov.in/" title="Soil Health Card">
+                        <img src="Images/Shc.png" width="50px" />
+                    </a>
+                </div>
+            </div></marquee> 
+        </div>
+
+
+
+        <div class='popup'>
+           
+            
+
+	 <div class="img">
+                <img src="images/cancel1.png" alt='quit' class='x'
+                    id='Img1' />
+                <img src="Images/PMKisan_popup11032026.jpeg" alt='harghartiranga' style="width: 700px;
+                    margin-top: -35px; height: 475px; cursor: pointer;" />
+
+            </div>
+
+        </div>
+        
+    </div>
+
+
+            
+                <div id="footerPanel">
+                    <div class="footerStrip">
+                        <div class="navbar-collapse collapse">
+                            <ul id="Ultext">
+                                <li><a href="home.aspx" style="font-size: 14px">Home</a></li>
+                                <li><a style="font-size: 14px">FAQ</a></li>
+                                <li><a style="font-size: 14px">Feedback</a></li>
+                                <li><a style="font-size: 14px">Contact Us</a></li>
+                                <li><a href="testsitemap.aspx" style="font-size: 14px">Sitemap</a></li>
+                                <li><a style="font-size: 14px">Link to Us</a></li>
+                                <li><a style="font-size: 14px">Terms & Conditions</a></li>
+                                <li><a style="font-size: 14px">Privacy Policy</a></li>
+                                <li><a style="font-size: 14px">Copyright Policy</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="footer">
+                        <div class="col-lg-1 col-sm-1 col-md-1">
+                            
+                        </div>
+                        <div class="mid col-lg-9 col-sm-9 col-md-9">
+                            <p>
+                                For any query and Suggestions Please write to <span id="lblsupportemail" style="color: #D4B877; font-size: 12px; font-weight: bold;">support[dot]acabc[at]gov[dot]in</span>
+                            </p>
+                            
+                            <p>
+                                Website Content Owned & Managed by Extension Division, Ministry of Agriculture and Farmers Welfare | Government of India, India.
+                            Site is maintained and hosted by DAD/IT, Ministry of Agriculture, New Delhi, India.
+                            </p>
+                        </div>
+                        <div class="col-lg-1 col-sm-1 col-md-1">
+                            
+                            <span id="ctl00_ContentPlaceHolderFooter_lblvisitor" style="display:inline-block;color:Black;background-color:White;font-family:ordinal;font-size:Larger;width:80px;"></span>
+                        </div>
+                    </div>
+                </div>
+
+            
+        </div>
+    
+
+<script type="text/javascript">
+//<![CDATA[
+ShowPopup('Greetings', 'Welcome to ASPSnippets.com');//]]>
+</script>
+</form>
+</body>
+</html>

@@ -1,1 +1,2 @@
 # Notification-specific deps (base covers everything)
+twilio>=9.3.0

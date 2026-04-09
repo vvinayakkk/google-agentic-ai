@@ -9,8 +9,11 @@ import json
 import logging
 import hashlib
 import asyncio
+import re
+import shutil
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -21,6 +24,28 @@ SCHEME_DOCS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "scheme_documents",
 )
+
+FORM_KEYWORDS = {
+    "form",
+    "apply",
+    "application",
+    "registration",
+    "enrolment",
+    "enrollment",
+    "download",
+    "annexure",
+    "format",
+    "proforma",
+}
+
+FORM_FILE_EXTS = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".rtf",
+}
 
 
 class SchemeDocumentDownloader:
@@ -55,6 +80,188 @@ class SchemeDocumentDownloader:
             safe = safe.replace("__", "_")
         return safe.strip("_")[:80]
 
+    def reset_storage(self) -> dict:
+        """Delete all downloaded scheme files and reset manifest."""
+        removed_files = 0
+        removed_dirs = 0
+
+        if os.path.isdir(self.base_dir):
+            for entry in os.listdir(self.base_dir):
+                path = os.path.join(self.base_dir, entry)
+
+                # Manifest is recreated from scratch after cleanup.
+                if os.path.isfile(path):
+                    try:
+                        os.remove(path)
+                        removed_files += 1
+                    except FileNotFoundError:
+                        pass
+                    continue
+
+                if os.path.isdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                    removed_dirs += 1
+
+        self.manifest = {"documents": {}, "last_updated": None}
+        self._save_manifest()
+
+        return {
+            "base_dir": self.base_dir,
+            "removed_files": removed_files,
+            "removed_dirs": removed_dirs,
+        }
+
+    def _normalize_url(self, raw: str) -> str:
+        url = (raw or "").strip()
+        if not url:
+            return ""
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"}:
+            return ""
+        # Trim fragment noise so dedupe is stable.
+        if parsed.fragment:
+            url = url.split("#", 1)[0]
+        return url.strip()
+
+    def _looks_like_form_link(self, url: str, text: str = "") -> bool:
+        u = (url or "").lower()
+        t = (text or "").lower()
+        if any(u.endswith(ext) for ext in FORM_FILE_EXTS):
+            return True
+        blob = f"{u} {t}"
+        return any(keyword in blob for keyword in FORM_KEYWORDS)
+
+    def _extract_links_from_html(self, html: str, base_url: str) -> List[Tuple[str, str]]:
+        links: List[Tuple[str, str]] = []
+        if not html:
+            return links
+
+        # Basic anchor extraction keeps dependency footprint low.
+        anchor_rx = re.compile(
+            r"<a[^>]*href=[\"']?([^\"' >]+)[^>]*>(.*?)</a>",
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+
+        for match in anchor_rx.finditer(html):
+            href = (match.group(1) or "").strip()
+            inner = re.sub(r"<[^>]+>", " ", match.group(2) or "")
+            text = " ".join(inner.split())
+            if not href:
+                continue
+            absolute = self._normalize_url(urljoin(base_url, href))
+            if not absolute:
+                continue
+            links.append((absolute, text))
+
+        return links
+
+    async def _discover_links_from_application_page(
+        self,
+        client: httpx.AsyncClient,
+        application_url: str,
+    ) -> List[Dict[str, str]]:
+        app_url = self._normalize_url(application_url)
+        if not app_url:
+            return []
+
+        discovered: List[Dict[str, str]] = []
+        try:
+            response = await client.get(app_url)
+            if response.status_code >= 400:
+                return []
+
+            content_type = (response.headers.get("content-type") or "").lower()
+            if "html" not in content_type:
+                return []
+
+            html = response.text or ""
+            for href, text in self._extract_links_from_html(html, str(response.url)):
+                if not self._looks_like_form_link(href, text):
+                    continue
+                discovered.append(
+                    {
+                        "name": text.strip() or "Discovered Form Link",
+                        "url": href,
+                        "source": "application_page_discovery",
+                    }
+                )
+                if len(discovered) >= 40:
+                    break
+        except Exception as exc:
+            logger.warning(f"Link discovery failed for {app_url}: {exc}")
+
+        return discovered
+
+    def _candidate_file_extension(self, url: str, content_type: str) -> str:
+        low_url = (url or "").lower()
+        low_ct = (content_type or "").lower()
+
+        for ext in FORM_FILE_EXTS:
+            if low_url.endswith(ext):
+                return ext
+
+        if "application/pdf" in low_ct:
+            return ".pdf"
+        if "msword" in low_ct:
+            return ".doc"
+        if "officedocument.wordprocessingml.document" in low_ct:
+            return ".docx"
+        if "spreadsheet" in low_ct or "excel" in low_ct:
+            return ".xlsx"
+        if "html" in low_ct:
+            return ".html"
+        return ".bin"
+
+    def _is_downloadable_payload(self, content_type: str, url: str) -> bool:
+        low_ct = (content_type or "").lower()
+        low_url = (url or "").lower()
+        if any(low_url.endswith(ext) for ext in FORM_FILE_EXTS):
+            return True
+        if "application/pdf" in low_ct:
+            return True
+        if "msword" in low_ct or "wordprocessingml" in low_ct:
+            return True
+        if "spreadsheet" in low_ct or "excel" in low_ct:
+            return True
+        if "html" in low_ct:
+            # Keep html form pages too, since many official forms are web flows.
+            return self._looks_like_form_link(url)
+        return False
+
+    def _iter_seed_links(self, scheme: dict) -> List[Dict[str, str]]:
+        seeds: List[Dict[str, str]] = []
+        for form_info in scheme.get("form_download_urls", []) or []:
+            if isinstance(form_info, dict):
+                seeds.append(
+                    {
+                        "name": str(form_info.get("name") or "Official Form").strip(),
+                        "url": str(form_info.get("url") or "").strip(),
+                        "source": "scheme_catalog",
+                    }
+                )
+            elif isinstance(form_info, str):
+                url = form_info.strip()
+                if not url:
+                    continue
+                seeds.append(
+                    {
+                        "name": url.rsplit("/", 1)[-1] or "Official Form",
+                        "url": url,
+                        "source": "scheme_catalog",
+                    }
+                )
+
+        app_url = str(scheme.get("application_url") or "").strip()
+        if app_url:
+            seeds.append(
+                {
+                    "name": "Official Application Portal",
+                    "url": app_url,
+                    "source": "application_url",
+                }
+            )
+        return seeds
+
     async def download_scheme_documents(
         self, scheme: dict, force: bool = False
     ) -> Dict:
@@ -68,12 +275,7 @@ class SchemeDocumentDownloader:
         os.makedirs(scheme_dir, exist_ok=True)
 
         results = []
-        form_urls = scheme.get("form_download_urls", [])
-        
-        # Also check application_url for downloadable content
-        app_url = scheme.get("application_url", "")
-        
-        # Download form URLs
+
         async with httpx.AsyncClient(
             timeout=30,
             follow_redirects=True,
@@ -81,18 +283,43 @@ class SchemeDocumentDownloader:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 KisanKiAwaaz/1.0"
             },
         ) as client:
-            for form_info in form_urls:
-                if isinstance(form_info, dict):
-                    url = form_info.get("url", "")
-                    name = form_info.get("name", "document")
-                elif isinstance(form_info, str):
-                    url = form_info
-                    name = url.rsplit("/", 1)[-1]
-                else:
-                    continue
+            candidates: Dict[str, Dict[str, str]] = {}
 
-                if not url or not url.startswith("http"):
-                    results.append({"name": name, "url": url, "status": "invalid_url"})
+            for item in self._iter_seed_links(scheme):
+                normalized = self._normalize_url(item.get("url", ""))
+                if not normalized:
+                    continue
+                candidates.setdefault(
+                    normalized,
+                    {
+                        "name": item.get("name", "Official Form"),
+                        "url": normalized,
+                        "source": item.get("source", "scheme_catalog"),
+                    },
+                )
+
+            app_url = str(scheme.get("application_url") or "").strip()
+            discovered = await self._discover_links_from_application_page(client, app_url)
+            for item in discovered:
+                normalized = self._normalize_url(item.get("url", ""))
+                if not normalized:
+                    continue
+                candidates.setdefault(
+                    normalized,
+                    {
+                        "name": item.get("name", "Discovered Form Link"),
+                        "url": normalized,
+                        "source": item.get("source", "application_page_discovery"),
+                    },
+                )
+
+            for entry in candidates.values():
+                url = entry.get("url", "")
+                name = entry.get("name", "document")
+                source = entry.get("source", "unknown")
+
+                if not url:
+                    results.append({"name": name, "url": url, "status": "invalid_url", "source": source})
                     continue
 
                 # Check if already downloaded
@@ -104,6 +331,7 @@ class SchemeDocumentDownloader:
                             "name": name,
                             "url": url,
                             "status": "already_downloaded",
+                            "source": existing.get("source") or source,
                             "local_path": existing["local_path"],
                             "size": existing.get("size", 0),
                         })
@@ -119,24 +347,30 @@ class SchemeDocumentDownloader:
                             "name": name,
                             "url": url,
                             "status": f"http_{response.status_code}",
+                            "source": source,
                             "is_webpage": True,
                         })
                         continue
 
                     content_type = response.headers.get("content-type", "")
+                    final_url = str(response.url)
+
+                    if not self._is_downloadable_payload(content_type, final_url):
+                        results.append(
+                            {
+                                "name": name,
+                                "url": url,
+                                "final_url": final_url,
+                                "status": "not_downloadable_payload",
+                                "source": source,
+                                "content_type": content_type,
+                            }
+                        )
+                        continue
+
                     content = response.content
 
-                    # Determine file extension
-                    if "pdf" in content_type or url.endswith(".pdf"):
-                        ext = ".pdf"
-                    elif "html" in content_type:
-                        ext = ".html"
-                    elif "image" in content_type:
-                        ext = ".png" if "png" in content_type else ".jpg"
-                    else:
-                        # Guess from URL or default to .html
-                        url_parts = url.rsplit(".", 1)
-                        ext = f".{url_parts[-1][:4]}" if len(url_parts) > 1 and len(url_parts[-1]) <= 4 else ".html"
+                    ext = self._candidate_file_extension(final_url, content_type)
 
                     safe_name = self._safe_filename(name)
                     filename = f"{safe_name}{ext}"
@@ -152,17 +386,22 @@ class SchemeDocumentDownloader:
                         "scheme": scheme_name,
                         "name": name,
                         "url": url,
+                        "final_url": final_url,
+                        "source": source,
                         "local_path": filepath,
                         "filename": filename,
                         "size": file_size,
                         "content_type": content_type,
+                        "is_form_candidate": self._looks_like_form_link(final_url, name),
                         "downloaded_at": datetime.now(timezone.utc).isoformat(),
                     }
 
                     results.append({
                         "name": name,
                         "url": url,
+                        "final_url": final_url,
                         "status": "downloaded",
+                        "source": source,
                         "local_path": filepath,
                         "size": file_size,
                         "content_type": content_type,
@@ -170,9 +409,9 @@ class SchemeDocumentDownloader:
                     logger.info(f"Downloaded: {name} ({file_size:,d} bytes) -> {filepath}")
 
                 except httpx.TimeoutException:
-                    results.append({"name": name, "url": url, "status": "timeout"})
+                    results.append({"name": name, "url": url, "status": "timeout", "source": source})
                 except Exception as e:
-                    results.append({"name": name, "url": url, "status": "error", "error": str(e)})
+                    results.append({"name": name, "url": url, "status": "error", "source": source, "error": str(e)})
 
         self._save_manifest()
 
@@ -180,16 +419,21 @@ class SchemeDocumentDownloader:
             "scheme": scheme_name,
             "scheme_dir": scheme_dir,
             "downloads": results,
+            "discovered_count": len([r for r in results if r.get("source") == "application_page_discovery"]),
             "success_count": len([r for r in results if r["status"] == "downloaded"]),
             "cached_count": len([r for r in results if r["status"] == "already_downloaded"]),
             "failed_count": len([r for r in results if r["status"] not in ("downloaded", "already_downloaded")]),
         }
 
-    async def download_all_schemes(self, force: bool = False) -> Dict:
-        """Download documents for ALL government schemes."""
+    async def download_all_schemes(
+        self,
+        force: bool = False,
+        schemes: Optional[List[dict]] = None,
+    ) -> Dict:
+        """Download documents for all provided schemes (or built-in fallback)."""
         from services.government_schemes_data import get_all_schemes
-        
-        all_schemes = get_all_schemes()
+
+        all_schemes = schemes if schemes is not None else get_all_schemes()
         results = []
         total_downloaded = 0
         total_cached = 0
@@ -271,8 +515,12 @@ class SchemeDocumentDownloader:
             return None
         
         if doc_name:
+            needle = doc_name.lower()
             for d in docs:
-                if doc_name.lower() in d.get("name", "").lower():
+                if (
+                    needle in d.get("name", "").lower()
+                    or needle in d.get("filename", "").lower()
+                ):
                     return d.get("local_path")
         
         # Return first available

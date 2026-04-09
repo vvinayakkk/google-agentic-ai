@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
@@ -9,6 +10,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/document_builder_service.dart';
+import 'official_form_preview_page.dart';
+import 'preview_download_screen.dart';
 import '../utils/document_scheme_map.dart';
 
 class SchemeDetailsPage extends ConsumerStatefulWidget {
@@ -335,10 +338,206 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  void _openBuildScreen(String docType) {
-    final sid = Uri.encodeComponent(_schemeId());
-    final dtype = Uri.encodeComponent(docType);
-    context.push('${RoutePaths.documentBuild}?scheme_id=$sid&doc_type=$dtype');
+  String _normalizeDocKey(String raw) {
+    return raw
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim();
+  }
+
+  int _docMatchScore(
+    String fileName, {
+    required String requiredDoc,
+    required String docType,
+  }) {
+    final normalizedName = _normalizeDocKey(fileName);
+    if (normalizedName.isEmpty) return 0;
+
+    final normalizedDoc = _normalizeDocKey(requiredDoc);
+    final normalizedType = _normalizeDocKey(docType);
+    var score = 0;
+
+    if (normalizedDoc.isNotEmpty) {
+      if (normalizedName == normalizedDoc) score += 80;
+      if (normalizedName.contains(normalizedDoc)) score += 60;
+      for (final token in normalizedDoc.split(' ')) {
+        if (token.length > 2 && normalizedName.contains(token)) {
+          score += 5;
+        }
+      }
+    }
+
+    if (normalizedType.isNotEmpty) {
+      if (normalizedName == normalizedType) score += 40;
+      if (normalizedName.contains(normalizedType)) score += 30;
+      for (final token in normalizedType.split(' ')) {
+        if (token.length > 2 && normalizedName.contains(token)) {
+          score += 3;
+        }
+      }
+    }
+
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.pdf')) score += 8;
+
+    return score;
+  }
+
+  Map<String, dynamic>? _pickBestDocForRequiredItem(
+    List<Map<String, dynamic>> docs, {
+    required String requiredDoc,
+    required String docType,
+  }) {
+    Map<String, dynamic>? best;
+    var bestScore = 0;
+
+    for (final doc in docs) {
+      final exists = doc['exists'];
+      if (exists is bool && !exists) continue;
+
+      final fileName = (doc['filename'] ?? doc['name'] ?? '')
+          .toString()
+          .trim();
+      if (fileName.isEmpty) continue;
+
+      final score = _docMatchScore(
+        fileName,
+        requiredDoc: requiredDoc,
+        docType: docType,
+      );
+      if (score > bestScore) {
+        bestScore = score;
+        best = doc;
+      }
+    }
+
+    // Keep direct-open behavior strict so wrong files are not shown.
+    return bestScore >= 20 ? best : null;
+  }
+
+  String _docTypeLabel(String name) {
+    final value = name.toLowerCase();
+    if (value.endsWith('.pdf')) return 'PDF';
+    if (value.endsWith('.docx')) return 'DOCX';
+    if (value.endsWith('.doc')) return 'DOC';
+    if (value.endsWith('.xlsx') || value.endsWith('.xls')) return 'XLS';
+    if (value.endsWith('.html') || value.endsWith('.htm')) return 'HTML';
+    return 'FILE';
+  }
+
+  String _firstOfficialSchemeUrl() {
+    final appUrl = (_scheme['application_url'] ?? '').toString().trim();
+    if (appUrl.isNotEmpty) return appUrl;
+
+    final links = _formDownloadItems();
+    if (links.isNotEmpty) {
+      return (links.first['url'] ?? '').trim();
+    }
+
+    return '';
+  }
+
+  Future<void> _sharePreviewFile(GeneratedDocumentFile file) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Official form downloaded from KisanKiAwaaz',
+        files: <XFile>[XFile(file.file.path)],
+      ),
+    );
+    if (!mounted) return;
+    context.showSnack('Document is ready to save/share from this sheet.');
+  }
+
+  Future<void> _openOfficialFormsHub({String? initialDocumentName}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PreviewDownloadScreen(
+          sessionId: 'scheme-${DateTime.now().millisecondsSinceEpoch}',
+          schemeId: _schemeId(),
+          schemeName:
+              (_scheme['short_name'] ?? _scheme['name'] ?? _schemeId())
+                  .toString(),
+          initialDocumentName: initialDocumentName,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openBuildScreen(String requiredDoc, String docType) async {
+    final key = _schemeLookupKey().trim();
+    if (key.isEmpty) {
+      context.showSnack('Scheme details are incomplete.', isError: true);
+      return;
+    }
+
+    final docService = ref.read(documentBuilderServiceProvider);
+    var docs = await docService.listSchemeDocumentsByScheme(key);
+    if (docs.isEmpty) {
+      await docService.downloadSchemeDocuments(key);
+      docs = await docService.listSchemeDocumentsByScheme(key);
+    }
+
+    if (!mounted) return;
+
+    final selected = _pickBestDocForRequiredItem(
+      docs,
+      requiredDoc: requiredDoc,
+      docType: docType,
+    );
+    if (selected == null) {
+      context.showSnack(
+        'Opening Official Forms Hub to pick the matching form.',
+      );
+      await _openOfficialFormsHub(initialDocumentName: requiredDoc);
+      return;
+    }
+
+    final docName = (selected['filename'] ?? selected['name'] ?? '')
+        .toString()
+        .trim();
+    if (docName.isEmpty) {
+      await _openOfficialFormsHub(initialDocumentName: requiredDoc);
+      return;
+    }
+
+    final file = await docService.downloadSchemeDocumentFile(
+      schemeKey: key,
+      docName: docName,
+    );
+
+    if (!mounted) return;
+    if (file == null) {
+      context.showSnack(
+        'Could not open direct preview. Opening Official Forms Hub instead.',
+      );
+      await _openOfficialFormsHub(initialDocumentName: requiredDoc);
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OfficialFormPreviewPage(
+          title: docName,
+          typeLabel: _docTypeLabel(docName),
+          file: file,
+          onAutofill: () async {
+            context.showSnack(
+              'Autofill helper is available in Official Forms Hub.',
+            );
+          },
+          onDownload: () async {
+            await _sharePreviewFile(file);
+          },
+          onOpenExternal: () async {
+            await _openExternalUrl(_firstOfficialSchemeUrl());
+          },
+          onOpenHub: () {
+            Navigator.of(context).pop();
+            _openOfficialFormsHub(initialDocumentName: docName);
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -510,7 +709,7 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                             else if (buildable != null)
                               TextButton(
                                 onPressed: () =>
-                                    _openBuildScreen(buildable.documentType),
+                                    _openBuildScreen(doc, buildable.documentType),
                                 child: const Text('Build Now'),
                               )
                             else

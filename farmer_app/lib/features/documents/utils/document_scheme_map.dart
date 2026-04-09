@@ -184,17 +184,24 @@ const List<String> kCoreReadinessDocs = <String>[
 
 BuildableDocumentDefinition? findBuildableDocumentForText(String text) {
   final needle = text.toLowerCase();
+  final looksLikeFormIntent =
+      needle.contains('form') ||
+      needle.contains('application') ||
+      needle.contains('registration') ||
+      needle.contains('enrol') ||
+      needle.contains('enroll');
+
+  if (!looksLikeFormIntent) {
+    // Common supporting docs (Aadhaar, bank passbook, land records, etc.)
+    // should not open synthetic build flows.
+    return null;
+  }
+
   for (final item in kBuildableDocuments) {
     final title = item.title.toLowerCase();
     if (title.contains(needle) || needle.contains(title)) {
       return item;
     }
-
-    final requiredHit = item.requiredDocs.any((d) {
-      final doc = d.toLowerCase();
-      return doc.contains(needle) || needle.contains(doc);
-    });
-    if (requiredHit) return item;
 
     final schemeHit = item.unlocksSchemes.any((s) {
       final scheme = s.toLowerCase();

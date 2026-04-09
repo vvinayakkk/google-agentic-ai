@@ -12,6 +12,7 @@ import uuid
 import os
 import json
 import logging
+import html
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
@@ -132,6 +133,8 @@ class DocumentBuilderService:
             "scheme_name": scheme.get("name", scheme_name or ""),
             "scheme_short_name": scheme.get("short_name", ""),
             "scheme_category": scheme.get("category", ""),
+            "application_url": scheme.get("application_url", ""),
+            "form_download_urls": scheme.get("form_download_urls", []),
             "preferred_format": (preferred_format or "html").lower(),
             "form_fields": form_fields,
             "filled_fields": pre_filled,
@@ -235,6 +238,8 @@ class DocumentBuilderService:
                 session_id=session_id,
                 scheme_name=session.get("scheme_name", ""),
                 filled_fields=filled,
+                application_url=session.get("application_url", ""),
+                form_download_urls=session.get("form_download_urls", []),
                 preferred_format=session.get("preferred_format", "html"),
             )
             document_url = doc_result.get("download_url", "")
@@ -481,6 +486,8 @@ Return ONLY the JSON, no markdown, no explanation."""
             session_id=session_id,
             scheme_name=session.get("scheme_name", ""),
             filled_fields=session.get("filled_fields", {}),
+            application_url=session.get("application_url", ""),
+            form_download_urls=session.get("form_download_urls", []),
             preferred_format=(preferred_format or session.get("preferred_format") or "html"),
         )
 
@@ -544,14 +551,21 @@ Return ONLY the JSON, no markdown, no explanation."""
         session_id: str,
         scheme_name: str,
         filled_fields: dict,
+        application_url: str = "",
+        form_download_urls: list | None = None,
         preferred_format: str = "html",
     ) -> dict:
-        """Generate a filled PDF/HTML application document."""
+        """Generate a neutral assist sheet for filling official forms."""
         output_dir = "/tmp/generated_documents"
         os.makedirs(output_dir, exist_ok=True)
         
-        # Generate HTML document
-        html_content = DocumentBuilderService._generate_html(scheme_name, filled_fields)
+        # Generate HTML assistant sheet (not a synthetic official form).
+        html_content = DocumentBuilderService._generate_html(
+            scheme_name,
+            filled_fields,
+            application_url=application_url,
+            form_download_urls=form_download_urls or [],
+        )
         
         filename = f"application_{session_id[:8]}_{datetime.now().strftime('%Y%m%d')}.html"
         filepath = os.path.join(output_dir, filename)
@@ -569,82 +583,109 @@ Return ONLY the JSON, no markdown, no explanation."""
         }
 
     @staticmethod
-    def _generate_html(scheme_name: str, fields: dict) -> str:
-        """Generate filled HTML application form."""
+    def _generate_html(
+        scheme_name: str,
+        fields: dict,
+        application_url: str = "",
+        form_download_urls: list | None = None,
+    ) -> str:
+        """Generate filled HTML helper sheet for official-form submission."""
+        def _coerce_form_links(raw_links: list | None) -> List[dict]:
+            out: List[dict] = []
+            for item in raw_links or []:
+                if isinstance(item, dict):
+                    url = str(item.get("url") or item.get("link") or "").strip()
+                    if not url:
+                        continue
+                    name = str(item.get("name") or item.get("title") or "Official Form").strip() or "Official Form"
+                    out.append({"name": name, "url": url})
+                elif isinstance(item, str):
+                    url = item.strip()
+                    if url:
+                        out.append({"name": "Official Form", "url": url})
+            return out
+
+        app_url = str(application_url or "").strip()
+        links_input = form_download_urls or []
+
         rows = ""
         for key, value in fields.items():
-            label = key.replace("_", " ").title()
+            if str(key).startswith("__meta_"):
+                continue
+            label = html.escape(key.replace("_", " ").title())
+            safe_val = html.escape(str(value))
             rows += f"""
             <tr>
                 <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 40%; background: #f9f9f9;">{label}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">{value}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{safe_val}</td>
             </tr>"""
+
+        links_html = ""
+        normalized_links = _coerce_form_links(links_input)
+        for item in normalized_links:
+            name = html.escape(item["name"])
+            url = html.escape(item["url"])
+            links_html += f'<li style="margin-bottom: 6px;"><a href="{url}" target="_blank" rel="noopener noreferrer">{name}</a><br/><span style="font-size: 12px; color: #4b5563;">{url}</span></li>'
+
+        if not links_html:
+            links_html = "<li>No official downloadable form URLs are mapped yet for this scheme.</li>"
+
+        escaped_scheme = html.escape(scheme_name)
+        escaped_app_url = html.escape(app_url)
+        app_portal_html = (
+            f'<p><a href="{escaped_app_url}" target="_blank" rel="noopener noreferrer">{escaped_app_url}</a></p>'
+            if escaped_app_url
+            else "<p>Application portal URL is not mapped yet.</p>"
+        )
 
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application Form - {scheme_name}</title>
+    <title>Official Form Assist Sheet - {escaped_scheme}</title>
     <style>
         body {{ font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }}
-        .header {{ text-align: center; border-bottom: 3px solid #1a5f2a; padding-bottom: 20px; margin-bottom: 30px; }}
-        .header img {{ width: 80px; }}
-        .header h1 {{ color: #1a5f2a; font-size: 20px; margin: 10px 0 5px; }}
-        .header h2 {{ color: #333; font-size: 16px; margin: 5px 0; font-weight: normal; }}
-        .govt-text {{ color: #666; font-size: 14px; }}
+        .header {{ border-bottom: 3px solid #0f766e; padding-bottom: 16px; margin-bottom: 24px; }}
+        .header h1 {{ color: #0f766e; font-size: 20px; margin: 8px 0 5px; }}
+        .header h2 {{ color: #111827; font-size: 16px; margin: 5px 0; font-weight: 600; }}
+        .hint {{ color: #4b5563; font-size: 13px; }}
         table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        .section-title {{ background: #1a5f2a; color: white; padding: 10px; font-size: 16px; font-weight: bold; margin-top: 20px; }}
+        .section-title {{ background: #0f766e; color: white; padding: 10px; font-size: 16px; font-weight: bold; margin-top: 20px; }}
         .footer {{ margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; }}
-        .signature {{ margin-top: 60px; display: flex; justify-content: space-between; }}
-        .signature div {{ text-align: center; }}
-        .sign-line {{ border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px; }}
         @media print {{ body {{ margin: 0; padding: 15px; }} .no-print {{ display: none; }} }}
     </style>
 </head>
 <body>
-    <div class="no-print" style="background: #e8f5e9; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-        <button onclick="window.print()" style="background: #1a5f2a; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 5px;">🖨️ Print / Save as PDF</button>
-        <span style="margin-left: 10px;">Generated by KisanKiAwaaz Document Builder</span>
+    <div class="no-print" style="background: #ecfeff; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+        <button onclick="window.print()" style="background: #0f766e; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 5px;">Print / Save</button>
+        <span style="margin-left: 10px;">Official Form Assist Sheet</span>
     </div>
     
     <div class="header">
-        <p class="govt-text">भारत सरकार / Government of India</p>
-        <p class="govt-text">कृषि एवं किसान कल्याण मंत्रालय / Ministry of Agriculture & Farmers Welfare</p>
-        <h1>आवेदन पत्र / Application Form</h1>
-        <h2>{scheme_name}</h2>
-        <p style="color: #666; font-size: 12px;">Application ID: APP-{datetime.now().strftime('%Y%m%d%H%M%S')}</p>
+        <h1>Official Form Assist Sheet</h1>
+        <h2>{escaped_scheme}</h2>
+        <p class="hint">Use the links below to open/download the official government application form. This sheet is a helper for pre-filled values only.</p>
+        <p style="color: #666; font-size: 12px;">Session ID: {session_id}</p>
         <p style="color: #666; font-size: 12px;">Date: {datetime.now().strftime('%d/%m/%Y')}</p>
     </div>
 
-    <div class="section-title">आवेदक विवरण / Applicant Details</div>
+    <div class="section-title">Official Application Portal</div>
+    {app_portal_html}
+
+    <div class="section-title">Official Form Links</div>
+    <ul>
+        {links_html}
+    </ul>
+
+    <div class="section-title">Pre-Filled Data (Copy Into Official Form)</div>
     <table>
         {rows}
     </table>
 
-    <div class="section-title">घोषणा / Declaration</div>
-    <p style="font-size: 13px; line-height: 1.6;">
-        मैं एतद्द्वारा घोषणा करता/करती हूँ कि ऊपर दी गई सभी जानकारी मेरी सर्वोत्तम जानकारी के अनुसार सत्य और सही है।
-        मैं समझता/समझती हूँ कि यदि कोई जानकारी असत्य पाई जाती है, तो मेरा आवेदन खारिज किया जा सकता है।
-        <br><br>
-        I hereby declare that all the information provided above is true and correct to the best of my knowledge and belief.
-        I understand that if any information is found to be false, my application may be rejected.
-    </p>
-
-    <div class="signature">
-        <div>
-            <div class="sign-line">आवेदक के हस्ताक्षर / Applicant's Signature</div>
-            <p style="font-size: 12px;">{fields.get('farmer_name', fields.get('applicant_name', ''))}</p>
-        </div>
-        <div>
-            <div class="sign-line">तारीख / Date</div>
-            <p style="font-size: 12px;">{datetime.now().strftime('%d/%m/%Y')}</p>
-        </div>
-    </div>
-
     <div class="footer" style="font-size: 11px; color: #666;">
-        <p><strong>Note:</strong> This is a computer-generated application form. Please attach all required supporting documents.</p>
-        <p>Generated by KisanKiAwaaz - किसान की आवाज़ | Digital Agriculture Platform</p>
+        <p><strong>Important:</strong> This is not an official government form. Submit only via official portal/form links above.</p>
+        <p>Generated by KisanKiAwaaz Document Builder Assistant.</p>
     </div>
 </body>
 </html>"""
@@ -674,7 +715,9 @@ Return ONLY the JSON, no markdown, no explanation."""
         result = await DocumentBuilderService._generate_document(
             session_id=session_id,
             scheme_name=session.get("scheme_name", ""),
-            filled_fields=session.get("filled_fields", {}),
+            filled_fields=session.get("filled_fields", {}) or {},
+            application_url=session.get("application_url", ""),
+            form_download_urls=session.get("form_download_urls", []),
             preferred_format=session.get("preferred_format", "html"),
         )
         

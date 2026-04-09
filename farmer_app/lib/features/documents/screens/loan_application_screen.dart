@@ -208,7 +208,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
     });
   }
 
-  Future<void> _generateDocument() async {
+  Future<void> _openOfficialFormsHub() async {
     if (!mounted) return;
     final sid = _sessionId;
     if (sid == null || sid.isEmpty) {
@@ -617,8 +617,8 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: _generateDocument,
-            child: const Text('Generate Document'),
+            onPressed: _openOfficialFormsHub,
+            child: const Text('Open Official Forms'),
           ),
         ),
         const SizedBox(height: 8),

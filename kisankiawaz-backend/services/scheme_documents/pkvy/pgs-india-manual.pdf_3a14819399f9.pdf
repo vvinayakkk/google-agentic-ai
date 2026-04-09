@@ -6,9 +6,9 @@
 <title>PGSI - Home</title>
 <link href="/Default/assets/front/css/bootstrap.min.css" rel="stylesheet" type="text/css">
 <link href="/Default/assets/front/css/default.css" rel="stylesheet" type="text/css">
-<link href="/Default/assets/front/css/style.css?1772530251" rel="stylesheet" type="text/css">
+<link href="/Default/assets/front/css/style.css?1775739533" rel="stylesheet" type="text/css">
 <link href="/Default/assets/front/css/plugin.css" rel="stylesheet" type="text/css">
-<link href="/Default/assets/front/css/custom.css?1772530251" rel="stylesheet" type="text/css">
+<link href="/Default/assets/front/css/custom.css?1775739533" rel="stylesheet" type="text/css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="/Default/assets/front/css/owl.carousel.min.css">
 <link rel="stylesheet" href="/Default/assets/front/css/jquery.fancybox.min.css">
@@ -21,18 +21,16 @@
 <style>
 #onloaddiv{display:none;}
 #onloaddiv.expand{display:flex; background:rgba(0,0,0,0.5); position:fixed; top:0; left:0; height:100%; width:100%;z-index:9999999;justify-content:center;align-items:center;  }
-.popupdata {background:white; padding:10px; position:relative; width:100%; max-width:500px;}
+.popupdata {background:white; padding:10px; position:relative; width:100%; max-width:810px;}
 .popupdata img {width:100%;}
 button#closepop{position:absolute; top:-10px; right:-5px; background:white; padding:5px 10px;}
 </style>
-<!--
 <div id="onloaddiv">
 <div class="popupdata">
-<a href="https://pmevents.ncog.gov.in/" target="_blank"><img src="/uploads/banners/PM_KISAN_Creative_2.jpeg" alt="Pm Kisan Events" /> </a>
+<a href="javascript:void(0);"><img src="/uploads/banners/PM_KISAN_Creative_3.jpeg" alt="Pm Kisan Events" /> </a>
 <button id="closepop">X</button>
 </div>
 </div>
--->
 <div class="main-banner-bg">
     <header class="main_header_area">
     <div class="top-bar">
@@ -254,7 +252,7 @@ button#closepop{position:absolute; top:-10px; right:-5px; background:white; padd
                            <div class="ftrRight">
                               <ul>
                                  <li><span><img src="/Default/assets/front/images/envelope.png" alt="img"><a href="">nbdc@nic.in </a></li>
-                                 <li><span><img src="/Default/assets/front/images/globe-icon.png" alt="img"><a href="https://nconf.dac.gov.in" target="_blank">nconf.dac.gov.in</a></li>
+                                 <li><span><img src="/Default/assets/front/images/globe-icon.png" alt="img"><a href="https://nconf.dac.gov.in" target="_blank">nconf.dac.gov.in </a></li>
                               </ul>
                            </div>
                         </div>
@@ -300,8 +298,8 @@ button#closepop{position:absolute; top:-10px; right:-5px; background:white; padd
                
                </div>
                <div class="col-md-3 site-visitors text-right">
-                                    <p>Visitors: 36470217</a></p>
-                  <p>Last updated on: 19 Feb, 2026</p>
+                                    <p>Visitors: 39940609</a></p>
+                  <p>Last updated on:- 08 Apr, 2026</p>
                </div>
             </div>
          </div>

@@ -298,6 +298,18 @@ function __doPostBack(eventTarget, eventArgument) {
         mm_menu_1011090347_0_4.menuLiteBgColor = '#E0C265';
         mm_menu_1011090347_0_4.menuBorderBgColor = '#E0C265';
 
+        //new menu added for financial literacy week 2026
+        window.mm_menu_0710165506_5_15 = new Menu("<font Face='mangal' size='2px'>Financial Literacy Week 2026</font>", 320, 20, "AkrutiDevWebRbi, arial, verdana, helvetica", 18, "#000000", "#000000", "#EFDFAF", "#FBF4E1", "left", "middle", 3, 0, 1000, -5, 7, true, true, true, 0, true, false);
+        mm_menu_0710165506_5_15.addMenuItem("<font Face='mangal' size='2px'>Basics of Know Your Customer (KYC) </font>", "location='../Scripts/FLW26_BasicsKnowYourCustomer.aspx'");
+        mm_menu_0710165506_5_15.addMenuItem("<font Face='mangal' size='2px'>Central KYC Registry (CKYC)</font>", "location='../Scripts/FLW26_CentralKYCRegistry.aspx'");
+        mm_menu_0710165506_5_15.addMenuItem("<font Face='mangal' size='2px'>Account Hygiene and Discipline</font>", "location='../Scripts/FLW26_AccountHygieneDiscipline.aspx'");
+        mm_menu_0710165506_5_15.hideOnMouseOut = true;
+        mm_menu_0710165506_5_15.childMenuIcon = "../images/arrow.gif";
+        mm_menu_0710165506_5_15.bgColor = '#8D7016';
+        mm_menu_0710165506_5_15.menuBorder = 1;
+        mm_menu_0710165506_5_15.menuLiteBgColor = '#E0C265';
+        mm_menu_0710165506_5_15.menuBorderBgColor = '#E0C265';
+
         //new menu added for financial literacy week 2025
         window.mm_menu_0710165506_5_14 = new Menu("<font Face='mangal' size='2px'>Financial Literacy Week 2025</font>", 320, 20, "AkrutiDevWebRbi, arial, verdana, helvetica", 18, "#000000", "#000000", "#EFDFAF", "#FBF4E1", "left", "middle", 3, 0, 1000, -5, 7, true, true, true, 0, true, false);
         mm_menu_0710165506_5_14.addMenuItem("<font Face='mangal' size='2px'>Financial Planning</font>", "location='../Scripts/FLW25_FinancialPlanning.aspx'");
@@ -423,6 +435,7 @@ function __doPostBack(eventTarget, eventArgument) {
 	//mm_menu_0710165506_5.addMenuItem("Paisa Bolta Hai", "location='https://paisaboltahai.rbi.org.in/'");
 	//mm_menu_0710165506_5.addMenuItem(mm_menu_0710165506_5_6);
 	mm_menu_0710165506_5.addMenuItem(mm_menu_1011090347_0_4);
+	mm_menu_0710165506_5.addMenuItem(mm_menu_0710165506_5_15);
 	mm_menu_0710165506_5.addMenuItem(mm_menu_0710165506_5_14);
 	mm_menu_0710165506_5.addMenuItem(mm_menu_0710165506_5_13);
 	mm_menu_0710165506_5.addMenuItem(mm_menu_0710165506_5_12);
@@ -746,7 +759,7 @@ function validatePeriodSearch()
 	}
 	else
 	{ 
-		var getSysdate = '03/03/2026';
+		var getSysdate = '09/04/2026';
 		var getTodate=document.getElementById("leftbar_strTo").value;
 		var getFromdate=document.getElementById("leftbar_strFrom").value;
 		var x;
@@ -1037,7 +1050,7 @@ function validatePeriodSearch()
 	}
 	</Script>
 </HTML>
-<script id="f5_cspm">(function(){var f5_cspm={f5_p:'KCKAJBGJGHMIPCDIMGEBGCEEELGONACCBBHEKBELPHAFBIADAGOCFCKALEEBBGEAIKBBLLOHAAGNCDFAKIAAKEEHAAAAGDDKBFJNKLAPAGACOAHCDNLOAOLMLANMGBDI',setCharAt:function(str,index,chr){if(index>str.length-1)return str;return str.substr(0,index)+chr+str.substr(index+1);},get_byte:function(str,i){var s=(i/16)|0;i=(i&15);s=s*32;return((str.charCodeAt(i+16+s)-65)<<4)|(str.charCodeAt(i+s)-65);},set_byte:function(str,i,b){var s=(i/16)|0;i=(i&15);s=s*32;str=f5_cspm.setCharAt(str,(i+16+s),String.fromCharCode((b>>4)+65));str=f5_cspm.setCharAt(str,(i+s),String.fromCharCode((b&15)+65));return str;},set_latency:function(str,latency){latency=latency&0xffff;str=f5_cspm.set_byte(str,40,(latency>>8));str=f5_cspm.set_byte(str,41,(latency&0xff));str=f5_cspm.set_byte(str,35,2);return str;},wait_perf_data:function(){try{var wp=window.performance.timing;if(wp.loadEventEnd>0){var res=wp.loadEventEnd-wp.navigationStart;if(res<60001){var cookie_val=f5_cspm.set_latency(f5_cspm.f5_p,res);window.document.cookie='f5avr0184420833aaaaaaaaaaaaaaaa_cspm_='+encodeURIComponent(cookie_val)+';path=/;'+'';}
+<script id="f5_cspm">(function(){var f5_cspm={f5_p:'ANJAPDEABHFPIFNFOGDODHINBDFFODFOMGPHJEDDMBAJBMBMCMMJPAPAOGEHAMMNMKOBNCIDAAMLEPBMDPKAGFBDAAGMGHLIPFIMDHDHFONGKOEIOFNKOGNLHJBHGNML',setCharAt:function(str,index,chr){if(index>str.length-1)return str;return str.substr(0,index)+chr+str.substr(index+1);},get_byte:function(str,i){var s=(i/16)|0;i=(i&15);s=s*32;return((str.charCodeAt(i+16+s)-65)<<4)|(str.charCodeAt(i+s)-65);},set_byte:function(str,i,b){var s=(i/16)|0;i=(i&15);s=s*32;str=f5_cspm.setCharAt(str,(i+16+s),String.fromCharCode((b>>4)+65));str=f5_cspm.setCharAt(str,(i+s),String.fromCharCode((b&15)+65));return str;},set_latency:function(str,latency){latency=latency&0xffff;str=f5_cspm.set_byte(str,40,(latency>>8));str=f5_cspm.set_byte(str,41,(latency&0xff));str=f5_cspm.set_byte(str,35,2);return str;},wait_perf_data:function(){try{var wp=window.performance.timing;if(wp.loadEventEnd>0){var res=wp.loadEventEnd-wp.navigationStart;if(res<60001){var cookie_val=f5_cspm.set_latency(f5_cspm.f5_p,res);window.document.cookie='f5avr0184420833aaaaaaaaaaaaaaaa_cspm_='+encodeURIComponent(cookie_val)+';path=/;'+'';}
 return;}}
 catch(err){return;}
 setTimeout(f5_cspm.wait_perf_data,100);return;},go:function(){var chunk=window.document.cookie.split(/\s*;\s*/);for(var i=0;i<chunk.length;++i){var pair=chunk[i].split(/\s*=\s*/);if(pair[0]=='f5_cspm'&&pair[1]=='1234')

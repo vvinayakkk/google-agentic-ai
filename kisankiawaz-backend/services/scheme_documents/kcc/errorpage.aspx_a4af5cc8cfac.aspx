@@ -8,7 +8,7 @@
 <body class="accessdenied">
     <form method="post" action="./ErrorPage.aspx?status=404" id="form1">
 <div class="aspNetHidden">
-<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="2MXAYIBO9rIFC/LZt0pHpPqedSpj5422VGo7WpCEjGL5eQSg2hI73W8KQIm+UNiA4dLnNdlNLovi+iCRjpUZOrKD6sgVJWr7ha7JHLvpEe0=" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="H4+q/qrewYDSlrehb/b7mGqLA6IpNt55dCX8XRiDbyuCzt+gcjvh8JtJGB9Yl8eZj9CWrXYyc30NHVN2KwtRL+ys4+Ynd9XMYTQgKt+RnP0=" />
 </div>
 
 <div class="aspNetHidden">

@@ -12,8 +12,8 @@ abstract final class AppColors {
   static const success = Color(0xFF22C55E);
   static const danger = Color(0xFFFF5722);
   static const warning = Color(0xFFF59E0B);
-  static const info = Color(0xFF3B82F6);
-  static const accent = Color(0xFFA855F7);
+  static const info = Color(0xFF16A34A);
+  static const accent = Color(0xFF34D399);
 
   // ── Light theme ────────────────────────────────────────
   static const lightBackground = Color(0xFFC8E6C9);
