@@ -13,6 +13,23 @@ warn() { printf "[deploy][warn] %s\n" "$*"; }
 fail() { printf "[deploy][error] %s\n" "$*" >&2; exit 1; }
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
+is_port_listening() {
+  local port="$1"
+  if command_exists lsof; then
+    lsof -iTCP:"$port" -sTCP:LISTEN -n -P >/dev/null 2>&1
+    return $?
+  fi
+  if command_exists ss; then
+    ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]${port}$"
+    return $?
+  fi
+  if command_exists netstat; then
+    netstat -an 2>/dev/null | grep -E "[\.:]${port}[[:space:]].*LISTEN" >/dev/null
+    return $?
+  fi
+  return 1
+}
+
 TUNNEL_URL=""
 
 load_backend_env() {
@@ -54,8 +71,40 @@ start_backend() {
   local compose_cmd="$1"
   ensure_env_file "$ROOT/kisankiawaz-backend/.env.example" "$ROOT/kisankiawaz-backend/.env"
   ensure_base_image
-  info "Starting Docker stack (nginx + 12 services + infra)..."
-  (cd "$ROOT" && $compose_cmd up -d --build)
+
+  local all_services=() running_services=() missing_services=() stopped_services=()
+  local svc container_id
+
+  mapfile -t all_services < <(cd "$ROOT" && $compose_cmd config --services)
+  mapfile -t running_services < <(cd "$ROOT" && $compose_cmd ps --services --status running 2>/dev/null || true)
+
+  for svc in "${all_services[@]}"; do
+    if printf '%s\n' "${running_services[@]}" | grep -Fxq "$svc"; then
+      continue
+    fi
+
+    container_id="$(cd "$ROOT" && $compose_cmd ps -aq "$svc" 2>/dev/null | head -n 1 || true)"
+    if [ -n "$container_id" ]; then
+      stopped_services+=("$svc")
+    else
+      missing_services+=("$svc")
+    fi
+  done
+
+  if [ "${#missing_services[@]}" -eq 0 ] && [ "${#stopped_services[@]}" -eq 0 ]; then
+    info "Docker stack already running. Skipping backend recreate/rebuild."
+    return
+  fi
+
+  if [ "${#missing_services[@]}" -gt 0 ]; then
+    info "Creating missing backend services (no forced rebuild): ${missing_services[*]}"
+    (cd "$ROOT" && $compose_cmd up -d "${missing_services[@]}")
+  fi
+
+  if [ "${#stopped_services[@]}" -gt 0 ]; then
+    info "Starting existing stopped backend services: ${stopped_services[*]}"
+    (cd "$ROOT" && $compose_cmd start "${stopped_services[@]}")
+  fi
 }
 
 start_admin_dashboard() {
@@ -69,6 +118,8 @@ start_admin_dashboard() {
   local pid_file="$LOG_DIR/admin-dashboard.pid"
   if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
     info "Admin dashboard already running (pid $(cat "$pid_file")). Skipping start."
+  elif is_port_listening "$port"; then
+    info "Admin dashboard appears to be running on port ${port}. Skipping start."
   else
     info "Starting admin dashboard on ${host}:${port}..."
     (cd "$ROOT/admin-dashboard" && nohup npm run dev -- --host "$host" --port "$port" > "$LOG_DIR/admin-dashboard.log" 2>&1 & echo $! > "$pid_file")
