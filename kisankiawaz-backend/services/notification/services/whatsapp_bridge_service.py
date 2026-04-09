@@ -30,8 +30,8 @@ class WhatsAppBridgeService:
 
     @staticmethod
     def _send_thinking_enabled() -> bool:
-        raw = str(os.getenv("WHATSAPP_BRIDGE_SEND_THINKING", "1")).strip().lower()
-        return raw in {"1", "true", "yes"}
+        # Keep WhatsApp responses direct: never send internal thinking text.
+        return False
 
     @staticmethod
     def _send_action_cards_enabled() -> bool:
@@ -426,6 +426,34 @@ class WhatsAppBridgeService:
         return "\n".join(lines)
 
     @staticmethod
+    def _clean_agent_answer(raw_text: str) -> str:
+        text = str(raw_text or "").strip()
+        if not text:
+            return ""
+
+        # If merged output contains an explicit final section, keep only that.
+        final_marker = re.search(r"live-validated\s+final\s+answer\s*:\s*", text, flags=re.IGNORECASE)
+        if final_marker:
+            tail = text[final_marker.end():].strip()
+            if tail:
+                text = tail
+
+        # Remove known heading lines if they leak into the final payload.
+        cleaned_lines: list[str] = []
+        for line in text.splitlines():
+            line_clean = line.strip()
+            if re.fullmatch(r"quick\s+snapshot\s*\(db/context\)\s*:?", line_clean, flags=re.IGNORECASE):
+                continue
+            if re.fullmatch(r"live-validated\s+final\s+answer\s*:?", line_clean, flags=re.IGNORECASE):
+                continue
+            cleaned_lines.append(line)
+
+        cleaned = "\n".join(cleaned_lines).strip()
+        if cleaned.lower().startswith("quick snapshot (db/context):"):
+            cleaned = cleaned[len("quick snapshot (db/context):"):].strip()
+        return cleaned
+
+    @staticmethod
     async def _send_multipart_whatsapp(
         client: Client,
         *,
@@ -664,12 +692,15 @@ class WhatsAppBridgeService:
             return
 
         live_result = finalize.get("result") if isinstance(finalize.get("result"), dict) else {}
-        final_text = (
-            str(finalize.get("merged_response") or "").strip()
-            or str(finalize.get("final_response") or "").strip()
+        final_text = WhatsAppBridgeService._clean_agent_answer(
+            str(finalize.get("final_response") or "").strip()
             or str(live_result.get("response") or "").strip()
-            or str(prepare.get("partial_response") or "").strip()
+            or str(finalize.get("merged_response") or "").strip()
         )
+        if not final_text:
+            final_text = WhatsAppBridgeService._clean_agent_answer(
+                str(prepare.get("partial_response") or "").strip()
+            )
         if final_text:
             outgoing.append(final_text)
 
