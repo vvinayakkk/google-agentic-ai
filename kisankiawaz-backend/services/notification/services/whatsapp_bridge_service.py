@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import contextlib
 import os
 import re
 from datetime import datetime, timezone
@@ -108,6 +110,55 @@ class WhatsAppBridgeService:
         return max(120, value)
 
     @staticmethod
+    def _voice_http_timeout_seconds() -> float:
+        try:
+            value = float(os.getenv("WHATSAPP_BRIDGE_VOICE_HTTP_TIMEOUT_SECONDS", "35"))
+        except Exception:
+            value = 35.0
+        return max(8.0, min(value, 90.0))
+
+    @staticmethod
+    def _voice_media_ttl_seconds() -> int:
+        try:
+            value = int(os.getenv("WHATSAPP_BRIDGE_VOICE_MEDIA_TTL_SECONDS", "900"))
+        except Exception:
+            value = 900
+        return max(120, value)
+
+    @staticmethod
+    def _voice_reply_enabled() -> bool:
+        raw = str(os.getenv("WHATSAPP_BRIDGE_VOICE_REPLY_ENABLED", "1")).strip().lower()
+        return raw in {"1", "true", "yes"}
+
+    @staticmethod
+    def _prefer_ogg_audio() -> bool:
+        raw = str(os.getenv("WHATSAPP_BRIDGE_PREFER_OGG_AUDIO", "1")).strip().lower()
+        return raw in {"1", "true", "yes"}
+
+    @staticmethod
+    def _ffmpeg_timeout_seconds() -> float:
+        try:
+            value = float(os.getenv("WHATSAPP_BRIDGE_FFMPEG_TIMEOUT_SECONDS", "20"))
+        except Exception:
+            value = 20.0
+        return max(3.0, min(value, 60.0))
+
+    @staticmethod
+    def _audio_text_backup_enabled() -> bool:
+        raw = str(os.getenv("WHATSAPP_BRIDGE_AUDIO_TEXT_BACKUP_ENABLED", "1")).strip().lower()
+        return raw in {"1", "true", "yes"}
+
+    @staticmethod
+    def _voice_tts_speaker() -> str:
+        speaker = str(os.getenv("WHATSAPP_BRIDGE_VOICE_TTS_SPEAKER", "anushka")).strip()
+        return speaker or "anushka"
+
+    @staticmethod
+    def _public_base_url_default() -> str:
+        raw = str(os.getenv("WHATSAPP_BRIDGE_PUBLIC_BASE_URL", "")).strip()
+        return raw.rstrip("/")
+
+    @staticmethod
     def _binding_cache_key(phone: str) -> str:
         normalized = WhatsAppBridgeService._normalize_phone(phone)
         return f"wa:user:binding:{normalized}"
@@ -116,6 +167,14 @@ class WhatsAppBridgeService:
     def _pending_query_key(phone: str) -> str:
         normalized = WhatsAppBridgeService._normalize_phone(phone)
         return f"wa:auth:pending_query:{normalized}"
+
+    @staticmethod
+    def _voice_media_key(media_id: str) -> str:
+        return f"wa:voice:media:{media_id}"
+
+    @staticmethod
+    def _voice_media_content_type_key(media_id: str) -> str:
+        return f"wa:voice:media:content_type:{media_id}"
 
     @staticmethod
     def _normalize_phone(raw: str | None) -> str:
@@ -372,13 +431,329 @@ class WhatsAppBridgeService:
         return session_id
 
     @staticmethod
+    def _is_audio_media(content_type: str | None) -> bool:
+        ctype = str(content_type or "").strip().lower()
+        return bool(ctype) and ctype.startswith("audio/")
+
+    @staticmethod
+    def _guess_audio_filename(content_type: str | None) -> str:
+        ctype = str(content_type or "").strip().lower()
+        if "mpeg" in ctype or "mp3" in ctype:
+            return "voice_note.mp3"
+        if "ogg" in ctype:
+            return "voice_note.ogg"
+        if "webm" in ctype:
+            return "voice_note.webm"
+        if "wav" in ctype:
+            return "voice_note.wav"
+        return "voice_note.audio"
+
+    @staticmethod
+    def _normalize_tts_language(lang: str) -> str:
+        raw = str(lang or "").strip().lower().replace("_", "-")
+        if not raw:
+            return "hi-IN"
+        mapping = {
+            "hi": "hi-IN",
+            "hindi": "hi-IN",
+            "en": "en-IN",
+            "english": "en-IN",
+            "mr": "mr-IN",
+            "bn": "bn-IN",
+            "gu": "gu-IN",
+            "kn": "kn-IN",
+            "ml": "ml-IN",
+            "od": "od-IN",
+            "or": "od-IN",
+            "pa": "pa-IN",
+            "ta": "ta-IN",
+            "te": "te-IN",
+            "hinglish": "hi-IN",
+        }
+        if raw in mapping:
+            return mapping[raw]
+        if re.match(r"^[a-z]{2,3}-[A-Za-z]{2,3}$", raw):
+            left, right = raw.split("-", 1)
+            return f"{left}-{right.upper()}"
+        return "hi-IN"
+
+    @staticmethod
+    def _normalize_stt_language(lang: str) -> str:
+        raw = str(lang or "").strip().lower().replace("_", "-")
+        if raw in {"", "auto", "unknown", "detect"}:
+            return "unknown"
+
+        mapping = {
+            "hi": "hi-IN",
+            "hindi": "hi-IN",
+            "en": "en-IN",
+            "english": "en-IN",
+            "bn": "bn-IN",
+            "kn": "kn-IN",
+            "ml": "ml-IN",
+            "mr": "mr-IN",
+            "od": "od-IN",
+            "or": "od-IN",
+            "pa": "pa-IN",
+            "ta": "ta-IN",
+            "te": "te-IN",
+            "gu": "gu-IN",
+            "as": "as-IN",
+            "ur": "ur-IN",
+            "ne": "ne-IN",
+            "hinglish": "hi-IN",
+        }
+        if raw in mapping:
+            return mapping[raw]
+        if re.match(r"^[a-z]{2,3}-[A-Za-z]{2,3}$", raw):
+            left, right = raw.split("-", 1)
+            return f"{left}-{right.upper()}"
+        return "unknown"
+
+    @staticmethod
+    def _resolve_public_base_url(public_base_url: str | None) -> str:
+        from_arg = str(public_base_url or "").strip().rstrip("/")
+        if from_arg:
+            return from_arg
+        from_env = WhatsAppBridgeService._public_base_url_default()
+        if from_env:
+            return from_env
+        settings = get_settings()
+        return str(settings.NOTIFICATION_SERVICE_URL or "").strip().rstrip("/")
+
+    @staticmethod
+    def _detect_audio_content_type(audio_bytes: bytes) -> str:
+        data = bytes(audio_bytes or b"")
+        if data.startswith(b"RIFF"):
+            return "audio/wav"
+        if data.startswith(b"OggS"):
+            return "audio/ogg"
+        if data.startswith(b"ID3"):
+            return "audio/mpeg"
+        if len(data) >= 2 and data[0] == 0xFF and (data[1] & 0xE0) == 0xE0:
+            return "audio/mpeg"
+        return "application/octet-stream"
+
+    @staticmethod
+    async def _convert_wav_to_ogg_opus(audio_bytes: bytes) -> bytes:
+        data = bytes(audio_bytes or b"")
+        if not data or not data.startswith(b"RIFF"):
+            return b""
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                "pipe:0",
+                "-vn",
+                "-c:a",
+                "libopus",
+                "-b:a",
+                "24k",
+                "-vbr",
+                "on",
+                "-application",
+                "audio",
+                "-f",
+                "ogg",
+                "pipe:1",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            logger.warning("ffmpeg not found; cannot convert WAV to OGG for WhatsApp")
+            return b""
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Unable to start ffmpeg for audio conversion: {exc}")
+            return b""
+
+        try:
+            out, err = await asyncio.wait_for(
+                proc.communicate(input=data),
+                timeout=WhatsAppBridgeService._ffmpeg_timeout_seconds(),
+            )
+        except Exception as exc:  # noqa: BLE001
+            with contextlib.suppress(Exception):
+                proc.kill()
+            with contextlib.suppress(Exception):
+                await proc.wait()
+            logger.warning(f"ffmpeg conversion timed out/failed: {exc}")
+            return b""
+
+        if proc.returncode != 0:
+            logger.warning(f"ffmpeg conversion failed rc={proc.returncode} err={err.decode(errors='ignore')[:240]}")
+            return b""
+        if not out.startswith(b"OggS"):
+            logger.warning("ffmpeg conversion did not produce OGG output")
+            return b""
+        return out
+
+    @staticmethod
+    async def _prepare_whatsapp_voice_media(audio_bytes: bytes) -> tuple[bytes, str]:
+        raw = bytes(audio_bytes or b"")
+        if not raw:
+            return b"", "application/octet-stream"
+
+        detected = WhatsAppBridgeService._detect_audio_content_type(raw)
+        if detected == "audio/wav" and WhatsAppBridgeService._prefer_ogg_audio():
+            converted = await WhatsAppBridgeService._convert_wav_to_ogg_opus(raw)
+            if converted:
+                return converted, "audio/ogg"
+
+        return raw, detected
+
+    @staticmethod
+    async def _download_twilio_media(*, media_url: str, account_sid: str, auth_token: str) -> bytes:
+        url = str(media_url or "").strip()
+        if not url:
+            return b""
+        timeout = httpx.Timeout(WhatsAppBridgeService._voice_http_timeout_seconds())
+        async with httpx.AsyncClient(timeout=timeout, auth=(account_sid, auth_token)) as client:
+            # Twilio media endpoints can 307-redirect to signed CDN URLs.
+            response = await client.get(url, follow_redirects=True)
+            response.raise_for_status()
+            return response.content
+
+    @staticmethod
+    async def _call_voice_stt(
+        *,
+        token: str,
+        audio_bytes: bytes,
+        filename: str,
+        content_type: str,
+        language: str,
+    ) -> dict[str, Any]:
+        settings = get_settings()
+        url = f"{settings.VOICE_SERVICE_URL.rstrip('/')}/api/v1/voice/stt"
+        headers = {"Authorization": f"Bearer {token}"}
+        files = {"file": (filename or "voice_note.audio", audio_bytes, content_type or "application/octet-stream")}
+        data = {"language": WhatsAppBridgeService._normalize_stt_language(language)}
+        timeout = httpx.Timeout(WhatsAppBridgeService._voice_http_timeout_seconds())
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, headers=headers, files=files, data=data)
+            response.raise_for_status()
+            payload = response.json()
+            return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
+    async def _call_voice_tts_base64(*, token: str, text: str, language: str) -> bytes:
+        msg = str(text or "").strip()
+        if not msg:
+            return b""
+        settings = get_settings()
+        url = f"{settings.VOICE_SERVICE_URL.rstrip('/')}/api/v1/voice/tts/base64"
+        headers = {"Authorization": f"Bearer {token}"}
+        payload = {
+            "text": msg,
+            "language": WhatsAppBridgeService._normalize_tts_language(language),
+            "speaker": WhatsAppBridgeService._voice_tts_speaker(),
+        }
+        timeout = httpx.Timeout(WhatsAppBridgeService._voice_http_timeout_seconds())
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            if not isinstance(data, dict):
+                return b""
+            audio_b64 = str(data.get("audio_base64") or "").strip()
+            if not audio_b64:
+                return b""
+            try:
+                return base64.b64decode(audio_b64)
+            except Exception:
+                logger.warning("Failed to decode voice-service TTS base64 payload")
+                return b""
+
+    @staticmethod
+    async def _store_temp_voice_media(audio_bytes: bytes, content_type: str = "audio/wav") -> str:
+        if not audio_bytes:
+            return ""
+        media_id = uuid4().hex
+        redis = await get_redis()
+        ttl = WhatsAppBridgeService._voice_media_ttl_seconds()
+        encoded_audio = base64.b64encode(audio_bytes).decode("ascii")
+        await redis.set(WhatsAppBridgeService._voice_media_key(media_id), encoded_audio, ex=ttl)
+        media_content_type = str(content_type or "").strip() or WhatsAppBridgeService._detect_audio_content_type(audio_bytes)
+        await redis.set(
+            WhatsAppBridgeService._voice_media_content_type_key(media_id),
+            media_content_type,
+            ex=ttl,
+        )
+        return media_id
+
+    @staticmethod
+    async def get_temp_voice_media(media_id: str) -> tuple[bytes, str]:
+        mid = str(media_id or "").strip()
+        if not mid:
+            return b"", ""
+        redis = await get_redis()
+        audio = await redis.get(WhatsAppBridgeService._voice_media_key(mid))
+        content_type = await redis.get(WhatsAppBridgeService._voice_media_content_type_key(mid))
+        if not audio:
+            return b"", ""
+
+        encoded = str(audio).strip()
+        if not encoded:
+            return b"", ""
+        try:
+            decoded = base64.b64decode(encoded)
+        except Exception:
+            logger.warning("Failed to decode cached WhatsApp voice media payload")
+            return b"", ""
+        return decoded, str(content_type or "audio/wav")
+
+    @staticmethod
     async def _twilio_send_message(client: Client, *, from_number: str, to_number: str, body: str) -> None:
         text = str(body or "").strip()
         if not text:
             return
 
         def _send() -> None:
-            client.messages.create(from_=from_number, to=to_number, body=text)
+            msg = client.messages.create(from_=from_number, to=to_number, body=text)
+            logger.info(
+                "WhatsApp text sent sid={} status={} to={}",
+                str(getattr(msg, "sid", "") or ""),
+                str(getattr(msg, "status", "") or ""),
+                to_number,
+            )
+
+        await asyncio.to_thread(_send)
+
+    @staticmethod
+    async def _twilio_send_media_message(
+        client: Client,
+        *,
+        from_number: str,
+        to_number: str,
+        media_url: str,
+        body: str = "",
+    ) -> None:
+        url = str(media_url or "").strip()
+        text = str(body or "").strip()
+        if not url:
+            return
+
+        def _send() -> None:
+            payload: dict[str, Any] = {
+                "from_": from_number,
+                "to": to_number,
+                "media_url": [url],
+            }
+            if text:
+                payload["body"] = text
+            msg = client.messages.create(**payload)
+            logger.info(
+                "WhatsApp media sent sid={} status={} to={} media_url={}",
+                str(getattr(msg, "sid", "") or ""),
+                str(getattr(msg, "status", "") or ""),
+                to_number,
+                url,
+            )
 
         await asyncio.to_thread(_send)
 
@@ -451,7 +826,125 @@ class WhatsAppBridgeService:
         cleaned = "\n".join(cleaned_lines).strip()
         if cleaned.lower().startswith("quick snapshot (db/context):"):
             cleaned = cleaned[len("quick snapshot (db/context):"):].strip()
-        return cleaned
+        return WhatsAppBridgeService._strip_markdown_formatting(cleaned)
+
+    @staticmethod
+    def _strip_markdown_formatting(raw_text: str) -> str:
+        text = str(raw_text or "").strip()
+        if not text:
+            return ""
+
+        text = text.replace("```", "")
+        text = re.sub(r"`([^`]+)`", r"\1", text)
+        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+        text = re.sub(r"__([^_]+)__", r"\1", text)
+        text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+        text = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"\1", text)
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", text)
+        text = re.sub(r"^\s{0,3}#{1,6}\s*", "", text, flags=re.MULTILINE)
+        text = text.replace("**", "").replace("__", "")
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    @staticmethod
+    async def _load_farmer_profile(user_id: str) -> dict[str, Any]:
+        uid = str(user_id or "").strip()
+        if not uid:
+            return {}
+
+        db = get_async_db()
+        profiles = db.collection(MongoCollections.FARMER_PROFILES)
+
+        docs = [
+            doc
+            async for doc in (
+                profiles.where(filter=FieldFilter("user_id", "==", uid)).limit(1)
+            ).stream()
+        ]
+        if docs:
+            profile = docs[0].to_dict() or {}
+            profile["id"] = docs[0].id
+            return profile
+
+        docs = [
+            doc
+            async for doc in (
+                profiles.where(filter=FieldFilter("farmer_id", "==", uid)).limit(1)
+            ).stream()
+        ]
+        if docs:
+            profile = docs[0].to_dict() or {}
+            profile["id"] = docs[0].id
+            return profile
+
+        direct_doc = await profiles.document(uid).get()
+        if direct_doc.exists:
+            profile = direct_doc.to_dict() or {}
+            profile["id"] = direct_doc.id
+            return profile
+
+        return {}
+
+    @staticmethod
+    def _build_profile_context_suffix(user: dict[str, Any], profile: dict[str, Any]) -> str:
+        source = profile if isinstance(profile, dict) and profile else user
+        if not isinstance(source, dict):
+            return ""
+
+        def _read_value(*keys: str) -> str:
+            for key in keys:
+                val = source.get(key)
+                if val is None:
+                    continue
+                if isinstance(val, list):
+                    joined = ", ".join(str(x).strip() for x in val if str(x).strip())
+                    if joined:
+                        return joined
+                    continue
+                text = str(val).strip()
+                if text:
+                    return text
+            return ""
+
+        facts: list[str] = []
+        state = _read_value("state")
+        district = _read_value("district")
+        village = _read_value("village")
+        pin_code = _read_value("pin_code", "pincode")
+        land = _read_value("land_size_acres", "land_acres")
+        soil = _read_value("soil_type")
+        irrigation = _read_value("irrigation_type")
+        crops = _read_value("major_crop_pattern", "primary_crop", "primary_crops", "crops_grown")
+        language = _read_value("language")
+
+        if state:
+            facts.append(f"state={state}")
+        if district:
+            facts.append(f"district={district}")
+        if village:
+            facts.append(f"village={village}")
+        if pin_code:
+            facts.append(f"pin_code={pin_code}")
+        if land:
+            facts.append(f"land_size_acres={land}")
+        if soil:
+            facts.append(f"soil_type={soil}")
+        if irrigation:
+            facts.append(f"irrigation_type={irrigation}")
+        if crops:
+            facts.append(f"major_crop_pattern={crops}")
+        if language:
+            facts.append(f"preferred_language={language}")
+
+        if not facts:
+            return ""
+
+        context = "; ".join(facts)
+        context = context[:700].strip()
+        return (
+            "\n\n[Internal profile context for localized advice; do not echo raw tags: "
+            f"{context}]"
+        )
 
     @staticmethod
     async def _send_multipart_whatsapp(
@@ -463,7 +956,8 @@ class WhatsAppBridgeService:
     ) -> None:
         max_chars = WhatsAppBridgeService._max_segment_chars()
         for message in messages:
-            for segment in WhatsAppBridgeService._split_text(message, max_chars=max_chars):
+            cleaned_message = WhatsAppBridgeService._strip_markdown_formatting(message)
+            for segment in WhatsAppBridgeService._split_text(cleaned_message, max_chars=max_chars):
                 await WhatsAppBridgeService._twilio_send_message(
                     client,
                     from_number=from_number,
@@ -517,13 +1011,19 @@ class WhatsAppBridgeService:
         sender: str,
         message_body: str,
         profile_name: str | None = None,
+        media_url: str | None = None,
+        media_content_type: str | None = None,
+        public_base_url: str | None = None,
     ) -> None:
         if not WhatsAppBridgeService.is_enabled():
             return
 
         incoming = str(message_body or "").strip()
+        inbound_media_url = str(media_url or "").strip()
+        inbound_media_type = str(media_content_type or "").strip().lower()
+        has_audio_note = bool(inbound_media_url and WhatsAppBridgeService._is_audio_media(inbound_media_type))
         from_number = WhatsAppBridgeService._normalize_phone(sender)
-        if not incoming or not from_number:
+        if (not incoming and not has_audio_note) or not from_number:
             return
 
         if await WhatsAppBridgeService._is_duplicate_webhook(message_sid):
@@ -545,7 +1045,8 @@ class WhatsAppBridgeService:
         if user is None:
             parsed = WhatsAppBridgeService._parse_login_message(incoming)
             if parsed is None:
-                await WhatsAppBridgeService._store_pending_query(from_number, incoming)
+                if incoming:
+                    await WhatsAppBridgeService._store_pending_query(from_number, incoming)
                 await WhatsAppBridgeService._send_multipart_whatsapp(
                     client,
                     from_number=from_channel,
@@ -554,6 +1055,7 @@ class WhatsAppBridgeService:
                         "This WhatsApp number is not linked yet.",
                         "Please login using: LOGIN <registered_phone> <password> | <your question>",
                         "Example: LOGIN +919876543210 MyPassword123 | Aaj gehu ka bhav kya hai?",
+                        "If you sent a voice note, please login first and then resend the voice note.",
                     ],
                 )
                 return
@@ -629,13 +1131,57 @@ class WhatsAppBridgeService:
         token = create_access_token(user_id=user_id, role=role)
         language = str(user.get("language") or WhatsAppBridgeService._default_language()).strip()
         session_id = await WhatsAppBridgeService._get_or_create_session_id(from_number)
+        profile = await WhatsAppBridgeService._load_farmer_profile(user_id)
+        if not str(user.get("language") or "").strip() and str(profile.get("language") or "").strip():
+            language = str(profile.get("language") or "").strip().lower()
+
+        if has_audio_note:
+            try:
+                audio_bytes = await WhatsAppBridgeService._download_twilio_media(
+                    media_url=inbound_media_url,
+                    account_sid=account_sid,
+                    auth_token=auth_token,
+                )
+                stt_result = await WhatsAppBridgeService._call_voice_stt(
+                    token=token,
+                    audio_bytes=audio_bytes,
+                    filename=WhatsAppBridgeService._guess_audio_filename(inbound_media_type),
+                    content_type=inbound_media_type or "application/octet-stream",
+                    language=language or "auto",
+                )
+                transcript = WhatsAppBridgeService._strip_markdown_formatting(
+                    str(stt_result.get("transcript") or "").strip()
+                )
+                if not transcript:
+                    await WhatsAppBridgeService._send_multipart_whatsapp(
+                        client,
+                        from_number=from_channel,
+                        to_number=to_channel,
+                        messages=["I could not clearly understand your voice note. Please send it again."],
+                    )
+                    return
+                incoming = transcript if not incoming else f"{incoming}\n\nVoice note: {transcript}"
+                stt_lang = str(stt_result.get("language_code") or "").strip().lower()
+                if stt_lang:
+                    language = stt_lang
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(f"WhatsApp voice STT failed for user {user_id}: {exc}")
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=["I could not process your voice note right now. Please try again."],
+                )
+                return
+
+        message_for_agent = incoming + WhatsAppBridgeService._build_profile_context_suffix(user, profile)
 
         try:
             prepare = await asyncio.wait_for(
                 WhatsAppBridgeService._call_agent_prepare(
                     token=token,
                     session_id=session_id,
-                    message=incoming,
+                    message=message_for_agent,
                     language=language,
                 ),
                 timeout=WhatsAppBridgeService._agent_prepare_timeout_seconds(),
@@ -724,6 +1270,53 @@ class WhatsAppBridgeService:
             outgoing.append(
                 f"Sorry {display_name}, I could not generate a useful response this time. Please try again."
             )
+
+        voice_reply_url = ""
+        if has_audio_note and final_text and WhatsAppBridgeService._voice_reply_enabled():
+            try:
+                tts_audio = await WhatsAppBridgeService._call_voice_tts_base64(
+                    token=token,
+                    text=final_text,
+                    language=language,
+                )
+                prepared_audio, prepared_content_type = await WhatsAppBridgeService._prepare_whatsapp_voice_media(
+                    tts_audio
+                )
+                media_id = await WhatsAppBridgeService._store_temp_voice_media(
+                    prepared_audio,
+                    content_type=prepared_content_type,
+                )
+                if media_id:
+                    base_url = WhatsAppBridgeService._resolve_public_base_url(public_base_url)
+                    if base_url:
+                        voice_reply_url = f"{base_url}/api/v1/notifications/whatsapp/media/{media_id}"
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(f"WhatsApp voice TTS failed for user {user_id}: {exc}")
+
+        if has_audio_note:
+            media_sent = False
+            if voice_reply_url:
+                try:
+                    await WhatsAppBridgeService._twilio_send_media_message(
+                        client,
+                        from_number=from_channel,
+                        to_number=to_channel,
+                        media_url=voice_reply_url,
+                        body="Voice reply attached.",
+                    )
+                    media_sent = True
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception(f"Failed to send WhatsApp voice reply for user {user_id}: {exc}")
+
+            # Send text backup after audio to avoid silent delivery failures on some WhatsApp clients.
+            if (not media_sent) or WhatsAppBridgeService._audio_text_backup_enabled():
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=outgoing,
+                )
+            return
 
         await WhatsAppBridgeService._send_multipart_whatsapp(
             client,
