@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -91,6 +92,32 @@ class WhatsAppBridgeService:
         return max(5.0, min(value, 90.0))
 
     @staticmethod
+    def _binding_cache_ttl_seconds() -> int:
+        try:
+            value = int(os.getenv("WHATSAPP_BRIDGE_BINDING_CACHE_TTL_SECONDS", "2592000"))
+        except Exception:
+            value = 2592000
+        return max(3600, value)
+
+    @staticmethod
+    def _pending_query_ttl_seconds() -> int:
+        try:
+            value = int(os.getenv("WHATSAPP_BRIDGE_PENDING_QUERY_TTL_SECONDS", "900"))
+        except Exception:
+            value = 900
+        return max(120, value)
+
+    @staticmethod
+    def _binding_cache_key(phone: str) -> str:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        return f"wa:user:binding:{normalized}"
+
+    @staticmethod
+    def _pending_query_key(phone: str) -> str:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        return f"wa:auth:pending_query:{normalized}"
+
+    @staticmethod
     def _normalize_phone(raw: str | None) -> str:
         value = str(raw or "").strip()
         if value.lower().startswith("whatsapp:"):
@@ -122,20 +149,199 @@ class WhatsAppBridgeService:
         return out
 
     @staticmethod
+    async def _get_user_by_id(user_id: str) -> dict[str, Any] | None:
+        uid = str(user_id or "").strip()
+        if not uid:
+            return None
+        db = get_async_db()
+        doc = await db.collection(MongoCollections.USERS).document(uid).get()
+        if not doc.exists:
+            return None
+        user = doc.to_dict()
+        user["id"] = doc.id
+        return user
+
+    @staticmethod
+    async def _set_user_binding_cache(phone: str, user_id: str) -> None:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        uid = str(user_id or "").strip()
+        if not normalized or not uid:
+            return
+        redis = await get_redis()
+        await redis.set(
+            WhatsAppBridgeService._binding_cache_key(normalized),
+            uid,
+            ex=WhatsAppBridgeService._binding_cache_ttl_seconds(),
+        )
+
+    @staticmethod
+    async def _get_user_binding_cache(phone: str) -> str:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        if not normalized:
+            return ""
+        redis = await get_redis()
+        cached = await redis.get(WhatsAppBridgeService._binding_cache_key(normalized))
+        return str(cached or "").strip()
+
+    @staticmethod
+    async def _store_pending_query(phone: str, query_text: str) -> None:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        text = str(query_text or "").strip()
+        if not normalized or not text:
+            return
+        redis = await get_redis()
+        await redis.set(
+            WhatsAppBridgeService._pending_query_key(normalized),
+            text,
+            ex=WhatsAppBridgeService._pending_query_ttl_seconds(),
+        )
+
+    @staticmethod
+    async def _consume_pending_query(phone: str) -> str:
+        normalized = WhatsAppBridgeService._normalize_phone(phone)
+        if not normalized:
+            return ""
+        redis = await get_redis()
+        key = WhatsAppBridgeService._pending_query_key(normalized)
+        value = await redis.get(key)
+        if value:
+            await redis.delete(key)
+        return str(value or "").strip()
+
+    @staticmethod
+    async def _bind_whatsapp_number_to_user(
+        *,
+        user_id: str,
+        sender_phone: str,
+        login_phone: str,
+    ) -> dict[str, Any] | None:
+        uid = str(user_id or "").strip()
+        sender = WhatsAppBridgeService._normalize_phone(sender_phone)
+        login_norm = WhatsAppBridgeService._normalize_phone(login_phone)
+        if not uid or not sender:
+            return None
+
+        db = get_async_db()
+        ref = db.collection(MongoCollections.USERS).document(uid)
+        doc = await ref.get()
+        if not doc.exists:
+            return None
+
+        user = doc.to_dict()
+        linked_numbers = user.get("whatsapp_numbers")
+        if not isinstance(linked_numbers, list):
+            linked_numbers = []
+
+        updated_numbers: list[str] = []
+        seen: set[str] = set()
+        for item in linked_numbers + [sender]:
+            normalized = WhatsAppBridgeService._normalize_phone(str(item))
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            updated_numbers.append(normalized)
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        updates = {
+            "whatsapp_phone": sender,
+            "whatsapp_numbers": updated_numbers,
+            "whatsapp_last_login_at": now_iso,
+            "whatsapp_login_phone": login_norm or login_phone,
+        }
+        await ref.update(updates)
+
+        merged = dict(user)
+        merged.update(updates)
+        merged["id"] = doc.id
+
+        await WhatsAppBridgeService._set_user_binding_cache(sender, uid)
+        return merged
+
+    @staticmethod
+    def _parse_login_message(message: str) -> tuple[str, str, str] | None:
+        text = str(message or "").strip()
+        if not text:
+            return None
+
+        m = re.match(r"^\s*login\s+([^\s]+)\s+(.+)$", text, flags=re.IGNORECASE)
+        if m is None:
+            m = re.match(r"^\s*auth\s+([^\s]+)\s+(.+)$", text, flags=re.IGNORECASE)
+        if m is None:
+            return None
+
+        raw_phone = str(m.group(1) or "").strip()
+        rest = str(m.group(2) or "").strip()
+        if not raw_phone or not rest:
+            return None
+
+        password = rest
+        inline_query = ""
+        if "|" in rest:
+            parts = rest.split("|", 1)
+            password = parts[0].strip()
+            inline_query = parts[1].strip()
+
+        if not password:
+            return None
+        return raw_phone, password, inline_query
+
+    @staticmethod
+    async def _authenticate_with_auth_service(phone: str, password: str) -> dict[str, Any] | None:
+        normalized_phone = WhatsAppBridgeService._normalize_phone(phone)
+        payload = {
+            "phone": normalized_phone or str(phone or "").strip(),
+            "password": str(password or ""),
+        }
+        if not payload["phone"] or not payload["password"]:
+            return None
+
+        settings = get_settings()
+        url = f"{settings.AUTH_SERVICE_URL.rstrip('/')}/api/v1/auth/login"
+        timeout = httpx.Timeout(15.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            if response.status_code >= 400:
+                return None
+            body = response.json()
+            if not isinstance(body, dict):
+                return None
+            return body
+
+    @staticmethod
     async def _find_user_for_phone(raw_phone: str) -> dict[str, Any] | None:
+        cached_user_id = await WhatsAppBridgeService._get_user_binding_cache(raw_phone)
+        if cached_user_id:
+            cached_user = await WhatsAppBridgeService._get_user_by_id(cached_user_id)
+            if cached_user is not None:
+                return cached_user
+
         db = get_async_db()
         for candidate in WhatsAppBridgeService._phone_candidates(raw_phone):
-            query = (
-                db.collection(MongoCollections.USERS)
-                .where(filter=FieldFilter("phone", "==", candidate))
-                .limit(1)
-            )
-            docs = [doc async for doc in query.stream()]
-            if not docs:
-                continue
-            user = docs[0].to_dict()
-            user["id"] = docs[0].id
-            return user
+            queries = [
+                (
+                    db.collection(MongoCollections.USERS)
+                    .where(filter=FieldFilter("phone", "==", candidate))
+                    .limit(1)
+                ),
+                (
+                    db.collection(MongoCollections.USERS)
+                    .where(filter=FieldFilter("whatsapp_phone", "==", candidate))
+                    .limit(1)
+                ),
+                (
+                    db.collection(MongoCollections.USERS)
+                    .where(filter=FieldFilter("whatsapp_numbers", "array_contains", candidate))
+                    .limit(1)
+                ),
+            ]
+            for query in queries:
+                docs = [doc async for doc in query.stream()]
+                if not docs:
+                    continue
+                user = docs[0].to_dict()
+                user["id"] = docs[0].id
+                await WhatsAppBridgeService._set_user_binding_cache(candidate, docs[0].id)
+                return user
         return None
 
     @staticmethod
@@ -309,21 +515,88 @@ class WhatsAppBridgeService:
 
         user = await WhatsAppBridgeService._find_user_for_phone(from_number)
         if user is None:
-            await WhatsAppBridgeService._send_multipart_whatsapp(
-                client,
-                from_number=from_channel,
-                to_number=to_channel,
-                messages=[
-                    "Your phone number is not registered in KisanKiAwaaz yet. Please sign in once in the app, then message here again.",
-                ],
+            parsed = WhatsAppBridgeService._parse_login_message(incoming)
+            if parsed is None:
+                await WhatsAppBridgeService._store_pending_query(from_number, incoming)
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=[
+                        "This WhatsApp number is not linked yet.",
+                        "Please login using: LOGIN <registered_phone> <password> | <your question>",
+                        "Example: LOGIN +919876543210 MyPassword123 | Aaj gehu ka bhav kya hai?",
+                    ],
+                )
+                return
+
+            login_phone, login_password, inline_query = parsed
+            auth_result = await WhatsAppBridgeService._authenticate_with_auth_service(
+                phone=login_phone,
+                password=login_password,
             )
-            return
+            if not isinstance(auth_result, dict):
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=[
+                        "Login failed. Please check phone/password and retry.",
+                        "Format: LOGIN <registered_phone> <password> | <your question>",
+                    ],
+                )
+                return
+
+            auth_user = auth_result.get("user") if isinstance(auth_result.get("user"), dict) else {}
+            user_id = str(auth_user.get("id") or "").strip()
+            if not user_id:
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=["Login succeeded but user profile lookup failed. Please try again."],
+                )
+                return
+
+            bound_user = await WhatsAppBridgeService._bind_whatsapp_number_to_user(
+                user_id=user_id,
+                sender_phone=from_number,
+                login_phone=login_phone,
+            )
+            if bound_user is None:
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=["Could not link this WhatsApp number to your account. Please retry."],
+                )
+                return
+
+            user = bound_user
+
+            pending_query = await WhatsAppBridgeService._consume_pending_query(from_number)
+            query_after_login = inline_query or pending_query
+            if not query_after_login:
+                await WhatsAppBridgeService._send_multipart_whatsapp(
+                    client,
+                    from_number=from_channel,
+                    to_number=to_channel,
+                    messages=[
+                        "Login successful. This WhatsApp number is now linked to your account.",
+                        "Now send your question and I will answer it.",
+                    ],
+                )
+                return
+
+            incoming = query_after_login
 
         user_id = str(user.get("id") or "").strip()
         role = str(user.get("role") or UserRole.FARMER.value).strip() or UserRole.FARMER.value
         if not user_id:
             logger.warning("WhatsApp bridge matched user without id; skipping")
             return
+
+        await WhatsAppBridgeService._set_user_binding_cache(from_number, user_id)
 
         token = create_access_token(user_id=user_id, role=role)
         language = str(user.get("language") or WhatsAppBridgeService._default_language()).strip()
