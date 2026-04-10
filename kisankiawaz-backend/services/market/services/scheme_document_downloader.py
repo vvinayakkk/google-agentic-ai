@@ -19,11 +19,29 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+def _resolve_scheme_docs_dir() -> str:
+    """Resolve scheme documents directory across local and container layouts."""
+    env_dir = (os.getenv("SCHEME_DOCUMENTS_DIR") or "").strip()
+    if env_dir:
+        return env_dir
+
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.normpath(os.path.join(this_dir, "..", "scheme_documents")),
+        os.path.normpath(os.path.join(this_dir, "..", "..", "scheme_documents")),
+        os.path.normpath(os.path.join(this_dir, "..", "..", "..", "scheme_documents")),
+    ]
+
+    for candidate in candidates:
+        if os.path.isdir(candidate):
+            return candidate
+
+    # If none exists yet, prefer the nearest path and create it later.
+    return candidates[0]
+
+
 # Base directory for downloaded scheme documents
-SCHEME_DOCS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "scheme_documents",
-)
+SCHEME_DOCS_DIR = _resolve_scheme_docs_dir()
 
 FORM_KEYWORDS = {
     "form",
@@ -57,6 +75,24 @@ DISCOVERY_BLOCKLIST = {
     if host.strip()
 }
 
+NON_FATAL_DOWNLOAD_STATUSES = {
+    "invalid_url",
+    "not_downloadable_payload",
+    "html_without_form_controls",
+    "application_portal_unavailable",
+}
+
+PM_KISAN_SCHEME_KEYS = {
+    "pmkisan",
+    "pmkisansammannidhi",
+}
+
+PM_KISAN_FORCED_HTML_FILENAME = (
+    os.getenv("MARKET_PM_KISAN_FORCED_HTML_FILENAME", "document_1399033a05ab.html")
+    .strip()
+    .lower()
+)
+
 
 class SchemeDocumentDownloader:
     """Downloads and manages government scheme documents for farmers."""
@@ -89,6 +125,82 @@ class SchemeDocumentDownloader:
         while "__" in safe:
             safe = safe.replace("__", "_")
         return safe.strip("_")[:80]
+
+    def _normalize_scheme_token(self, value: str) -> str:
+        text = (value or "").strip().lower()
+        return re.sub(r"[^a-z0-9]+", "", text)
+
+    def _is_pm_kisan_scheme(self, scheme_name: str) -> bool:
+        token = self._normalize_scheme_token(scheme_name)
+        return token in PM_KISAN_SCHEME_KEYS
+
+    def _local_scheme_dir_candidates(self, scheme_name: str) -> List[str]:
+        raw = (scheme_name or "").strip()
+        if not raw:
+            return []
+
+        candidates = {
+            raw,
+            raw.lower(),
+            self._safe_filename(raw),
+        }
+
+        # Common PM-KISAN directory aliases used in local storage.
+        if self._is_pm_kisan_scheme(raw):
+            candidates.update({"pm-kisan", "pmkisan", "pm_kisan", "pm kisan"})
+
+        out = []
+        for candidate in candidates:
+            path = os.path.join(self.base_dir, candidate)
+            if os.path.isdir(path):
+                out.append(path)
+        return out
+
+    def _scan_local_fillable_html_docs(self, scheme_name: str) -> List[Dict]:
+        docs: List[Dict] = []
+        seen_paths = set()
+
+        for scheme_dir in self._local_scheme_dir_candidates(scheme_name):
+            for entry in os.listdir(scheme_dir):
+                path = os.path.join(scheme_dir, entry)
+                if not os.path.isfile(path):
+                    continue
+
+                ext = os.path.splitext(entry.lower())[1]
+                if ext not in {".html", ".htm", ".aspx", ".jsp", ".php", ".do"}:
+                    continue
+
+                if path in seen_paths:
+                    continue
+
+                autofill_possible = self._is_fillable_html_doc(
+                    local_path=path,
+                    filename=entry,
+                    content_type="text/html",
+                )
+                if not autofill_possible:
+                    continue
+
+                stat = os.stat(path)
+                doc_id = hashlib.md5(path.encode("utf-8")).hexdigest()[:12]
+                docs.append(
+                    {
+                        "scheme": scheme_name,
+                        "name": os.path.splitext(entry)[0],
+                        "filename": entry,
+                        "local_path": path,
+                        "size": int(stat.st_size),
+                        "content_type": "text/html",
+                        "source": "local_seed",
+                        "is_form_candidate": True,
+                        "exists": True,
+                        "doc_id": doc_id,
+                        "autofill_possible": True,
+                    }
+                )
+                seen_paths.add(path)
+
+        return docs
 
     def reset_storage(self) -> dict:
         """Delete all downloaded scheme files and reset manifest."""
@@ -246,6 +358,13 @@ class SchemeDocumentDownloader:
             return ".html"
         return ".bin"
 
+    def _html_has_fillable_controls(self, content: bytes) -> bool:
+        """Detect whether an HTML payload looks like a form page we can autofill."""
+        if not content:
+            return False
+        text = content.decode("utf-8", errors="ignore").lower()
+        return any(token in text for token in ("<form", "<input", "<select", "<textarea"))
+
     def _is_downloadable_payload(self, content_type: str, url: str) -> bool:
         low_ct = (content_type or "").lower()
         low_url = (url or "").lower()
@@ -261,6 +380,21 @@ class SchemeDocumentDownloader:
             # Keep html form pages too, since many official forms are web flows.
             return self._looks_like_form_link(url)
         return False
+
+    def _is_fillable_html_doc(self, local_path: str, filename: str, content_type: str) -> bool:
+        """Return True only for HTML-like docs that contain fillable controls."""
+        ext = os.path.splitext((filename or "").lower())[1]
+        low_ct = (content_type or "").lower()
+        if ext not in {".html", ".htm", ".aspx", ".jsp", ".php", ".do"} and "html" not in low_ct:
+            return False
+        if not local_path or not os.path.exists(local_path):
+            return False
+        try:
+            with open(local_path, "rb") as f:
+                raw = f.read()
+            return self._html_has_fillable_controls(raw)
+        except Exception:
+            return False
 
     def _iter_seed_links(self, scheme: dict) -> List[Dict[str, str]]:
         seeds: List[Dict[str, str]] = []
@@ -376,11 +510,14 @@ class SchemeDocumentDownloader:
                     response = await client.get(url)
                     
                     if response.status_code >= 400:
-                        # Try HEAD to check if it's a webpage vs downloadable
+                        status = f"http_{response.status_code}"
+                        if source == "application_url":
+                            # App portals frequently rate-limit/geo-gate automation. Do not count this as hard failure.
+                            status = "application_portal_unavailable"
                         results.append({
                             "name": name,
                             "url": url,
-                            "status": f"http_{response.status_code}",
+                            "status": status,
                             "source": source,
                             "is_webpage": True,
                         })
@@ -405,6 +542,19 @@ class SchemeDocumentDownloader:
                     content = response.content
 
                     ext = self._candidate_file_extension(final_url, content_type)
+
+                    if ext in {".html", ".htm"} and not self._html_has_fillable_controls(content):
+                        results.append(
+                            {
+                                "name": name,
+                                "url": url,
+                                "final_url": final_url,
+                                "status": "html_without_form_controls",
+                                "source": source,
+                                "content_type": content_type,
+                            }
+                        )
+                        continue
 
                     safe_name = self._safe_filename(name)
                     filename = f"{safe_name}{ext}"
@@ -449,6 +599,16 @@ class SchemeDocumentDownloader:
 
         self._save_manifest()
 
+        skipped_count = len([
+            r for r in results if r.get("status") in NON_FATAL_DOWNLOAD_STATUSES
+        ])
+        failed_count = len([
+            r
+            for r in results
+            if r.get("status") not in ("downloaded", "already_downloaded")
+            and r.get("status") not in NON_FATAL_DOWNLOAD_STATUSES
+        ])
+
         return {
             "scheme": scheme_name,
             "scheme_dir": scheme_dir,
@@ -456,7 +616,8 @@ class SchemeDocumentDownloader:
             "discovered_count": len([r for r in results if r.get("source") == "application_page_discovery"]),
             "success_count": len([r for r in results if r["status"] == "downloaded"]),
             "cached_count": len([r for r in results if r["status"] == "already_downloaded"]),
-            "failed_count": len([r for r in results if r["status"] not in ("downloaded", "already_downloaded")]),
+            "skipped_count": skipped_count,
+            "failed_count": failed_count,
         }
 
     async def download_all_schemes(
@@ -471,6 +632,7 @@ class SchemeDocumentDownloader:
         results = []
         total_downloaded = 0
         total_cached = 0
+        total_skipped = 0
         total_failed = 0
         total_size = 0
 
@@ -479,6 +641,7 @@ class SchemeDocumentDownloader:
             results.append(result)
             total_downloaded += result["success_count"]
             total_cached += result["cached_count"]
+            total_skipped += result.get("skipped_count", 0)
             total_failed += result["failed_count"]
             
             for dl in result["downloads"]:
@@ -491,6 +654,7 @@ class SchemeDocumentDownloader:
             "total_schemes": len(all_schemes),
             "total_downloaded": total_downloaded,
             "total_cached": total_cached,
+            "total_skipped": total_skipped,
             "total_failed": total_failed,
             "total_size_bytes": total_size,
             "total_size_mb": round(total_size / (1024 * 1024), 2),
@@ -500,42 +664,99 @@ class SchemeDocumentDownloader:
 
     def get_scheme_documents(self, scheme_name: str) -> List[Dict]:
         """List all downloaded documents for a scheme."""
+        requested = (scheme_name or "").strip()
+        requested_token = self._normalize_scheme_token(requested)
+
         results = []
+        seen_paths = set()
         for doc_id, doc_info in self.manifest.get("documents", {}).items():
-            if doc_info.get("scheme", "").lower() == scheme_name.lower():
-                exists = os.path.exists(doc_info.get("local_path", ""))
-                results.append({
+            doc_scheme = str(doc_info.get("scheme", ""))
+            if self._normalize_scheme_token(doc_scheme) != requested_token:
+                continue
+
+            local_path = doc_info.get("local_path", "")
+            exists = os.path.exists(local_path)
+            autofill_possible = self._is_fillable_html_doc(
+                local_path=local_path,
+                filename=doc_info.get("filename", ""),
+                content_type=doc_info.get("content_type", ""),
+            )
+            results.append(
+                {
                     **doc_info,
                     "exists": exists,
                     "doc_id": doc_id,
-                })
+                    "autofill_possible": autofill_possible,
+                }
+            )
+            seen_paths.add(local_path)
+
+        # Fallback: include fillable HTML files present locally even if manifest keys drifted.
+        for doc in self._scan_local_fillable_html_docs(requested):
+            local_path = doc.get("local_path", "")
+            if local_path in seen_paths:
+                continue
+            results.append(doc)
+            seen_paths.add(local_path)
+
+        if self._is_pm_kisan_scheme(requested) and PM_KISAN_FORCED_HTML_FILENAME:
+            forced = [
+                d
+                for d in results
+                if str(d.get("filename", "")).strip().lower()
+                == PM_KISAN_FORCED_HTML_FILENAME
+            ]
+            if forced:
+                results = forced
+
+        results.sort(
+            key=lambda d: str(d.get("filename") or d.get("name") or "").lower()
+        )
         return results
 
     def get_all_downloaded(self) -> Dict:
         """Get summary of all downloaded documents."""
         by_scheme = {}
         total_size = 0
-        
-        for doc_id, doc_info in self.manifest.get("documents", {}).items():
-            scheme = doc_info.get("scheme", "unknown")
+
+        scheme_names = set()
+        for doc_info in self.manifest.get("documents", {}).values():
+            scheme = str(doc_info.get("scheme", "")).strip()
+            if scheme:
+                scheme_names.add(scheme)
+
+        for entry in os.listdir(self.base_dir):
+            path = os.path.join(self.base_dir, entry)
+            if os.path.isdir(path):
+                scheme_names.add(entry)
+
+        for scheme in sorted(scheme_names):
+            docs = self.get_scheme_documents(scheme)
+            if not docs:
+                continue
+
             if scheme not in by_scheme:
                 by_scheme[scheme] = {"count": 0, "size": 0, "documents": []}
-            
-            exists = os.path.exists(doc_info.get("local_path", ""))
-            size = doc_info.get("size", 0)
-            
-            by_scheme[scheme]["count"] += 1
-            by_scheme[scheme]["size"] += size
-            by_scheme[scheme]["documents"].append({
-                "name": doc_info.get("name"),
-                "filename": doc_info.get("filename"),
-                "size": size,
-                "exists": exists,
-            })
-            total_size += size
+
+            for doc_info in docs:
+                size = int(doc_info.get("size", 0) or 0)
+                by_scheme[scheme]["count"] += 1
+                by_scheme[scheme]["size"] += size
+                by_scheme[scheme]["documents"].append(
+                    {
+                        "name": doc_info.get("name"),
+                        "filename": doc_info.get("filename"),
+                        "size": size,
+                        "exists": bool(doc_info.get("exists", False)),
+                        "content_type": doc_info.get("content_type", ""),
+                        "is_form_candidate": bool(doc_info.get("is_form_candidate")),
+                        "autofill_possible": bool(doc_info.get("autofill_possible", False)),
+                    }
+                )
+                total_size += size
 
         return {
-            "total_documents": len(self.manifest.get("documents", {})),
+            "total_documents": sum(item["count"] for item in by_scheme.values()),
             "total_size_bytes": total_size,
             "total_size_mb": round(total_size / (1024 * 1024), 2),
             "by_scheme": by_scheme,

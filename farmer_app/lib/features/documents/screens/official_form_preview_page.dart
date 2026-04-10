@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -40,6 +43,8 @@ class _OfficialFormPreviewPageState extends State<OfficialFormPreviewPage>
 
   bool _isLoading = false;
   String? _loadingLabel;
+  WebViewController? _htmlController;
+  String? _htmlSignature;
 
   bool get _isTextLike {
     final path = widget.file.file.path.toLowerCase();
@@ -48,6 +53,47 @@ class _OfficialFormPreviewPageState extends State<OfficialFormPreviewPage>
         path.endsWith('.txt') ||
         widget.file.contentType.contains('text/') ||
         widget.file.contentType.contains('html');
+  }
+
+  bool _looksLikeHtml(String raw) {
+    final probe = raw.toLowerCase();
+    return probe.contains("<html") ||
+        probe.contains("<head") ||
+        probe.contains("<body") ||
+        probe.contains("<form") ||
+        probe.contains("<input") ||
+        probe.contains("<select") ||
+        probe.contains("<textarea") ||
+        probe.contains("<script") ||
+        probe.contains("<style");
+  }
+
+  String _wrapAsHtmlDocument(String text) {
+    final escaped = const HtmlEscape(HtmlEscapeMode.element).convert(text);
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; margin: 16px; line-height: 1.5; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <pre>$escaped</pre>
+</body>
+</html>
+''';
+  }
+
+  WebViewController _buildHtmlController(String htmlText) {
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..loadHtmlString(htmlText);
+    return controller;
   }
 
   @override
@@ -387,23 +433,14 @@ class _OfficialFormPreviewPageState extends State<OfficialFormPreviewPage>
             );
           }
 
-          final cleaned = text
-              .replaceAll(RegExp(r'<[^>]+>'), ' ')
-              .replaceAll(RegExp(r'\s+'), ' ')
-              .trim();
+          final htmlText = _looksLikeHtml(text) ? text : _wrapAsHtmlDocument(text);
+          final signature = '${widget.file.file.path}:${htmlText.hashCode}';
+          if (_htmlController == null || _htmlSignature != signature) {
+            _htmlController = _buildHtmlController(htmlText);
+            _htmlSignature = signature;
+          }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(18),
-            child: Text(
-              cleaned,
-              style: context.textTheme.bodyMedium?.copyWith(
-                height: 1.65,
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.8)
-                    : Colors.black.withValues(alpha: 0.75),
-              ),
-            ),
-          );
+          return WebViewWidget(controller: _htmlController!);
         },
       );
     }

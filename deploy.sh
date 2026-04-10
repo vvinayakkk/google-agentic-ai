@@ -53,8 +53,14 @@ TUNNEL_URL=""
 load_backend_env() {
   local env_file="$ROOT/kisankiawaz-backend/.env"
   if [ -f "$env_file" ]; then
+    # Load only valid assignment lines to tolerate accidental headers like ".env".
     # shellcheck disable=SC1090
-    set -a; . "$env_file"; set +a
+    set -a
+    . <(sed -nE 's/\r$//; /^[[:space:]]*#/d; /^[[:space:]]*$/d; /^[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=.*/p' "$env_file")
+    set +a
+    if grep -Eqv '^[[:space:]]*($|#|(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=.*)$' "$env_file"; then
+      warn "Ignored non-variable lines in kisankiawaz-backend/.env while loading environment."
+    fi
     info "Loaded backend environment from kisankiawaz-backend/.env"
   fi
 }

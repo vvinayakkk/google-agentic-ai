@@ -36,9 +36,12 @@ class PreviewDownloadScreen extends ConsumerStatefulWidget {
 
 class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
     with SingleTickerProviderStateMixin {
+  static const String _pilotAutofillDocName = 'document_1399033a05ab.html';
+
   bool _loading = true;
   bool _syncing = false;
   bool _saving = false;
+  bool _autofillInProgress = false;
 
   Map<String, dynamic> _scheme = <String, dynamic>{};
   List<Map<String, String>> _officialLinks = <Map<String, String>>[];
@@ -73,8 +76,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   // ── All original logic untouched ─────────────────────────────────────────
 
   String _schemeLookupKey() {
-    final fromScheme =
-        (_scheme['short_name'] ?? _scheme['name'] ?? '').toString().trim();
+    final fromScheme = (_scheme['short_name'] ?? _scheme['name'] ?? '')
+        .toString()
+        .trim();
     if (fromScheme.isNotEmpty) return fromScheme;
     return widget.schemeName.trim().isNotEmpty
         ? widget.schemeName.trim()
@@ -96,8 +100,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
         final map = Map<String, dynamic>.from(item.cast<dynamic, dynamic>());
         final url = (map['url'] ?? map['link'] ?? '').toString().trim();
         if (url.isEmpty) continue;
-        final name =
-            (map['name'] ?? map['title'] ?? 'Official Form Link').toString().trim();
+        final name = (map['name'] ?? map['title'] ?? 'Official Form Link')
+            .toString()
+            .trim();
         out.add(<String, String>{'name': name, 'url': url});
       }
     }
@@ -113,19 +118,53 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       return '';
     }
 
+    String composedAddress() {
+      final parts = <String>[
+        pick(<String>['address']),
+        pick(<String>['village']),
+        pick(<String>['sub_district', 'tehsil', 'taluka', 'block']),
+        pick(<String>['district']),
+        pick(<String>['state']),
+        pick(<String>['pin_code', 'pincode']),
+      ].where((part) => part.isNotEmpty).toList(growable: false);
+      return parts.join(', ');
+    }
+
     final map = <String, String>{
       ...?widget.formData,
       'applicant_name': pick(<String>['name', 'farmer_name']),
+      'farmer_name': pick(<String>['farmer_name', 'name']),
+      'father_name': pick(<String>[
+        'father_name',
+        'father_or_husband_name',
+        'husband_name',
+      ]),
       'phone': pick(<String>['phone', 'mobile', 'mobile_number']),
+      'mobile_number': pick(<String>['mobile_number', 'phone', 'mobile']),
       'village': pick(<String>['village']),
+      'block': pick(<String>['block']),
+      'sub_district': pick(<String>['sub_district', 'tehsil', 'taluka']),
       'district': pick(<String>['district']),
       'state': pick(<String>['state']),
       'pin_code': pick(<String>['pin_code', 'pincode']),
       'land_size_acres': pick(<String>['land_size_acres', 'land_size']),
+      'land_area_hectares': pick(<String>['land_size_hectares', 'land_area_hectares']),
       'aadhaar_number': pick(<String>['aadhaar', 'aadhaar_number']),
+      'gender': pick(<String>['gender']),
+      'category': pick(<String>['category']),
       'bank_account': pick(<String>['bank_account', 'account_number']),
+      'bank_account_holder_name': pick(<String>[
+        'bank_account_holder_name',
+        'name',
+        'farmer_name',
+      ]),
       'ifsc_code': pick(<String>['ifsc', 'ifsc_code']),
+      'address': composedAddress(),
+      'area_type': pick(<String>['area_type']),
     };
+    if ((map['area_type'] ?? '').isEmpty) {
+      map['area_type'] = 'Rural';
+    }
     map.removeWhere((_, value) => value.trim().isEmpty);
     return map;
   }
@@ -161,7 +200,10 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       final cachedDocs = await docService.getCachedSchemeDocumentsByScheme(key);
       if (!mounted) return;
       if (cachedDocs.isNotEmpty) {
-        setState(() => _downloadedDocs = _prioritizeInitialDoc(cachedDocs));
+        final filtered = _prioritizeInitialDoc(
+          _autofillCapableDocs(cachedDocs),
+        );
+        setState(() => _downloadedDocs = filtered);
       }
 
       _syncDownloadedDocs(
@@ -188,25 +230,67 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       .replaceAll(RegExp(r'[\-_]+'), ' ')
       .trim();
 
+  bool _isHtmlDoc(Map<String, dynamic> doc) {
+    final fileName = (doc['filename'] ?? doc['name'] ?? '')
+        .toString()
+        .toLowerCase();
+    final contentType = (doc['content_type'] ?? '').toString().toLowerCase();
+    return fileName.endsWith('.html') ||
+        fileName.endsWith('.htm') ||
+        contentType.contains('html');
+  }
+
+  bool _isAutofillCapableDoc(Map<String, dynamic> doc) {
+    if (!_isHtmlDoc(doc)) return false;
+
+    final explicit = doc['autofill_possible'];
+    if (explicit is bool) return explicit;
+
+    final candidate = doc['is_form_candidate'];
+    if (candidate is bool) return candidate;
+
+    return true;
+  }
+
+  bool _isPilotAutofillDoc(Map<String, dynamic> doc) {
+    final fileName = (doc['filename'] ?? doc['name'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    return fileName == _pilotAutofillDocName;
+  }
+
+  List<Map<String, dynamic>> _autofillCapableDocs(
+    List<Map<String, dynamic>> docs,
+  ) {
+    return docs
+        .where(_isAutofillCapableDoc)
+        .where(_isPilotAutofillDoc)
+        .toList(growable: false);
+  }
+
   List<Map<String, dynamic>> _prioritizeInitialDoc(
-      List<Map<String, dynamic>> docs) {
+    List<Map<String, dynamic>> docs,
+  ) {
     final target = (widget.initialDocumentName ?? '').trim();
     if (target.isEmpty || docs.isEmpty) return docs;
     final normalizedTarget = _normalizeDocName(target);
     final sorted = List<Map<String, dynamic>>.from(docs);
     sorted.sort((a, b) {
-      final aName =
-          _normalizeDocName((a['filename'] ?? a['name'] ?? '').toString());
-      final bName =
-          _normalizeDocName((b['filename'] ?? b['name'] ?? '').toString());
+      final aName = _normalizeDocName(
+        (a['filename'] ?? a['name'] ?? '').toString(),
+      );
+      final bName = _normalizeDocName(
+        (b['filename'] ?? b['name'] ?? '').toString(),
+      );
       final aScore =
           (aName == normalizedTarget || aName.contains(normalizedTarget))
-              ? 1
-              : 0;
+          ? 1
+          : 0;
       final bScore =
           (bName == normalizedTarget || bName.contains(normalizedTarget))
-              ? 1
-              : 0;
+          ? 1
+          : 0;
       return bScore.compareTo(aScore);
     });
     return sorted;
@@ -221,14 +305,20 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
     setState(() => _syncing = true);
     try {
       final docService = ref.read(documentBuilderServiceProvider);
-      var docs = await docService.listSchemeDocumentsByScheme(key,
-          preferCache: !forceRefresh, forceRefresh: forceRefresh);
+      var docs = await docService.listSchemeDocumentsByScheme(
+        key,
+        preferCache: !forceRefresh,
+        forceRefresh: forceRefresh,
+      );
       if (forceDownloadIfEmpty && docs.isEmpty) {
         await docService.downloadSchemeDocuments(key);
-        docs = await docService.listSchemeDocumentsByScheme(key,
-            preferCache: false, forceRefresh: true);
+        docs = await docService.listSchemeDocumentsByScheme(
+          key,
+          preferCache: false,
+          forceRefresh: true,
+        );
       }
-      docs = _prioritizeInitialDoc(docs);
+      docs = _prioritizeInitialDoc(_autofillCapableDocs(docs));
       if (!mounted) return;
       setState(() => _downloadedDocs = docs);
     } catch (_) {
@@ -244,8 +334,13 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
     if (key.trim().isEmpty) return;
     setState(() => _syncing = true);
     try {
-      await ref.read(documentBuilderServiceProvider).downloadSchemeDocuments(key);
-      await _syncDownloadedDocs(forceDownloadIfEmpty: false, forceRefresh: true);
+      await ref
+          .read(documentBuilderServiceProvider)
+          .downloadSchemeDocuments(key);
+      await _syncDownloadedDocs(
+        forceDownloadIfEmpty: false,
+        forceRefresh: true,
+      );
       if (!mounted) return;
       context.showSnack(
         'screen.preview_download_screen.official_forms_synced_for_this_scheme'
@@ -304,10 +399,11 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   Future<void> _previewDownloadedDoc(Map<String, dynamic> doc) async {
     final file = await _fetchDownloadedDocFile(doc);
     if (file == null || !mounted) return;
-    final title = (doc['name'] ??
-            doc['filename'] ??
-            'screen.preview_download_screen.document'.tr())
-        .toString();
+    final title =
+        (doc['name'] ??
+                doc['filename'] ??
+                'screen.preview_download_screen.document'.tr())
+            .toString();
     final typeLabel = _docTypeLabel(doc);
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -315,13 +411,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
           title: title,
           typeLabel: typeLabel,
           file: file,
-          onAutofill: () async {
-            if (!mounted) return;
-            context.showSnack(
-              'screen.preview_download_screen.autofill_helper_is_available_in_official_forms_hub'
-                  .tr(),
-            );
-          },
+          onAutofill: () => _autofillAndPreviewDownloadedDoc(doc),
           onDownload: () => _downloadDownloadedDoc(doc),
           onOpenExternal: _openPrimaryOfficialLink,
           onOpenHub: () {
@@ -333,7 +423,8 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   }
 
   Future<GeneratedDocumentFile?> _fetchDownloadedDocFile(
-      Map<String, dynamic> doc) async {
+    Map<String, dynamic> doc,
+  ) async {
     final fileName = (doc['filename'] ?? doc['name'] ?? '').toString().trim();
     if (fileName.isEmpty) {
       context.showSnack(
@@ -364,12 +455,14 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   }
 
   Future<void> _shareDownloadedDoc(GeneratedDocumentFile file) async {
-    await SharePlus.instance.share(ShareParams(
-      text:
-          'screen.preview_download_screen.official_form_downloaded_from_kisankiawaaz'
-              .tr(),
-      files: <XFile>[XFile(file.file.path)],
-    ));
+    await SharePlus.instance.share(
+      ShareParams(
+        text:
+            'screen.preview_download_screen.official_form_downloaded_from_kisankiawaaz'
+                .tr(),
+        files: <XFile>[XFile(file.file.path)],
+      ),
+    );
     if (!mounted) return;
     context.showSnack(
       'screen.preview_download_screen.document_is_ready_to_save_share_from_this_sheet'
@@ -378,8 +471,160 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   }
 
   String _docDisplayName(Map<String, dynamic> doc) =>
-      (doc['name'] ?? doc['filename'] ?? 'screen.preview_download_screen.document'.tr())
-        .toString();
+      (doc['name'] ??
+              doc['filename'] ??
+              'screen.preview_download_screen.document'.tr())
+          .toString();
+
+  List<String> _sessionStartSchemeSeeds() {
+    final seeds = <String>{};
+
+    void add(dynamic raw) {
+      final value = (raw ?? '').toString().trim();
+      if (value.isNotEmpty) {
+        seeds.add(value);
+      }
+    }
+
+    add(_scheme['id']);
+    add(_scheme['scheme_id']);
+    add(_scheme['short_name']);
+    add(_scheme['name']);
+    add(widget.schemeId);
+    add(widget.schemeName);
+    add(_schemeLookupKey());
+
+    return seeds.toList(growable: false);
+  }
+
+  String _sessionSchemeName() {
+    final name = (_scheme['name'] ?? widget.schemeName).toString().trim();
+    return name;
+  }
+
+  Map<String, String> _sessionAutofillAnswers() {
+    final out = <String, String>{..._autofill};
+
+    String pick(List<String> keys) {
+      for (final key in keys) {
+        final value = (out[key] ?? '').toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+      return '';
+    }
+
+    void setIfMissing(String target, List<String> candidates) {
+      if ((out[target] ?? '').trim().isNotEmpty) return;
+      final value = pick(candidates);
+      if (value.isNotEmpty) {
+        out[target] = value;
+      }
+    }
+
+    setIfMissing('farmer_name', ['applicant_name']);
+    setIfMissing('full_name', ['applicant_name', 'farmer_name']);
+    setIfMissing('mobile_number', ['phone']);
+    setIfMissing('bank_account_number', ['bank_account']);
+    setIfMissing('land_area_acres', ['land_size_acres']);
+    setIfMissing('bank_account_holder_name', ['applicant_name', 'farmer_name']);
+
+    out.removeWhere((_, value) => value.trim().isEmpty);
+    return out;
+  }
+
+  Future<void> _autofillAndPreviewDownloadedDoc(
+    Map<String, dynamic> doc,
+  ) async {
+    if (_autofillInProgress) {
+      context.showSnack('Autofill is already running. Please wait.');
+      return;
+    }
+
+    if (!_isAutofillCapableDoc(doc)) {
+      context.showSnack(
+        'This file is not a fillable HTML form for in-app autofill.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _autofillInProgress = true);
+    try {
+      final docService = ref.read(documentBuilderServiceProvider);
+      final schemeName = _sessionSchemeName();
+      final sourceDocName = (doc['filename'] ?? doc['name'] ?? '')
+          .toString()
+          .trim();
+
+      Map<String, dynamic>? started;
+      Object? lastError;
+      for (final seed in _sessionStartSchemeSeeds()) {
+        try {
+          started = await docService.startSession(
+            seed,
+            schemeName: schemeName.isEmpty ? null : schemeName,
+            preferredFormat: 'html',
+          );
+          final sid = (started['session_id'] ?? '').toString().trim();
+          if (sid.isNotEmpty) break;
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      final sessionId = (started?['session_id'] ?? '').toString().trim();
+      if (sessionId.isEmpty) {
+        throw lastError ?? Exception('Could not start autofill session');
+      }
+
+      final answers = _sessionAutofillAnswers();
+      if (answers.isNotEmpty) {
+        await docService.submitFields(sessionId: sessionId, values: answers);
+      }
+
+      await docService.generateDocument(
+        sessionId,
+        format: 'html',
+        sourceDocumentName: sourceDocName,
+      );
+      final generated = await docService.downloadGeneratedDocumentFile(
+        sessionId,
+      );
+      if (generated == null) {
+        throw Exception('Autofilled document not available');
+      }
+
+      if (!mounted) return;
+      final baseTitle = _docDisplayName(doc);
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OfficialFormPreviewPage(
+            title: '$baseTitle (Autofilled)',
+            typeLabel: 'HTML',
+            file: generated,
+            onAutofill: () => _autofillAndPreviewDownloadedDoc(doc),
+            onDownload: () => _shareDownloadedDoc(generated),
+            onOpenExternal: _openPrimaryOfficialLink,
+            onOpenHub: () {
+              Navigator.of(context).maybePop();
+            },
+          ),
+        ),
+      );
+      if (!mounted) return;
+      context.showSnack('Autofilled preview generated from your profile data.');
+    } catch (_) {
+      if (!mounted) return;
+      context.showSnack(
+        'Could not autofill this form right now. Please try again.',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _autofillInProgress = false);
+      }
+    }
+  }
 
   Future<void> _downloadDownloadedDoc(Map<String, dynamic> doc) async {
     final file = await _fetchDownloadedDocFile(doc);
@@ -394,8 +639,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       );
       return;
     }
-    final lines =
-        _autofill.entries.map((e) => '${e.key}: ${e.value}').toList();
+    final lines = _autofill.entries.map((e) => '${e.key}: ${e.value}').toList();
     await Clipboard.setData(ClipboardData(text: lines.join('\n')));
     if (!mounted) return;
     context.showSnack(
@@ -408,9 +652,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
     await Clipboard.setData(ClipboardData(text: value));
     if (!mounted) return;
     context.showSnack(
-      'screen.preview_download_screen.key_copied'
-          .tr()
-          .replaceAll(r'$key', key),
+      'screen.preview_download_screen.key_copied'.tr().replaceAll(r'$key', key),
     );
   }
 
@@ -421,8 +663,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       );
       return;
     }
-    final text =
-        _autofill.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+    final text = _autofill.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join('\n');
     await SharePlus.instance.share(ShareParams(text: text));
   }
 
@@ -443,20 +686,26 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   }
 
   Set<String> _seedReadinessFromProfile(
-      Map<String, dynamic> scheme, Map<String, String> autofill) {
+    Map<String, dynamic> scheme,
+    Map<String, String> autofill,
+  ) {
     final reqs = _requiredDocsFromScheme(scheme);
     final ready = <String>{};
     for (final req in reqs) {
       final d = req.toLowerCase();
-      if (d.contains('aadhaar') && (autofill['aadhaar_number'] ?? '').isNotEmpty)
+      if (d.contains('aadhaar') &&
+          (autofill['aadhaar_number'] ?? '').isNotEmpty)
         ready.add(req);
       if (d.contains('bank') &&
           (autofill['bank_account'] ?? '').isNotEmpty &&
-          (autofill['ifsc_code'] ?? '').isNotEmpty) ready.add(req);
+          (autofill['ifsc_code'] ?? '').isNotEmpty)
+        ready.add(req);
       if ((d.contains('land') || d.contains('khasra')) &&
-          (autofill['land_size_acres'] ?? '').isNotEmpty) ready.add(req);
+          (autofill['land_size_acres'] ?? '').isNotEmpty)
+        ready.add(req);
       if ((d.contains('mobile') || d.contains('phone')) &&
-          (autofill['phone'] ?? '').isNotEmpty) ready.add(req);
+          (autofill['phone'] ?? '').isNotEmpty)
+        ready.add(req);
     }
     return ready;
   }
@@ -471,8 +720,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
       return;
     }
     final lines = reqs
-        .map((item) =>
-            '${_readinessDone.contains(item) ? '[x]' : '[ ]'} $item')
+        .map((item) => '${_readinessDone.contains(item) ? '[x]' : '[ ]'} $item')
         .join('\n');
     await Clipboard.setData(ClipboardData(text: lines));
     if (!mounted) return;
@@ -493,9 +741,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
         final bs = (b['size'] is num) ? (b['size'] as num).toDouble() : 0;
         return bs.compareTo(as_);
       }
-      return _docDisplayName(a)
-          .toLowerCase()
-          .compareTo(_docDisplayName(b).toLowerCase());
+      return _docDisplayName(
+        a,
+      ).toLowerCase().compareTo(_docDisplayName(b).toLowerCase());
     });
     return out;
   }
@@ -517,15 +765,18 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
   }
 
   String _docTypeLabel(Map<String, dynamic> doc) {
-    final fileName =
-        (doc['filename'] ?? doc['name'] ?? '').toString().toLowerCase();
+    final fileName = (doc['filename'] ?? doc['name'] ?? '')
+        .toString()
+        .toLowerCase();
     final contentType = (doc['content_type'] ?? '').toString().toLowerCase();
     if (fileName.endsWith('.pdf') || contentType.contains('pdf')) return 'PDF';
     if (fileName.endsWith('.docx') || contentType.contains('wordprocessingml'))
       return 'DOCX';
-    if (fileName.endsWith('.doc') || contentType.contains('msword')) return 'DOC';
+    if (fileName.endsWith('.doc') || contentType.contains('msword'))
+      return 'DOC';
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) return 'XLS';
-    if (fileName.endsWith('.html') || contentType.contains('html')) return 'HTML';
+    if (fileName.endsWith('.html') || contentType.contains('html'))
+      return 'HTML';
     return 'FILE';
   }
 
@@ -579,12 +830,14 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
     final isDark = context.isDark;
     final requiredDocs = _requiredDocsFromScheme(_scheme);
     final completed = requiredDocs.where(_readinessDone.contains).length;
-    final readiness =
-        requiredDocs.isEmpty ? 0.0 : completed / requiredDocs.length;
+    final readiness = requiredDocs.isEmpty
+        ? 0.0
+        : completed / requiredDocs.length;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       appBar: AppBar(
         title: Text('screen.preview_download_screen.official_forms_hub'.tr()),
         elevation: 0,
@@ -598,10 +851,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: isDark
-                      ? <Color>[
-                          AppColors.darkBackground,
-                          AppColors.darkSurface,
-                        ]
+                      ? <Color>[AppColors.darkBackground, AppColors.darkSurface]
                       : <Color>[
                           AppColors.lightBackground,
                           AppColors.lightSurface,
@@ -626,7 +876,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Expanded(
                               child: _StatTile(
                                 icon: Icons.file_copy_outlined,
-                                label: 'screen.preview_download_screen.downloaded'.tr(),
+                                label:
+                                    'screen.preview_download_screen.downloaded'
+                                        .tr(),
                                 value: '${_downloadedDocs.length}',
                                 isDark: isDark,
                               ),
@@ -635,7 +887,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Expanded(
                               child: _StatTile(
                                 icon: Icons.task_alt_outlined,
-                                label: 'screen.preview_download_screen.readiness'.tr(),
+                                label:
+                                    'screen.preview_download_screen.readiness'
+                                        .tr(),
                                 value: '${(readiness * 100).round()}%',
                                 isDark: isDark,
                                 highlight: readiness == 1.0,
@@ -645,7 +899,8 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Expanded(
                               child: _StatTile(
                                 icon: Icons.link_outlined,
-                                label: 'screen.preview_download_screen.links'.tr(),
+                                label: 'screen.preview_download_screen.links'
+                                    .tr(),
                                 value: '${_officialLinks.length}',
                                 isDark: isDark,
                               ),
@@ -658,7 +913,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Expanded(
                               child: _OutlineBtn(
                                 icon: Icons.public_rounded,
-                                label: 'screen.preview_download_screen.scheme_portal'.tr(),
+                                label:
+                                    'screen.preview_download_screen.scheme_portal'
+                                        .tr(),
                                 onTap: _openPrimaryOfficialLink,
                               ),
                             ),
@@ -666,11 +923,14 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Expanded(
                               child: _OutlineBtn(
                                 icon: Icons.history_rounded,
-                                label: 'screen.preview_download_screen.last_saved'.tr(),
+                                label:
+                                    'screen.preview_download_screen.last_saved'
+                                        .tr(),
                                 onTap: _savedDocs.isEmpty
                                     ? null
                                     : () => _openExternalUrl(
-                                        _savedDocs.first.documentUrl),
+                                        _savedDocs.first.documentUrl,
+                                      ),
                               ),
                             ),
                           ],
@@ -686,16 +946,16 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                     icon: Icons.checklist_rounded,
                     iconColor: AppColors.primary,
                     title:
-                      'screen.preview_download_screen.application_readiness'
-                        .tr(),
+                        'screen.preview_download_screen.application_readiness'
+                            .tr(),
                     subtitle:
-                      'screen.preview_download_screen.mark_what_you_have_ready_before_filling'
-                        .tr(),
+                        'screen.preview_download_screen.mark_what_you_have_ready_before_filling'
+                            .tr(),
                     child: requiredDocs.isEmpty
                         ? _EmptyHint(
-                        text:
-                          'screen.preview_download_screen.no_required_doc_checklist_found_for_this_scheme'
-                            .tr(),
+                            text:
+                                'screen.preview_download_screen.no_required_doc_checklist_found_for_this_scheme'
+                                    .tr(),
                           )
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,10 +973,10 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                             .withValues(alpha: 0.12),
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                          readiness == 1.0
-                                              ? Colors.green
-                                              : AppColors.primary,
-                                        ),
+                                              readiness == 1.0
+                                                  ? Colors.green
+                                                  : AppColors.primary,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -726,7 +986,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w800,
-                                      color: isDark ? Colors.white : Colors.black,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
                                     ),
                                   ),
                                 ],
@@ -742,8 +1004,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: requiredDocs.map((item) {
-                                      final done =
-                                          _readinessDone.contains(item);
+                                      final done = _readinessDone.contains(
+                                        item,
+                                      );
                                       return _CheckChip(
                                         label: item,
                                         checked: done,
@@ -770,8 +1033,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                 alignment: Alignment.centerRight,
                                 child: _IconActionBtn(
                                   icon: Icons.checklist_rtl_outlined,
-                                  tooltip: 'screen.preview_download_screen.copy_checklist'
-                                      .tr(),
+                                  tooltip:
+                                      'screen.preview_download_screen.copy_checklist'
+                                          .tr(),
                                   onTap: _copyReadinessChecklist,
                                   outlined: true,
                                 ),
@@ -786,7 +1050,8 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                   _HubSection(
                     icon: Icons.visibility_rounded,
                     iconColor: AppColors.primary,
-                    title: 'screen.preview_download_screen.preview_download'.tr(),
+                    title: 'screen.preview_download_screen.preview_download'
+                        .tr(),
                     subtitle:
                         'screen.preview_download_screen.browse_and_open_downloaded_forms'
                             .tr(),
@@ -803,7 +1068,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                     .tr(),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -821,20 +1088,17 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                   children: <Widget>[
                                     for (final f in const <String>[
                                       'ALL',
-                                      'PDF',
-                                      'DOC',
-                                      'DOCX',
-                                      'XLS',
                                       'HTML',
                                     ])
                                       Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 6),
+                                        padding: const EdgeInsets.only(
+                                          right: 6,
+                                        ),
                                         child: _FilterPill(
                                           label: f,
                                           selected: _docFilter == f,
-                                          onTap: () => setState(
-                                              () => _docFilter = f),
+                                          onTap: () =>
+                                              setState(() => _docFilter = f),
                                         ),
                                       ),
                                   ],
@@ -845,8 +1109,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                             Tooltip(
                               message: _sortByLargest
                                   ? 'screen.preview_download_screen.largest_first'
-                                      .tr()
-                                  : 'screen.preview_download_screen.name_a_z'.tr(),
+                                        .tr()
+                                  : 'screen.preview_download_screen.name_a_z'
+                                        .tr(),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(10),
                                 onTap: () => setState(
@@ -877,9 +1142,10 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                           )
                         else if (_visibleDocs.isEmpty)
                           _EmptyHint(
-                              text:
-                                  'screen.preview_download_screen.no_forms_match_your_current_filters'
-                                      .tr())
+                            text:
+                                'screen.preview_download_screen.no_forms_match_your_current_filters'
+                                    .tr(),
+                          )
                         else
                           SizedBox(
                             height: 200,
@@ -894,8 +1160,7 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                 final size = (doc['size'] is num)
                                     ? (doc['size'] as num).toDouble()
                                     : 0;
-                                final sizeKb =
-                                    (size / 1024).toStringAsFixed(1);
+                                final sizeKb = (size / 1024).toStringAsFixed(1);
                                 return SizedBox(
                                   width: 260,
                                   child: _DocCard(
@@ -904,11 +1169,11 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                     typeLabel: _docTypeLabel(doc),
                                     isDark: isDark,
                                     onOpen: () => _previewDownloadedDoc(doc),
-                                    onPreview: () =>
-                                        _previewDownloadedDoc(doc),
+                                    onPreview: () => _previewDownloadedDoc(doc),
                                     onDownload: () =>
                                         _downloadDownloadedDoc(doc),
-                                    onAutofill: _copyAutofill,
+                                    onAutofill: () =>
+                                        _autofillAndPreviewDownloadedDoc(doc),
                                   ),
                                 );
                               },
@@ -924,17 +1189,22 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                               icon: _syncing
                                   ? Icons.hourglass_top_rounded
                                   : Icons.sync_rounded,
-                              tooltip: 'screen.preview_download_screen.sync_forms'.tr(),
+                              tooltip:
+                                  'screen.preview_download_screen.sync_forms'
+                                      .tr(),
                               onTap: _syncing ? null : _downloadAllNow,
                               outlined: true,
                             ),
                             _IconActionBtn(
                               icon: Icons.play_arrow_rounded,
-                              tooltip: 'screen.preview_download_screen.quick_preview'.tr(),
+                              tooltip:
+                                  'screen.preview_download_screen.quick_preview'
+                                      .tr(),
                               onTap: _visibleDocs.isEmpty
                                   ? null
                                   : () => _previewDownloadedDoc(
-                                      _visibleDocs.first),
+                                      _visibleDocs.first,
+                                    ),
                               outlined: true,
                             ),
                           ],
@@ -949,7 +1219,8 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                   _HubSection(
                     icon: Icons.link_rounded,
                     iconColor: Colors.orange,
-                    title: 'screen.preview_download_screen.official_sources'.tr(),
+                    title: 'screen.preview_download_screen.official_sources'
+                        .tr(),
                     subtitle: widget.schemeName,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -961,13 +1232,15 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                                     .tr(),
                           )
                         else
-                          ..._officialLinks.map((link) => _LinkRow(
-                                name: link['name'] ??
-                                    'screen.preview_download_screen.official_form_link'
-                                        .tr(),
-                                onOpen: () =>
-                                    _openExternalUrl(link['url'] ?? ''),
-                              )),
+                          ..._officialLinks.map(
+                            (link) => _LinkRow(
+                              name:
+                                  link['name'] ??
+                                  'screen.preview_download_screen.official_form_link'
+                                      .tr(),
+                              onOpen: () => _openExternalUrl(link['url'] ?? ''),
+                            ),
+                          ),
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerRight,
@@ -992,7 +1265,8 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                   _HubSection(
                     icon: Icons.auto_fix_high_rounded,
                     iconColor: AppColors.primary,
-                    title: 'screen.preview_download_screen.autofill_helper'.tr(),
+                    title: 'screen.preview_download_screen.autofill_helper'
+                        .tr(),
                     subtitle:
                         'screen.preview_download_screen.tap_any_field_to_copy_it_instantly'
                             .tr(),
@@ -1001,16 +1275,18 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                       children: <Widget>[
                         if (_autofill.isEmpty)
                           _EmptyHint(
-                            text: 'screen.preview_download_screen.no_autofill_values_available'
-                                .tr(),
+                            text:
+                                'screen.preview_download_screen.no_autofill_values_available'
+                                    .tr(),
                           )
                         else
-                          ..._autofill.entries.map((e) => _AutofillRow(
-                                fieldKey: e.key,
-                                value: e.value,
-                                onTap: () =>
-                                    _copySingleField(e.key, e.value),
-                              )),
+                          ..._autofill.entries.map(
+                            (e) => _AutofillRow(
+                              fieldKey: e.key,
+                              value: e.value,
+                              onTap: () => _copySingleField(e.key, e.value),
+                            ),
+                          ),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
@@ -1018,13 +1294,15 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                           children: <Widget>[
                             _IconActionBtn(
                               icon: Icons.copy_all_outlined,
-                              tooltip: 'screen.preview_download_screen.copy_all'.tr(),
+                              tooltip: 'screen.preview_download_screen.copy_all'
+                                  .tr(),
                               onTap: _copyAutofill,
                               outlined: true,
                             ),
                             _IconActionBtn(
                               icon: Icons.share_outlined,
-                              tooltip: 'screen.preview_download_screen.share'.tr(),
+                              tooltip: 'screen.preview_download_screen.share'
+                                  .tr(),
                               onTap: _shareAutofill,
                               outlined: true,
                             ),
@@ -1032,7 +1310,9 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                               icon: _saving
                                   ? Icons.hourglass_top_rounded
                                   : Icons.save_outlined,
-                              tooltip: 'screen.preview_download_screen.save_link'.tr(),
+                              tooltip:
+                                  'screen.preview_download_screen.save_link'
+                                      .tr(),
                               onTap: _saving ? null : _saveToProfile,
                               outlined: true,
                             ),
@@ -1048,23 +1328,24 @@ class _PreviewDownloadScreenState extends ConsumerState<PreviewDownloadScreen>
                   _HubSection(
                     icon: Icons.bookmark_rounded,
                     iconColor: AppColors.primary,
-                    title: 'screen.preview_download_screen.saved_references'.tr(),
-                    subtitle:
-                      'screen.preview_download_screen.recent_official_form_links_in_your_vault'
+                    title: 'screen.preview_download_screen.saved_references'
                         .tr(),
+                    subtitle:
+                        'screen.preview_download_screen.recent_official_form_links_in_your_vault'
+                            .tr(),
                     child: _savedDocs.isEmpty
-                      ? _EmptyHint(
-                        text: 'screen.preview_download_screen.no_saved_references_yet'
-                          .tr(),
-                        )
+                        ? _EmptyHint(
+                            text:
+                                'screen.preview_download_screen.no_saved_references_yet'
+                                    .tr(),
+                          )
                         : Column(
                             children: _savedDocs.take(5).map((d) {
                               return _SavedRefTile(
                                 schemeName: d.schemeName,
                                 date:
                                     '${d.generatedAt.day}/${d.generatedAt.month}/${d.generatedAt.year}',
-                                onTap: () =>
-                                    _openExternalUrl(d.documentUrl),
+                                onTap: () => _openExternalUrl(d.documentUrl),
                               );
                             }).toList(),
                           ),
@@ -1114,7 +1395,9 @@ class _HubSection extends StatelessWidget {
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: isDark ? 0.06 : 0.08),
+            color: AppColors.primaryDark.withValues(
+              alpha: isDark ? 0.06 : 0.08,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1375,23 +1658,33 @@ class _DocCard extends StatelessWidget {
 
   IconData get _typeIcon {
     switch (typeLabel) {
-      case 'PDF': return Icons.picture_as_pdf_outlined;
+      case 'PDF':
+        return Icons.picture_as_pdf_outlined;
       case 'DOC':
-      case 'DOCX': return Icons.description_outlined;
-      case 'XLS': return Icons.table_chart_outlined;
-      case 'HTML': return Icons.language_outlined;
-      default: return Icons.insert_drive_file_outlined;
+      case 'DOCX':
+        return Icons.description_outlined;
+      case 'XLS':
+        return Icons.table_chart_outlined;
+      case 'HTML':
+        return Icons.language_outlined;
+      default:
+        return Icons.insert_drive_file_outlined;
     }
   }
 
   Color get _typeColor {
     switch (typeLabel) {
-      case 'PDF': return Colors.red;
+      case 'PDF':
+        return Colors.red;
       case 'DOC':
-      case 'DOCX': return AppColors.primaryDark;
-      case 'XLS': return AppColors.primary;
-      case 'HTML': return Colors.orange;
-      default: return AppColors.primary;
+      case 'DOCX':
+        return AppColors.primaryDark;
+      case 'XLS':
+        return AppColors.primary;
+      case 'HTML':
+        return Colors.orange;
+      default:
+        return AppColors.primary;
     }
   }
 
@@ -1418,7 +1711,9 @@ class _DocCard extends StatelessWidget {
             ),
             boxShadow: <BoxShadow>[
               BoxShadow(
-                color: AppColors.primaryDark.withValues(alpha: isDark ? 0.06 : 0.08),
+                color: AppColors.primaryDark.withValues(
+                  alpha: isDark ? 0.06 : 0.08,
+                ),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1433,7 +1728,9 @@ class _DocCard extends StatelessWidget {
                 children: <Widget>[
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _typeColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -1455,13 +1752,7 @@ class _DocCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    sizeLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: muted,
-                    ),
-                  ),
+                  Text(sizeLabel, style: TextStyle(fontSize: 11, color: muted)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1477,33 +1768,33 @@ class _DocCard extends StatelessWidget {
               ),
               const Spacer(),
               // Action buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      _MiniBtn(
-                        icon: Icons.visibility_outlined,
-                        tooltip: 'screen.preview_download_screen.preview'.tr(),
-                        onTap: onPreview,
-                        outlined: true,
-                      ),
-                      const SizedBox(width: 5),
-                      _MiniBtn(
-                        icon: Icons.download_outlined,
-                        tooltip: 'screen.preview_download_screen.download'.tr(),
-                        onTap: onDownload,
-                        outlined: true,
-                      ),
-                      const SizedBox(width: 5),
-                      _MiniBtn(
-                        icon: Icons.auto_fix_high,
-                        tooltip: 'screen.preview_download_screen.autofill'.tr(),
-                        onTap: onAutofill,
-                        outlined: true,
-                      ),
-                    ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  _MiniBtn(
+                    icon: Icons.visibility_outlined,
+                    tooltip: 'screen.preview_download_screen.preview'.tr(),
+                    onTap: onPreview,
+                    outlined: true,
+                  ),
+                  const SizedBox(width: 5),
+                  _MiniBtn(
+                    icon: Icons.download_outlined,
+                    tooltip: 'screen.preview_download_screen.download'.tr(),
+                    onTap: onDownload,
+                    outlined: true,
+                  ),
+                  const SizedBox(width: 5),
+                  _MiniBtn(
+                    icon: Icons.auto_fix_high,
+                    tooltip: 'screen.preview_download_screen.autofill'.tr(),
+                    onTap: onAutofill,
+                    outlined: true,
                   ),
                 ],
               ),
+            ],
+          ),
         ),
       ),
     );
@@ -1533,11 +1824,7 @@ class _MiniBtn extends StatelessWidget {
         child: SizedBox(
           width: 34,
           height: 34,
-          child: Icon(
-            icon,
-            size: 22,
-            color: enabledColor,
-          ),
+          child: Icon(icon, size: 22, color: enabledColor),
         ),
       ),
     );
@@ -1711,9 +1998,7 @@ class _SavedRefTile extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               date,
-              style: context.textTheme.bodySmall?.copyWith(
-                color: muted,
-              ),
+              style: context.textTheme.bodySmall?.copyWith(color: muted),
             ),
             const SizedBox(width: 6),
             Icon(Icons.chevron_right_rounded, size: 18, color: muted),
@@ -1801,11 +2086,7 @@ class _IconActionBtn extends StatelessWidget {
         child: SizedBox(
           width: 36,
           height: 36,
-          child: Icon(
-            icon,
-            size: 23,
-            color: iconColor,
-          ),
+          child: Icon(icon, size: 23, color: iconColor),
         ),
       ),
     );
