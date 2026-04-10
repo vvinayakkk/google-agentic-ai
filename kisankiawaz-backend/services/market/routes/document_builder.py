@@ -82,6 +82,7 @@ class StartSessionRequest(BaseModel):
 
 class GenerateDocumentRequest(BaseModel):
     format: str = Field(default="html", description="Requested output format (html/pdf)")
+    source_document_name: Optional[str] = None
 
 class SubmitAnswerRequest(BaseModel):
     answers: dict = Field(..., description="Dict of field_name → value for the answered questions")
@@ -234,6 +235,7 @@ async def generate_document(
         db=db,
         session_id=session_id,
         preferred_format=(body.format or "html").lower(),
+        preferred_document_name=body.source_document_name,
     )
     return result
 
@@ -539,6 +541,7 @@ async def serve_scheme_document(
 ):
     """Serve a downloaded scheme document file to the farmer."""
     import os
+    import mimetypes
     db = get_async_db()
     scheme = await _resolve_scheme(db, scheme_name)
     canonical = scheme.get("short_name") or scheme.get("name") if scheme else scheme_name
@@ -551,10 +554,19 @@ async def serve_scheme_document(
             ErrorCode.RESOURCE_NOT_FOUND,
             f"Document not found. Try downloading first via POST /download-scheme-docs/{scheme_name}",
         )
+
+    guessed_media_type, _ = mimetypes.guess_type(file_path)
+    media_type = guessed_media_type or "application/octet-stream"
+
+    # Some web forms are stored with uncommon extensions (e.g. .aspx); keep these renderable.
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in {".html", ".htm", ".aspx", ".jsp", ".php", ".do"}:
+        media_type = "text/html"
+
     return FileResponse(
         path=file_path,
         filename=os.path.basename(file_path),
-        media_type="application/octet-stream",
+        media_type=media_type,
     )
 
 

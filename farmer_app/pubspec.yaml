@@ -61,6 +61,7 @@ dependencies:
   path_provider: any
   permission_handler: any
   connectivity_plus: any
+  webview_flutter: ^4.10.0
 
   # Icons
   cupertino_icons: any

@@ -26,12 +26,15 @@ class DocumentBuilderScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
+  static const String _pilotAutofillDocName = 'document_1399033a05ab.html';
+
   bool _loading = true;
   bool _syncingAllForms = false;
   String _search = '';
   String _selectedCategory = 'All';
   bool _highestBenefit = false;
   bool _loadingFormPreviews = false;
+  bool _autofillPreviewInProgress = false;
 
   Map<String, dynamic> _profile = <String, dynamic>{};
   List<Map<String, dynamic>> _schemes = <Map<String, dynamic>>[];
@@ -202,10 +205,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   }
 
   String _normalizeSchemeLookup(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
-        .trim();
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
   }
 
   Map<String, dynamic>? _findSchemeForDownloadedKey(String rawKey) {
@@ -248,7 +248,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     return '';
   }
 
-  Future<void> _openSchemePortalForPreviewItem(_FormPreviewCardData item) async {
+  Future<void> _openSchemePortalForPreviewItem(
+    _FormPreviewCardData item,
+  ) async {
     final scheme = _findSchemeForPreviewItem(item);
     if (scheme == null) {
       context.showSnack(
@@ -279,6 +281,211 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     );
   }
 
+  Map<String, String> _profileAutofillForPreview() {
+    String pick(List<String> keys) {
+      for (final key in keys) {
+        final value = (_profile[key] ?? '').toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+      return '';
+    }
+
+    String composedAddress() {
+      final parts = <String>[
+        pick(<String>['address']),
+        pick(<String>['village']),
+        pick(<String>['sub_district', 'tehsil', 'taluka', 'block']),
+        pick(<String>['district']),
+        pick(<String>['state']),
+        pick(<String>['pin_code', 'pincode']),
+      ].where((part) => part.isNotEmpty).toList(growable: false);
+      return parts.join(', ');
+    }
+
+    final map = <String, String>{
+      'applicant_name': pick(<String>['name', 'farmer_name']),
+      'farmer_name': pick(<String>['farmer_name', 'name']),
+      'father_name': pick(<String>[
+        'father_name',
+        'father_or_husband_name',
+        'husband_name',
+      ]),
+      'phone': pick(<String>['phone', 'mobile', 'mobile_number']),
+      'mobile_number': pick(<String>['mobile_number', 'phone', 'mobile']),
+      'village': pick(<String>['village']),
+      'block': pick(<String>['block']),
+      'sub_district': pick(<String>['sub_district', 'tehsil', 'taluka']),
+      'district': pick(<String>['district']),
+      'state': pick(<String>['state']),
+      'pin_code': pick(<String>['pin_code', 'pincode']),
+      'land_size_acres': pick(<String>['land_size_acres', 'land_size']),
+      'land_area_hectares': pick(<String>['land_size_hectares', 'land_area_hectares']),
+      'aadhaar_number': pick(<String>['aadhaar', 'aadhaar_number']),
+      'gender': pick(<String>['gender']),
+      'category': pick(<String>['category']),
+      'bank_account': pick(<String>['bank_account', 'account_number']),
+      'bank_account_holder_name': pick(<String>[
+        'bank_account_holder_name',
+        'name',
+        'farmer_name',
+      ]),
+      'ifsc_code': pick(<String>['ifsc', 'ifsc_code']),
+      'address': composedAddress(),
+      'area_type': pick(<String>['area_type']),
+    };
+    if ((map['area_type'] ?? '').isEmpty) {
+      map['area_type'] = 'Rural';
+    }
+    map.removeWhere((_, value) => value.trim().isEmpty);
+    return map;
+  }
+
+  Map<String, String> _sessionAutofillAnswersForPreview() {
+    final out = _profileAutofillForPreview();
+
+    String pick(List<String> keys) {
+      for (final key in keys) {
+        final value = (out[key] ?? '').toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+      return '';
+    }
+
+    void setIfMissing(String target, List<String> candidates) {
+      if ((out[target] ?? '').trim().isNotEmpty) return;
+      final value = pick(candidates);
+      if (value.isNotEmpty) out[target] = value;
+    }
+
+    setIfMissing('farmer_name', ['applicant_name']);
+    setIfMissing('full_name', ['applicant_name', 'farmer_name']);
+    setIfMissing('mobile_number', ['phone']);
+    setIfMissing('bank_account_number', ['bank_account']);
+    setIfMissing('land_area_acres', ['land_size_acres']);
+    setIfMissing('bank_account_holder_name', ['applicant_name', 'farmer_name']);
+
+    out.removeWhere((_, value) => value.trim().isEmpty);
+    return out;
+  }
+
+  List<String> _sessionSeedsForPreviewItem(
+    _FormPreviewCardData item,
+    Map<String, dynamic>? scheme,
+  ) {
+    final seeds = <String>{};
+    void add(dynamic raw) {
+      final value = (raw ?? '').toString().trim();
+      if (value.isNotEmpty) seeds.add(value);
+    }
+
+    add(item.schemeId);
+    add(item.schemeLookupKey);
+    add(item.schemeName);
+    add(scheme?['id']);
+    add(scheme?['scheme_id']);
+    add(scheme?['short_name']);
+    add(scheme?['name']);
+
+    return seeds.toList(growable: false);
+  }
+
+  Future<void> _autofillAndOpenDirectPreview(_FormPreviewCardData item) async {
+    if (_autofillPreviewInProgress) {
+      context.showSnack('Autofill is already running. Please wait.');
+      return;
+    }
+
+    final docName = item.documentName.trim();
+    if (docName.isEmpty || item.typeLabel != 'HTML') {
+      context.showSnack(
+        'Only fillable HTML forms are supported for in-app autofill.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _autofillPreviewInProgress = true);
+    try {
+      final docService = ref.read(documentBuilderServiceProvider);
+      final mapped = _findSchemeForPreviewItem(item);
+      final scheme = mapped == null
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(mapped);
+      if (scheme.isNotEmpty) {
+        await _hydrateSchemeDetailsInPlace(scheme);
+      }
+
+      final schemeName = (scheme['name'] ?? item.schemeName).toString().trim();
+
+      Map<String, dynamic>? started;
+      Object? lastError;
+      for (final seed in _sessionSeedsForPreviewItem(item, scheme)) {
+        try {
+          started = await docService.startSession(
+            seed,
+            schemeName: schemeName.isEmpty ? null : schemeName,
+            preferredFormat: 'html',
+          );
+          final sid = (started['session_id'] ?? '').toString().trim();
+          if (sid.isNotEmpty) break;
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      final sessionId = (started?['session_id'] ?? '').toString().trim();
+      if (sessionId.isEmpty) {
+        throw lastError ?? Exception('Could not start autofill session');
+      }
+
+      final answers = _sessionAutofillAnswersForPreview();
+      if (answers.isNotEmpty) {
+        await docService.submitFields(sessionId: sessionId, values: answers);
+      }
+
+      await docService.generateDocument(
+        sessionId,
+        format: 'html',
+        sourceDocumentName: docName,
+      );
+
+      final generated = await docService.downloadGeneratedDocumentFile(
+        sessionId,
+      );
+      if (generated == null) {
+        throw Exception('Autofilled document not available');
+      }
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OfficialFormPreviewPage(
+            title: '$docName (Autofilled)',
+            typeLabel: 'HTML',
+            file: generated,
+            onAutofill: () => _autofillAndOpenDirectPreview(item),
+            onDownload: () => _sharePreviewFile(generated),
+            onOpenExternal: () => _openSchemePortalForPreviewItem(item),
+            onOpenHub: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      context.showSnack('Autofilled preview generated from your profile data.');
+    } catch (_) {
+      if (!mounted) return;
+      context.showSnack(
+        'Could not autofill this form right now. Please try again.',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _autofillPreviewInProgress = false);
+      }
+    }
+  }
+
   List<Map<String, dynamic>> get _recommendedSchemes {
     final scored =
         _schemes
@@ -298,9 +505,37 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     return 'FILE';
   }
 
-  Future<void> _openOfficialFormsHub([
-    _FormPreviewCardData? preferred,
-  ]) async {
+  bool _isHtmlDownloadedDoc(Map<String, dynamic> doc) {
+    final fileName = (doc['filename'] ?? doc['name'] ?? '')
+        .toString()
+        .toLowerCase();
+    final contentType = (doc['content_type'] ?? '').toString().toLowerCase();
+    return fileName.endsWith('.html') ||
+        fileName.endsWith('.htm') ||
+        contentType.contains('html');
+  }
+
+  bool _isAutofillCapableDownloadedDoc(Map<String, dynamic> doc) {
+    if (!_isHtmlDownloadedDoc(doc)) return false;
+
+    final fileName = (doc['filename'] ?? doc['name'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (fileName != _pilotAutofillDocName) {
+      return false;
+    }
+
+    final explicit = doc['autofill_possible'];
+    if (explicit is bool) return explicit;
+
+    final candidate = doc['is_form_candidate'];
+    if (candidate is bool) return candidate;
+
+    return true;
+  }
+
+  Future<void> _openOfficialFormsHub([_FormPreviewCardData? preferred]) async {
     _FormPreviewCardData? selected = preferred;
     if (selected == null && _formPreviewCards.isNotEmpty) {
       selected = _formPreviewCards.first;
@@ -371,9 +606,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
           typeLabel: item.typeLabel,
           file: file,
           onAutofill: () async {
-            context.showSnack(
-              'Autofill helper is available in Official Forms Hub.',
-            );
+            await _autofillAndOpenDirectPreview(item);
           },
           onDownload: () async {
             await _sharePreviewFile(file);
@@ -400,12 +633,14 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     for (final doc in allDownloaded) {
       final exists = doc['exists'];
       if (exists is bool && !exists) continue;
+      if (!_isAutofillCapableDownloadedDoc(doc)) continue;
 
       final docName = (doc['filename'] ?? doc['name'] ?? '').toString().trim();
       if (docName.isEmpty) continue;
 
-      final rawSchemeKey =
-          (doc['scheme'] ?? doc['scheme_name'] ?? '').toString().trim();
+      final rawSchemeKey = (doc['scheme'] ?? doc['scheme_name'] ?? '')
+          .toString()
+          .trim();
       final mappedScheme = _findSchemeForDownloadedKey(rawSchemeKey);
 
       final schemeId = mappedScheme != null
@@ -420,7 +655,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
       final lookupKey = mappedScheme != null
           ? (mappedScheme['short_name'] ?? mappedScheme['name'] ?? schemeId)
-            .toString()
+                .toString()
           : (rawSchemeKey.isEmpty ? schemeId : rawSchemeKey);
 
       final dedupeKey = '${schemeId.toLowerCase()}::${docName.toLowerCase()}';
@@ -480,10 +715,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
           final schemeId = _schemeId(scheme);
           if (schemeId.trim().isEmpty) continue;
 
-          final schemeName = (scheme['name'] ?? scheme['short_name'] ?? schemeId)
+          final schemeName =
+              (scheme['name'] ?? scheme['short_name'] ?? schemeId).toString();
+          final schemeKey = (scheme['short_name'] ?? scheme['name'] ?? schemeId)
               .toString();
-          final schemeKey =
-              (scheme['short_name'] ?? scheme['name'] ?? schemeId).toString();
 
           var docs = await docService.listSchemeDocumentsByScheme(
             schemeKey,
@@ -498,13 +733,17 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
             );
           }
 
+          docs = docs
+              .where(_isAutofillCapableDownloadedDoc)
+              .toList(growable: false);
           if (docs.isEmpty) continue;
 
           for (final doc in docs.take(2)) {
             final docName = (doc['filename'] ?? doc['name'] ?? 'Document')
                 .toString();
-            final size =
-                (doc['size'] is num) ? (doc['size'] as num).toDouble() : 0;
+            final size = (doc['size'] is num)
+                ? (doc['size'] as num).toDouble()
+                : 0;
             previews.add(
               _FormPreviewCardData(
                 schemeId: schemeId,
@@ -1083,10 +1322,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       return;
     }
     try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
         context.showSnack(
           'screen.document_builder_screen.could_not_open_this_website_right_now'
@@ -1127,10 +1363,12 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
             'screen.document_builder_screen.bulk_sync_is_still_running_forms_will_keep_appearing'
                 .tr(),
           );
-        } else if ((polled['state'] ?? '').toString().toLowerCase() == 'failed') {
-          final msg = (polled['error'] ??
-                  'screen.document_builder_screen.bulk_sync_failed'.tr())
-              .toString();
+        } else if ((polled['state'] ?? '').toString().toLowerCase() ==
+            'failed') {
+          final msg =
+              (polled['error'] ??
+                      'screen.document_builder_screen.bulk_sync_failed'.tr())
+                  .toString();
           context.showSnack(msg, isError: true);
         } else {
           final summary = (polled['summary'] is Map)
@@ -1277,7 +1515,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                           : ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: _formPreviewCards.length,
-                                separatorBuilder: (_, index) =>
+                              separatorBuilder: (_, index) =>
                                   const SizedBox(width: 12),
                               itemBuilder: (_, i) {
                                 final item = _formPreviewCards[i];
@@ -1363,7 +1601,8 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                     ),
                     const SizedBox(height: 18),
                     _sectionHeader(
-                      'screen.document_builder_screen.best_schemes_for_you'.tr(),
+                      'screen.document_builder_screen.best_schemes_for_you'
+                          .tr(),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -1407,11 +1646,23 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
   Widget _readinessBanner(Color cardColor, Color textColor, Color subColor) {
     final docs = <(_ReadinessState, String)>[
-      (_readinessForAadhaar(), 'screen.document_builder_screen.aadhaar_card'.tr()),
+      (
+        _readinessForAadhaar(),
+        'screen.document_builder_screen.aadhaar_card'.tr(),
+      ),
       (_readinessForLand(), 'screen.document_builder_screen.land_records'.tr()),
-      (_readinessForBank(), 'screen.document_builder_screen.bank_passbook'.tr()),
-      (_readinessForCaste(), 'screen.document_builder_screen.caste_certificate'.tr()),
-      (_readinessForPhoto(), 'screen.document_builder_screen.passport_photo'.tr()),
+      (
+        _readinessForBank(),
+        'screen.document_builder_screen.bank_passbook'.tr(),
+      ),
+      (
+        _readinessForCaste(),
+        'screen.document_builder_screen.caste_certificate'.tr(),
+      ),
+      (
+        _readinessForPhoto(),
+        'screen.document_builder_screen.passport_photo'.tr(),
+      ),
     ];
 
     return _glassCard(
@@ -1485,7 +1736,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
               const Spacer(),
               TextButton(
                 onPressed: () => _openOfficialFormsHub(),
-                child: Text('screen.document_builder_screen.complete_profile'.tr()),
+                child: Text(
+                  'screen.document_builder_screen.complete_profile'.tr(),
+                ),
               ),
             ],
           ),
@@ -1630,7 +1883,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
               }),
               FilterChip(
                 selected: _highestBenefit,
-                label: Text('screen.document_builder_screen.highest_benefit'.tr()),
+                label: Text(
+                  'screen.document_builder_screen.highest_benefit'.tr(),
+                ),
                 onSelected: (v) => setState(() => _highestBenefit = v),
               ),
             ],

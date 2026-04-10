@@ -84,6 +84,18 @@ class DocumentBuilderService {
     return null;
   }
 
+  Future<String> _resolveRouteSafeSchemeKey(String schemeKey) async {
+    final raw = schemeKey.trim();
+    if (raw.isEmpty) return raw;
+
+    final canonical = await _resolveCanonicalSchemeId(raw);
+    final candidate = (canonical ?? raw).trim();
+    if (candidate.isEmpty) return raw;
+
+    // Slash-containing IDs cannot be used safely in path params.
+    return candidate.replaceAll('/', '_');
+  }
+
   List<Map<String, dynamic>>? _listFromCache(dynamic cached) {
     if (cached is! List) return null;
     return cached
@@ -125,9 +137,9 @@ class DocumentBuilderService {
 
     if (map['documents'] is List) {
       out.addAll(
-        (map['documents'] as List)
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>())),
+        (map['documents'] as List).whereType<Map>().map(
+          (e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()),
+        ),
       );
     }
 
@@ -137,13 +149,17 @@ class DocumentBuilderService {
       );
       byScheme.forEach((schemeKey, value) {
         if (value is! Map) return;
-        final bucket = Map<String, dynamic>.from(value.cast<dynamic, dynamic>());
+        final bucket = Map<String, dynamic>.from(
+          value.cast<dynamic, dynamic>(),
+        );
         final docs = bucket['documents'];
         if (docs is! List) return;
 
         for (final rawDoc in docs) {
           if (rawDoc is! Map) continue;
-          final doc = Map<String, dynamic>.from(rawDoc.cast<dynamic, dynamic>());
+          final doc = Map<String, dynamic>.from(
+            rawDoc.cast<dynamic, dynamic>(),
+          );
           out.add(<String, dynamic>{
             ...doc,
             'scheme': (doc['scheme'] ?? schemeKey).toString(),
@@ -178,10 +194,13 @@ class DocumentBuilderService {
     List<Map<String, dynamic>> docs,
     String schemeKey,
   ) {
-    return docs.where((doc) {
-      final docScheme = (doc['scheme'] ?? doc['scheme_name'] ?? '').toString();
-      return _schemeKeysMatch(docScheme, schemeKey);
-    }).toList(growable: false);
+    return docs
+        .where((doc) {
+          final docScheme = (doc['scheme'] ?? doc['scheme_name'] ?? '')
+              .toString();
+          return _schemeKeysMatch(docScheme, schemeKey);
+        })
+        .toList(growable: false);
   }
 
   /// GET /document-builder/schemes → list all schemes with form templates.
@@ -243,12 +262,38 @@ class DocumentBuilderService {
       );
     }
 
-    try {
-      final data = await fetchById(normalizedId);
-      await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
-      return data;
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 404) {
+    final tried = <String>{};
+    final candidates = <String>[];
+    void pushCandidate(String value) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return;
+      if (tried.add(trimmed)) {
+        candidates.add(trimmed);
+      }
+    }
+
+    pushCandidate(await _resolveRouteSafeSchemeKey(normalizedId));
+    pushCandidate(normalizedId.replaceAll('/', '_'));
+    if (!normalizedId.contains('/')) {
+      pushCandidate(normalizedId);
+    }
+
+    DioException? lastDioError;
+    for (final candidate in candidates) {
+      try {
+        final data = await fetchById(candidate);
+        await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
+        await AppCache.put(
+          _schemeFormCacheKey(candidate),
+          data,
+          ttlSeconds: _ttlSchemeForm,
+        );
+        return data;
+      } on DioException catch (e) {
+        lastDioError = e;
+        if (e.response?.statusCode == 404) {
+          continue;
+        }
         final stale = _mapFromCache(await AppCache.getStale(key));
         if (stale != null) return stale;
         return <String, dynamic>{
@@ -258,19 +303,9 @@ class DocumentBuilderService {
           'source': 'offline_fallback',
         };
       }
+    }
 
-      final canonicalId = await _resolveCanonicalSchemeId(normalizedId);
-      if (canonicalId == null || canonicalId == normalizedId) rethrow;
-
-      final data = await fetchById(canonicalId);
-      await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
-      await AppCache.put(
-        _schemeFormCacheKey(canonicalId),
-        data,
-        ttlSeconds: _ttlSchemeForm,
-      );
-      return data;
-    } catch (_) {
+    if (lastDioError != null) {
       final stale = _mapFromCache(await AppCache.getStale(key));
       if (stale != null) return stale;
       return <String, dynamic>{
@@ -280,6 +315,15 @@ class DocumentBuilderService {
         'source': 'offline_fallback',
       };
     }
+
+    final stale = _mapFromCache(await AppCache.getStale(key));
+    if (stale != null) return stale;
+    return <String, dynamic>{
+      'scheme_id': normalizedId,
+      'fields': <Map<String, dynamic>>[],
+      'stale': true,
+      'source': 'offline_fallback',
+    };
   }
 
   /// POST /document-builder/sessions/start → start a form-fill session.
@@ -330,10 +374,15 @@ class DocumentBuilderService {
   Future<Map<String, dynamic>> generateDocument(
     String sessionId, {
     String format = 'html',
+    String? sourceDocumentName,
   }) async {
     final res = await _client.post(
       ApiEndpoints.docBuilderGenerateSession(sessionId),
-      data: {'format': format},
+      data: {
+        'format': format,
+        if (sourceDocumentName != null && sourceDocumentName.trim().isNotEmpty)
+          'source_document_name': sourceDocumentName.trim(),
+      },
     );
     final generated = Map<String, dynamic>.from(
       (res.data as Map).cast<dynamic, dynamic>(),
@@ -411,7 +460,9 @@ class DocumentBuilderService {
       );
       return out;
     } catch (_) {
-      final stale = _listFromCache(await AppCache.getStale(_allSchemeDocsCacheKey));
+      final stale = _listFromCache(
+        await AppCache.getStale(_allSchemeDocsCacheKey),
+      );
       if (stale != null) return stale;
       return <Map<String, dynamic>>[];
     }
@@ -419,11 +470,13 @@ class DocumentBuilderService {
 
   /// POST /document-builder/download-scheme-docs/{scheme}.
   Future<Map<String, dynamic>> downloadSchemeDocuments(String schemeKey) async {
-    final encoded = Uri.encodeComponent(schemeKey);
+    final routeKey = await _resolveRouteSafeSchemeKey(schemeKey);
+    final encoded = Uri.encodeComponent(routeKey);
     final res = await _client.post(
       ApiEndpoints.docBuilderDownloadSchemeDocs(encoded),
     );
     await AppCache.invalidate(_schemeDocsCacheKey(schemeKey));
+    await AppCache.invalidate(_schemeDocsCacheKey(routeKey));
     await AppCache.invalidate(_allSchemeDocsCacheKey);
     return Map<String, dynamic>.from(
       (res.data as Map).cast<dynamic, dynamic>(),
@@ -468,16 +521,19 @@ class DocumentBuilderService {
       if (cached != null && cached.isNotEmpty) return cached;
     }
 
-    final encoded = Uri.encodeComponent(schemeKey);
+    final routeKey = await _resolveRouteSafeSchemeKey(schemeKey);
+    final encoded = Uri.encodeComponent(routeKey);
     List<Map<String, dynamic>> docs = const <Map<String, dynamic>>[];
     try {
-      final res = await _client.get(ApiEndpoints.docBuilderSchemeDocsByName(encoded));
+      final res = await _client.get(
+        ApiEndpoints.docBuilderSchemeDocsByName(encoded),
+      );
       final data = res.data;
       if (data is Map && data['documents'] is List) {
         docs = (data['documents'] as List)
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
-          .toList(growable: false);
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
+            .toList(growable: false);
       }
     } catch (_) {
       docs = const <Map<String, dynamic>>[];
@@ -489,6 +545,9 @@ class DocumentBuilderService {
         forceRefresh: forceRefresh,
       );
       docs = _filterDocsByScheme(all, schemeKey);
+      if (docs.isEmpty && routeKey != schemeKey) {
+        docs = _filterDocsByScheme(all, routeKey);
+      }
     }
 
     await AppCache.put(cacheKey, docs, ttlSeconds: _ttlSchemeDocs);
@@ -499,7 +558,8 @@ class DocumentBuilderService {
     required String schemeKey,
     required String docName,
   }) {
-    final scheme = Uri.encodeComponent(schemeKey);
+    final safeSchemeKey = schemeKey.trim().replaceAll('/', '_');
+    final scheme = Uri.encodeComponent(safeSchemeKey);
     final doc = Uri.encodeComponent(docName);
     return _resolveDocumentUrl(
       ApiEndpoints.docBuilderSchemeDocFile(scheme, doc),
@@ -510,7 +570,8 @@ class DocumentBuilderService {
     required String schemeKey,
     required String docName,
   }) async {
-    final scheme = Uri.encodeComponent(schemeKey);
+    final routeKey = await _resolveRouteSafeSchemeKey(schemeKey);
+    final scheme = Uri.encodeComponent(routeKey);
     final doc = Uri.encodeComponent(docName);
     final cacheKey = _schemeDocFileCacheKey(schemeKey, docName);
 
@@ -535,8 +596,9 @@ class DocumentBuilderService {
 
       final extension = _extensionForContentType(contentType, serverFilename);
       final tempDir = await getTemporaryDirectory();
-      final fallbackName =
-          docName.trim().isEmpty ? 'scheme_document$extension' : docName.trim();
+      final fallbackName = docName.trim().isEmpty
+          ? 'scheme_document$extension'
+          : docName.trim();
       final filename = serverFilename.isNotEmpty
           ? serverFilename
           : (fallbackName.toLowerCase().endsWith(extension)
