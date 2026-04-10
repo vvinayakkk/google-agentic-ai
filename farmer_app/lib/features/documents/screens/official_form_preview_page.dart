@@ -88,6 +88,69 @@ class _OfficialFormPreviewPageState extends State<OfficialFormPreviewPage>
 ''';
   }
 
+  String _injectMobilePreviewTuning(String htmlText) {
+    const tuning = '''
+<style id="kka-mobile-preview-style">
+  html, body { margin: 0 !important; padding: 0 !important; }
+  body { -webkit-text-size-adjust: 100% !important; }
+</style>
+<script id="kka-mobile-preview-script">
+  (function () {
+    function naturalWidth(body) {
+      body.style.zoom = '1';
+      body.style.transform = 'none';
+      body.style.width = 'auto';
+      return Math.max(
+        body.scrollWidth || 0,
+        document.documentElement.scrollWidth || 0,
+        Math.ceil(body.getBoundingClientRect().width || 0),
+        window.innerWidth || 360
+      );
+    }
+
+    function applyScale(body, scale) {
+      body.style.zoom = String(scale);
+      body.style.transformOrigin = 'top left';
+      body.style.transform = 'scale(' + scale + ')';
+      body.style.width = (100 / scale) + '%';
+    }
+
+    function fit() {
+      try {
+        var body = document.body;
+        if (!body) return;
+        var viewport = window.innerWidth || document.documentElement.clientWidth || 360;
+        var contentWidth = naturalWidth(body);
+        var scale = viewport / contentWidth;
+        if (!isFinite(scale) || scale <= 0) scale = 1;
+        // Force slightly zoomed-out default on mobile to avoid giant first render.
+        scale = Math.min(0.78, Math.max(0.24, scale));
+        applyScale(body, scale);
+      } catch (_) {}
+    }
+
+    window.addEventListener('load', fit);
+    window.addEventListener('resize', fit);
+    setTimeout(fit, 0);
+    setTimeout(fit, 120);
+    setTimeout(fit, 420);
+  })();
+</script>
+''';
+
+    final lower = htmlText.toLowerCase();
+    if (lower.contains('id="kka-mobile-preview-script"')) {
+      return htmlText;
+    }
+
+    final headClose = RegExp(r'</head>', caseSensitive: false);
+    if (headClose.hasMatch(htmlText)) {
+      return htmlText.replaceFirst(headClose, '$tuning</head>');
+    }
+
+    return '<head>$tuning</head>$htmlText';
+  }
+
   WebViewController _buildHtmlController(String htmlText) {
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -434,9 +497,10 @@ class _OfficialFormPreviewPageState extends State<OfficialFormPreviewPage>
           }
 
           final htmlText = _looksLikeHtml(text) ? text : _wrapAsHtmlDocument(text);
-          final signature = '${widget.file.file.path}:${htmlText.hashCode}';
+          final tunedHtml = _injectMobilePreviewTuning(htmlText);
+          final signature = '${widget.file.file.path}:${tunedHtml.hashCode}';
           if (_htmlController == null || _htmlSignature != signature) {
-            _htmlController = _buildHtmlController(htmlText);
+            _htmlController = _buildHtmlController(tunedHtml);
             _htmlSignature = signature;
           }
 

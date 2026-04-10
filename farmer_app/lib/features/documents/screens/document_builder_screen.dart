@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/document_builder_service.dart';
+import '../../../shared/services/document_export_service.dart';
 import '../../../shared/services/personalization_service.dart';
 import 'official_form_preview_page.dart';
 import 'preview_download_screen.dart';
@@ -266,12 +267,16 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   }
 
   Future<void> _sharePreviewFile(GeneratedDocumentFile file) async {
+    final shareable = await DocumentExportService.ensurePdfOrOriginal(
+      file,
+      preferredBaseName: file.file.uri.pathSegments.last,
+    );
     await SharePlus.instance.share(
       ShareParams(
         text:
             'screen.document_builder_screen.official_form_downloaded_from_kisankiawaaz'
                 .tr(),
-        files: <XFile>[XFile(file.file.path)],
+        files: <XFile>[XFile(shareable.file.path)],
       ),
     );
     if (!mounted) return;
@@ -364,6 +369,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     setIfMissing('land_area_acres', ['land_size_acres']);
     setIfMissing('bank_account_holder_name', ['applicant_name', 'farmer_name']);
 
+    if ((out['area_type'] ?? '').trim().isEmpty) {
+      out['area_type'] = 'Rural';
+    }
+
     out.removeWhere((_, value) => value.trim().isEmpty);
     return out;
   }
@@ -405,6 +414,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     }
 
     setState(() => _autofillPreviewInProgress = true);
+    var stage = 'starting autofill session';
     try {
       final docService = ref.read(documentBuilderServiceProvider);
       final mapped = _findSchemeForPreviewItem(item);
@@ -440,15 +450,18 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
       final answers = _sessionAutofillAnswersForPreview();
       if (answers.isNotEmpty) {
+        stage = 'submitting profile fields';
         await docService.submitFields(sessionId: sessionId, values: answers);
       }
 
+      stage = 'generating autofilled document';
       await docService.generateDocument(
         sessionId,
         format: 'html',
         sourceDocumentName: docName,
       );
 
+      stage = 'downloading generated document';
       final generated = await docService.downloadGeneratedDocumentFile(
         sessionId,
       );
@@ -456,15 +469,21 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         throw Exception('Autofilled document not available');
       }
 
+      stage = 'preparing preview';
+      final generatedPdf = await DocumentExportService.ensurePdfOrOriginal(
+        generated,
+        preferredBaseName: docName,
+      );
+
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => OfficialFormPreviewPage(
             title: '$docName (Autofilled)',
-            typeLabel: 'HTML',
-            file: generated,
+            typeLabel: generatedPdf.isPdf ? 'PDF' : 'HTML',
+            file: generatedPdf,
             onAutofill: () => _autofillAndOpenDirectPreview(item),
-            onDownload: () => _sharePreviewFile(generated),
+            onDownload: () => _sharePreviewFile(generatedPdf),
             onOpenExternal: () => _openSchemePortalForPreviewItem(item),
             onOpenHub: () => Navigator.of(context).maybePop(),
           ),
@@ -473,10 +492,11 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
       if (!mounted) return;
       context.showSnack('Autofilled preview generated from your profile data.');
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Autofill preview failed at $stage: $e\n$st');
       if (!mounted) return;
       context.showSnack(
-        'Could not autofill this form right now. Please try again.',
+        'Could not autofill this form right now ($stage). Please try again.',
         isError: true,
       );
     } finally {

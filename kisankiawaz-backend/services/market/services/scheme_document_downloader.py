@@ -40,8 +40,34 @@ def _resolve_scheme_docs_dir() -> str:
     return candidates[0]
 
 
+def _resolve_scheme_seed_dir() -> str:
+    """Resolve bundled read-only seed documents directory."""
+    env_dir = (os.getenv("SCHEME_DOCUMENTS_SEED_DIR") or "").strip()
+
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = []
+    if env_dir:
+        candidates.append(env_dir)
+
+    candidates.extend(
+        [
+            "/app/seed_scheme_documents",
+            os.path.normpath(os.path.join(this_dir, "..", "scheme_documents")),
+            os.path.normpath(os.path.join(this_dir, "..", "..", "scheme_documents")),
+            os.path.normpath(os.path.join(this_dir, "..", "..", "..", "scheme_documents")),
+        ]
+    )
+
+    for candidate in candidates:
+        if os.path.isdir(candidate):
+            return candidate
+
+    return ""
+
+
 # Base directory for downloaded scheme documents
 SCHEME_DOCS_DIR = _resolve_scheme_docs_dir()
+SCHEME_SEED_DIR = _resolve_scheme_seed_dir()
 
 FORM_KEYWORDS = {
     "form",
@@ -99,9 +125,57 @@ class SchemeDocumentDownloader:
 
     def __init__(self, base_dir: str = None):
         self.base_dir = base_dir or SCHEME_DOCS_DIR
+        self.seed_dir = SCHEME_SEED_DIR
+        if self.seed_dir and os.path.normcase(os.path.abspath(self.seed_dir)) == os.path.normcase(
+            os.path.abspath(self.base_dir)
+        ):
+            alt_seed = "/app/seed_scheme_documents"
+            if os.path.isdir(alt_seed):
+                self.seed_dir = alt_seed
         os.makedirs(self.base_dir, exist_ok=True)
+        self._sync_pm_kisan_seed_doc()
         self.manifest_path = os.path.join(self.base_dir, "manifest.json")
         self.manifest = self._load_manifest()
+
+    def _file_hash(self, path: str) -> str:
+        hasher = hashlib.md5()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    def _sync_pm_kisan_seed_doc(self):
+        """Keep the PM-KISAN pilot seed form current in writable storage."""
+        if not self.seed_dir or not PM_KISAN_FORCED_HTML_FILENAME:
+            return
+
+        source_path = os.path.join(
+            self.seed_dir,
+            "pm-kisan",
+            PM_KISAN_FORCED_HTML_FILENAME,
+        )
+        if not os.path.isfile(source_path):
+            return
+
+        target_dir = os.path.join(self.base_dir, "pm-kisan")
+        os.makedirs(target_dir, exist_ok=True)
+        target_path = os.path.join(target_dir, PM_KISAN_FORCED_HTML_FILENAME)
+
+        source_real = os.path.normcase(os.path.abspath(source_path))
+        target_real = os.path.normcase(os.path.abspath(target_path))
+        if source_real == target_real:
+            return
+
+        should_copy = not os.path.exists(target_path)
+        if not should_copy:
+            try:
+                should_copy = self._file_hash(source_path) != self._file_hash(target_path)
+            except OSError:
+                should_copy = True
+
+        if should_copy:
+            shutil.copy2(source_path, target_path)
+            logger.info("Synced PM-KISAN seed form to %s", target_path)
 
     def _load_manifest(self) -> dict:
         """Load download manifest tracking all downloaded files."""
@@ -707,7 +781,33 @@ class SchemeDocumentDownloader:
                 == PM_KISAN_FORCED_HTML_FILENAME
             ]
             if forced:
-                results = forced
+                preferred_path = os.path.normcase(
+                    os.path.abspath(
+                        os.path.join(
+                            self.base_dir,
+                            "pm-kisan",
+                            PM_KISAN_FORCED_HTML_FILENAME,
+                        )
+                    )
+                )
+                preferred_doc = next(
+                    (
+                        doc
+                        for doc in forced
+                        if os.path.normcase(
+                            os.path.abspath(doc.get("local_path", ""))
+                        )
+                        == preferred_path
+                    ),
+                    None,
+                )
+                if preferred_doc is not None:
+                    results = [preferred_doc]
+                else:
+                    forced.sort(
+                        key=lambda d: str(d.get("local_path", "")).lower()
+                    )
+                    results = [forced[0]]
 
         results.sort(
             key=lambda d: str(d.get("filename") or d.get("name") or "").lower()
