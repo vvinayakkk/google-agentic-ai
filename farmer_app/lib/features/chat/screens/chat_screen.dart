@@ -2181,14 +2181,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 ),
               ),
             ),
-            if (_expanded) Divider(height: 1, thickness: 1, color: borderColor),
-            AnimatedCrossFade(
-              duration: const Duration(milliseconds: 220),
-              crossFadeState: _expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: const SizedBox.shrink(),
-              secondChild: Padding(
+            if (_expanded) ...[
+              Divider(height: 1, thickness: 1, color: borderColor),
+              Padding(
                 padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2232,7 +2227,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   ],
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

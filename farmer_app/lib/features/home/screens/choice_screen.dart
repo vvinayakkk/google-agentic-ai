@@ -25,6 +25,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
   static const primaryGreen = Color(0xFF10B981);
   static bool _warmupStarted = false;
   String _locationName = '';
+  bool _themeToggleBusy = false;
 
   @override
   void initState() {
@@ -155,6 +156,24 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     await _saveLocationName(manual);
   }
 
+  Future<void> _toggleThemeSafely() async {
+    if (_themeToggleBusy || !mounted) return;
+    _themeToggleBusy = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    if (!mounted) {
+      _themeToggleBusy = false;
+      return;
+    }
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      _themeToggleBusy = false;
+      return;
+    }
+    await ref.read(themeProvider.notifier).toggle();
+    _themeToggleBusy = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -273,7 +292,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                       AppColors.primary,
                       context,
                       iconBg,
-                      onTap: () => ref.read(themeProvider.notifier).toggle(),
+                      onTap: _toggleThemeSafely,
                     ),
                     const SizedBox(width: 8),
                     _topIcon(
