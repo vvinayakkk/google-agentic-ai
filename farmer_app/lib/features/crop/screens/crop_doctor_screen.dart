@@ -370,10 +370,16 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
-    final iconBg = Colors.white.withValues(alpha: 0.56);
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
+    final iconBg = isDark
+      ? AppColors.darkSurface.withValues(alpha: 0.92)
+      : Colors.white.withValues(alpha: 0.56);
 
     return Scaffold(
       backgroundColor: isDark
@@ -406,7 +412,7 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
                         alignment: Alignment.centerLeft,
                         child: _topAction(
                           icon: Icons.arrow_back_rounded,
-                          color: AppColors.primaryDark,
+                          color: isDark ? Colors.white : AppColors.primaryDark,
                           background: iconBg,
                           onTap: () => Navigator.of(context).maybePop(),
                         ),
@@ -422,7 +428,7 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
                         alignment: Alignment.centerRight,
                         child: _topAction(
                           icon: Icons.refresh_rounded,
-                          color: AppColors.primaryDark,
+                          color: isDark ? Colors.white : AppColors.primaryDark,
                           background: iconBg,
                           onTap: () {
                             setState(() {
@@ -462,15 +468,19 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
                                     ? null
                                     : () => _pickImage(ImageSource.camera),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white.withValues(
-                                    alpha: 0.88,
-                                  ),
-                                  foregroundColor: AppColors.lightText,
+                                  backgroundColor: isDark
+                                      ? AppColors.darkSurface.withValues(alpha: 0.92)
+                                      : Colors.white.withValues(alpha: 0.88),
+                                  foregroundColor: isDark
+                                      ? AppColors.darkText
+                                      : AppColors.lightText,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(40),
                                   ),
                                   side: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.85),
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : Colors.white.withValues(alpha: 0.85),
                                   ),
                                 ),
                                 icon: const Icon(Icons.camera_alt_outlined),
@@ -493,7 +503,9 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
                                                 _pickImage(ImageSource.gallery)
                                           : _diagnoseWithImage),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryDark,
+                                  backgroundColor: isDark
+                                      ? AppColors.darkSurface
+                                      : AppColors.primaryDark,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(40),
@@ -826,12 +838,13 @@ class _CropDoctorScreenState extends ConsumerState<CropDoctorScreen> {
   }
 
   Widget _glassCard({required Color cardColor, required Widget child}) {
+    final isDark = context.isDark;
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.8),
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
           width: 1.2,
         ),
         boxShadow: <BoxShadow>[
@@ -913,6 +926,7 @@ class _IssueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return InkWell(
       onTap: _openSearch,
       borderRadius: BorderRadius.circular(14),
@@ -921,7 +935,9 @@ class _IssueTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+          border: Border.all(
+            color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
+          ),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: AppColors.primaryDark.withValues(alpha: 0.06),
@@ -935,7 +951,11 @@ class _IssueTile extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Icon(issue.icon, color: AppColors.primaryDark, size: 20),
+                Icon(
+                  issue.icon,
+                  color: isDark ? Colors.white : AppColors.primaryDark,
+                  size: 20,
+                ),
                 const Spacer(),
                 Icon(Icons.open_in_new, color: subColor, size: 14),
               ],
@@ -1024,9 +1044,13 @@ class _DiagnosisResultScreenState extends State<DiagnosisResultScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
 
     final confidenceMeta = _confidenceStyle(widget.confidencePercent);
 
@@ -1056,17 +1080,19 @@ class _DiagnosisResultScreenState extends State<DiagnosisResultScreen>
                   children: <Widget>[
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.56),
+                        color: isDark
+                            ? AppColors.darkSurface.withValues(alpha: 0.92)
+                            : Colors.white.withValues(alpha: 0.56),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                       child: IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back_rounded,
-                          color: AppColors.primaryDark,
+                          color: isDark ? Colors.white : AppColors.primaryDark,
                           size: 20,
                         ),
                       ),
@@ -1117,15 +1143,16 @@ class _DiagnosisResultScreenState extends State<DiagnosisResultScreen>
                                                 error,
                                                 stackTrace,
                                               ) => Container(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.62,
-                                                ),
+                                                color: isDark
+                                                    ? AppColors.darkSurface
+                                                    : Colors.white.withValues(alpha: 0.62),
                                                 alignment: Alignment.center,
                                                 child: Icon(
                                                   Icons.grass_outlined,
                                                   size: 44,
-                                                  color: AppColors.primaryDark
-                                                      .withValues(alpha: 0.7),
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : AppColors.primaryDark.withValues(alpha: 0.7),
                                                 ),
                                               ),
                                         ),

@@ -41,8 +41,6 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
 
   Future<void> _primeData() async {
     await _loadData();
-    if (!mounted) return;
-    _loadData(forceRefresh: true, silent: true);
   }
 
   String _currentUserId() {

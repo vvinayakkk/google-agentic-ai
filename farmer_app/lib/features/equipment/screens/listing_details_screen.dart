@@ -42,8 +42,6 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
 
   Future<void> _primeData() async {
     await _load();
-    if (!mounted) return;
-    _load(forceRefresh: true, silent: true);
   }
 
   String _currentUserId() {

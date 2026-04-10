@@ -186,6 +186,36 @@ class AppPrefetchService {
       // Best-effort, never block onboarding.
     }
 
+    try {
+      final equipmentList = await guardValue<List<Map<String, dynamic>>>(
+        () => equipment.listEquipment(preferCache: true, forceRefresh: false),
+      );
+      final rentalList = await guardValue<List<Map<String, dynamic>>>(
+        () => equipment.listRentals(preferCache: true, forceRefresh: false),
+      );
+
+      final equipmentIds = <String>{};
+      final rentalIds = <String>{};
+
+      for (final item in equipmentList ?? const <Map<String, dynamic>>[]) {
+        final id = (item['id'] ?? '').toString().trim();
+        if (id.isNotEmpty) equipmentIds.add(id);
+      }
+      for (final item in rentalList ?? const <Map<String, dynamic>>[]) {
+        final id = (item['id'] ?? '').toString().trim();
+        if (id.isNotEmpty) rentalIds.add(id);
+      }
+
+      await Future.wait([
+        for (final id in equipmentIds.take(8))
+          guard(() => equipment.getEquipmentById(id, preferCache: true, forceRefresh: false)),
+        for (final id in rentalIds.take(8))
+          guard(() => equipment.getRentalById(id, preferCache: true, forceRefresh: false)),
+      ]);
+    } catch (_) {
+      // Best-effort, never block onboarding.
+    }
+
 
     final docSchemes = await guardValue<List<Map<String, dynamic>>>(
       () => docBuilder.listSchemes(preferCache: true, forceRefresh: false),

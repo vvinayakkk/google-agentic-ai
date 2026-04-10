@@ -193,11 +193,24 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   }
 
   void _showAddCattleSheet() {
+    final isDark = context.isDark;
     final typeC = TextEditingController();
     final breedC = TextEditingController();
     final countC = TextEditingController(text: '1');
     final ageC = TextEditingController();
     String healthStatus = 'healthy';
+    final fieldBg = isDark
+      ? AppColors.darkSurface.withValues(alpha: 0.92)
+      : Colors.white.withValues(alpha: 0.72);
+    final borderColor = isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.88);
+    final sheetBg = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.98)
+      : Colors.white.withValues(alpha: 0.96);
+    final handleColor = isDark
+      ? AppColors.darkTextSecondary.withValues(alpha: 0.3)
+      : AppColors.lightTextSecondary.withValues(alpha: 0.3);
+    final titleColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final bodyColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     showModalBottomSheet(
       context: context,
@@ -217,9 +230,9 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.96),
+                color: sheetBg,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
+                border: Border.all(color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.92)),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primaryDark.withValues(alpha: 0.1),
@@ -240,9 +253,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.lightTextSecondary.withValues(
-                              alpha: 0.3,
-                            ),
+                            color: handleColor,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -252,15 +263,13 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                         'cattle.add_cattle'.tr(),
                         style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.lightText,
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Create a livestock profile synced to backend records.',
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: AppColors.lightTextSecondary,
-                        ),
+                        style: context.textTheme.bodySmall?.copyWith(color: bodyColor),
                       ),
                       const SizedBox(height: 20),
                       _sheetField(
@@ -283,12 +292,12 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                         children: [
                           Expanded(
                             child: _sheetField(
-                              controller: countC,
                               label: 'cattle.count'.tr(),
                               icon: Icons.tag,
                               fieldBg: fieldBg,
                               borderColor: borderColor,
                               keyboardType: TextInputType.number,
+                              controller: countC,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -309,7 +318,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                         'Health Status',
                         style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.lightText,
+                          color: bodyColor,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -417,19 +426,20 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     required Color borderColor,
     TextInputType? keyboardType,
   }) {
+    final isDark = context.isDark;
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(color: AppColors.lightText),
+      style: TextStyle(color: isDark ? AppColors.darkText : AppColors.lightText),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: AppColors.lightTextSecondary,
+        labelStyle: TextStyle(
+          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
           fontSize: 13,
         ),
         filled: true,
         fillColor: fieldBg,
-        prefixIcon: Icon(icon, color: AppColors.primaryDark, size: 18),
+        prefixIcon: Icon(icon, color: isDark ? Colors.white : AppColors.primaryDark, size: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: borderColor),
@@ -441,7 +451,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: AppColors.primaryDark.withValues(alpha: 0.5),
+            color: isDark ? Colors.white70 : AppColors.primaryDark.withValues(alpha: 0.5),
             width: 1.5,
           ),
         ),
@@ -469,13 +479,16 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   // ─── Shared card builder (matches CropDoctorScreen exactly) ──────────────
 
   Widget _glassCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    final isDark = context.isDark;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.56),
+        color: isDark
+            ? AppColors.darkCard.withValues(alpha: 0.96)
+            : Colors.white.withValues(alpha: 0.56),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.8),
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
           width: 1.2,
         ),
         boxShadow: [
@@ -500,11 +513,16 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     VoidCallback? onTap,
     bool loading = false,
   }) {
+    final isDark = context.isDark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.56),
+        color: isDark
+            ? AppColors.darkSurface.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.56),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
+        ),
       ),
       child: IconButton(
         onPressed: onTap,
@@ -517,7 +535,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                   color: AppColors.primaryDark,
                 ),
               )
-            : Icon(icon, color: AppColors.primaryDark, size: 20),
+            : Icon(icon, color: isDark ? Colors.white : AppColors.primaryDark, size: 20),
       ),
     );
   }
@@ -525,6 +543,14 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   // ─── AI overview card ─────────────────────────────────────────────────────
 
   Widget _aiOverviewSection() {
+    final isDark = context.isDark;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.96)
+        : Colors.white.withValues(alpha: 0.56);
     return AiOverviewCard(
       title: 'AI Herd Advisory',
       summary: _aiSummary,
@@ -535,9 +561,9 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
       onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
       onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
       margin: EdgeInsets.zero,
-      cardColor: Colors.white.withValues(alpha: 0.56),
-      textColor: _textColor,
-      subColor: _subColor,
+      cardColor: cardColor,
+      textColor: textColor,
+      subColor: subColor,
       onActionTap: _openAiActionCard,
     );
   }
@@ -547,6 +573,21 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
+    final iconBg = isDark
+      ? AppColors.darkSurface.withValues(alpha: 0.92)
+      : Colors.white.withValues(alpha: 0.56);
+    // Ignore the underscore lint here so the existing build references keep using the dark-mode locals.
+    // ignore: no_leading_underscores_for_local_identifiers
+    final _textColor = textColor;
+    // ignore: no_leading_underscores_for_local_identifiers
+    final _subColor = subColor;
 
     // counts
     final counts = <String, int>{};

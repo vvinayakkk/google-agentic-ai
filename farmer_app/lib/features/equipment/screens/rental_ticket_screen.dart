@@ -41,8 +41,6 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
 
   Future<void> _primeData() async {
     await _loadTicket();
-    if (!mounted) return;
-    _loadTicket(forceRefresh: true, silent: true);
   }
 
   Future<void> _loadTicket({

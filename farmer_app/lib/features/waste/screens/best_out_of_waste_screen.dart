@@ -1350,9 +1350,13 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.58);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.58);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: isDark
@@ -1691,6 +1695,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
     Color textColor,
     Color subColor,
   ) {
+    final isDark = context.isDark;
     return _glassCard(
       cardColor: cardColor,
       child: Column(
@@ -1776,8 +1781,10 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 44),
-                backgroundColor: Colors.white.withValues(alpha: 0.85),
-                foregroundColor: AppColors.lightText,
+                backgroundColor: isDark
+                    ? AppColors.darkSurface.withValues(alpha: 0.92)
+                    : Colors.white.withValues(alpha: 0.85),
+                foregroundColor: isDark ? AppColors.darkText : AppColors.lightText,
                 side: BorderSide(
                   color: AppColors.primary.withValues(alpha: 0.26),
                 ),
@@ -1895,6 +1902,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
   }
 
   Widget _schemeSpotlight(Color cardColor, Color textColor, Color subColor) {
+    final isDark = context.isDark;
     if (_spotlightSchemes.isEmpty) {
       return _glassCard(
         cardColor: cardColor,
@@ -1984,9 +1992,10 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                             child: OutlinedButton(
                               onPressed: () => _openSchemeUrl(scheme),
                               style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.84,
-                                ),
+                                backgroundColor: isDark
+                                    ? AppColors.darkSurface.withValues(alpha: 0.92)
+                                    : Colors.white.withValues(alpha: 0.84),
+                                foregroundColor: isDark ? AppColors.darkText : AppColors.lightText,
                               ),
                               child: Text('screen.best_out_of_waste_screen.apply_now'.tr()),
                             ),
@@ -2021,6 +2030,11 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
   }
 
   Widget _stickyActionBar() {
+    final isDark = context.isDark;
+    final buttonBg = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.96)
+        : Colors.white.withValues(alpha: 0.92);
+    final buttonFg = isDark ? AppColors.darkText : AppColors.lightText;
     final planPrompt = [
       'Build a complete waste-to-wealth plan for my farm profile.',
       'Location: ${_locationLabel()}',
@@ -2033,9 +2047,9 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
+          color: buttonBg,
           border: Border(
-            top: BorderSide(color: Colors.white.withValues(alpha: 0.94)),
+            top: BorderSide(color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.94)),
           ),
         ),
         child: Row(
@@ -2047,8 +2061,10 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                 label: Text('screen.best_out_of_waste_screen.ask_ai_full_plan'.tr()),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 42),
-                  backgroundColor: Colors.white.withValues(alpha: 0.84),
-                  foregroundColor: AppColors.lightText,
+                  backgroundColor: isDark
+                      ? AppColors.darkSurface.withValues(alpha: 0.92)
+                      : Colors.white.withValues(alpha: 0.84),
+                  foregroundColor: buttonFg,
                   side: BorderSide(
                     color: AppColors.primary.withValues(alpha: 0.26),
                   ),
@@ -2064,7 +2080,13 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                 onPressed: _openNearbyMandis,
                 icon: const Icon(Icons.storefront_outlined),
                 label: Text('screen.best_out_of_waste_screen.nearby_mandis'.tr()),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  backgroundColor: isDark
+                      ? AppColors.darkSurface.withValues(alpha: 0.92)
+                      : Colors.white.withValues(alpha: 0.84),
+                  foregroundColor: buttonFg,
+                ),
               ),
             ),
           ],
@@ -2110,12 +2132,13 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
   }
 
   Widget _glassCard({required Color cardColor, required Widget child}) {
+    final isDark = context.isDark;
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.82),
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.82),
           width: 1.2,
         ),
         boxShadow: <BoxShadow>[

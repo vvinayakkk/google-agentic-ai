@@ -705,9 +705,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
   void _showSourceInfo() {
     final available = _soilComposition?['available'] == true;
+    final isDark = context.isDark;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -961,9 +962,13 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
           ];
 
     // ── Colors matching CropDoctorScreen exactly ──
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
 
     return Scaffold(
       backgroundColor: isDark
@@ -1534,11 +1539,16 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     VoidCallback? onTap,
     bool loading = false,
   }) {
+    final isDark = context.isDark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.56),
+        color: isDark
+            ? AppColors.darkSurface.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.56),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
+        ),
       ),
       child: IconButton(
         onPressed: onTap,
@@ -1551,19 +1561,20 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                   color: AppColors.primaryDark,
                 ),
               )
-            : Icon(icon, color: AppColors.primaryDark, size: 20),
+            : Icon(icon, color: isDark ? Colors.white : AppColors.primaryDark, size: 20),
       ),
     );
   }
 
   Widget _glassCard({required Color cardColor, required Widget child}) {
+    final isDark = context.isDark;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.8),
+          color: isDark ? AppColors.darkBorder : Colors.white.withValues(alpha: 0.8),
           width: 1.2,
         ),
         boxShadow: [

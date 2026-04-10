@@ -311,6 +311,63 @@ This single command:
 
 Logs are written under `.logs/`.
 
+### 3A. Manual setup without `deploy.sh`
+
+If you prefer to start everything yourself, use these steps instead:
+
+#### Start the backend
+
+```bash
+docker compose up -d --build
+```
+
+Then verify the gateway and services:
+
+```bash
+curl http://localhost:8000
+curl http://localhost:8008/health
+curl http://localhost:8006/health
+curl http://localhost:8004/health
+```
+
+#### Start the admin dashboard
+
+```bash
+cd admin-dashboard
+npm install
+npm run dev
+```
+
+#### Start the Flutter app
+
+```bash
+cd farmer_app
+flutter pub get
+flutter run -d chrome
+```
+
+#### Start a tunnel for Twilio / WhatsApp webhooks
+
+Use one of these options if you need a public webhook URL:
+
+```bash
+# ngrok
+ngrok http 8000
+
+# localtunnel
+npx localtunnel --port 8000
+```
+
+Then point Twilio to:
+
+```text
+<tunnel_url>/api/v1/notifications/whatsapp/twilio/webhook
+```
+
+Paste that URL into your Twilio Sandbox Sender webhook config with method `POST`.
+
+> **Note:** localtunnel URLs change on restart. ngrok URLs are more stable with a verified account.
+
 ### 4. Verify everything is up
 
 ```bash
@@ -361,16 +418,25 @@ flutter run              # connected device / emulator
 
 ## 📞 Twilio WhatsApp Local Development
 
-No deployment needed — run the backend locally and receive Twilio webhooks via tunnel.
+No deployment script is required. Start the backend manually, then expose port `8000` with a tunnel and configure Twilio to hit the webhook endpoint below:
 
-1. Set `ENABLE_TUNNEL=1` in `.env` and start `./deploy.sh`
-2. Use the tunnel URL printed in logs:
-   ```
-   <tunnel_url>/api/v1/notifications/whatsapp/twilio/webhook
-   ```
-3. Paste this URL into your **Twilio Sandbox Sender** webhook config (method: `POST`)
+```text
+<tunnel_url>/api/v1/notifications/whatsapp/twilio/webhook
+```
 
-> **Note:** localtunnel URLs change on restart. ngrok URLs are stable with a verified account.
+For example:
+
+```bash
+ngrok http 8000
+# or
+npx localtunnel --port 8000
+```
+
+Paste the resulting public URL into your **Twilio Sandbox Sender** webhook config with method `POST`.
+
+If you see a `POST /` `404` in the gateway logs, Twilio is still pointed at the tunnel root instead of the webhook path. Use the full URL above, including `/api/v1/notifications/whatsapp/twilio/webhook`.
+
+> **Note:** localtunnel URLs change on restart. ngrok URLs are more stable with a verified account.
 
 ---
 

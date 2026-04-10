@@ -898,11 +898,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ),
   ];
 
-  Widget _modeChip(String value, String labelKey) {
+  Widget _modeChip(BuildContext context, String value, String labelKey) {
     final selected = _responseMode == value;
     return ChoiceChip(
       label: Text(labelKey.tr()),
       selected: selected,
+      checkmarkColor: context.isDark ? Colors.white : Colors.black87,
       onSelected: (_) {
         setState(() => _responseMode = value);
       },
@@ -1153,10 +1154,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _modeChip('brief', 'screen.chat_screen.brief'),
-                  _modeChip('detailed', 'screen.chat_screen.detailed'),
-                  _modeChip('step-by-step', 'screen.chat_screen.step_by_step'),
-                  _modeChip('voice-friendly', 'screen.chat_screen.voice'),
+                  _modeChip(context, 'brief', 'screen.chat_screen.brief'),
+                  _modeChip(context, 'detailed', 'screen.chat_screen.detailed'),
+                  _modeChip(context, 'step-by-step', 'screen.chat_screen.step_by_step'),
+                  _modeChip(context, 'voice-friendly', 'screen.chat_screen.voice'),
                 ],
               ),
             ),
@@ -1768,6 +1769,9 @@ class _ChatBubbleState extends State<_ChatBubble> {
                 _TypewriterMarkdown(
                   text: widget.message.content,
                   animate: shouldAnimateTyping,
+                  forcePlainText:
+                      widget.message.isPartial ||
+                      widget.message.stage == 'partial',
                   onCompleted: () {
                     if (!mounted || _typingComplete) return;
                     setState(() => _typingComplete = true);
@@ -1866,11 +1870,13 @@ class _ChatBubbleState extends State<_ChatBubble> {
 class _TypewriterMarkdown extends StatefulWidget {
   final String text;
   final bool animate;
+  final bool forcePlainText;
   final VoidCallback? onCompleted;
 
   const _TypewriterMarkdown({
     required this.text,
     required this.animate,
+    this.forcePlainText = false,
     this.onCompleted,
   });
 
@@ -1950,9 +1956,18 @@ class _TypewriterMarkdownState extends State<_TypewriterMarkdown> {
   @override
   Widget build(BuildContext context) {
     final fullText = widget.text;
-    final shown = (widget.animate && _visibleChars < fullText.length)
-        ? fullText.substring(0, _visibleChars)
-        : fullText;
+    final isPartial = widget.animate && _visibleChars < fullText.length;
+    final shown = isPartial ? fullText.substring(0, _visibleChars) : fullText;
+    final usePlainText = widget.forcePlainText || isPartial;
+
+    if (usePlainText) {
+      // Render plain text while streaming to avoid malformed markdown flashes
+      // when fences/lists/links are still incomplete.
+      return Text(
+        shown,
+        style: context.textTheme.bodyMedium,
+      );
+    }
 
     return MarkdownBody(
       data: shown,
@@ -1978,56 +1993,68 @@ class _TypingIndicator extends StatefulWidget {
 class _TypingIndicatorState extends State<_TypingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _anim;
-  Timer? _thoughtTimer;
+  Timer? _feedTimer;
   Timer? _elapsedTimer;
   int _elapsedSeconds = 0;
   bool _expanded = true;
   final List<String> _thoughtFeed = <String>[];
-  int _thoughtCursor = 0;
+  int _cursor = 0;
 
-  List<String> _buildThoughtTemplates() {
-    if (context.locale.languageCode == 'hi') {
-      return <String>[
-        'आपका सवाल ध्यान से पढ़ रहा हूँ',
-        'भाषा और आशय पहचान रहा हूँ',
-        'पिछली बातचीत का संदर्भ देख रहा हूँ',
-        'सटीक और उपयोगी उत्तर तैयार कर रहा हूँ',
-      ];
-    }
-    return SharedThinkingTemplates.buildThoughtTemplates(
-      phase: widget.text,
+  static const List<String> _fallbackHints = <String>[
+    'Understanding your request',
+    'Checking recent context',
+    'Preparing an accurate response',
+    'Verifying useful next steps',
+    'Finalizing answer',
+  ];
+
+  String _cleanLine(String raw) {
+    final compact = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.isEmpty) return '';
+    return compact.length > 110 ? '${compact.substring(0, 110)}...' : compact;
+  }
+
+  List<String> _templates() {
+    final phase = _cleanLine(widget.text);
+    final built = SharedThinkingTemplates.buildThoughtTemplates(
+      phase: phase,
       contextHint: widget.contextHint,
     );
+
+    final cleaned = built
+        .map(_cleanLine)
+        .where((e) => e.isNotEmpty)
+        .take(12)
+        .toList(growable: false);
+
+    return cleaned.isNotEmpty ? cleaned : _fallbackHints;
   }
 
-  void _seedThinkingFeed({bool resetElapsed = false}) {
+  void _seedFeed() {
+    final templates = _templates();
     _thoughtFeed
       ..clear()
-      ..addAll(_buildThoughtTemplates().take(2));
-    _thoughtCursor = _thoughtFeed.length;
-    if (resetElapsed) {
-      _elapsedSeconds = 0;
-    }
+      ..addAll(templates.take(2));
+    _cursor = _thoughtFeed.length;
   }
 
-  void _startThinkingLoop() {
-    _thoughtTimer?.cancel();
+  void _startLoop() {
+    _feedTimer?.cancel();
     _elapsedTimer?.cancel();
 
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() {
-        _elapsedSeconds += 1;
-      });
+      setState(() => _elapsedSeconds += 1);
     });
 
-    _thoughtTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
+    _feedTimer = Timer.periodic(const Duration(milliseconds: 950), (_) {
       if (!mounted) return;
-      final templates = _buildThoughtTemplates();
-      if (_thoughtCursor >= templates.length) return;
+      final templates = _templates();
+      if (templates.isEmpty) return;
+      final line = templates[_cursor % templates.length];
       setState(() {
-        _thoughtFeed.add(templates[_thoughtCursor]);
-        _thoughtCursor += 1;
+        _thoughtFeed.add(line);
+        _cursor += 1;
         if (_thoughtFeed.length > 4) {
           _thoughtFeed.removeAt(0);
         }
@@ -2042,8 +2069,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
-    _seedThinkingFeed(resetElapsed: true);
-    _startThinkingLoop();
+    _seedFeed();
+    _startLoop();
   }
 
   @override
@@ -2051,20 +2078,18 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text ||
         oldWidget.contextHint != widget.contextHint) {
+      if (!mounted) return;
       setState(() {
-        _thoughtFeed.add('Current phase: ${widget.text}');
-        if (_thoughtFeed.length > 4) {
-          _thoughtFeed.removeAt(0);
-        }
+        _seedFeed();
       });
     }
   }
 
   @override
   void dispose() {
-    _anim.dispose();
-    _thoughtTimer?.cancel();
+    _feedTimer?.cancel();
     _elapsedTimer?.cancel();
+    _anim.dispose();
     super.dispose();
   }
 
@@ -2079,6 +2104,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     );
     final bodyColor = context.appColors.textSecondary;
     final phaseColor = context.colors.onSurface.withValues(alpha: 0.9);
+
+    final phase = _cleanLine(widget.text).isEmpty
+        ? 'screen.chat_screen.thinking'.tr()
+        : _cleanLine(widget.text);
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -2121,8 +2150,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                       child: AnimatedBuilder(
                         animation: _anim,
                         builder: (context, _) {
-                          final t = _anim.value;
-                          final dots = (t * 3).floor() % 3 + 1;
+                          final dots = (_anim.value * 3).floor() % 3 + 1;
                           return Text(
                             '.' * dots,
                             style: context.textTheme.bodySmall?.copyWith(
@@ -2165,33 +2193,35 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.text.trim().isNotEmpty) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          widget.text,
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: phaseColor,
-                            fontWeight: FontWeight.w600,
-                            height: 1.35,
-                          ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        phase,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: phaseColor,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                    ],
+                    ),
+                    const SizedBox(height: 8),
                     ..._thoughtFeed.map(
                       (line) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           line,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: context.textTheme.bodySmall?.copyWith(
                             color: bodyColor,
                             height: 1.35,

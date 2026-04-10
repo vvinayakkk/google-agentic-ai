@@ -46,8 +46,6 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
   Future<void> _primeData() async {
     await _loadRentals();
-    if (!mounted) return;
-    _loadRentals(forceRefresh: true, silent: true);
   }
 
   String _currentUserId() {

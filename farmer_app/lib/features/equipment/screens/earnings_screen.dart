@@ -36,8 +36,6 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
 
   Future<void> _primeData() async {
     await _fetchRentals();
-    if (!mounted) return;
-    _fetchRentals(forceRefresh: true, silent: true);
   }
 
   Future<void> _fetchRentals({

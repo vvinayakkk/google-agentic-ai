@@ -13,6 +13,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/services/app_prefetch_service.dart';
 
 class FetchingLocationScreen extends ConsumerStatefulWidget {
@@ -321,9 +323,12 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     final colors = Theme.of(context).colorScheme;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
-    final textColor = colors.onSurface;
+    final textColor = isDark ? AppColors.darkText : colors.onSurface;
+    final panelBg = isDark ? AppColors.darkCard : colors.surface;
+    final panelBorder = isDark ? AppColors.darkBorder : colors.outline.withOpacity(0.4);
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -412,9 +417,9 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: colors.surface.withOpacity(0.84),
+                  color: panelBg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.outline.withOpacity(0.4)),
+                  border: Border.all(color: panelBorder),
                 ),
                 child: Text(
                   _locationLabel,
@@ -434,9 +439,9 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: colors.surface.withOpacity(0.92),
+                  color: panelBg,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: colors.outline.withOpacity(0.45)),
+                  border: Border.all(color: panelBorder),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -490,9 +495,9 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: colors.surface.withOpacity(0.9),
+                  color: panelBg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.outline.withOpacity(0.45)),
+                  border: Border.all(color: panelBorder),
                 ),
                 child: Row(
                   children: [
@@ -537,9 +542,9 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: colors.surface.withOpacity(0.88),
+                  color: panelBg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.outline.withOpacity(0.45)),
+                  border: Border.all(color: panelBorder),
                 ),
                 child: Text(
                   '${_farmAreaAcres!.toStringAsFixed(2)} ${'profile.acres'.tr()}',
