@@ -195,25 +195,31 @@ class DocumentBuilderService {
       if (cached != null) return cached;
     }
 
-    final res = await _client.get(ApiEndpoints.docBuilderSchemes);
-    final data = res.data;
-    List<Map<String, dynamic>> out;
-    if (data is Map && data['schemes'] is List) {
-      out = (data['schemes'] as List)
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
-          .toList(growable: false);
-    } else if (data is List) {
-      out = data
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
-          .toList(growable: false);
-    } else {
-      out = <Map<String, dynamic>>[];
-    }
+    try {
+      final res = await _client.get(ApiEndpoints.docBuilderSchemes);
+      final data = res.data;
+      List<Map<String, dynamic>> out;
+      if (data is Map && data['schemes'] is List) {
+        out = (data['schemes'] as List)
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
+            .toList(growable: false);
+      } else if (data is List) {
+        out = data
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e.cast<dynamic, dynamic>()))
+            .toList(growable: false);
+      } else {
+        out = <Map<String, dynamic>>[];
+      }
 
-    await AppCache.put(key, out, ttlSeconds: _ttlSchemes);
-    return out;
+      await AppCache.put(key, out, ttlSeconds: _ttlSchemes);
+      return out;
+    } catch (_) {
+      final stale = _listFromCache(await AppCache.getStale(key));
+      if (stale != null) return stale;
+      return <Map<String, dynamic>>[];
+    }
   }
 
   /// GET /document-builder/schemes/{id} → get scheme form detail.
@@ -242,7 +248,16 @@ class DocumentBuilderService {
       await AppCache.put(key, data, ttlSeconds: _ttlSchemeForm);
       return data;
     } on DioException catch (e) {
-      if (e.response?.statusCode != 404) rethrow;
+      if (e.response?.statusCode != 404) {
+        final stale = _mapFromCache(await AppCache.getStale(key));
+        if (stale != null) return stale;
+        return <String, dynamic>{
+          'scheme_id': normalizedId,
+          'fields': <Map<String, dynamic>>[],
+          'stale': true,
+          'source': 'offline_fallback',
+        };
+      }
 
       final canonicalId = await _resolveCanonicalSchemeId(normalizedId);
       if (canonicalId == null || canonicalId == normalizedId) rethrow;
@@ -255,6 +270,15 @@ class DocumentBuilderService {
         ttlSeconds: _ttlSchemeForm,
       );
       return data;
+    } catch (_) {
+      final stale = _mapFromCache(await AppCache.getStale(key));
+      if (stale != null) return stale;
+      return <String, dynamic>{
+        'scheme_id': normalizedId,
+        'fields': <Map<String, dynamic>>[],
+        'stale': true,
+        'source': 'offline_fallback',
+      };
     }
   }
 
@@ -377,10 +401,20 @@ class DocumentBuilderService {
       if (cached.isNotEmpty) return cached;
     }
 
-    final res = await _client.get(ApiEndpoints.docBuilderSchemeDocs);
-    final out = _flattenAllSchemeDocsPayload(res.data);
-    await AppCache.put(_allSchemeDocsCacheKey, out, ttlSeconds: _ttlSchemeDocs);
-    return out;
+    try {
+      final res = await _client.get(ApiEndpoints.docBuilderSchemeDocs);
+      final out = _flattenAllSchemeDocsPayload(res.data);
+      await AppCache.put(
+        _allSchemeDocsCacheKey,
+        out,
+        ttlSeconds: _ttlSchemeDocs,
+      );
+      return out;
+    } catch (_) {
+      final stale = _listFromCache(await AppCache.getStale(_allSchemeDocsCacheKey));
+      if (stale != null) return stale;
+      return <Map<String, dynamic>>[];
+    }
   }
 
   /// POST /document-builder/download-scheme-docs/{scheme}.

@@ -33,6 +33,20 @@ class AuthInterceptor extends Interceptor {
 
 /// Logs request/response in debug mode.
 class LoggingInterceptor extends Interceptor {
+  bool _shouldSuppressErrorLog(DioException err) {
+    if (err.requestOptions.extra['suppressErrorLog'] == true) {
+      return true;
+    }
+
+    final status = err.response?.statusCode ?? 0;
+    final path = err.requestOptions.path.toLowerCase();
+    if (status >= 500 && status < 600 && path.contains('/api/v1/market/')) {
+      return true;
+    }
+
+    return false;
+  }
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     // ignore: avoid_print
@@ -49,6 +63,10 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (_shouldSuppressErrorLog(err)) {
+      handler.next(err);
+      return;
+    }
     // ignore: avoid_print
     print(
       '✖ ${err.response?.statusCode} ${err.requestOptions.uri} '

@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../shared/providers/auth_provider.dart';
+import '../../shared/providers/locale_provider.dart';
 import '../../features/auth/screens/language_select_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
@@ -110,6 +112,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen<AsyncValue>(
     authStateProvider,
     (previous, next) => notifier.notify(),
+  );
+  ref.listen<Locale>(
+    localeProvider,
+    (previous, next) {
+      if (previous != next) notifier.notify();
+    },
   );
   ref.onDispose(notifier.dispose);
 

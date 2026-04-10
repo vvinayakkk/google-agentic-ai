@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'shared/providers/theme_provider.dart';
+import 'shared/providers/locale_provider.dart';
 
 /// Root widget – wires theme, locale, and router.
 class KisanApp extends ConsumerWidget {
@@ -13,6 +14,7 @@ class KisanApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
+    final locale = ref.watch(localeProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
@@ -27,7 +29,7 @@ class KisanApp extends ConsumerWidget {
       // ── Localization ───────────────────────────────
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
-      locale: context.locale,
+      locale: locale,
 
       // ── Routing ────────────────────────────────────
       routerConfig: router,
