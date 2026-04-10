@@ -1217,11 +1217,11 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text('Rain %'),
+              Text('screen.weather_soil_screen.rain_percent'.tr()),
               const SizedBox(width: 14),
               Container(width: 14, height: 2, color: AppColors.success),
               const SizedBox(width: 6),
-              const Text('ET0 (mm)'),
+              Text('screen.weather_soil_screen.et0_mm'.tr()),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1276,7 +1276,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sun & UV',
+            'screen.weather_soil_screen.sun_uv'.tr(),
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -1290,10 +1290,24 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Sunrise ${_fmtTime(sunrise)}  •  Sunset ${_fmtTime(sunset)}'),
+          Text(
+            'screen.weather_soil_screen.sunrise_sunset'.tr(args: [
+              _fmtTime(sunrise),
+              _fmtTime(sunset),
+            ]),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Text('UV ${uv.toStringAsFixed(1)} (${uvLabel()})'),
-          Text('Solar radiation ${solar?.toStringAsFixed(1) ?? '--'} W/m2/day'),
+          Text(
+            'screen.weather_soil_screen.uv_value_label'.tr(args: [
+              uv.toStringAsFixed(1),
+              uvLabel(),
+            ]),
+          ),
+          Text(
+            'screen.weather_soil_screen.solar_radiation_value'.tr(args: [
+              solar?.toStringAsFixed(1) ?? '--',
+            ]),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Best foliar spray: early morning or late afternoon (avoid peak UV hours).',
@@ -1317,7 +1331,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Wind',
+            'screen.weather_soil_screen.wind'.tr(),
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -1361,7 +1375,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Air Quality',
+            'screen.weather_soil_screen.air_quality'.tr(),
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -1392,7 +1406,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Text('AQI'),
+                      Text('screen.weather_soil_screen.aqi'.tr()),
                       Text(
                         aqi == null ? '--' : aqi.toStringAsFixed(0),
                         style: TextStyle(
@@ -1413,7 +1427,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
 
   Widget _aiOverviewSection() {
     return AiOverviewCard(
-      title: 'AI Weather Advisory',
+      title: 'screen.weather_soil_screen.ai_weather_advisory'.tr(),
       summary: _aiSummary,
       details: _aiDetails,
       expanded: _aiExpanded,

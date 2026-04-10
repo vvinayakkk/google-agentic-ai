@@ -90,7 +90,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         _loading = false;
       });
       if (hasSnapshot) {
-        context.showSnack('Unable to refresh right now. Showing recent bookings.', isError: true);
+        context.showSnack(
+          'Unable to refresh right now. Showing recent bookings.'.tr(),
+          isError: true,
+        );
       }
     }
   }
@@ -102,7 +105,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       if (action == 'approve') await svc.approveRental(id);
       if (action == 'reject') await svc.rejectRental(id);
       if (!mounted) return;
-      context.showSnack('Action completed');
+      context.showSnack('Action completed'.tr());
       _loadRentals(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -211,7 +214,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                       ),
                                 ),
                                 Text(
-                                  'Manage active, completed, and owner-side rentals',
+                                  'Manage active, completed, and owner-side rentals'
+                                      .tr(),
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context)
                                       .textTheme
@@ -235,7 +239,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                       ),
                       child: EquipmentRefreshStrip(
                         refreshing: _refreshing,
-                        label: 'Refreshing your booking timeline...',
+                        label: 'Refreshing your booking timeline...'.tr(),
                       ),
                     ),
                     if (_error != null && _hasSnapshot) ...[
@@ -254,7 +258,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Text(
-                            'Showing cached booking data while connection recovers.',
+                            'Showing cached booking data while connection recovers.'
+                                .tr(),
                             style: context.textTheme.bodySmall?.copyWith(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
@@ -276,19 +281,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                           children: [
                             _metricPill(
                               icon: Icons.event_available_rounded,
-                              label: 'Active',
+                              label: 'Active'.tr(),
                               value: _active.length,
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             _metricPill(
                               icon: Icons.task_alt_rounded,
-                              label: 'Done',
+                              label: 'Done'.tr(),
                               value: _completed.length,
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             _metricPill(
                               icon: Icons.handshake_outlined,
-                              label: 'Owner',
+                              label: 'Owner'.tr(),
                               value: _asOwner.length,
                             ),
                           ],
@@ -320,11 +325,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
-                          tabs: const [
-                            Tab(text: 'Active'),
-                            Tab(text: 'Completed'),
-                            Tab(text: 'Cancelled'),
-                            Tab(text: 'Owner'),
+                          tabs: [
+                            Tab(text: 'Active'.tr()),
+                            Tab(text: 'Completed'.tr()),
+                            Tab(text: 'Cancelled'.tr()),
+                            Tab(text: 'Owner'.tr()),
                           ],
                         ),
                       ),
@@ -337,30 +342,30 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                           _tabContent(
                             items: _active,
                             icon: Icons.event_available,
-                            emptyTitle: 'No active bookings',
-                            emptyActionLabel: 'Browse Equipment',
+                            emptyTitle: 'No active bookings'.tr(),
+                            emptyActionLabel: 'Browse Equipment'.tr(),
                             onEmptyAction: () =>
                                 context.push(RoutePaths.equipmentMarketplace),
                           ),
                           _tabContent(
                             items: _completed,
                             icon: Icons.task_alt,
-                            emptyTitle: 'No completed rentals yet',
-                            emptyActionLabel: 'View Active',
+                            emptyTitle: 'No completed rentals yet'.tr(),
+                            emptyActionLabel: 'View Active'.tr(),
                             onEmptyAction: () => _tabController.animateTo(0),
                           ),
                           _tabContent(
                             items: _cancelled,
                             icon: Icons.cancel_outlined,
-                            emptyTitle: 'No cancelled bookings',
-                            emptyActionLabel: 'View Active',
+                            emptyTitle: 'No cancelled bookings'.tr(),
+                            emptyActionLabel: 'View Active'.tr(),
                             onEmptyAction: () => _tabController.animateTo(0),
                           ),
                           _tabContent(
                             items: _asOwner,
                             icon: Icons.handshake_outlined,
-                            emptyTitle: 'No owner-side bookings',
-                            emptyActionLabel: 'My Equipment',
+                            emptyTitle: 'No owner-side bookings'.tr(),
+                            emptyActionLabel: 'My Equipment'.tr(),
                             onEmptyAction: () => context.push(RoutePaths.myEquipment),
                           ),
                         ],
@@ -494,7 +499,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                         borderRadius: BorderRadius.circular(AppRadius.full),
                       ),
                       child: Text(
-                        '$duration days',
+                        '$duration ${'days'.tr()}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
@@ -516,7 +521,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
                 child: Text(
-                  isOwner ? "You're Lending" : "You're Renting",
+                    isOwner
+                        ? "You're Lending".tr()
+                        : "You're Renting".tr(),
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w800,
@@ -634,7 +641,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         child: OutlinedButton(
           onPressed: () => _doAction(id, 'cancel'),
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr()),
         ),
       );
     }
@@ -645,7 +652,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
           Expanded(
             child: ElevatedButton(
               onPressed: () => _doAction(id, 'approve'),
-              child: const Text('Approve'),
+              child: Text('Approve'.tr()),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -653,7 +660,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
             child: OutlinedButton(
               onPressed: () => _doAction(id, 'reject'),
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-              child: const Text('Reject'),
+              child: Text('Reject'.tr()),
             ),
           ),
         ],

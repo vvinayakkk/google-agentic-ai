@@ -34,18 +34,29 @@ abstract final class AppTheme {
     required Color textSecondary,
     required Color border,
   }) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: brightness,
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
-      surface: surface,
-      onSurface: text,
-      error: AppColors.danger,
-    ).copyWith(
-      surfaceContainerHighest: card,
-      outline: border,
-    );
+    final colorScheme = brightness == Brightness.dark
+        ? const ColorScheme.dark(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+        secondary: AppColors.primaryLight,
+        onSecondary: Colors.white,
+            error: AppColors.danger,
+            onError: Colors.white,
+            surface: AppColors.darkSurface,
+            onSurface: AppColors.darkText,
+            outline: AppColors.darkBorder,
+          ).copyWith(surfaceContainerHighest: card)
+        : const ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            secondary: AppColors.primaryLight,
+            onSecondary: Colors.white,
+            error: AppColors.danger,
+            onError: Colors.white,
+            surface: AppColors.lightSurface,
+            onSurface: AppColors.lightText,
+            outline: AppColors.lightBorder,
+          ).copyWith(surfaceContainerHighest: card);
 
     final textTheme = AppTypography.textTheme(text);
 
@@ -54,6 +65,16 @@ abstract final class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
+      iconTheme: IconThemeData(
+        color: brightness == Brightness.dark ? AppColors.primary : null,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: brightness == Brightness.dark
+              ? AppColors.primary
+              : AppColors.primaryDark,
+        ),
+      ),
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: background,

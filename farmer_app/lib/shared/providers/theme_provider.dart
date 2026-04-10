@@ -6,7 +6,7 @@ class ThemeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
     _init();
-    return ThemeMode.light; // default to light; _init() will override from saved pref
+    return _platformDefault();
   }
 
   Future<void> _init() async {
@@ -27,10 +27,20 @@ class ThemeNotifier extends Notifier<ThemeMode> {
     await setTheme(next);
   }
 
+  ThemeMode _platformDefault() {
+    return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark
+        ? ThemeMode.dark
+        : ThemeMode.light;
+  }
+
   static ThemeMode _fromString(String s) => switch (s) {
         'light' => ThemeMode.light,
         'dark' => ThemeMode.dark,
-        _ => ThemeMode.light, // default to light instead of system
+        _ => WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark
+            ? ThemeMode.dark
+            : ThemeMode.light,
       };
 
   static String _toString(ThemeMode m) => switch (m) {

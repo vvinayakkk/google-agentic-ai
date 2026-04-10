@@ -382,10 +382,10 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
                     prefixIcon: const Icon(Icons.wb_sunny),
                     border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'Kharif', child: Text('Kharif')),
-                    DropdownMenuItem(value: 'Rabi', child: Text('Rabi')),
-                    DropdownMenuItem(value: 'Zaid', child: Text('Zaid')),
+                  items: [
+                    DropdownMenuItem(value: 'Kharif', child: Text('Kharif'.tr())),
+                    DropdownMenuItem(value: 'Rabi', child: Text('Rabi'.tr())),
+                    DropdownMenuItem(value: 'Zaid', child: Text('Zaid'.tr())),
                   ],
                   onChanged: (v) {
                     if (v != null) setSheetState(() => selectedSeason = v);
@@ -417,7 +417,9 @@ class _CropCycleScreenState extends ConsumerState<CropCycleScreen> {
                     if (name.isEmpty || area == null || area <= 0) {
                       if (ctx.mounted) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please fill valid values.')),
+                          SnackBar(
+                            content: Text('Please fill valid values.'.tr()),
+                          ),
                         );
                       }
                       return;

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -269,16 +270,19 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                       labelText: 'Health Status',
                       prefixIcon: Icon(Icons.health_and_safety),
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: 'healthy',
-                        child: Text('Healthy'),
+                        child: Text('Healthy'.tr()),
                       ),
                       DropdownMenuItem(
                         value: 'under_treatment',
-                        child: Text('Under Treatment'),
+                        child: Text('Under Treatment'.tr()),
                       ),
-                      DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                      DropdownMenuItem(
+                        value: 'sick',
+                        child: Text('Sick'.tr()),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -418,16 +422,19 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                       labelText: 'Current Health Status',
                       prefixIcon: Icon(Icons.health_and_safety),
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: 'healthy',
-                        child: Text('Healthy'),
+                        child: Text('Healthy'.tr()),
                       ),
                       DropdownMenuItem(
                         value: 'under_treatment',
-                        child: Text('Under Treatment'),
+                        child: Text('Under Treatment'.tr()),
                       ),
-                      DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                      DropdownMenuItem(
+                        value: 'sick',
+                        child: Text('Sick'.tr()),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value != null) {

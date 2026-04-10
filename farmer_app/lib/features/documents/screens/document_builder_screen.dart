@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,7 +61,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       final profile = await personalization.getProfileContext();
       final schemes = await ref
           .read(documentBuilderServiceProvider)
-          .listSchemes(forceRefresh: true);
+          .listSchemes(forceRefresh: false);
 
       final ranked =
           schemes
@@ -250,7 +251,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   Future<void> _openSchemePortalForPreviewItem(_FormPreviewCardData item) async {
     final scheme = _findSchemeForPreviewItem(item);
     if (scheme == null) {
-      context.showSnack('Official portal link not available for this scheme.');
+      context.showSnack(
+        'screen.document_builder_screen.official_portal_link_not_available_for_this_scheme'
+            .tr(),
+      );
       return;
     }
 
@@ -262,12 +266,17 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   Future<void> _sharePreviewFile(GeneratedDocumentFile file) async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Official form downloaded from KisanKiAwaaz',
+        text:
+            'screen.document_builder_screen.official_form_downloaded_from_kisankiawaaz'
+                .tr(),
         files: <XFile>[XFile(file.file.path)],
       ),
     );
     if (!mounted) return;
-    context.showSnack('Document is ready to save/share from this sheet.');
+    context.showSnack(
+      'screen.document_builder_screen.document_is_ready_to_save_share_from_this_sheet'
+          .tr(),
+    );
   }
 
   List<Map<String, dynamic>> get _recommendedSchemes {
@@ -314,7 +323,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
     final target = selected;
     if (target == null) {
-      context.showSnack('No scheme available right now.', isError: true);
+      context.showSnack(
+        'screen.document_builder_screen.no_scheme_available_right_now'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -882,7 +894,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
   ) async {
     final fileName = (doc['filename'] ?? doc['name'] ?? '').toString().trim();
     if (fileName.isEmpty) {
-      context.showSnack('Document file name missing.', isError: true);
+      context.showSnack(
+        'screen.document_builder_screen.document_file_name_missing'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -1050,7 +1065,8 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
     final link = raw.trim();
     if (link.isEmpty) {
       context.showSnack(
-        'Official link not available right now.',
+        'screen.document_builder_screen.official_link_not_available_right_now'
+            .tr(),
         isError: true,
       );
       return;
@@ -1060,7 +1076,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       uri = Uri.tryParse('https://$link');
     }
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
-      context.showSnack('Invalid scheme URL.', isError: true);
+      context.showSnack(
+        'screen.document_builder_screen.invalid_scheme_url'.tr(),
+        isError: true,
+      );
       return;
     }
     try {
@@ -1069,11 +1088,19 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
-        context.showSnack('Could not open this website right now.', isError: true);
+        context.showSnack(
+          'screen.document_builder_screen.could_not_open_this_website_right_now'
+              .tr(),
+          isError: true,
+        );
       }
     } catch (_) {
       if (!mounted) return;
-      context.showSnack('Could not open this website right now.', isError: true);
+      context.showSnack(
+        'screen.document_builder_screen.could_not_open_this_website_right_now'
+            .tr(),
+        isError: true,
+      );
     }
   }
 
@@ -1087,17 +1114,23 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
       final state = (trigger['state'] ?? '').toString().toLowerCase();
       if (state == 'started' || state == 'running') {
         if (!mounted) return;
-        context.showSnack('Bulk sync started. Fetching documents in background...');
+        context.showSnack(
+          'screen.document_builder_screen.bulk_sync_started_fetching_documents_in_background'
+              .tr(),
+        );
 
         final polled = await _pollBulkSyncStatus(docService);
         if (!mounted) return;
 
         if (polled == null) {
           context.showSnack(
-            'Bulk sync is still running. Forms will keep appearing as sync completes.',
+            'screen.document_builder_screen.bulk_sync_is_still_running_forms_will_keep_appearing'
+                .tr(),
           );
         } else if ((polled['state'] ?? '').toString().toLowerCase() == 'failed') {
-          final msg = (polled['error'] ?? 'Bulk sync failed.').toString();
+          final msg = (polled['error'] ??
+                  'screen.document_builder_screen.bulk_sync_failed'.tr())
+              .toString();
           context.showSnack(msg, isError: true);
         } else {
           final summary = (polled['summary'] is Map)
@@ -1173,7 +1206,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Document Builder'),
+        title: Text('screen.document_builder_screen.document_builder'.tr()),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -1182,7 +1215,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
           IconButton(
             onPressed: () => _openOfficialFormsHub(),
             icon: const Icon(Icons.dashboard_customize_outlined),
-            tooltip: 'Go to Forms Hub',
+            tooltip: 'screen.document_builder_screen.go_to_forms_hub'.tr(),
           ),
           IconButton(
             onPressed: _syncingAllForms ? null : _syncAllOfficialForms,
@@ -1193,12 +1226,12 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.cloud_download_outlined),
-            tooltip: 'Sync Official Forms',
+            tooltip: 'screen.document_builder_screen.sync_official_forms'.tr(),
           ),
           IconButton(
             onPressed: () => context.push(RoutePaths.documentVault),
             icon: const Icon(Icons.folder_copy_outlined),
-            tooltip: 'Document Vault',
+            tooltip: 'screen.document_builder_screen.document_vault'.tr(),
           ),
         ],
       ),
@@ -1221,7 +1254,10 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                   children: <Widget>[
                     _readinessBanner(cardColor, textColor, subColor),
                     const SizedBox(height: 16),
-                    _sectionHeader('Forms You Can Preview'),
+                    _sectionHeader(
+                      'screen.document_builder_screen.forms_you_can_preview'
+                          .tr(),
+                    ),
                     const SizedBox(height: 8),
                     SizedBox(
                       height: 210,
@@ -1232,7 +1268,8 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                               cardColor: cardColor,
                               child: Center(
                                 child: Text(
-                                  'No local forms yet. Use Sync Official Forms once.',
+                                  'screen.document_builder_screen.no_local_forms_yet_use_sync_official_forms_once'
+                                      .tr(),
                                   style: TextStyle(color: subColor),
                                 ),
                               ),
@@ -1288,7 +1325,8 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           Text(
-                                            'Ready to preview before filling',
+                                            'screen.document_builder_screen.ready_to_preview_before_filling'
+                                                .tr(),
                                             style: TextStyle(color: subColor),
                                           ),
                                           const Spacer(),
@@ -1324,7 +1362,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                             ),
                     ),
                     const SizedBox(height: 18),
-                    _sectionHeader('Best Schemes for You'),
+                    _sectionHeader(
+                      'screen.document_builder_screen.best_schemes_for_you'.tr(),
+                    ),
                     const SizedBox(height: 8),
                     SizedBox(
                       height: 230,
@@ -1344,7 +1384,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    _sectionHeader('All Schemes'),
+                    _sectionHeader(
+                      'screen.document_builder_screen.all_schemes'.tr(),
+                    ),
                     const SizedBox(height: 8),
                     _searchAndFilters(cardColor),
                     const SizedBox(height: 10),
@@ -1365,11 +1407,11 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
 
   Widget _readinessBanner(Color cardColor, Color textColor, Color subColor) {
     final docs = <(_ReadinessState, String)>[
-      (_readinessForAadhaar(), 'Aadhaar Card'),
-      (_readinessForLand(), 'Land Records'),
-      (_readinessForBank(), 'Bank Passbook'),
-      (_readinessForCaste(), 'Caste Certificate'),
-      (_readinessForPhoto(), 'Passport Photo'),
+      (_readinessForAadhaar(), 'screen.document_builder_screen.aadhaar_card'.tr()),
+      (_readinessForLand(), 'screen.document_builder_screen.land_records'.tr()),
+      (_readinessForBank(), 'screen.document_builder_screen.bank_passbook'.tr()),
+      (_readinessForCaste(), 'screen.document_builder_screen.caste_certificate'.tr()),
+      (_readinessForPhoto(), 'screen.document_builder_screen.passport_photo'.tr()),
     ];
 
     return _glassCard(
@@ -1378,7 +1420,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Your Document Readiness',
+            'screen.document_builder_screen.your_document_readiness'.tr(),
             style: TextStyle(
               color: textColor,
               fontWeight: FontWeight.w800,
@@ -1432,7 +1474,9 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
           Row(
             children: <Widget>[
               Text(
-                '$_readyCount of 5 ready',
+                'screen.document_builder_screen.readycount_of_5_ready'
+                    .tr()
+                    .replaceAll(r'$_readyCount', _readyCount.toString()),
                 style: const TextStyle(
                   color: AppColors.success,
                   fontWeight: FontWeight.w700,
@@ -1441,7 +1485,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
               const Spacer(),
               TextButton(
                 onPressed: () => _openOfficialFormsHub(),
-                child: const Text('Complete Profile'),
+                child: Text('screen.document_builder_screen.complete_profile'.tr()),
               ),
             ],
           ),
@@ -1557,9 +1601,11 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
         _glassCard(
           cardColor: cardColor,
           child: TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search by scheme name or category',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText:
+                  'screen.document_builder_screen.search_by_scheme_name_or_category'
+                      .tr(),
+              prefixIcon: const Icon(Icons.search),
               border: InputBorder.none,
             ),
             onChanged: (v) => setState(() => _search = v),
@@ -1584,7 +1630,7 @@ class _DocumentBuilderScreenState extends ConsumerState<DocumentBuilderScreen> {
               }),
               FilterChip(
                 selected: _highestBenefit,
-                label: const Text('Highest Benefit'),
+                label: Text('screen.document_builder_screen.highest_benefit'.tr()),
                 onSelected: (v) => setState(() => _highestBenefit = v),
               ),
             ],

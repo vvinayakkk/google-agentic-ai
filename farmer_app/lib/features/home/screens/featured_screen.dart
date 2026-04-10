@@ -1,4 +1,5 @@
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -68,7 +69,7 @@ class FeaturedScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Agri-Suite Features'),
+        title: Text('Agri-Suite Features'.tr()),
       ),
       body: ListView(
         padding: AppSpacing.allLg,

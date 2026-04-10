@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -60,11 +61,13 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   }
 
   String _downloadedDocName(Map<String, dynamic> doc) {
-    return (doc['filename'] ?? doc['name'] ?? 'Document').toString();
+    return (doc['filename'] ?? doc['name'] ?? 'screen.document_vault_screen.document'.tr())
+        .toString();
   }
 
   String _downloadedDocScheme(Map<String, dynamic> doc) {
-    return (doc['scheme_name'] ?? doc['scheme'] ?? 'Scheme').toString();
+    return (doc['scheme_name'] ?? doc['scheme'] ?? 'screen.document_vault_screen.scheme'.tr())
+        .toString();
   }
 
   String _downloadedDocType(Map<String, dynamic> doc) {
@@ -72,12 +75,18 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
     final contentType = (doc['content_type'] ?? '').toString().toLowerCase();
     if (fileName.endsWith('.pdf') || contentType.contains('pdf')) return 'PDF';
     if (fileName.endsWith('.docx') || contentType.contains('wordprocessingml')) {
-      return 'DOCX';
+      return 'screen.document_vault_screen.docx_2'.tr();
     }
-    if (fileName.endsWith('.doc') || contentType.contains('msword')) return 'DOC';
-    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) return 'XLS';
-    if (fileName.endsWith('.html') || contentType.contains('html')) return 'HTML';
-    return 'FILE';
+    if (fileName.endsWith('.doc') || contentType.contains('msword')) {
+      return 'screen.document_vault_screen.doc_2'.tr();
+    }
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      return 'screen.document_vault_screen.xls_2'.tr();
+    }
+    if (fileName.endsWith('.html') || contentType.contains('html')) {
+      return 'screen.document_vault_screen.html_2'.tr();
+    }
+    return 'screen.document_vault_screen.file'.tr();
   }
 
   Future<void> _openExternalUrl(String raw) async {
@@ -89,7 +98,8 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   Future<void> _shareSchemeDocFile(GeneratedDocumentFile file) async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Official form downloaded from KisanKiAwaaz',
+        text: 'screen.document_vault_screen.official_form_downloaded_from_kisankiawaaz'
+            .tr(),
         files: <XFile>[XFile(file.file.path)],
       ),
     );
@@ -100,7 +110,10 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
         (doc['scheme'] ?? doc['scheme_name'] ?? '').toString().trim();
     final docName = _downloadedDocName(doc).trim();
     if (schemeKey.isEmpty || docName.isEmpty) {
-      context.showSnack('Document details missing.', isError: true);
+      context.showSnack(
+        'screen.document_vault_screen.document_details_missing'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -111,7 +124,10 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
     );
     if (!mounted) return;
     if (file == null) {
-      context.showSnack('Could not open this file right now.', isError: true);
+      context.showSnack(
+        'screen.document_vault_screen.could_not_open_this_file_right_now'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -181,7 +197,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Document Vault'),
+        title: Text('screen.document_vault_screen.document_vault'.tr()),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
@@ -208,23 +224,41 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'Core Document Checklist',
+                            'screen.document_vault_screen.core_document_checklist'
+                                .tr(),
                             style: context.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 10),
-                          _checkItem('Aadhaar Card', _readyAadhaar()),
-                          _checkItem('Land Records', _readyLand()),
-                          _checkItem('Bank Passbook / IFSC', _readyBank()),
-                          _checkItem('Caste Certificate', _readyCaste()),
-                          _checkItem('Passport Photo', _readyPhoto()),
+                          _checkItem(
+                            'screen.document_vault_screen.aadhaar_card'.tr(),
+                            _readyAadhaar(),
+                          ),
+                          _checkItem(
+                            'screen.document_vault_screen.land_records'.tr(),
+                            _readyLand(),
+                          ),
+                          _checkItem(
+                            'screen.document_vault_screen.bank_passbook_ifsc'
+                                .tr(),
+                            _readyBank(),
+                          ),
+                          _checkItem(
+                            'screen.document_vault_screen.caste_certificate'
+                                .tr(),
+                            _readyCaste(),
+                          ),
+                          _checkItem(
+                            'screen.document_vault_screen.passport_photo'.tr(),
+                            _readyPhoto(),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Saved Documents',
+                      'screen.document_vault_screen.saved_documents'.tr(),
                       style: context.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -234,7 +268,8 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                       _glassCard(
                         cardColor,
                         Text(
-                          'No documents saved yet. Build a document and save it to your profile.',
+                          'screen.document_vault_screen.no_documents_saved_yet_build_a_document_and_save_it'
+                              .tr(),
                           style: context.textTheme.bodyMedium,
                         ),
                       )
@@ -242,7 +277,8 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                       ..._savedDocs.map((doc) => _docCard(doc, cardColor)),
                     const SizedBox(height: 16),
                     Text(
-                      'Downloaded Official Forms',
+                      'screen.document_vault_screen.downloaded_official_forms'
+                          .tr(),
                       style: context.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -252,7 +288,8 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                       _glassCard(
                         cardColor,
                         Text(
-                          'No downloaded scheme forms yet. Sync from Official Forms Hub to populate this vault.',
+                          'screen.document_vault_screen.no_downloaded_scheme_forms_yet_sync_from_official_fo'
+                              .tr(),
                           style: context.textTheme.bodyMedium,
                         ),
                       )
@@ -280,7 +317,9 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
           const SizedBox(width: 8),
           Expanded(child: Text(label)),
           Text(
-            ready ? 'Uploaded' : 'Build',
+            ready
+                ? 'screen.document_vault_screen.uploaded'.tr()
+                : 'screen.document_vault_screen.build'.tr(),
             style: TextStyle(
               color: ready ? AppColors.success : AppColors.warning,
               fontWeight: FontWeight.w700,
@@ -324,7 +363,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                         await launchUrl(uri, mode: LaunchMode.inAppWebView);
                       }
                     },
-                    child: const Text('Preview'),
+                    child: Text('screen.document_vault_screen.preview'.tr()),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -339,7 +378,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                         );
                       }
                     },
-                    child: const Text('Re-download'),
+                    child: Text('screen.document_vault_screen.re_download'.tr()),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -353,7 +392,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                         ),
                       );
                     },
-                    child: const Text('Share'),
+                    child: Text('screen.document_vault_screen.share'.tr()),
                   ),
                 ),
               ],
@@ -403,7 +442,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
             IconButton(
               onPressed: () => _previewDownloadedSchemeDoc(doc),
               icon: const Icon(Icons.visibility_outlined),
-              tooltip: 'Preview',
+              tooltip: 'screen.document_vault_screen.preview'.tr(),
             ),
           ],
         ),

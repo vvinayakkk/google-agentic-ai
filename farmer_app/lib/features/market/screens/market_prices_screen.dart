@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -1746,14 +1747,14 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _showSchemeDetails(item),
-                  child: const Text('Details'),
+                  child: Text('screen.market_prices_screen.details'.tr()),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () => _openSchemeUrl(item),
-                  child: const Text('Apply'),
+                  child: Text('common.apply'.tr()),
                 ),
               ),
             ],

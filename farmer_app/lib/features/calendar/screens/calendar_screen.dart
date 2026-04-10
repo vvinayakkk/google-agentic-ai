@@ -1,7 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/router/app_router.dart';
@@ -43,8 +45,8 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  DateTime _focusedDay = DateTime(2026, 3, 1);
-  DateTime _selectedDay = DateTime(2026, 3, 3);
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
 
   bool _heroVisible = false;
   final List<bool> _taskVisible = <bool>[false, false, false];
@@ -54,14 +56,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String? _heroRecommendation;
   List<_TaskEntry> _backendTasks = <_TaskEntry>[];
 
-  static final Map<DateTime, List<String>> _seedEvents =
-      <DateTime, List<String>>{
-        DateTime(2026, 3, 3): <String>['high', 'normal'],
-        DateTime(2026, 3, 8): <String>['normal'],
-        DateTime(2026, 3, 14): <String>['high'],
-        DateTime(2026, 3, 17): <String>['ai'],
-        DateTime(2026, 3, 18): <String>['normal', 'ai'],
-      };
+  late final Map<DateTime, List<String>> _seedEvents = _buildSeedEvents();
 
   Map<DateTime, List<String>> _events = <DateTime, List<String>>{};
 
@@ -98,6 +93,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  Map<DateTime, List<String>> _buildSeedEvents() {
+    final today = _stripTime(DateTime.now());
+    return <DateTime, List<String>>{
+      today: <String>['high', 'normal'],
+      today.add(const Duration(days: 2)): <String>['normal'],
+      today.add(const Duration(days: 6)): <String>['high'],
+      today.add(const Duration(days: 9)): <String>['ai'],
+      today.add(const Duration(days: 10)): <String>['normal', 'ai'],
+    };
+  }
 
   void _rebuildEventMap() {
     final rebuilt = <DateTime, List<String>>{};
@@ -254,21 +260,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   String _shortDate(DateTime date) {
-    const months = <String>[
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}';
+    return DateFormat('MMM dd', context.locale.toString()).format(date);
   }
 
   String _formatTime(TimeOfDay time) {
@@ -299,11 +291,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
-            final fieldBg = Colors.white.withValues(alpha: 0.72);
-            final borderColor = Colors.white.withValues(alpha: 0.88);
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final fieldBg = isDark
+                ? AppColors.darkCard
+                : Colors.white.withValues(alpha: 0.72);
+            final borderColor = isDark
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.88);
             final titleStyle = Theme.of(context).textTheme.titleMedium
                 ?.copyWith(
-                  color: AppColors.lightText,
+                  color: isDark ? AppColors.darkText : AppColors.lightText,
                   fontWeight: FontWeight.w700,
                 );
 
@@ -316,10 +313,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: isDark
+                      ? AppColors.darkCard
+                      : Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: borderColor,
                   ),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
@@ -348,20 +347,22 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Schedule New Task', style: titleStyle),
+                      Text('screen.calendar_screen.schedule_new_task'.tr(), style: titleStyle),
                       const SizedBox(height: 4),
                       Text(
-                        'Add a quick farm task for your selected date.',
+                        'screen.calendar_screen.add_a_quick_farm_task_for_your_selected_date'.tr(),
                         style: TextStyle(
-                          color: AppColors.lightTextSecondary,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Task Name',
+                        'screen.calendar_screen.task_name'.tr(),
                         style: TextStyle(
-                          color: AppColors.lightText,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -370,13 +371,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       TextField(
                         controller: titleController,
                         decoration: InputDecoration(
-                          hintText: 'Task title',
+                          hintText: 'screen.calendar_screen.task_title'.tr(),
                           filled: true,
                           fillColor: fieldBg,
                           prefixIcon: const Icon(
                             Icons.assignment_outlined,
                             size: 18,
-                            color: AppColors.primaryDark,
+                            color: AppColors.primary,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -399,9 +400,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Details',
+                        'screen.calendar_screen.details'.tr(),
                         style: TextStyle(
-                          color: AppColors.lightText,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -412,7 +413,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         minLines: 2,
                         maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: 'Details (optional)',
+                          hintText: 'screen.calendar_screen.details_optional'.tr(),
                           filled: true,
                           fillColor: fieldBg,
                           prefixIcon: const Padding(
@@ -420,7 +421,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             child: Icon(
                               Icons.notes_rounded,
                               size: 18,
-                              color: AppColors.primaryDark,
+                              color: AppColors.primary,
                             ),
                           ),
                           border: OutlineInputBorder(
@@ -444,9 +445,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Schedule',
+                        'screen.calendar_screen.schedule'.tr(),
                         style: TextStyle(
-                          color: AppColors.lightText,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -471,7 +472,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: fieldBg,
-                                foregroundColor: AppColors.lightText,
+                                foregroundColor: isDark
+                                  ? AppColors.darkText
+                                  : AppColors.lightText,
                                 elevation: 0,
                                 side: BorderSide(color: borderColor),
                                 shape: RoundedRectangleBorder(
@@ -503,7 +506,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: fieldBg,
-                                foregroundColor: AppColors.lightText,
+                                foregroundColor: isDark
+                                  ? AppColors.darkText
+                                  : AppColors.lightText,
                                 elevation: 0,
                                 side: BorderSide(color: borderColor),
                                 shape: RoundedRectangleBorder(
@@ -523,9 +528,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Priority',
+                        'screen.calendar_screen.priority'.tr(),
                         style: TextStyle(
-                          color: AppColors.lightText,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -535,7 +540,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         children: <Widget>[
                           Expanded(
                             child: ChoiceChip(
-                              label: const Text('Normal'),
+                              label: Text('screen.calendar_screen.normal'.tr()),
                               selected: !highPriority,
                               onSelected: (_) {
                                 setSheetState(() {
@@ -548,7 +553,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               ),
                               side: BorderSide(color: borderColor),
                               labelStyle: TextStyle(
-                                color: AppColors.lightText,
+                                color: isDark
+                                    ? AppColors.darkText
+                                    : AppColors.lightText,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -556,7 +563,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: ChoiceChip(
-                              label: const Text('High'),
+                              label: Text('screen.calendar_screen.high'.tr()),
                               selected: highPriority,
                               onSelected: (_) {
                                 setSheetState(() {
@@ -586,7 +593,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           onPressed: () {
                             final title = titleController.text.trim();
                             if (title.isEmpty) {
-                              _showSnack('Please enter task title');
+                              _showSnack('screen.calendar_screen.please_enter_task_title'.tr());
                               return;
                             }
 
@@ -598,7 +605,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 _TaskEntry(
                                   title: title,
                                   subtitle: details.isEmpty
-                                      ? 'Planned task from calendar'
+                                      ? 'screen.calendar_screen.planned_task_from_calendar'.tr()
                                       : details,
                                   date: pickedDate,
                                   time: pickedTime,
@@ -609,10 +616,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             });
 
                             Navigator.of(sheetContext).pop();
-                            _showSnack('Task scheduled successfully');
+                            _showSnack('screen.calendar_screen.task_scheduled_successfully'.tr());
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryDark,
+                            backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(40),
@@ -620,8 +627,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             elevation: 0,
                           ),
                           icon: const Icon(Icons.add_task_rounded),
-                          label: const Text(
-                            'Save Task',
+                          label: Text(
+                            'screen.calendar_screen.save_task'.tr(),
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -643,10 +650,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
-    final iconBg = Colors.white.withValues(alpha: 0.56);
+    final cardColor = isDark
+      ? AppColors.darkCard
+      : Colors.white.withValues(alpha: 0.56);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor = isDark
+      ? AppColors.darkTextSecondary
+      : AppColors.lightTextSecondary;
+    final iconBg = isDark
+      ? Colors.transparent
+      : Colors.white.withValues(alpha: 0.56);
 
     return Scaffold(
       backgroundColor: isDark
@@ -679,13 +692,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         alignment: Alignment.centerLeft,
                         child: _topAction(
                           icon: Icons.arrow_back_rounded,
-                          color: AppColors.primaryDark,
+                          color: AppColors.primary,
                           background: iconBg,
                           onTap: () => Navigator.of(context).maybePop(),
                         ),
                       ),
                       Text(
-                        'Calendar',
+                        'screen.calendar_screen.calendar'.tr(),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w700,
@@ -695,7 +708,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         alignment: Alignment.centerRight,
                         child: _topAction(
                           icon: Icons.notifications_outlined,
-                          color: AppColors.primaryDark,
+                          color: AppColors.primary,
                           background: iconBg,
                           onTap: () => context.push(RoutePaths.notifications),
                         ),
@@ -723,10 +736,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 300),
                             opacity: _heroVisible ? 1 : 0,
-                            child: _HeroCard(
-                              recommendation: _heroRecommendation,
-                              isLoading: _heroLoading,
-                              onSchedule: _openScheduleTaskSheet,
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: _HeroCard(
+                                recommendation: _heroRecommendation,
+                                isLoading: _heroLoading,
+                                onSchedule: _openScheduleTaskSheet,
+                              ),
                             ),
                           ),
                         ),
@@ -734,7 +750,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         Row(
                           children: <Widget>[
                             Text(
-                              'Farming Calendar',
+                              'screen.calendar_screen.farming_calendar'.tr(),
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     color: textColor,
@@ -781,7 +797,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Upcoming Tasks',
+                          'screen.calendar_screen.upcoming_tasks'.tr(),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: textColor,
@@ -795,20 +811,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _openScheduleTaskSheet,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(
-                                alpha: 0.86,
-                              ),
-                              foregroundColor: AppColors.lightText,
+                              backgroundColor: isDark
+                                  ? AppColors.darkCard
+                                  : Colors.white.withValues(alpha: 0.86),
+                              foregroundColor: isDark
+                                  ? AppColors.darkText
+                                  : AppColors.lightText,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(40),
                               ),
                               side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.88),
+                                color: isDark
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.88),
                               ),
                             ),
                             icon: const Icon(Icons.add_task_rounded),
-                            label: const Text(
-                              'Schedule New Task',
+                            label: Text(
+                              'screen.calendar_screen.schedule_new_task'.tr(),
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -844,13 +864,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                     subtitle: task.subtitle,
                                     dateTime:
                                         '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
-                                    priority: task.isHigh ? 'HIGH' : 'SYNCED',
+                                    priority: task.isHigh
+                                        ? 'screen.calendar_screen.high'.tr()
+                                        : 'screen.calendar_screen.synced'.tr(),
                                     isHigh: task.isHigh,
                                     cardColor: cardColor,
                                     textColor: textColor,
                                     subColor: subColor,
                                     onTap: () => _showSnack(
-                                      'Synced task: ${task.title}',
+                                      '${'screen.calendar_screen.synced'.tr()}: ${task.title}',
                                     ),
                                   ),
                                 ),
@@ -862,17 +884,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             iconBg: const Color(0xFFFFEBEE),
                             iconColor: const Color(0xFFC62828),
                             icon: Icons.bug_report_outlined,
-                            title: 'Pest Treatment',
-                            subtitle:
-                                'Wheat Field C - Aphid infestation warning',
-                            dateTime: 'Mar 08  •  08:30 AM',
-                            priority: 'HIGH',
+                            title: 'screen.calendar_screen.pest_treatment'.tr(),
+                            subtitle: 'screen.calendar_screen.wheat_field_c_aphid_infestation_warning'.tr(),
+                            dateTime:
+                              '${_shortDate(DateTime.now().add(const Duration(days: 1)))}  •  08:30 AM',
+                            priority: 'screen.calendar_screen.high'.tr(),
                             isHigh: true,
                             cardColor: cardColor,
                             textColor: textColor,
                             subColor: subColor,
                             onTap: () =>
-                                _showSnack('Opening Pest Treatment...'),
+                                _showSnack('screen.calendar_screen.opening_pest_treatment'.tr()),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -882,16 +904,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             iconBg: const Color(0xFFE3F2FD),
                             iconColor: const Color(0xFF1565C0),
                             icon: Icons.water_drop_outlined,
-                            title: 'Irrigation for Wheat',
-                            subtitle: 'North Quad - Standard hydration cycle',
-                            dateTime: 'Mar 08  •  05:30 AM',
-                            priority: 'NORMAL',
+                            title: 'screen.calendar_screen.irrigation_for_wheat'.tr(),
+                            subtitle: 'screen.calendar_screen.north_quad_standard_hydration_cycle'.tr(),
+                            dateTime:
+                              '${_shortDate(DateTime.now().add(const Duration(days: 1)))}  •  05:30 AM',
+                            priority: 'screen.calendar_screen.normal'.tr(),
                             isHigh: false,
                             cardColor: cardColor,
                             textColor: textColor,
                             subColor: subColor,
                             onTap: () =>
-                                _showSnack('Opening Irrigation for Wheat...'),
+                                _showSnack('screen.calendar_screen.opening_irrigation_for_wheat'.tr()),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -901,17 +924,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             iconBg: CalendarColors.tagGreenBg,
                             iconColor: CalendarColors.primaryDark,
                             icon: Icons.science_outlined,
-                            title: 'Soil Fertilization',
-                            subtitle:
-                                'Organic Zone 2 - Nitrogen boost required',
-                            dateTime: 'Mar 08  •  07:00 AM',
-                            priority: 'NORMAL',
+                            title: 'screen.calendar_screen.soil_fertilization'.tr(),
+                            subtitle: 'screen.calendar_screen.organic_zone_2_nitrogen_boost_required'.tr(),
+                            dateTime:
+                              '${_shortDate(DateTime.now().add(const Duration(days: 1)))}  •  07:00 AM',
+                            priority: 'screen.calendar_screen.normal'.tr(),
                             isHigh: false,
                             cardColor: cardColor,
                             textColor: textColor,
                             subColor: subColor,
                             onTap: () =>
-                                _showSnack('Opening Soil Fertilization...'),
+                                _showSnack('screen.calendar_screen.opening_soil_fertilization'.tr()),
                           ),
                         ),
                         if (_customTasks.isNotEmpty) ...<Widget>[
@@ -931,13 +954,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 subtitle: task.subtitle,
                                 dateTime:
                                     '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
-                                priority: task.isHigh ? 'HIGH' : 'NORMAL',
+                                priority: task.isHigh
+                                  ? 'screen.calendar_screen.high'.tr()
+                                  : 'screen.calendar_screen.normal'.tr(),
                                 isHigh: task.isHigh,
                                 cardColor: cardColor,
                                 textColor: textColor,
                                 subColor: subColor,
                                 onTap: () =>
-                                    _showSnack('Opening ${task.title}...'),
+                                  _showSnack('Opening ${task.title}...'),
                               ),
                             ),
                           ),
@@ -948,7 +973,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             onPressed: () =>
                                 context.push(RoutePaths.notifications),
                             child: Text(
-                              'View All Tasks  →',
+                              'screen.calendar_screen.view_all_tasks'.tr(),
                               style: TextStyle(
                                 color: AppColors.primaryDark,
                                 fontWeight: FontWeight.w700,
@@ -975,11 +1000,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     required Color background,
     required VoidCallback onTap,
   }) {
+    final isDark = context.isDark;
     return Container(
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+        border: isDark ? null : Border.all(color: Colors.white.withValues(alpha: 0.8)),
       ),
       child: IconButton(
         onPressed: onTap,
@@ -993,6 +1019,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     required Color subColor,
     required VoidCallback onTap,
   }) {
+    final isDark = context.isDark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -1000,31 +1027,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         width: 26,
         height: 26,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.56),
+          color: isDark
+              ? Colors.transparent
+              : Colors.white.withValues(alpha: 0.56),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+          border: isDark
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.8)),
         ),
-        child: Icon(icon, size: 18, color: subColor),
+        child: Icon(icon, size: 18, color: AppColors.primary),
       ),
     );
   }
 
   String _monthLabel(DateTime date) {
-    const months = <String>[
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[date.month - 1]} ${date.year}';
+    return DateFormat('MMMM yyyy', context.locale.toString()).format(date);
   }
 
   void _showSnack(String message) {
@@ -1073,21 +1090,21 @@ class _HeroCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'DAILY AI RECOMMENDATION',
+                  'screen.calendar_screen.daily_ai_recommendation'.tr(),
                   style: CalendarTextStyles.heroLabel,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                'Optimal Irrigation\nWindow Detected',
+                'screen.calendar_screen.optimal_irrigation_window_detected'.tr(),
                 style: CalendarTextStyles.heroTitle,
               ),
               const SizedBox(height: 8),
               Text(
                 isLoading
-                    ? 'Syncing backend recommendations...'
+                    ? 'screen.calendar_screen.syncing_backend_recommendations'.tr()
                     : (recommendation ??
-                          'Soil moisture levels in the North Quad are at 18%. Based on the 4 PM forecast, we recommend starting irrigation at 05:00 AM tomorrow.'),
+                          'screen.calendar_screen.soil_moisture_levels_in_the_north_quad_are_at_18_bas'.tr()),
                 style: CalendarTextStyles.heroBody,
               ),
               const SizedBox(height: 14),
@@ -1105,7 +1122,10 @@ class _HeroCard extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: Text('Schedule Now', style: CalendarTextStyles.button),
+                child: Text(
+                  'screen.calendar_screen.schedule_now'.tr(),
+                  style: CalendarTextStyles.button,
+                ),
               ),
             ],
           ),
@@ -1158,13 +1178,13 @@ class _CalendarCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _DayHeader(label: 'MON', subColor: subColor),
-              _DayHeader(label: 'TUE', subColor: subColor),
-              _DayHeader(label: 'WED', subColor: subColor),
-              _DayHeader(label: 'THU', subColor: subColor),
-              _DayHeader(label: 'FRI', subColor: subColor),
-              _DayHeader(label: 'SAT', subColor: subColor),
-              _DayHeader(label: 'SUN', subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.mon'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.tue'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.wed'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.thu'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.fri'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.sat'.tr(), subColor: subColor),
+              _DayHeader(label: 'screen.calendar_screen.sun'.tr(), subColor: subColor),
             ],
           ),
           const SizedBox(height: 8),
@@ -1326,6 +1346,7 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     final badgeColor = isHigh
         ? CalendarColors.highBadgeText
         : AppColors.primaryDark;
@@ -1338,7 +1359,9 @@ class _TaskCard extends StatelessWidget {
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: isDark
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.8),
             width: 1.2,
           ),
           boxShadow: <BoxShadow>[
@@ -1359,7 +1382,9 @@ class _TaskCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: iconBg.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
+                border: isDark
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.88)),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
                     color: AppColors.primaryDark.withValues(alpha: 0.06),
@@ -1468,6 +1493,9 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorText = context.isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -1481,7 +1509,7 @@ class _LegendDot extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: AppColors.lightTextSecondary,
+            color: colorText,
             letterSpacing: 0.5,
             fontWeight: FontWeight.w600,
           ),

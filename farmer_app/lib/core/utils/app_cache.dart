@@ -45,6 +45,20 @@ class AppCache {
     }
   }
 
+  /// Retrieve cached data even if expired.
+  /// Useful as a last-resort stale fallback during transient backend failures.
+  static Future<dynamic> getStale(String key) async {
+    final prefs = await _instance;
+    final raw = prefs.getString('cache_$key');
+    if (raw == null) return null;
+    try {
+      final wrapper = jsonDecode(raw) as Map<String, dynamic>;
+      return wrapper['data'];
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Invalidate a single key.
   static Future<void> invalidate(String key) async {
     final prefs = await _instance;

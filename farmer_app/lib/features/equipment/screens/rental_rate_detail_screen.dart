@@ -312,7 +312,7 @@ class _RentalRateDetailScreenState
     } catch (e) {
       if (!mounted) return;
       setState(() => _aiLoading = false);
-      context.showSnack('Failed to generate AI overview: $e', isError: true);
+      context.showSnack('Failed to generate AI overview: $e'.tr(), isError: true);
     }
   }
 
@@ -366,7 +366,7 @@ class _RentalRateDetailScreenState
       return;
     }
     if (!mounted) return;
-    context.showSnack('Unable to place call', isError: true);
+    context.showSnack('Unable to place call'.tr(), isError: true);
   }
 
   Future<void> _openWhatsApp(String phone) async {
@@ -438,7 +438,7 @@ class _RentalRateDetailScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Request Rental',
+                      'Request Rental'.tr(),
                       style: context.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -452,9 +452,9 @@ class _RentalRateDetailScreenState
                     if (providerOptions.isNotEmpty) ...[
                       DropdownButtonFormField<String>(
                         value: selectedState,
-                        decoration: const InputDecoration(
-                          labelText: 'Select State',
-                          hintText: 'Choose state',
+                        decoration: InputDecoration(
+                          labelText: 'Select State'.tr(),
+                          hintText: 'Choose state'.tr(),
                         ),
                         isExpanded: true,
                         items: stateOptions
@@ -505,9 +505,9 @@ class _RentalRateDetailScreenState
                           );
                           return DropdownButtonFormField<String>(
                             value: selectedDistrict,
-                            decoration: const InputDecoration(
-                              labelText: 'Select District / Mandi Area',
-                              hintText: 'Choose district',
+                            decoration: InputDecoration(
+                              labelText: 'Select District / Mandi Area'.tr(),
+                              hintText: 'Choose district'.tr(),
                             ),
                             isExpanded: true,
                             items: districtOptions
@@ -568,9 +568,9 @@ class _RentalRateDetailScreenState
 
                           return DropdownButtonFormField<String>(
                             value: selectedProviderId,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Provider / Mandi',
-                              hintText: 'Choose where you want to rent from',
+                            decoration: InputDecoration(
+                              labelText: 'Select Provider / Mandi'.tr(),
+                              hintText: 'Choose where you want to rent from'.tr(),
                             ),
                             isExpanded: true,
                             items: scopedProviders
@@ -598,7 +598,7 @@ class _RentalRateDetailScreenState
                       ),
                     ] else
                       Text(
-                        'No providers available right now.',
+                        'No providers available right now.'.tr(),
                         style: context.textTheme.bodyMedium?.copyWith(
                           color: context.appColors.textSecondary,
                         ),
@@ -608,7 +608,7 @@ class _RentalRateDetailScreenState
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         startDate == null
-                            ? 'Select start date'
+                            ? 'Select start date'.tr()
                             : DateFormat('dd MMM yyyy').format(startDate!),
                       ),
                       trailing: const Icon(Icons.calendar_today_outlined),
@@ -628,7 +628,7 @@ class _RentalRateDetailScreenState
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         endDate == null
-                            ? 'Select end date'
+                            ? 'Select end date'.tr()
                             : DateFormat('dd MMM yyyy').format(endDate!),
                       ),
                       trailing: const Icon(Icons.calendar_today_outlined),
@@ -645,8 +645,8 @@ class _RentalRateDetailScreenState
                       },
                     ),
                     AppTextField(
-                      label: 'Message',
-                      hint: 'Add a request note',
+                      label: 'Message'.tr(),
+                      hint: 'Add a request note'.tr(),
                       maxLines: 3,
                       onChanged: (v) => messageText = v,
                     ),
@@ -657,7 +657,7 @@ class _RentalRateDetailScreenState
                         onPressed: () async {
                           if (startDate == null || endDate == null) {
                             context.showSnack(
-                              'Select start and end dates',
+                              'Select start and end dates'.tr(),
                               isError: true,
                             );
                             return;
@@ -665,7 +665,7 @@ class _RentalRateDetailScreenState
                           final equipmentId = (selectedProviderId ?? '').trim();
                           if (equipmentId.isEmpty) {
                             context.showSnack(
-                              'Select a provider/mandi first',
+                              'Select a provider/mandi first'.tr(),
                               isError: true,
                             );
                             return;
@@ -683,7 +683,7 @@ class _RentalRateDetailScreenState
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);
                             if (!mounted) return;
-                            context.showSnack('Rental request submitted');
+                            context.showSnack('Rental request submitted'.tr());
                             final rentalId =
                                 (created['id'] ?? created['rental_id'] ?? '')
                                     .toString();
@@ -701,7 +701,7 @@ class _RentalRateDetailScreenState
                           foregroundColor: context.colors.onSurface,
                           side: BorderSide(color: context.appColors.border),
                         ),
-                        child: const Text('Submit Request'),
+                        child: Text('Submit Request'.tr()),
                       ),
                     ),
                   ],
@@ -747,7 +747,7 @@ class _RentalRateDetailScreenState
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.assignment_rounded, size: 18),
-                label: const Text('Request Rental'),
+                label: Text('Request Rental'.tr()),
               ),
             ],
           ),
@@ -901,14 +901,14 @@ class _RentalRateDetailScreenState
                               ),
                               const SizedBox(height: AppSpacing.sm),
                               SegmentedButton<String>(
-                                segments: const [
+                                segments: [
                                   ButtonSegment(
                                     value: 'general',
-                                    label: Text('General Farmer'),
+                                    label: Text('General Farmer'.tr()),
                                   ),
                                   ButtonSegment(
                                     value: 'scst',
-                                    label: Text('SC/ST or Small-Marginal'),
+                                    label: Text('SC/ST or Small-Marginal'.tr()),
                                   ),
                                 ],
                                 selected: {_subsidyCategory},
@@ -930,9 +930,7 @@ class _RentalRateDetailScreenState
                                   Uri.parse('https://agrimachinery.nic.in'),
                                   mode: LaunchMode.externalApplication,
                                 ),
-                                child: const Text(
-                                  'Apply for SMAM Subsidy Online',
-                                ),
+                                child: Text('Apply for SMAM Subsidy Online'.tr()),
                               ),
                             ],
                           ],
@@ -944,9 +942,7 @@ class _RentalRateDetailScreenState
                           children: [
                             ListTile(
                               contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                'What is a Custom Hiring Centre?',
-                              ),
+                              title: Text('What is a Custom Hiring Centre?'.tr()),
                               trailing: Icon(
                                 _chcExpanded
                                     ? Icons.expand_less
@@ -1022,7 +1018,7 @@ class _RentalRateDetailScreenState
                     ),
                   ),
                   Text(
-                    'Rental intelligence and booking guidance',
+                    'Rental intelligence and booking guidance'.tr(),
                     textAlign: TextAlign.center,
                     style: context.textTheme.bodySmall?.copyWith(
                       color: context.appColors.textSecondary,
@@ -1048,7 +1044,7 @@ class _RentalRateDetailScreenState
           children: [
             _headerBadge('${_providers.length} providers'),
             _headerBadge('₹$minDaily-₹$maxDaily/day'),
-            _headerBadge(_selectedState ?? 'All states'),
+            _headerBadge(_selectedState ?? 'All states'.tr()),
           ],
         ),
       ],
@@ -1115,7 +1111,9 @@ class _RentalRateDetailScreenState
       chips.add(
         InputChip(
           label: Text(
-            _providerSortBy == 'rate_desc' ? 'High to Low' : 'Availability',
+            _providerSortBy == 'rate_desc'
+                ? 'High to Low'.tr()
+                : 'Availability'.tr(),
           ),
           onDeleted: () => setState(() => _providerSortBy = 'rate_asc'),
         ),
@@ -1149,8 +1147,8 @@ class _RentalRateDetailScreenState
                   Expanded(
                     child: Text(
                       chips.isEmpty
-                          ? 'Filters'
-                          : 'Filters (${chips.length} active)',
+                          ? 'Filters'.tr()
+                          : '${'Filters'.tr()} (${chips.length} ${'active'.tr()})',
                       style: context.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.colors.onSurface,
@@ -1190,9 +1188,9 @@ class _RentalRateDetailScreenState
                           });
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: '__all__',
-                            child: Text('All states'),
+                            child: Text('All states'.tr()),
                           ),
                           ...indianStates.map(
                             (state) => PopupMenuItem<String>(
@@ -1203,34 +1201,34 @@ class _RentalRateDetailScreenState
                         ],
                         child: _popupFilterChip(
                           icon: Icons.location_on_outlined,
-                          text: _selectedState ?? 'All states',
+                          text: _selectedState ?? 'All states'.tr(),
                         ),
                       ),
                       PopupMenuButton<String>(
                         onSelected: (value) {
                           setState(() => _providerSortBy = value);
                         },
-                        itemBuilder: (_) => const [
+                        itemBuilder: (_) => [
                           PopupMenuItem<String>(
                             value: 'rate_asc',
-                            child: Text('Sort: Low to High'),
+                            child: Text('Sort: Low to High'.tr()),
                           ),
                           PopupMenuItem<String>(
                             value: 'rate_desc',
-                            child: Text('Sort: High to Low'),
+                            child: Text('Sort: High to Low'.tr()),
                           ),
                           PopupMenuItem<String>(
                             value: 'availability',
-                            child: Text('Sort: Availability'),
+                            child: Text('Sort: Availability'.tr()),
                           ),
                         ],
                         child: _popupFilterChip(
                           icon: Icons.sort_rounded,
                           text: _providerSortBy == 'rate_desc'
-                              ? 'High to Low'
+                              ? 'High to Low'.tr()
                               : _providerSortBy == 'availability'
-                              ? 'Availability'
-                              : 'Low to High',
+                              ? 'Availability'.tr()
+                              : 'Low to High'.tr(),
                         ),
                       ),
                     ],
@@ -1256,7 +1254,7 @@ class _RentalRateDetailScreenState
                           _loadData(forceRefresh: true);
                         },
                         icon: const Icon(Icons.clear_all_rounded),
-                        label: const Text('Clear'),
+                        label: Text('Clear'.tr()),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -1270,7 +1268,7 @@ class _RentalRateDetailScreenState
                             side: BorderSide(color: context.appColors.border),
                           ),
                           icon: const Icon(Icons.check_circle_outline_rounded),
-                          label: const Text('Apply Filters'),
+                          label: Text('Apply Filters'.tr()),
                         ),
                       ),
                     ],
@@ -1369,14 +1367,14 @@ class _RentalRateDetailScreenState
 
   Widget _trendChart() {
     if (_rateHistory.isEmpty) {
-      return const Center(child: Text('No data'));
+      return Center(child: Text('No data'.tr()));
     }
 
     final cleaned = _rateHistory
         .where((row) => (row['rate_daily'] as num?)?.toDouble() != null)
         .toList(growable: false);
     if (cleaned.isEmpty) {
-      return const Center(child: Text('No chartable history'));
+      return Center(child: Text('No chartable history'.tr()));
     }
 
     const maxPoints = 10;
@@ -1396,7 +1394,7 @@ class _RentalRateDetailScreenState
         .where((v) => v > 0)
         .toList(growable: false);
     if (values.isEmpty) {
-      return const Center(child: Text('No chartable history'));
+      return Center(child: Text('No chartable history'.tr()));
     }
 
     final minValue = values.reduce((a, b) => a < b ? a : b);
@@ -1582,12 +1580,12 @@ class _RentalRateDetailScreenState
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Provider')),
-                    DataColumn(label: Text('Daily Rate')),
-                    DataColumn(label: Text('Operator')),
-                    DataColumn(label: Text('Fuel')),
-                    DataColumn(label: Text('Availability')),
+                  columns: [
+                    DataColumn(label: Text('Provider'.tr())),
+                    DataColumn(label: Text('Daily Rate'.tr())),
+                    DataColumn(label: Text('Operator'.tr())),
+                    DataColumn(label: Text('Fuel'.tr())),
+                    DataColumn(label: Text('Availability'.tr())),
                   ],
                   rows: rows
                       .map((p) {
@@ -1733,7 +1731,7 @@ class _RentalRateDetailScreenState
                             foregroundColor: context.colors.onSurface,
                             side: BorderSide(color: context.appColors.border),
                           ),
-                          child: const Text('Call'),
+                          child: Text('Call'.tr()),
                         ),
                       ),
                     if (provider.provider.phone.isNotEmpty &&
@@ -1744,7 +1742,7 @@ class _RentalRateDetailScreenState
                         child: OutlinedButton(
                           onPressed: () =>
                               _openWhatsApp(provider.provider.whatsapp),
-                          child: const Text('WhatsApp'),
+                          child: Text('WhatsApp'.tr()),
                         ),
                       ),
                   ],

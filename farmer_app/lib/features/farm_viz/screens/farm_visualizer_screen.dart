@@ -898,14 +898,14 @@ class _FarmVisualizerScreenState extends ConsumerState<FarmVisualizerScreen>
 
         // AI Response
         if (_isAiLoading)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
               child: Column(
                 children: [
                   CircularProgressIndicator(color: AppColors.primary),
                   SizedBox(height: AppSpacing.md),
-                  Text('Thinking...'),
+                  Text('Thinking...'.tr()),
                 ],
               ),
             ),

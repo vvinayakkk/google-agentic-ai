@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -212,7 +213,10 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
     if (!mounted) return;
     final sid = _sessionId;
     if (sid == null || sid.isEmpty) {
-      context.showSnack('Session not ready yet.', isError: true);
+      context.showSnack(
+        'screen.loan_application_screen.session_not_ready_yet'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -239,7 +243,9 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text(widget.docType ?? 'Document Builder'),
+        title: Text(
+          widget.docType ?? 'screen.loan_application_screen.document_builder'.tr(),
+        ),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
@@ -298,7 +304,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
               SwitchListTile(
                 value: _showAllAtOnce,
                 onChanged: (v) => setState(() => _showAllAtOnce = v),
-                title: const Text('Fill All at Once'),
+                title: Text('screen.loan_application_screen.fill_all_at_once'.tr()),
                 contentPadding: EdgeInsets.zero,
               ),
             ],
@@ -311,7 +317,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Auto-filled from profile',
+                'screen.loan_application_screen.auto_filled_from_profile'.tr(),
                 style: context.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -319,7 +325,8 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
               const SizedBox(height: 8),
               if (_autoFilled.isEmpty)
                 Text(
-                  'No profile values available yet.',
+                  'screen.loan_application_screen.no_profile_values_available_yet'
+                      .tr(),
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.appColors.textSecondary,
                   ),
@@ -366,7 +373,8 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
           _wizardForm(cardColor, needsInput),
         const SizedBox(height: 12),
         Text(
-          'Saved answers will be remembered for future documents.',
+          'screen.loan_application_screen.saved_answers_will_be_remembered_for_future_document'
+              .tr(),
           style: context.textTheme.bodySmall?.copyWith(
             color: context.appColors.textSecondary,
           ),
@@ -382,7 +390,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Needs your input',
+            'screen.loan_application_screen.needs_your_input'.tr(),
             style: context.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -437,7 +445,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                 }
                 _goToReview();
               },
-              child: const Text('Review Answers'),
+              child: Text('screen.loan_application_screen.review_answers'.tr()),
             ),
           ),
         ],
@@ -451,7 +459,10 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
         cardColor,
         Column(
           children: <Widget>[
-            const Text('All required fields are already filled.'),
+            Text(
+              'screen.loan_application_screen.all_required_fields_are_already_filled'
+                  .tr(),
+            ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -460,7 +471,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                   backgroundColor: AppColors.primary,
                 ),
                 onPressed: _goToReview,
-                child: const Text('Go To Review'),
+                child: Text('screen.loan_application_screen.go_to_review'.tr()),
               ),
             ),
           ],
@@ -500,7 +511,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
             controller: controller,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
-              hintText: 'Enter value',
+              hintText: 'screen.loan_application_screen.enter_value'.tr(),
             ),
           ),
           const SizedBox(height: 10),
@@ -510,7 +521,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => setState(() => _wizardIndex -= 1),
-                    child: const Text('Back'),
+                    child: Text('screen.loan_application_screen.back'.tr()),
                   ),
                 ),
               if (_wizardIndex > 0) const SizedBox(width: 8),
@@ -528,7 +539,9 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                     }
                   },
                   child: Text(
-                    _wizardIndex == fields.length - 1 ? 'Review' : 'Next',
+                    _wizardIndex == fields.length - 1
+                        ? 'screen.loan_application_screen.review'.tr()
+                        : 'screen.loan_application_screen.next'.tr(),
                   ),
                 ),
               ),
@@ -542,7 +555,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                       setState(() => _wizardIndex += 1);
                     }
                   },
-                  child: const Text('Skip'),
+                  child: Text('screen.loan_application_screen.skip'.tr()),
                 ),
               ),
             ],
@@ -599,7 +612,11 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(_labelForField(f)),
-                    subtitle: Text(value.isEmpty ? 'Not provided' : value),
+                    subtitle: Text(
+                      value.isEmpty
+                          ? 'screen.loan_application_screen.not_provided'.tr()
+                          : value,
+                    ),
                     trailing: const Icon(Icons.edit_outlined),
                     onTap: () {
                       setState(() {
@@ -618,7 +635,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: _openOfficialFormsHub,
-            child: const Text('Open Official Forms'),
+            child: Text('screen.loan_application_screen.open_official_forms'.tr()),
           ),
         ),
         const SizedBox(height: 8),
@@ -626,7 +643,7 @@ class _LoanApplicationScreenState extends ConsumerState<LoanApplicationScreen> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () => setState(() => _reviewMode = false),
-            child: const Text('Go Back to Edit'),
+            child: Text('screen.loan_application_screen.go_back_to_edit'.tr()),
           ),
         ),
       ],

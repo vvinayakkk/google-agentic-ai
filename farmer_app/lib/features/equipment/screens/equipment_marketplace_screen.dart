@@ -293,16 +293,16 @@ class _EquipmentMarketplaceScreenState
     } catch (e) {
       if (!mounted) return;
       setState(() => _aiLoading = false);
-      context.showSnack('Failed to generate AI overview: $e', isError: true);
+      context.showSnack('Failed to generate AI overview: $e'.tr(), isError: true);
     }
   }
 
   String _aiUpdatedLabel() {
     final dt = _aiUpdatedAt;
-    if (dt == null) return 'Not generated yet';
+    if (dt == null) return 'Not generated yet'.tr();
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
-    return 'Updated at $hh:$mm';
+    return '${'Updated at'.tr()} $hh:$mm';
   }
 
   void _openAiActionCard(String actionText) {
@@ -728,9 +728,9 @@ class _EquipmentMarketplaceScreenState
                           });
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: '__all__',
-                            child: Text('All states'),
+                            child: Text('All states'.tr()),
                           ),
                           ...indianStates.map(
                             (state) => PopupMenuItem<String>(
@@ -758,7 +758,7 @@ class _EquipmentMarketplaceScreenState
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 _selectedState == null
-                                    ? 'All states'
+                                    ? 'All states'.tr()
                                     : _selectedState!,
                                 style: context.textTheme.bodySmall?.copyWith(
                                   color: context.colors.onSurface,
@@ -780,9 +780,9 @@ class _EquipmentMarketplaceScreenState
                           });
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: '__all__',
-                            child: Text('All categories'),
+                            child: Text('All categories'.tr()),
                           ),
                           ..._categories.map(
                             (category) => PopupMenuItem<String>(
@@ -810,7 +810,7 @@ class _EquipmentMarketplaceScreenState
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 _selectedCategory == null
-                                    ? 'All categories'
+                                    ? 'All categories'.tr()
                                     : categoryDisplay(_selectedCategory),
                                 style: context.textTheme.bodySmall?.copyWith(
                                   color: context.colors.onSurface,
@@ -827,18 +827,18 @@ class _EquipmentMarketplaceScreenState
                         onSelected: (value) {
                           setState(() => _sortBy = value);
                         },
-                        itemBuilder: (_) => const [
+                        itemBuilder: (_) => [
                           PopupMenuItem<String>(
                             value: 'rate_asc',
-                            child: Text('Sort: Low to High'),
+                            child: Text('Sort: Low to High'.tr()),
                           ),
                           PopupMenuItem<String>(
                             value: 'rate_desc',
-                            child: Text('Sort: High to Low'),
+                            child: Text('Sort: High to Low'.tr()),
                           ),
                           PopupMenuItem<String>(
                             value: 'availability',
-                            child: Text('Sort: Availability'),
+                            child: Text('Sort: Availability'.tr()),
                           ),
                         ],
                         child: Container(
@@ -860,10 +860,10 @@ class _EquipmentMarketplaceScreenState
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 _sortBy == 'rate_desc'
-                                    ? 'High to Low'
+                                    ? 'High to Low'.tr()
                                     : _sortBy == 'availability'
-                                    ? 'Availability'
-                                    : 'Low to High',
+                                    ? 'Availability'.tr()
+                                    : 'Low to High'.tr(),
                                 style: context.textTheme.bodySmall?.copyWith(
                                   color: context.colors.onSurface,
                                   fontWeight: FontWeight.w600,
@@ -899,7 +899,7 @@ class _EquipmentMarketplaceScreenState
                           _loadData(forceRefresh: true);
                         },
                         icon: const Icon(Icons.clear_all_rounded),
-                        label: const Text('Clear'),
+                        label: Text('Clear'.tr()),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -913,7 +913,7 @@ class _EquipmentMarketplaceScreenState
                             side: BorderSide(color: context.appColors.border),
                           ),
                           icon: const Icon(Icons.check_circle_outline_rounded),
-                          label: const Text('Apply Filters'),
+                          label: Text('Apply Filters'.tr()),
                         ),
                       ),
                     ],
@@ -974,7 +974,7 @@ class _EquipmentMarketplaceScreenState
                       _searchController.clear();
                       _loadData(forceRefresh: true);
                     },
-                    child: const Text('Clear Filters'),
+                    child: Text('Clear Filters'.tr()),
                   ),
                 ],
               ),

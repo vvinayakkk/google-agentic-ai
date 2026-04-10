@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -256,7 +257,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
-      context.showSnack('Unable to open CHC app', isError: true);
+      context.showSnack('Unable to open CHC app'.tr(), isError: true);
     }
   }
 
@@ -285,7 +286,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'What is a Custom Hiring Centre?',
+                    'What is a Custom Hiring Centre?'.tr(),
                     style: ctx.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -322,7 +323,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text('Open FARMS App'),
+                      child: Text('Open FARMS App'.tr()),
                     ),
                   ),
                 ],
@@ -344,9 +345,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
   }
 
   String _mechanizationBand(double value) {
-    if (value >= 70) return 'High';
-    if (value >= 50) return 'Moderate';
-    return 'Growth Zone';
+    if (value >= 70) return 'High'.tr();
+    if (value >= 50) return 'Moderate'.tr();
+    return 'Growth Zone'.tr();
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────

@@ -288,7 +288,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
         title: Text('documents.title'.tr()),
         actions: [
           IconButton(
-            tooltip: 'Smart Document Builder',
+            tooltip: 'screen.document_agent_screen.smart_document_builder'.tr(),
             icon: const Icon(Icons.auto_awesome),
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -300,11 +300,23 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(icon: Icon(Icons.checklist), text: 'My Documents'),
-            Tab(icon: Icon(Icons.search), text: 'Scheme Finder'),
-            Tab(icon: Icon(Icons.menu_book), text: 'Document Guide'),
-            Tab(icon: Icon(Icons.edit_note), text: 'Form Helper'),
+          tabs: [
+            Tab(
+              icon: const Icon(Icons.checklist),
+              text: 'screen.document_agent_screen.my_documents'.tr(),
+            ),
+            Tab(
+              icon: const Icon(Icons.search),
+              text: 'screen.document_agent_screen.scheme_finder'.tr(),
+            ),
+            Tab(
+              icon: const Icon(Icons.menu_book),
+              text: 'screen.document_agent_screen.document_guide'.tr(),
+            ),
+            Tab(
+              icon: const Icon(Icons.edit_note),
+              text: 'screen.document_agent_screen.form_helper'.tr(),
+            ),
           ],
         ),
       ),
@@ -331,7 +343,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
         return FloatingActionButton.extended(
           onPressed: _showAddDocumentDialog,
           icon: const Icon(Icons.add),
-          label: const Text('Add Document'),
+          label: Text('screen.document_agent_screen.add_document'.tr()),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
         );
@@ -344,14 +356,17 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Custom Document'),
+        title: Text('screen.document_agent_screen.add_custom_document'.tr()),
         content: AppTextField(
-          hint: 'Document name',
+          hint: 'screen.document_agent_screen.document_name'.tr(),
           controller: ctrl,
           prefixIcon: Icons.description,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('screen.document_agent_screen.cancel'.tr()),
+          ),
           TextButton(
             onPressed: () {
               final name = ctrl.text.trim();
@@ -361,7 +376,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Add'),
+            child: Text('screen.document_agent_screen.add'.tr()),
           ),
         ],
       ),
@@ -397,7 +412,10 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
           child: Column(
             children: [
               Text(
-                '$done / $total Documents Ready',
+                'screen.document_agent_screen.done_total_documents_ready'
+                    .tr()
+                    .replaceAll(r'$done', done.toString())
+                    .replaceAll(r'$total', total.toString()),
                 style: context.textTheme.titleMedium
                     ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
               ),
@@ -413,7 +431,12 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                '${(progress * 100).toInt()}% complete',
+                'screen.document_agent_screen.progress_100_toint_complete'
+                    .tr()
+                    .replaceAll(
+                      r'${(progress * 100).toInt()}',
+                      (progress * 100).toInt().toString(),
+                    ),
                 style: context.textTheme.bodySmall?.copyWith(color: Colors.white70),
               ),
             ],
@@ -476,7 +499,9 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
               _saveChecklist();
             },
             child: Text(
-              doc.done ? 'Done' : 'Mark',
+              doc.done
+                  ? 'screen.document_agent_screen.done'.tr()
+                  : 'screen.document_agent_screen.mark'.tr(),
               style: context.textTheme.labelSmall?.copyWith(
                 color: doc.done ? AppColors.success : AppColors.primary,
                 fontWeight: FontWeight.w600,
@@ -506,7 +531,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
         Padding(
           padding: AppSpacing.allLg,
           child: AppTextField(
-            hint: 'Search schemes...',
+            hint: 'screen.document_agent_screen.search_schemes'.tr(),
             controller: _schemeSearchCtrl,
             prefixIcon: Icons.search,
             onChanged: (v) => setState(() => _schemeFilter = v.toLowerCase()),
@@ -515,7 +540,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text('No schemes found',
+                  child: Text('screen.document_agent_screen.no_schemes_found'.tr(),
                       style: context.textTheme.bodyLarge
                           ?.copyWith(color: context.appColors.textSecondary)))
               : ListView.separated(
@@ -558,7 +583,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
               style: context.textTheme.bodySmall
                   ?.copyWith(color: context.appColors.textSecondary)),
           const SizedBox(height: AppSpacing.sm),
-          Text('Required Documents:',
+            Text('screen.document_agent_screen.required_documents'.tr(),
               style: context.textTheme.labelSmall
                   ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: AppSpacing.xs),
@@ -584,7 +609,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
                 'benefits, important deadlines, and helpline numbers.',
               ),
               icon: const Icon(Icons.smart_toy, size: 18),
-              label: const Text('Ask AI for Details'),
+              label: Text('screen.document_agent_screen.ask_ai_for_details'.tr()),
               style: OutlinedButton.styleFrom(
                 foregroundColor: scheme.color,
                 side: BorderSide(color: scheme.color),
@@ -645,7 +670,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
                               size: 64,
                               color: AppColors.primary.withValues(alpha: 0.3)),
                           const SizedBox(height: AppSpacing.md),
-                          Text('Select a topic above to get AI guidance',
+                            Text('screen.document_agent_screen.select_a_topic_above_to_get_ai_guidance'.tr(),
                               style: context.textTheme.bodyMedium?.copyWith(
                                   color: context.appColors.textSecondary)),
                         ],
@@ -675,7 +700,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
             children: [
               Expanded(
                 child: AppTextField(
-                  hint: 'Ask a document question...',
+                  hint: 'screen.document_agent_screen.ask_a_document_question'.tr(),
                   controller: _questionCtrl,
                   prefixIcon: Icons.help_outline,
                 ),
@@ -759,11 +784,23 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _infoRow(Icons.text_fields, 'Fields', form.fields.join(', ')),
+          _infoRow(
+            Icons.text_fields,
+            'screen.document_agent_screen.fields'.tr(),
+            form.fields.join(', '),
+          ),
           const SizedBox(height: AppSpacing.xs),
-          _infoRow(Icons.folder_open, 'Documents', form.docsNeeded.join(', ')),
+          _infoRow(
+            Icons.folder_open,
+            'screen.document_agent_screen.documents'.tr(),
+            form.docsNeeded.join(', '),
+          ),
           const SizedBox(height: AppSpacing.xs),
-          _infoRow(Icons.location_on, 'Submit at', form.submitAt),
+          _infoRow(
+            Icons.location_on,
+            'screen.document_agent_screen.submit_at'.tr(),
+            form.submitAt,
+          ),
         ],
       ),
     );
@@ -801,7 +838,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
                 _formLoading = false;
               }),
               icon: const Icon(Icons.arrow_back, size: 18),
-              label: const Text('Back to forms'),
+              label: Text('screen.document_agent_screen.back_to_forms'.tr()),
             ),
           ),
         ),
@@ -853,7 +890,7 @@ class _DocumentAgentScreenState extends ConsumerState<DocumentAgentScreen>
               children: [
                 const Icon(Icons.smart_toy, size: 18, color: AppColors.primary),
                 const SizedBox(width: AppSpacing.sm),
-                Text('AI Response',
+                Text('screen.document_agent_screen.ai_response'.tr(),
                     style: context.textTheme.labelMedium
                         ?.copyWith(fontWeight: FontWeight.w600)),
                 const Spacer(),

@@ -318,7 +318,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                         runSpacing: 8,
                         children: [
                           ChoiceChip(
-                            label: const Text('Healthy'),
+                            label: Text('cattle.healthy'.tr()),
                             selected: healthStatus == 'healthy',
                             onSelected: (_) =>
                                 setLocal(() => healthStatus = 'healthy'),
@@ -328,7 +328,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                             side: BorderSide(color: borderColor),
                           ),
                           ChoiceChip(
-                            label: const Text('Under Treatment'),
+                            label: Text('cattle.under_treatment'.tr()),
                             selected: healthStatus == 'under_treatment',
                             onSelected: (_) => setLocal(
                               () => healthStatus = 'under_treatment',
@@ -339,7 +339,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                             side: BorderSide(color: borderColor),
                           ),
                           ChoiceChip(
-                            label: const Text('Sick'),
+                            label: Text('cattle.sick'.tr()),
                             selected: healthStatus == 'sick',
                             onSelected: (_) =>
                                 setLocal(() => healthStatus = 'sick'),

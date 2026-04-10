@@ -10,18 +10,15 @@ abstract final class AppConstants {
   static const maxMessageLength = 5000;
 
   /// Supported locale codes.
-  static const supportedLocales = ['en', 'hi', 'bn', 'gu', 'mr', 'ta', 'te', 'kn'];
+  static const supportedLocales = ['en', 'hi', 'mr', 'gu', 'pa'];
 
   /// Language display names.
   static const languageNames = {
     'en': 'English',
     'hi': 'हिंदी',
-    'bn': 'বাংলা',
-    'gu': 'ગુજરાતી',
     'mr': 'मराठी',
-    'ta': 'தமிழ்',
-    'te': 'తెలుగు',
-    'kn': 'ಕನ್ನಡ',
+    'gu': 'ગુજરાતી',
+    'pa': 'ਪੰਜਾਬੀ',
   };
 
   /// Agent types available for chat.

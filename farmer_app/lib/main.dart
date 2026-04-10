@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/api_client.dart';
-import 'core/localization/merged_json_asset_loader.dart';
 import 'app.dart';
 
 void main() async {
@@ -13,6 +12,10 @@ void main() async {
   // Pre-load backend URL so real devices don't need a rebuild when WiFi changes
   final prefs = await SharedPreferences.getInstance();
   final savedUrl = (prefs.getString('backend_url') ?? '').trim();
+  final savedLocaleCode = (prefs.getString('locale') ?? '').trim().toLowerCase();
+  const localeCodes = <String>{'en', 'hi', 'mr', 'gu', 'pa'};
+  final Locale? startLocale =
+      localeCodes.contains(savedLocaleCode) ? Locale(savedLocaleCode) : null;
 
   if (savedUrl.isNotEmpty) {
     final lowered = savedUrl.toLowerCase();
@@ -29,16 +32,13 @@ void main() async {
       supportedLocales: const [
         Locale('en'),
         Locale('hi'),
-        Locale('bn'),
-        Locale('gu'),
         Locale('mr'),
-        Locale('ta'),
-        Locale('te'),
-        Locale('kn'),
+        Locale('gu'),
+        Locale('pa'),
       ],
       path: 'assets/translations',
-      assetLoader: const MergedJsonAssetLoader(),
       fallbackLocale: const Locale('en'),
+      startLocale: startLocale,
       child: const ProviderScope(
         child: KisanApp(),
       ),

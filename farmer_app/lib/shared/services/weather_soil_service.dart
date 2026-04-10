@@ -19,6 +19,14 @@ class WeatherSoilService {
     return Map<String, dynamic>.from(cached.cast<dynamic, dynamic>());
   }
 
+  Future<Map<String, dynamic>?> _readCache(
+    String key, {
+    bool allowExpired = false,
+  }) async {
+    final raw = allowExpired ? await AppCache.getStale(key) : await AppCache.get(key);
+    return _mapFromCache(raw);
+  }
+
   Future<Map<String, dynamic>> getFullWeather({
     double? lat,
     double? lon,
@@ -26,21 +34,60 @@ class WeatherSoilService {
     int ttlSeconds = 3600,
   }) async {
     final cacheKey = 'weather_full_${_coordKey(lat, lon)}';
+    final lastGoodKey = '${cacheKey}_last_good';
     if (!forceRefresh) {
-      final cached = _mapFromCache(await AppCache.get(cacheKey));
+      final cached = await _readCache(cacheKey);
       if (cached != null) return cached;
+
+      final stale = await _readCache(cacheKey, allowExpired: true) ??
+          await _readCache(lastGoodKey, allowExpired: true);
+      if (stale != null) {
+        return <String, dynamic>{
+          ...stale,
+          'stale': true,
+          'stale_reason': 'stale_cache_fallback',
+        };
+      }
     }
 
-    final res = await _client.get(
-      ApiEndpoints.marketWeatherFull,
-      queryParameters: <String, dynamic>{
-        'lat': lat,
-        'lon': lon,
-      }..removeWhere((_, value) => value == null),
-    );
-    final data = res.data as Map<String, dynamic>;
-    await AppCache.put(cacheKey, data, ttlSeconds: ttlSeconds);
-    return data;
+    try {
+      final res = await _client.get(
+        ApiEndpoints.marketWeatherFull,
+        queryParameters: <String, dynamic>{
+          'lat': lat,
+          'lon': lon,
+        }..removeWhere((_, value) => value == null),
+      );
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+      await AppCache.put(cacheKey, data, ttlSeconds: ttlSeconds);
+      await AppCache.put(lastGoodKey, data, ttlSeconds: 30 * 24 * 3600);
+      return data;
+    } catch (_) {
+      final stale = await _readCache(cacheKey, allowExpired: true) ??
+          await _readCache(lastGoodKey, allowExpired: true);
+      if (stale != null) {
+        return <String, dynamic>{
+          ...stale,
+          'stale': true,
+          'stale_reason': 'network_error',
+        };
+      }
+
+      final offline = <String, dynamic>{
+        'current': <String, dynamic>{},
+        'hourly': <String, dynamic>{'time': <String>[]},
+        'daily': <String, dynamic>{'date': <String>[]},
+        'farm_decisions': <String, dynamic>{},
+        'air_quality': <String, dynamic>{},
+        'nasa_power': <String, dynamic>{},
+        'stale': true,
+        'stale_reason': 'offline_fallback',
+      };
+      await AppCache.put(lastGoodKey, offline, ttlSeconds: 6 * 3600);
+      return offline;
+    }
   }
 
   Future<Map<String, dynamic>> getSoilComposition({
@@ -71,12 +118,12 @@ class WeatherSoilService {
     }
 
     if (!forceRefresh) {
-      final cached = _mapFromCache(await AppCache.get(cacheKey));
+      final cached = await _readCache(cacheKey);
       if (hasUsableMetrics(cached)) return cached!;
 
-      final negative = _mapFromCache(await AppCache.get(negativeKey));
+      final negative = await _readCache(negativeKey);
       if (negative != null) {
-        final lastGood = _mapFromCache(await AppCache.get(lastGoodKey));
+        final lastGood = await _readCache(lastGoodKey, allowExpired: true);
         final fallback = withStaleFlag(lastGood, 'last_good_fallback');
         if (fallback != null) return fallback;
         return negative;
@@ -102,14 +149,19 @@ class WeatherSoilService {
 
       // Keep negative responses short-lived to avoid stale empty chemistry state.
       await AppCache.put(negativeKey, data, ttlSeconds: 300);
-      final lastGood = _mapFromCache(await AppCache.get(lastGoodKey));
+      final lastGood = await _readCache(lastGoodKey, allowExpired: true);
       return withStaleFlag(lastGood, 'soilgrids_unavailable') ?? data;
     } catch (_) {
-      final lastGood = _mapFromCache(await AppCache.get(lastGoodKey));
+      final lastGood = await _readCache(lastGoodKey, allowExpired: true);
       if (lastGood != null) {
         return withStaleFlag(lastGood, 'network_error')!;
       }
-      rethrow;
+      return <String, dynamic>{
+        'available': false,
+        'metrics': <String, dynamic>{},
+        'stale': true,
+        'stale_reason': 'offline_fallback',
+      };
     }
   }
 
@@ -140,21 +192,36 @@ class WeatherSoilService {
     final cacheKey =
         'soil_moisture_${state.trim().toLowerCase()}_${districtKey}_$limit';
     if (!forceRefresh) {
-      final cached = _mapFromCache(await AppCache.get(cacheKey));
+      final cached = await _readCache(cacheKey);
       if (cached != null) return cached;
     }
 
-    final res = await _client.get(
-      ApiEndpoints.marketSoilMoisture,
-      queryParameters: {
-        'state': state,
-        if (district != null && district.isNotEmpty) 'district': district,
-        'limit': limit,
-      },
-    );
-    final data = res.data as Map<String, dynamic>;
-    await AppCache.put(cacheKey, data, ttlSeconds: ttlSeconds);
-    return data;
+    try {
+      final res = await _client.get(
+        ApiEndpoints.marketSoilMoisture,
+        queryParameters: {
+          'state': state,
+          if (district != null && district.isNotEmpty) 'district': district,
+          'limit': limit,
+        },
+      );
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+      await AppCache.put(cacheKey, data, ttlSeconds: ttlSeconds);
+      return data;
+    } catch (_) {
+      final stale = await _readCache(cacheKey, allowExpired: true);
+      if (stale != null) {
+        return <String, dynamic>{...stale, 'stale': true};
+      }
+      return <String, dynamic>{
+        'items': <Map<String, dynamic>>[],
+        'count': 0,
+        'stale': true,
+        'source': 'offline_fallback',
+      };
+    }
   }
 }
 

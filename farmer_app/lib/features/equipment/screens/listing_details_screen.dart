@@ -87,7 +87,10 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         _loading = false;
       });
       if (hasSnapshot) {
-        context.showSnack('Could not refresh listing now. Showing recent data.', isError: true);
+        context.showSnack(
+          'Could not refresh listing now. Showing recent data.'.tr(),
+          isError: true,
+        );
       }
     }
   }
@@ -102,7 +105,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     try {
       await ref.read(equipmentServiceProvider).updateEquipment(id, {'status': available ? 'unavailable' : 'available'});
       if (!mounted) return;
-      context.showSnack(available ? 'Marked unavailable' : 'Marked available');
+      context.showSnack(
+        available ? 'Marked unavailable'.tr() : 'Marked available'.tr(),
+      );
       _load(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -119,8 +124,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Listing'),
-        content: const Text('Are you sure you want to delete this equipment listing?'),
+        title: Text('Delete Listing'.tr()),
+        content: Text('Are you sure you want to delete this equipment listing?'.tr()),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           FilledButton(
@@ -136,7 +141,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     try {
       await ref.read(equipmentServiceProvider).deleteEquipment(id);
       if (!mounted) return;
-      context.showSnack('Deleted successfully');
+      context.showSnack('Deleted successfully'.tr());
       context.pop();
     } catch (e) {
       if (!mounted) return;
@@ -166,11 +171,20 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Request Rental', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  Text(
+                    'Request Rental'.tr(),
+                    style: context.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(startDate == null ? 'Start date' : DateFormat('dd MMM yyyy').format(startDate!)),
+                    title: Text(
+                      startDate == null
+                          ? 'Start date'.tr()
+                          : DateFormat('dd MMM yyyy').format(startDate!),
+                    ),
                     trailing: const Icon(Icons.calendar_today_outlined),
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -184,7 +198,11 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(endDate == null ? 'End date' : DateFormat('dd MMM yyyy').format(endDate!)),
+                    title: Text(
+                      endDate == null
+                          ? 'End date'.tr()
+                          : DateFormat('dd MMM yyyy').format(endDate!),
+                    ),
                     trailing: const Icon(Icons.calendar_today_outlined),
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -196,7 +214,12 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                       if (picked != null) setLocal(() => endDate = picked);
                     },
                   ),
-                  AppTextField(label: 'Message', hint: 'Optional request note', maxLines: 3, controller: messageController),
+                  AppTextField(
+                    label: 'Message'.tr(),
+                    hint: 'Optional request note'.tr(),
+                    maxLines: 3,
+                    controller: messageController,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   SizedBox(
                     width: double.infinity,
@@ -215,7 +238,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                           Navigator.pop(ctx);
                           if (!mounted) return;
                           final rentalId = (data['id'] ?? '').toString();
-                          context.showSnack('Request submitted');
+                          context.showSnack('Request submitted'.tr());
                           if (rentalId.isNotEmpty) {
                             context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}');
                           }
@@ -224,7 +247,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                           context.showSnack(e.toString(), isError: true);
                         }
                       },
-                      child: const Text('Submit Request'),
+                      child: Text('Submit Request'.tr()),
                     ),
                   ),
                 ],
@@ -265,21 +288,41 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Edit Equipment', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                Text(
+                  'Edit Equipment'.tr(),
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.md),
-                AppTextField(label: 'Name', controller: nameController),
+                AppTextField(label: 'Name'.tr(), controller: nameController),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Type', controller: typeController),
+                AppTextField(label: 'Type'.tr(), controller: typeController),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Rate per hour', keyboardType: TextInputType.number, controller: hourController),
+                AppTextField(
+                  label: 'Rate per hour'.tr(),
+                  keyboardType: TextInputType.number,
+                  controller: hourController,
+                ),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Rate per day', keyboardType: TextInputType.number, controller: dayController),
+                AppTextField(
+                  label: 'Rate per day'.tr(),
+                  keyboardType: TextInputType.number,
+                  controller: dayController,
+                ),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Location', controller: locationController),
+                AppTextField(label: 'Location'.tr(), controller: locationController),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Contact phone', controller: phoneController),
+                AppTextField(
+                  label: 'Contact phone'.tr(),
+                  controller: phoneController,
+                ),
                 const SizedBox(height: AppSpacing.sm),
-                AppTextField(label: 'Description', maxLines: 3, controller: descController),
+                AppTextField(
+                  label: 'Description'.tr(),
+                  maxLines: 3,
+                  controller: descController,
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   width: double.infinity,
@@ -300,7 +343,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         if (!mounted) return;
-                        context.showSnack('Updated successfully');
+                        context.showSnack('Updated successfully'.tr());
                         _load(forceRefresh: true);
                       } catch (e) {
                         if (!mounted) return;
@@ -366,7 +409,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         children: [
           EquipmentRefreshStrip(
             refreshing: _refreshing,
-            label: 'Refreshing listing details...',
+            label: 'Refreshing listing details...'.tr(),
           ),
           if (_error != null && _hasSnapshot)
             Container(
@@ -378,7 +421,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Text(
-                'Showing recent cached listing data.',
+                'Showing recent cached listing data.'.tr(),
                 style: context.textTheme.bodySmall?.copyWith(
                   color: AppColors.warning,
                   fontWeight: FontWeight.w700,
@@ -387,19 +430,23 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
             ),
           EquipmentHeaderCard(
             title: listingName,
-            subtitle: '${type.isEmpty ? 'Other equipment' : type} listing with direct owner response.',
+            subtitle: '${type.isEmpty ? 'Other equipment'.tr() : type} ${'listing with direct owner response.'.tr()}',
             icon: categoryIcon(type),
             badges: [
-              EquipmentInfoBadge(label: available ? 'Available now' : 'Currently unavailable'),
+              EquipmentInfoBadge(
+                label: available
+                    ? 'Available now'.tr()
+                    : 'Currently unavailable'.tr(),
+              ),
               EquipmentInfoBadge(label: '${rateDay.inr}/day'),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(child: _rateCard('Hourly', rateHour)),
+              Expanded(child: _rateCard('Hourly'.tr(), rateHour)),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _rateCard('Daily', rateDay)),
+              Expanded(child: _rateCard('Daily'.tr(), rateDay)),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -407,9 +454,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _line('Phone', (row['contact_phone'] ?? '').toString()),
-                _line('Location', (row['location'] ?? '').toString()),
-                _line('Description', (row['description'] ?? '').toString()),
+                _line('Phone'.tr(), (row['contact_phone'] ?? '').toString()),
+                _line('Location'.tr(), (row['location'] ?? '').toString()),
+                _line('Description'.tr(), (row['description'] ?? '').toString()),
               ],
             ),
           ),
@@ -417,7 +464,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
           if (isOwner) ...[
             OutlinedButton(
               onPressed: _toggleAvailability,
-              child: Text(available ? 'Set Unavailable' : 'Set Available'),
+              child: Text(
+                available ? 'Set Unavailable'.tr() : 'Set Available'.tr(),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Row(

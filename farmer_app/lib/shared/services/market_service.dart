@@ -8,6 +8,7 @@ class MarketService {
 
   static const int _ttlShort = 300;
   static const int _ttlMedium = 900;
+  static const int _ttlLastGood = 30 * 24 * 3600;
 
   MarketService(this._client);
 
@@ -22,6 +23,50 @@ class MarketService {
   Map<String, dynamic>? _mapFromCache(dynamic cached) {
     if (cached is! Map) return null;
     return Map<String, dynamic>.from(cached.cast<dynamic, dynamic>());
+  }
+
+  String _lastGoodKey(String key) => '${key}_last_good';
+
+  Future<Map<String, dynamic>?> _cachedMap(
+    String key, {
+    bool allowExpired = false,
+  }) async {
+    final raw = allowExpired ? await AppCache.getStale(key) : await AppCache.get(key);
+    return _mapFromCache(raw);
+  }
+
+  Future<void> _cacheMap(
+    String key,
+    Map<String, dynamic> data, {
+    required int ttlSeconds,
+  }) async {
+    await AppCache.put(key, data, ttlSeconds: ttlSeconds);
+    await AppCache.put(_lastGoodKey(key), data, ttlSeconds: _ttlLastGood);
+  }
+
+  Future<Map<String, dynamic>?> _staleFallback(String key) async {
+    final stalePrimary = await _cachedMap(key, allowExpired: true);
+    if (stalePrimary != null) {
+      return <String, dynamic>{
+        ...stalePrimary,
+        'stale': true,
+        'cache_fallback': true,
+      };
+    }
+
+    final staleLastGood = await _cachedMap(
+      _lastGoodKey(key),
+      allowExpired: true,
+    );
+    if (staleLastGood != null) {
+      return <String, dynamic>{
+        ...staleLastGood,
+        'stale': true,
+        'cache_fallback': true,
+      };
+    }
+
+    return null;
   }
 
   // ── Prices ────────────────────────────────────────────────
@@ -45,19 +90,37 @@ class MarketService {
     };
     final key = _cacheKey('market:prices', params);
     if (!forceRefresh && preferCache) {
-      final cached = _mapFromCache(await AppCache.get(key));
+      final cached = await _cachedMap(key);
       if (cached != null) return cached;
+
+      final stale = await _staleFallback(key);
+      if (stale != null) return stale;
     }
 
-    final res = await _client.get(
-      ApiEndpoints.marketPrices,
-      queryParameters: params,
-    );
-    final data = Map<String, dynamic>.from(
-      (res.data as Map).cast<dynamic, dynamic>(),
-    );
-    await AppCache.put(key, data, ttlSeconds: _ttlShort);
-    return data;
+    try {
+      final res = await _client.get(
+        ApiEndpoints.marketPrices,
+        queryParameters: params,
+      );
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+      await _cacheMap(key, data, ttlSeconds: _ttlShort);
+      return data;
+    } catch (_) {
+      final fallback = await _staleFallback(key);
+      if (fallback != null) return fallback;
+      return <String, dynamic>{
+        'items': <Map<String, dynamic>>[],
+        'prices': <Map<String, dynamic>>[],
+        'data': <Map<String, dynamic>>[],
+        'page': page ?? 1,
+        'per_page': perPage ?? 20,
+        'count': 0,
+        'source': 'offline_fallback',
+        'stale': true,
+      };
+    }
   }
 
   /// GET /api/v1/market/prices/{id}.
@@ -85,19 +148,37 @@ class MarketService {
     };
     final key = _cacheKey('market:mandis', params);
     if (!forceRefresh && preferCache) {
-      final cached = _mapFromCache(await AppCache.get(key));
+      final cached = await _cachedMap(key);
       if (cached != null) return cached;
+
+      final stale = await _staleFallback(key);
+      if (stale != null) return stale;
     }
 
-    final res = await _client.get(
-      ApiEndpoints.marketMandis,
-      queryParameters: params,
-    );
-    final data = Map<String, dynamic>.from(
-      (res.data as Map).cast<dynamic, dynamic>(),
-    );
-    await AppCache.put(key, data, ttlSeconds: _ttlShort);
-    return data;
+    try {
+      final res = await _client.get(
+        ApiEndpoints.marketMandis,
+        queryParameters: params,
+      );
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+      await _cacheMap(key, data, ttlSeconds: _ttlShort);
+      return data;
+    } catch (_) {
+      final fallback = await _staleFallback(key);
+      if (fallback != null) return fallback;
+      return <String, dynamic>{
+        'items': <Map<String, dynamic>>[],
+        'mandis': <Map<String, dynamic>>[],
+        'data': <Map<String, dynamic>>[],
+        'page': page ?? 1,
+        'per_page': perPage ?? 20,
+        'count': 0,
+        'source': 'offline_fallback',
+        'stale': true,
+      };
+    }
   }
 
   /// GET /api/v1/market/mandis/{id}.
@@ -130,19 +211,37 @@ class MarketService {
     };
     final key = _cacheKey('market:schemes', params);
     if (!forceRefresh && preferCache) {
-      final cached = _mapFromCache(await AppCache.get(key));
+      final cached = await _cachedMap(key);
       if (cached != null) return cached;
+
+      final stale = await _staleFallback(key);
+      if (stale != null) return stale;
     }
 
-    final res = await _client.get(
-      ApiEndpoints.marketSchemes,
-      queryParameters: params,
-    );
-    final data = Map<String, dynamic>.from(
-      (res.data as Map).cast<dynamic, dynamic>(),
-    );
-    await AppCache.put(key, data, ttlSeconds: _ttlMedium);
-    return data;
+    try {
+      final res = await _client.get(
+        ApiEndpoints.marketSchemes,
+        queryParameters: params,
+      );
+      final data = Map<String, dynamic>.from(
+        (res.data as Map).cast<dynamic, dynamic>(),
+      );
+      await _cacheMap(key, data, ttlSeconds: _ttlMedium);
+      return data;
+    } catch (_) {
+      final fallback = await _staleFallback(key);
+      if (fallback != null) return fallback;
+      return <String, dynamic>{
+        'items': <Map<String, dynamic>>[],
+        'schemes': <Map<String, dynamic>>[],
+        'data': <Map<String, dynamic>>[],
+        'page': page ?? 1,
+        'per_page': perPage ?? 20,
+        'count': 0,
+        'source': 'offline_fallback',
+        'stale': true,
+      };
+    }
   }
 
   /// GET /api/v1/market/schemes/{id}.

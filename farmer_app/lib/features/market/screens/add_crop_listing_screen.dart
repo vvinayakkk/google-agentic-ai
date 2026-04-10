@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -154,15 +155,18 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                               onPressed: () {
                                 if (_formKey.currentState?.validate() ?? false) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Listing draft saved. Backend save will be wired next.'),
+                                    SnackBar(
+                                      content: Text(
+                                        'Listing draft saved. Backend save will be wired next.'
+                                            .tr(),
+                                      ),
                                     ),
                                   );
                                 }
                               },
                               icon: const Icon(Icons.publish_rounded),
-                              label: const Text(
-                                'Publish Listing',
+                              label: Text(
+                                'Publish Listing'.tr(),
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                               style: ElevatedButton.styleFrom(

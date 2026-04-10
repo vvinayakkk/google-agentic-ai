@@ -79,7 +79,10 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
         _loading = false;
       });
       if (hasSnapshot) {
-        context.showSnack('Could not sync latest earnings. Showing recent snapshot.', isError: true);
+        context.showSnack(
+          'Could not sync latest earnings. Showing recent snapshot.'.tr(),
+          isError: true,
+        );
       }
     }
   }

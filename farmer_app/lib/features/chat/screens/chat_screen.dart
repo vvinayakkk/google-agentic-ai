@@ -1026,13 +1026,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Resume your previous chat session',
+                                        'screen.chat_screen.resume_your_previous_chat_session'
+                                            .tr(),
                                         style: context.textTheme.bodyMedium,
                                       ),
                                     ),
                                     TextButton(
                                       onPressed: _resumeLastSession,
-                                      child: const Text('Resume'),
+                                      child: Text('screen.chat_screen.resume'.tr()),
                                     ),
                                   ],
                                 ),
@@ -1040,7 +1041,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             ],
                             // â”€â”€ Heading â”€â”€
                             Text(
-                              'What can I help with?',
+                              'screen.chat_screen.what_can_i_help_with'.tr(),
                               style: context.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: headingColor,

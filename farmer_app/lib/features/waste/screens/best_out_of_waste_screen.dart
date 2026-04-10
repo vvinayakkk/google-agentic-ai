@@ -665,7 +665,9 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
               const Icon(Icons.celebration, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Great progress. "${task.title}" marked complete.'),
+                child: Text(
+                  'Great progress. "${task.title}" marked complete.'.tr(),
+                ),
               ),
             ],
           ),
@@ -684,7 +686,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
     try {
       final snippets = <String>[
         _languageInstruction(),
-        'Do not include labels like Data now or Data last updated.',
+        'screen.best_out_of_waste_screen.do_not_include_labels_like_data_now_or_data_last_upd'.tr(),
         ..._streams
             .take(6)
             .map((stream) => '${stream.title}: ${stream.valueEstimate}'),
@@ -781,7 +783,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
     } catch (_) {
       if (mounted) {
         context.showSnack(
-          'Could not generate AI explanation. Metrics are still available.',
+          'screen.best_out_of_waste_screen.could_not_generate_ai_explanation_metrics_are_still'.tr(),
         );
       }
     } finally {
@@ -873,20 +875,20 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
         .trim();
     if (raw.isEmpty) {
       context.showSnack(
-        'Official application link is not available for this scheme.',
+        'screen.best_out_of_waste_screen.official_application_link_is_not_available_for_this'.tr(),
       );
       return;
     }
 
     final uri = Uri.tryParse(raw);
     if (uri == null) {
-      context.showSnack('Scheme link is invalid.', isError: true);
+      context.showSnack('screen.best_out_of_waste_screen.scheme_link_is_invalid'.tr(), isError: true);
       return;
     }
 
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      context.showSnack('Could not open scheme link.', isError: true);
+      context.showSnack('screen.best_out_of_waste_screen.could_not_open_scheme_link'.tr(), isError: true);
     }
   }
 
@@ -937,14 +939,14 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                 Text(description, style: context.textTheme.bodyMedium),
                 const SizedBox(height: 12),
                 Text(
-                  'Eligibility: $eligibility',
+                  '${'screen.best_out_of_waste_screen.eligibility'.tr()}: $eligibility',
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.appColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Benefit: $benefits',
+                  '${'screen.best_out_of_waste_screen.benefits'.tr()}: $benefits',
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.appColors.textSecondary,
                   ),
@@ -956,7 +958,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => _openSchemeInMarket(scheme),
                         icon: const Icon(Icons.storefront_outlined),
-                        label: const Text('View in Market'),
+                        label: Text('screen.best_out_of_waste_screen.view_in_market'.tr()),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -964,7 +966,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => _openSchemeUrl(scheme),
                         icon: const Icon(Icons.open_in_new),
-                        label: const Text('Apply Now'),
+                        label: Text('screen.best_out_of_waste_screen.apply_now'.tr()),
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white.withValues(alpha: 0.84),
                           foregroundColor: AppColors.lightText,
@@ -1070,7 +1072,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                   _guideInfoRow(Icons.schedule, stream.timeToIncome),
                   const SizedBox(height: 12),
                   Text(
-                    'Materials Needed',
+                    'screen.best_out_of_waste_screen.materials_needed'.tr(),
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -1093,7 +1095,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Step-by-step Guide',
+                    'screen.best_out_of_waste_screen.step_by_step_guide'.tr(),
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -1128,7 +1130,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                   if (relatedSchemes.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 6),
                     Text(
-                      'Relevant Government Schemes',
+                      'screen.best_out_of_waste_screen.relevant_government_schemes'.tr(),
                       style: context.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1157,7 +1159,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                           ),
                           trailing: TextButton(
                             onPressed: () => _openSchemeUrl(scheme),
-                            child: const Text('Apply'),
+                            child: Text('common.apply'.tr()),
                           ),
                         ),
                       );
@@ -1172,7 +1174,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                         _openPlanChat(stream.chatPrompt);
                       },
                       icon: const Icon(Icons.smart_toy_outlined),
-                      label: const Text('Ask AI For Custom Plan'),
+                      label: Text('screen.best_out_of_waste_screen.ask_ai_for_custom_plan'.tr()),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 42),
                         backgroundColor: Colors.white.withValues(alpha: 0.84),
@@ -1356,7 +1358,10 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
       backgroundColor: isDark
           ? AppColors.darkBackground
           : AppColors.lightBackground,
-      appBar: AppBar(title: const Text('Best Out Of Waste'), centerTitle: true),
+      appBar: AppBar(
+        title: Text('screen.best_out_of_waste_screen.best_out_of_waste'.tr()),
+        centerTitle: true,
+      ),
       bottomNavigationBar: _stickyActionBar(),
       body: Container(
         decoration: BoxDecoration(
@@ -1406,7 +1411,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       ],
                       const SizedBox(height: 18),
                       _sectionTitle(
-                        'Waste Streams',
+                        'screen.best_out_of_waste_screen.waste_streams'.tr(),
                         Icons.layers_outlined,
                         textColor,
                       ),
@@ -1414,7 +1419,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       _streamScroller(cardColor, textColor, subColor),
                       const SizedBox(height: 18),
                       _sectionTitle(
-                        'Quick Wins For Today',
+                        'screen.best_out_of_waste_screen.quick_wins_for_today'.tr(),
                         Icons.check_circle_outline,
                         textColor,
                       ),
@@ -1422,7 +1427,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       _quickWinsCard(cardColor, textColor, subColor),
                       const SizedBox(height: 18),
                       _sectionTitle(
-                        'Impact Calculator',
+                        'screen.best_out_of_waste_screen.impact_calculator'.tr(),
                         Icons.calculate_outlined,
                         textColor,
                       ),
@@ -1430,7 +1435,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                       _impactCalculatorCard(cardColor, textColor, subColor),
                       const SizedBox(height: 18),
                       _sectionTitle(
-                        'Scheme Spotlight',
+                        'screen.best_out_of_waste_screen.scheme_spotlight'.tr(),
                         Icons.account_balance_outlined,
                         textColor,
                       ),
@@ -1475,7 +1480,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
             children: _activeCrops.isEmpty
                 ? <Widget>[
                     Chip(
-                      label: const Text('Profile sync pending'),
+                            label: Text('screen.best_out_of_waste_screen.profile_sync_pending'.tr()),
                       side: BorderSide.none,
                       backgroundColor: Colors.white.withValues(alpha: 0.7),
                     ),
@@ -1508,7 +1513,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
       expanded: _aiExpanded,
       loading: _aiOverviewLoading,
       updatedLabel: _overviewUpdatedAt == null
-          ? 'Not generated yet'
+          ? 'screen.best_out_of_waste_screen.not_generated_yet'.tr()
           : 'Updated at ${_overviewUpdatedAt!.hour.toString().padLeft(2, '0')}:${_overviewUpdatedAt!.minute.toString().padLeft(2, '0')}',
       onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
       onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
@@ -1527,19 +1532,19 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Profile data is incomplete',
+            'screen.best_out_of_waste_screen.profile_data_is_incomplete'.tr(),
             style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
-            'Add state and district in your profile to unlock accurate schemes and better local plans.',
+            'screen.best_out_of_waste_screen.add_state_and_district_in_your_profile_to_unlock_acc'.tr(),
             style: TextStyle(color: subColor, height: 1.35),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: () => context.push(RoutePaths.profile),
             icon: const Icon(Icons.person_outline),
-            label: const Text('Complete Profile'),
+            label: Text('screen.best_out_of_waste_screen.complete_profile'.tr()),
             style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
           ),
         ],
@@ -1552,7 +1557,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
       return _glassCard(
         cardColor: cardColor,
         child: Text(
-          'No waste streams available right now.',
+          'screen.best_out_of_waste_screen.no_waste_streams_available_right_now'.tr(),
           style: TextStyle(color: subColor),
         ),
       );
@@ -1765,7 +1770,9 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                 _impactLoading ? Icons.hourglass_top : Icons.calculate,
               ),
               label: Text(
-                _impactLoading ? 'Calculating...' : 'Calculate Impact',
+                _impactLoading
+                    ? 'screen.best_out_of_waste_screen.calculating'.tr()
+                    : 'screen.best_out_of_waste_screen.calculate_impact'.tr(),
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 44),
@@ -1837,7 +1844,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
               child: OutlinedButton.icon(
                 onPressed: _shareImpactResult,
                 icon: const Icon(Icons.share_outlined),
-                label: const Text('Share Result'),
+                label: Text('screen.best_out_of_waste_screen.share_result'.tr()),
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
               ),
             ),
@@ -1895,12 +1902,12 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'No personalized schemes found yet.',
+              'screen.best_out_of_waste_screen.no_personalized_schemes_found_yet'.tr(),
               style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              'Update profile location and try refresh to fetch state-matched subsidy programs.',
+              'screen.best_out_of_waste_screen.update_profile_location_and_try_refresh_to_fetch_sta'.tr(),
               style: TextStyle(color: subColor),
             ),
           ],
@@ -1969,7 +1976,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                           Expanded(
                             child: OutlinedButton(
                               onPressed: () => _openSchemeDetails(scheme),
-                              child: const Text('Details'),
+                              child: Text('screen.best_out_of_waste_screen.details'.tr()),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1981,7 +1988,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
                                   alpha: 0.84,
                                 ),
                               ),
-                              child: const Text('Apply Now'),
+                              child: Text('screen.best_out_of_waste_screen.apply_now'.tr()),
                             ),
                           ),
                         ],
@@ -2037,7 +2044,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => _openPlanChat(planPrompt),
                 icon: const Icon(Icons.smart_toy_outlined),
-                label: const Text('Ask AI Full Plan'),
+                label: Text('screen.best_out_of_waste_screen.ask_ai_full_plan'.tr()),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 42),
                   backgroundColor: Colors.white.withValues(alpha: 0.84),
@@ -2056,7 +2063,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
               child: OutlinedButton.icon(
                 onPressed: _openNearbyMandis,
                 icon: const Icon(Icons.storefront_outlined),
-                label: const Text('Nearby Mandis'),
+                label: Text('screen.best_out_of_waste_screen.nearby_mandis'.tr()),
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
               ),
             ),

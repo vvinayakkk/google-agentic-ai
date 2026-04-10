@@ -1038,7 +1038,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                               _openChatContinuation();
                             },
                             icon: const Icon(Icons.chat_bubble_outline_rounded),
-                            label: const Text('Continue in Chat'),
+                            label: Text('Continue in Chat'.tr()),
                           ),
                       ],
                     ),
@@ -1377,72 +1377,72 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
   }) {
     const actionsByTag = <String, _VoiceActionCard>{
       'marketplace': _VoiceActionCard(
-        label: 'Marketplace',
+        label: 'screen.live_voice_screen.marketplace',
         icon: Icons.storefront_outlined,
         route: RoutePaths.marketplace,
       ),
       'market_prices': _VoiceActionCard(
-        label: 'Mandi Prices',
+        label: 'screen.live_voice_screen.mandi_prices',
         icon: Icons.attach_money_outlined,
         route: RoutePaths.marketPrices,
       ),
       'calendar': _VoiceActionCard(
-        label: 'Calendar',
+        label: 'screen.live_voice_screen.calendar',
         icon: Icons.calendar_month_outlined,
         route: RoutePaths.calendar,
       ),
       'weather': _VoiceActionCard(
-        label: 'Weather',
+        label: 'screen.live_voice_screen.weather',
         icon: Icons.cloud_outlined,
         route: RoutePaths.weather,
       ),
       'soil_moisture': _VoiceActionCard(
-        label: 'Soil Moisture',
+        label: 'screen.live_voice_screen.soil_moisture',
         icon: Icons.water_drop_outlined,
         route: RoutePaths.soilMoisture,
       ),
       'cattle': _VoiceActionCard(
-        label: 'Cattle',
+        label: 'screen.live_voice_screen.cattle',
         icon: Icons.pets_outlined,
         route: RoutePaths.cattle,
       ),
       'documents': _VoiceActionCard(
-        label: 'Schemes',
+        label: 'screen.live_voice_screen.schemes',
         icon: Icons.description_outlined,
         route: RoutePaths.documents,
       ),
       'crop_doctor': _VoiceActionCard(
-        label: 'Crop Doctor',
+        label: 'screen.live_voice_screen.crop_doctor',
         icon: Icons.medical_services_outlined,
         route: RoutePaths.cropDoctor,
       ),
       'equipment_marketplace': _VoiceActionCard(
-        label: 'Equipment',
+        label: 'screen.live_voice_screen.equipment',
         icon: Icons.agriculture_outlined,
         route: RoutePaths.equipmentMarketplace,
       ),
       'rental': _VoiceActionCard(
-        label: 'Rental Hub',
+        label: 'screen.live_voice_screen.rental_hub',
         icon: Icons.build_outlined,
         route: RoutePaths.rental,
       ),
       'mental_health': _VoiceActionCard(
-        label: 'Mental Health',
+        label: 'screen.live_voice_screen.mental_health',
         icon: Icons.self_improvement_outlined,
         route: RoutePaths.mentalHealth,
       ),
       'equipment_hub': _VoiceActionCard(
-        label: 'Equipment Hub',
+        label: 'screen.live_voice_screen.equipment_hub',
         icon: Icons.handyman_outlined,
         route: RoutePaths.equipmentHub,
       ),
       'upi': _VoiceActionCard(
-        label: 'Finance',
+        label: 'screen.live_voice_screen.finance',
         icon: Icons.account_balance_wallet_outlined,
         route: RoutePaths.upi,
       ),
       'waste': _VoiceActionCard(
-        label: 'Best Out Of Waste',
+        label: 'screen.live_voice_screen.best_out_of_waste',
         icon: Icons.recycling_outlined,
         route: RoutePaths.waste,
       ),
@@ -2010,7 +2010,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        card.label,
+                        card.label.tr(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

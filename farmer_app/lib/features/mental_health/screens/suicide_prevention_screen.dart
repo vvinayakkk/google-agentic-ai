@@ -466,7 +466,7 @@ class _SuicidePreventionScreenState
           ElevatedButton.icon(
             onPressed: () => _callNumber('1800-599-0019'),
             icon: const Icon(Icons.call, size: 18),
-            label: const Text('Call'),
+            label: Text('mental_health.call_now'.tr()),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.danger,
               foregroundColor: Colors.white,
@@ -638,7 +638,7 @@ class _SuicidePreventionScreenState
                 child: OutlinedButton.icon(
                   onPressed: () => _callNumber(_aiHelplineDial),
                   icon: const Icon(Icons.call_rounded),
-                  label: const Text('Call AI Helpline'),
+                  label: Text('mental_health.call_now'.tr()),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.info,
                     side: BorderSide(

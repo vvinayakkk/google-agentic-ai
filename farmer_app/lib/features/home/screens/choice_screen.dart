@@ -10,6 +10,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/providers/locale_provider.dart';
+import '../../../shared/providers/theme_provider.dart';
+import '../../../shared/services/app_prefetch_service.dart';
 import '../../../core/constants/app_constants.dart';
 
 class ChoiceScreen extends ConsumerStatefulWidget {
@@ -21,6 +23,7 @@ class ChoiceScreen extends ConsumerStatefulWidget {
 
 class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
   static const primaryGreen = Color(0xFF10B981);
+  static bool _warmupStarted = false;
   String _locationName = '';
 
   @override
@@ -28,6 +31,21 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     super.initState();
     _loadLocationName();
     _refreshLiveLocation(showError: false);
+    _warmupAllInBackground();
+  }
+
+  Future<void> _warmupAllInBackground() async {
+    if (_warmupStarted) return;
+    _warmupStarted = true;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lat = prefs.getDouble('last_location_lat');
+      final lon = prefs.getDouble('last_location_lon');
+      await ref.read(appPrefetchServiceProvider).warmupAll(lat: lat, lon: lon);
+    } catch (_) {
+      // Background warmup is best-effort.
+    }
   }
 
   Future<void> _loadLocationName() async {
@@ -142,10 +160,18 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final logoSize = screenHeight * 0.20;
     final isDark = context.isDark;
-    final cardColor = Colors.white.withValues(alpha: 0.56);
-    final textColor = AppColors.lightText;
-    final subColor = AppColors.lightTextSecondary;
-    final iconBg = Colors.white.withValues(alpha: 0.56);
+    final cardColor = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
+    final borderColor = isDark
+      ? AppColors.darkBorder
+      : Colors.white.withValues(alpha: 0.8);
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final subColor =
+      isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final iconBg = isDark
+      ? AppColors.darkCard.withValues(alpha: 0.96)
+      : Colors.white.withValues(alpha: 0.56);
 
     return PopScope(
       canPop: false,
@@ -186,10 +212,10 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.58),
+                          color: iconBg,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: borderColor,
                           ),
                         ),
                         child: PopupMenuButton<String>(
@@ -214,7 +240,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                           child: Row(
                             children: [
                               const Icon(Icons.location_on_outlined,
-                                  color: AppColors.primaryDark, size: 18),
+                                  color: AppColors.primary, size: 18),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -223,15 +249,15 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                                       : _locationName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.lightText,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                               const Icon(
                                 Icons.keyboard_arrow_down_rounded,
-                                color: AppColors.primaryDark,
+                                color: AppColors.primary,
                               ),
                             ],
                           ),
@@ -243,8 +269,16 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                     _languageMenu(ref, context, iconBg),
                     const SizedBox(width: 8),
                     _topIcon(
+                      isDark ? Icons.dark_mode : Icons.light_mode,
+                      AppColors.primary,
+                      context,
+                      iconBg,
+                      onTap: () => ref.read(themeProvider.notifier).toggle(),
+                    ),
+                    const SizedBox(width: 8),
+                    _topIcon(
                       Icons.person_rounded,
-                      AppColors.primaryDark,
+                      AppColors.primary,
                       context,
                       iconBg,
                       route: RoutePaths.profile,
@@ -287,6 +321,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                     'screen.choice_screen.speak_naturally_to_get_instant_farming_advice'.tr(),
                 onTap: () => context.push(RoutePaths.liveVoice),
                 cardColor: cardColor,
+                borderColor: borderColor,
                 textColor: textColor,
                 subColor: subColor,
               ),
@@ -305,6 +340,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                     'screen.choice_screen.type_your_questions_for_detailed_responses'.tr(),
                 onTap: () => context.push(RoutePaths.chat),
                 cardColor: cardColor,
+                borderColor: borderColor,
                 textColor: textColor,
                 subColor: subColor,
               ),
@@ -334,6 +370,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                       subtitle: 'screen.choice_screen.sustainable_solutions'.tr(),
                       onTap: () => context.push(RoutePaths.waste),
                       cardColor: cardColor,
+                      borderColor: borderColor,
                       textColor: textColor,
                       subColor: subColor,
                     ),
@@ -348,6 +385,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                       subtitle: 'screen.choice_screen.real_time_rates'.tr(),
                       onTap: () => context.push(RoutePaths.marketPrices),
                       cardColor: cardColor,
+                      borderColor: borderColor,
                       textColor: textColor,
                       subColor: subColor,
                     ),
@@ -376,16 +414,23 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     Color color,
     BuildContext context,
     Color bg, {
-    required String route,
+    String? route,
+    VoidCallback? onTap,
   }) {
+    final action = onTap ?? (route == null ? null : () => context.push(route));
     return Container(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        border: context.isDark
+            ? null
+            : Border.all(
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
       ),
       child: IconButton(
         icon: Icon(icon, color: color, size: 20),
-        onPressed: () => context.push(route),
+        onPressed: action,
       ),
     );
   }
@@ -395,9 +440,14 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        border: context.isDark
+            ? null
+            : Border.all(
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
       ),
       child: PopupMenuButton<String>(
-        icon: const Icon(Icons.language, color: Colors.orange, size: 20),
+        icon: const Icon(Icons.language, color: AppColors.primary, size: 20),
         onSelected: (code) async {
           await ref.read(localeProvider.notifier).setLocale(context, code);
         },
@@ -419,6 +469,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     required String subtitle,
     required VoidCallback onTap,
     required Color cardColor,
+    required Color borderColor,
     required Color textColor,
     required Color subColor,
   }) {
@@ -426,7 +477,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: AppColors.primaryDark.withValues(alpha: 0.08),
@@ -499,6 +550,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     required String subtitle,
     required VoidCallback onTap,
     required Color cardColor,
+    required Color borderColor,
     required Color textColor,
     required Color subColor,
   }) {
@@ -507,7 +559,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: AppColors.primaryDark.withValues(alpha: 0.08),

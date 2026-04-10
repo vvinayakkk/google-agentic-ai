@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
@@ -60,11 +61,11 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
   double? _farmAreaAcres;
 
   final List<String> _analysisSteps = const [
-    'Analyzing farm land',
-    'Analyzing soil conditions',
-    'Fetching mandi prices',
-    'Fetching weather updates',
-    'Preparing insights',
+    'fetching_location.analyzing_farm',
+    'features.soil_moisture',
+    'features.market_prices',
+    'features.weather',
+    'fetching_location.please_wait',
   ];
 
   @override
@@ -443,7 +444,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                     Icon(Icons.agriculture, color: colors.primary, size: 34),
                     const SizedBox(height: 10),
                     Text(
-                      'Select your farmland',
+                      'fetching_location.subtitle'.tr(),
                       style: TextStyle(
                         color: textColor,
                         fontSize: 22,
@@ -452,7 +453,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tap 4 points around your farm boundary to continue.',
+                      'fetching_location.tap_map'.tr(),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: textColor.withOpacity(0.8),
@@ -471,7 +472,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Start Selection'),
+                      child: Text('fetching_location.start_selection'.tr()),
                     ),
                   ],
                 ),
@@ -499,7 +500,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Tap ${4 - _selectedPoints.length} more point(s) to define your farm boundary',
+                        '${'fetching_location.tap_map'.tr()} (${4 - _selectedPoints.length})',
                         style: TextStyle(
                           color: textColor,
                           fontSize: 14,
@@ -522,7 +523,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                   backgroundColor: colors.surface.withOpacity(0.88),
                 ),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Reset points'),
+                label: Text('common.reset'.tr()),
               ),
             ),
 
@@ -541,7 +542,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                   border: Border.all(color: colors.outline.withOpacity(0.45)),
                 ),
                 child: Text(
-                  '${_farmAreaAcres!.toStringAsFixed(2)} acres',
+                  '${_farmAreaAcres!.toStringAsFixed(2)} ${'profile.acres'.tr()}',
                   style: TextStyle(
                     color: textColor,
                     fontSize: 14,
@@ -573,7 +574,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                         CircularProgressIndicator(color: colors.primary),
                         const SizedBox(height: 22),
                         Text(
-                          'Preparing your app',
+                          'fetching_location.please_wait'.tr(),
                           style: TextStyle(
                             color: textColor,
                             fontSize: 26,
@@ -582,7 +583,7 @@ class _FetchingLocationScreenState extends ConsumerState<FetchingLocationScreen>
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          _analysisSteps[_currentStep],
+                          _analysisSteps[_currentStep].tr(),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: textColor.withOpacity(0.78),

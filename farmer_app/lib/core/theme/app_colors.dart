@@ -24,10 +24,10 @@ abstract final class AppColors {
   static const lightBorder = Color(0xFFE2E8F0);
 
   // ── Dark theme ─────────────────────────────────────────
-  static const darkBackground = Color(0xFF121212);
-  static const darkSurface = Color(0xFF1A1A1A);
-  static const darkCard = Color(0xFF1F2937);
+  static const darkBackground = Color(0xFF000000);
+  static const darkSurface = Color(0xFF000000);
+  static const darkCard = Color(0xFF000000);
   static const darkText = Color(0xFFFFFFFF);
-  static const darkTextSecondary = Color(0xFF9CA3AF);
-  static const darkBorder = Color(0xFF374151);
+  static const darkTextSecondary = Color(0xFFB3B3B3);
+  static const darkBorder = Color(0xFFFFFFFF);
 }

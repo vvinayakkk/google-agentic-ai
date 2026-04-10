@@ -81,7 +81,10 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
         _loading = false;
       });
       if (hasSnapshot) {
-        context.showSnack('Unable to refresh ticket now. Showing recent data.', isError: true);
+        context.showSnack(
+          'Unable to refresh ticket now. Showing recent data.'.tr(),
+          isError: true,
+        );
       }
     }
   }
@@ -102,7 +105,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
       if (action == 'reject') await svc.rejectRental(ticket.id);
       if (action == 'complete') await svc.completeRental(ticket.id);
       if (!mounted) return;
-      context.showSnack('Updated successfully');
+      context.showSnack('Updated successfully'.tr());
       _loadTicket(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -122,7 +125,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rental Ticket'),
+        title: Text('Rental Ticket'.tr()),
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -141,7 +144,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
                           children: [
                             EquipmentRefreshStrip(
                               refreshing: _refreshing,
-                              label: 'Refreshing ticket status and timeline...',
+                              label: 'Refreshing ticket status and timeline...'.tr(),
                             ),
                             _ticketCard(_ticket!),
                             const SizedBox(height: AppSpacing.md),
@@ -189,7 +192,13 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
                         color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(AppRadius.full),
                       ),
-                      child: const Text('Equipment Rental', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      child: Text(
+                        'Equipment Rental'.tr(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -236,7 +245,13 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
-                child: Text('${ticket.durationDays} Days', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                child: Text(
+                  '${ticket.durationDays} ${'Days'.tr()}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ],
           ),
@@ -248,11 +263,19 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
   Widget _statusTimeline(RentalTicket ticket) {
     final status = ticket.status.toLowerCase();
     final steps = [
-      _TimelineStep('Request Submitted', done: true, at: ticket.createdAt),
-      _TimelineStep('Under Review', done: status != 'pending', at: ticket.updatedAt),
-      _TimelineStep(status == 'rejected' ? 'Rejected' : 'Approved', done: status == 'approved' || status == 'completed' || status == 'rejected', at: ticket.updatedAt),
-      _TimelineStep('In Progress', done: status == 'approved' || status == 'completed', at: ticket.updatedAt),
-      _TimelineStep('Completed', done: status == 'completed', at: ticket.completedAt),
+      _TimelineStep('Request Submitted'.tr(), done: true, at: ticket.createdAt),
+      _TimelineStep('Under Review'.tr(), done: status != 'pending', at: ticket.updatedAt),
+      _TimelineStep(
+        (status == 'rejected' ? 'Rejected' : 'Approved').tr(),
+        done: status == 'approved' || status == 'completed' || status == 'rejected',
+        at: ticket.updatedAt,
+      ),
+      _TimelineStep(
+        'In Progress'.tr(),
+        done: status == 'approved' || status == 'completed',
+        at: ticket.updatedAt,
+      ),
+      _TimelineStep('Completed'.tr(), done: status == 'completed', at: ticket.completedAt),
     ];
 
     final isRejected = status == 'rejected' || status == 'cancelled';
@@ -261,7 +284,12 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Status Timeline', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            'Status Timeline'.tr(),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           ...List.generate(steps.length, (i) {
             final step = steps[i];
@@ -309,13 +337,19 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Details', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            'Details'.tr(),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          _detailRow('Equipment', ticket.equipmentName),
-          _detailRow('Start', DateFormat('EEE, dd MMM').format(ticket.startDate)),
-          _detailRow('End', DateFormat('EEE, dd MMM').format(ticket.endDate)),
-          _detailRow('Duration', '${ticket.durationDays} days'),
-          if (ticket.message.trim().isNotEmpty) _detailRow('Message', ticket.message),
+          _detailRow('Equipment'.tr(), ticket.equipmentName),
+          _detailRow('Start'.tr(), DateFormat('EEE, dd MMM').format(ticket.startDate)),
+          _detailRow('End'.tr(), DateFormat('EEE, dd MMM').format(ticket.endDate)),
+          _detailRow('Duration'.tr(), '${ticket.durationDays} ${'days'.tr()}'),
+          if (ticket.message.trim().isNotEmpty)
+            _detailRow('Message'.tr(), ticket.message),
         ],
       ),
     );
@@ -343,7 +377,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
       return OutlinedButton(
         onPressed: () => _runAction('cancel'),
         style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-        child: const Text('Cancel Rental'),
+        child: Text('Cancel Rental'.tr()),
       );
     }
 
@@ -353,7 +387,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
           Expanded(
             child: ElevatedButton(
               onPressed: () => _runAction('approve'),
-              child: const Text('Approve'),
+              child: Text('Approve'.tr()),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -361,7 +395,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
             child: OutlinedButton(
               onPressed: () => _runAction('reject'),
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-              child: const Text('Reject'),
+              child: Text('Reject'.tr()),
             ),
           ),
         ],
@@ -372,7 +406,7 @@ class _RentalTicketScreenState extends ConsumerState<RentalTicketScreen> {
       return ElevatedButton(
         onPressed: () => _runAction('complete'),
         style: ElevatedButton.styleFrom(backgroundColor: AppColors.info),
-        child: const Text('Mark Complete'),
+        child: Text('Mark Complete'.tr()),
       );
     }
 

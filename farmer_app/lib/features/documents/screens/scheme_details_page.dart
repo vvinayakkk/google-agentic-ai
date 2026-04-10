@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -307,7 +308,10 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
   Future<void> _openDownloadedSchemeDocument(Map<String, dynamic> doc) async {
     final fileName = (doc['filename'] ?? doc['name'] ?? '').toString().trim();
     if (fileName.isEmpty) {
-      context.showSnack('Document file name missing.', isError: true);
+      context.showSnack(
+        'screen.scheme_details_page.document_file_name_missing'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -325,14 +329,17 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
     final link = raw.trim();
     if (link.isEmpty) {
       context.showSnack(
-        'Official link not available right now.',
+        'screen.scheme_details_page.official_link_not_available_right_now'.tr(),
         isError: true,
       );
       return;
     }
     final uri = Uri.tryParse(link);
     if (uri == null) {
-      context.showSnack('Invalid scheme URL.', isError: true);
+      context.showSnack(
+        'screen.scheme_details_page.invalid_scheme_url'.tr(),
+        isError: true,
+      );
       return;
     }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -440,12 +447,17 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
   Future<void> _sharePreviewFile(GeneratedDocumentFile file) async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Official form downloaded from KisanKiAwaaz',
+        text:
+            'screen.scheme_details_page.official_form_downloaded_from_kisankiawaaz'
+                .tr(),
         files: <XFile>[XFile(file.file.path)],
       ),
     );
     if (!mounted) return;
-    context.showSnack('Document is ready to save/share from this sheet.');
+    context.showSnack(
+      'screen.scheme_details_page.document_is_ready_to_save_share_from_this_sheet'
+          .tr(),
+    );
   }
 
   Future<void> _openOfficialFormsHub({String? initialDocumentName}) async {
@@ -466,7 +478,10 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
   Future<void> _openBuildScreen(String requiredDoc, String docType) async {
     final key = _schemeLookupKey().trim();
     if (key.isEmpty) {
-      context.showSnack('Scheme details are incomplete.', isError: true);
+      context.showSnack(
+        'screen.scheme_details_page.scheme_details_are_incomplete'.tr(),
+        isError: true,
+      );
       return;
     }
 
@@ -486,7 +501,8 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
     );
     if (selected == null) {
       context.showSnack(
-        'Opening Official Forms Hub to pick the matching form.',
+        'screen.scheme_details_page.opening_official_forms_hub_to_pick_the_matching_form'
+            .tr(),
       );
       await _openOfficialFormsHub(initialDocumentName: requiredDoc);
       return;
@@ -508,7 +524,8 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
     if (!mounted) return;
     if (file == null) {
       context.showSnack(
-        'Could not open direct preview. Opening Official Forms Hub instead.',
+        'screen.scheme_details_page.could_not_open_direct_preview_opening_official_forms'
+            .tr(),
       );
       await _openOfficialFormsHub(initialDocumentName: requiredDoc);
       return;
@@ -522,7 +539,8 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
           file: file,
           onAutofill: () async {
             context.showSnack(
-              'Autofill helper is available in Official Forms Hub.',
+              'screen.scheme_details_page.autofill_helper_is_available_in_official_forms_hub'
+                  .tr(),
             );
           },
           onDownload: () async {
@@ -702,19 +720,19 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                               ),
                             ),
                             if (inProfile)
-                              const _StatusChip(
-                                label: 'In Profile',
+                              _StatusChip(
+                                label: 'screen.scheme_details_page.in_profile'.tr(),
                                 color: AppColors.success,
                               )
                             else if (buildable != null)
                               TextButton(
                                 onPressed: () =>
                                     _openBuildScreen(doc, buildable.documentType),
-                                child: const Text('Build Now'),
+                                child: Text('screen.scheme_details_page.build_now'.tr()),
                               )
                             else
-                              const _StatusChip(
-                                label: 'Bring Original',
+                              _StatusChip(
+                                label: 'screen.scheme_details_page.bring_original'.tr(),
                                 color: Colors.grey,
                               ),
                           ],
@@ -833,7 +851,7 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                         TextButton.icon(
                           onPressed: _downloadAllDocs,
                           icon: const Icon(Icons.download),
-                          label: const Text('Download All'),
+                          label: Text('screen.scheme_details_page.download_all'.tr()),
                         ),
                       ],
                     ),
@@ -864,7 +882,8 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
 
                         if (snapshot.hasError) {
                           return Text(
-                            'Could not fetch downloaded docs. Tap Download All to retry.',
+                            'screen.scheme_details_page.could_not_fetch_downloaded_docs_tap_download_all_to'
+                                .tr(),
                             style: context.textTheme.bodySmall?.copyWith(
                               color: AppColors.danger,
                             ),
@@ -932,7 +951,7 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                                         onPressed: () =>
                                             _openDownloadedSchemeDocument(doc),
                                         icon: const Icon(Icons.open_in_new),
-                                        label: const Text('Open'),
+                                        label: Text('screen.scheme_details_page.open'.tr()),
                                       ),
                                     ],
                                   ),
@@ -978,7 +997,7 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                                 onPressed: () =>
                                     _openExternalUrl(item['url'] ?? ''),
                                 icon: const Icon(Icons.download),
-                                label: const Text('Open'),
+                                label: Text('screen.scheme_details_page.open'.tr()),
                               ),
                             ],
                           ),
@@ -1104,14 +1123,16 @@ class _SchemeDetailsPageState extends ConsumerState<SchemeDetailsPage> {
                           backgroundColor: AppColors.primary,
                         ),
                         icon: const Icon(Icons.open_in_new),
-                        label: const Text('Apply Online'),
+                        label: Text('screen.scheme_details_page.apply_online'.tr()),
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: () => context.push(RoutePaths.documentAgent),
                       icon: const Icon(Icons.smart_toy_outlined),
-                      label: const Text('Ask AI About This Scheme'),
+                      label: Text(
+                        'screen.scheme_details_page.ask_ai_about_this_scheme'.tr(),
+                      ),
                     ),
                   ],
                 ),

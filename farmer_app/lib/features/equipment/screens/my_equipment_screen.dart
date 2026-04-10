@@ -93,7 +93,10 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
         }
       });
       if (hasSnapshot) {
-        context.showSnack('Could not refresh now. Displaying recent cached data.', isError: true);
+        context.showSnack(
+          'Could not refresh now. Displaying recent cached data.'.tr(),
+          isError: true,
+        );
       }
     }
   }
@@ -122,7 +125,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('common.delete'.tr()),
-        content: const Text('Are you sure you want to delete this listing?'),
+        content: Text('Are you sure you want to delete this listing?'.tr()),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           FilledButton(
@@ -138,7 +141,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
     try {
       await ref.read(equipmentServiceProvider).deleteEquipment(id);
       if (!mounted) return;
-      context.showSnack('Deleted successfully');
+      context.showSnack('Deleted successfully'.tr());
       _loadData(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -154,7 +157,9 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
     try {
       await ref.read(equipmentServiceProvider).updateEquipment(id, {'status': current ? 'unavailable' : 'available'});
       if (!mounted) return;
-      context.showSnack(current ? 'Marked unavailable' : 'Marked available');
+      context.showSnack(
+        current ? 'Marked unavailable'.tr() : 'Marked available'.tr(),
+      );
       _loadData(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -168,7 +173,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
       if (action == 'approve') await svc.approveRental(id);
       if (action == 'reject') await svc.rejectRental(id);
       if (!mounted) return;
-      context.showSnack('Action completed');
+      context.showSnack('Action completed'.tr());
       _loadData(forceRefresh: true);
     } catch (e) {
       if (!mounted) return;
@@ -218,32 +223,65 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isEdit ? 'Edit Equipment' : 'List Equipment', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(
+                      (isEdit ? 'Edit Equipment' : 'List Equipment').tr(),
+                      style: context.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    AppTextField(label: 'Name', hint: 'Equipment name', controller: nameController),
+                    AppTextField(
+                      label: 'Name'.tr(),
+                      hint: 'Equipment name'.tr(),
+                      controller: nameController,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
                       value: equipmentTypes.contains(type) ? type : 'Other',
                       items: equipmentTypes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(growable: false),
                       onChanged: (v) => setLocal(() => type = v ?? 'Other'),
-                      decoration: const InputDecoration(labelText: 'Type'),
+                      decoration: InputDecoration(labelText: 'Type'.tr()),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
                       value: isAvailable,
-                      title: const Text('Available'),
+                      title: Text('Available'.tr()),
                       onChanged: (v) => setLocal(() => isAvailable = v),
                     ),
-                    AppTextField(label: 'Rate per hour', hint: '0', keyboardType: TextInputType.number, controller: hourController),
+                    AppTextField(
+                      label: 'Rate per hour'.tr(),
+                      hint: '0',
+                      keyboardType: TextInputType.number,
+                      controller: hourController,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    AppTextField(label: 'Rate per day', hint: '0', keyboardType: TextInputType.number, controller: dayController),
+                    AppTextField(
+                      label: 'Rate per day'.tr(),
+                      hint: '0',
+                      keyboardType: TextInputType.number,
+                      controller: dayController,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    AppTextField(label: 'Location', hint: 'Village / District', controller: locationController),
+                    AppTextField(
+                      label: 'Location'.tr(),
+                      hint: 'Village / District'.tr(),
+                      controller: locationController,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    AppTextField(label: 'Contact phone', hint: '10-digit number', keyboardType: TextInputType.phone, controller: phoneController),
+                    AppTextField(
+                      label: 'Contact phone'.tr(),
+                      hint: '10-digit number'.tr(),
+                      keyboardType: TextInputType.phone,
+                      controller: phoneController,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    AppTextField(label: 'Description', hint: 'Additional details', maxLines: 3, controller: descController),
+                    AppTextField(
+                      label: 'Description'.tr(),
+                      hint: 'Additional details'.tr(),
+                      maxLines: 3,
+                      controller: descController,
+                    ),
                     const SizedBox(height: AppSpacing.lg),
                     SizedBox(
                       width: double.infinity,
@@ -253,11 +291,17 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                           final name = nameController.text.trim();
                           final phone = phoneController.text.trim();
                           if (name.isEmpty || type.trim().isEmpty) {
-                            context.showSnack('Name and type are required', isError: true);
+                            context.showSnack(
+                              'Name and type are required'.tr(),
+                              isError: true,
+                            );
                             return;
                           }
                           if (phone.isNotEmpty && phone.replaceAll(RegExp(r'[^0-9]'), '').length != 10) {
-                            context.showSnack('Enter a valid 10-digit phone', isError: true);
+                            context.showSnack(
+                              'Enter a valid 10-digit phone'.tr(),
+                              isError: true,
+                            );
                             return;
                           }
 
@@ -292,7 +336,12 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);
                             if (!mounted) return;
-                            context.showSnack(isEdit ? 'Updated successfully' : 'Created successfully');
+                            context.showSnack(
+                              (isEdit
+                                      ? 'Updated successfully'
+                                      : 'Created successfully')
+                                  .tr(),
+                            );
                             _loadData(forceRefresh: true);
                           } catch (e) {
                             if (!mounted) return;
@@ -379,7 +428,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              'My Equipment',
+                              'My Equipment'.tr(),
                               textAlign: TextAlign.center,
                               style: context.textTheme.titleLarge?.copyWith(
                                 color: Colors.black,
@@ -402,7 +451,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       EquipmentRefreshStrip(
                         refreshing: _refreshing,
-                        label: 'Refreshing your inventory and requests...',
+                        label: 'Refreshing your inventory and requests...'.tr(),
                       ),
                       if (_error != null && _hasSnapshot) ...[
                         Container(
@@ -414,7 +463,8 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Text(
-                            'Showing cached snapshot while network reconnects.',
+                            'Showing cached snapshot while network reconnects.'
+                                .tr(),
                             style: context.textTheme.bodySmall?.copyWith(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
@@ -424,26 +474,26 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                       ],
                       Row(
                         children: [
-                          _statChip('Total', _equipment.length.toString()),
+                          _statChip('Total'.tr(), _equipment.length.toString()),
                           const SizedBox(width: AppSpacing.sm),
-                          _statChip('Available', _availableCount.toString()),
+                          _statChip('Available'.tr(), _availableCount.toString()),
                           const SizedBox(width: AppSpacing.sm),
-                          _statChip('Pending', _pendingIncomingCount.toString()),
+                          _statChip('Pending'.tr(), _pendingIncomingCount.toString()),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      _sectionLabel('My Listings'),
+                      _sectionLabel('My Listings'.tr()),
                       const SizedBox(height: AppSpacing.sm),
                       if (_equipment.isEmpty)
                         EmptyView(
                           icon: Icons.inventory_2_outlined,
-                          title: 'No equipment listed yet',
-                          subtitle: 'Tap + to publish your first listing.',
+                          title: 'No equipment listed yet'.tr(),
+                          subtitle: 'Tap + to publish your first listing.'.tr(),
                         )
                       else
                         ..._equipment.map(_listingCard),
                       const SizedBox(height: AppSpacing.md),
-                      _sectionLabel('Incoming Rental Requests'),
+                      _sectionLabel('Incoming Rental Requests'.tr()),
                       const SizedBox(height: AppSpacing.sm),
                       ..._incomingSection(),
                       const SizedBox(height: AppSpacing.md),
@@ -460,7 +510,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Text(
-                                'Completed rentals: $_completedRentalsCount',
+                                '${'Completed rentals'.tr()}: $_completedRentalsCount',
                                 style: context.textTheme.bodyLarge?.copyWith(
                                   color: Colors.black,
                                   fontWeight: FontWeight.w800,
@@ -607,7 +657,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                   border: Border.all(color: Colors.black26),
                 ),
                 child: Text(
-                  available ? 'AVAILABLE' : 'UNAVAILABLE',
+                  available ? 'AVAILABLE'.tr() : 'UNAVAILABLE'.tr(),
                   style: const TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.w800,
@@ -623,7 +673,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
               Expanded(
                 child: Center(
                   child: IconButton(
-                    tooltip: 'Edit',
+                    tooltip: 'Edit'.tr(),
                     onPressed: () => _showAddEditSheet(row: row),
                     icon: const Icon(Icons.edit_outlined, size: 30),
                     color: AppColors.success,
@@ -633,7 +683,9 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
               Expanded(
                 child: Center(
                   child: IconButton(
-                    tooltip: available ? 'Mark unavailable' : 'Mark available',
+                    tooltip: available
+                        ? 'Mark unavailable'.tr()
+                        : 'Mark available'.tr(),
                     onPressed: () => _toggleAvailability(row),
                     icon: Icon(
                       available
@@ -648,7 +700,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
               Expanded(
                 child: Center(
                   child: IconButton(
-                    tooltip: 'Delete',
+                    tooltip: 'Delete'.tr(),
                     onPressed: () => _deleteEquipment(id),
                     icon: const Icon(Icons.delete_outline, size: 30),
                     color: AppColors.success,
@@ -667,8 +719,9 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
       return [
         EmptyView(
           icon: Icons.inbox_outlined,
-          title: 'No incoming requests',
-          subtitle: 'When farmers request your equipment, they will appear here.',
+          title: 'No incoming requests'.tr(),
+          subtitle: 'When farmers request your equipment, they will appear here.'
+              .tr(),
         ),
       ];
     }
@@ -678,13 +731,13 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
 
     final widgets = <Widget>[];
     if (pending.isNotEmpty) {
-      widgets.add(_sectionLabel('Pending Requests'));
+      widgets.add(_sectionLabel('Pending Requests'.tr()));
       widgets.add(const SizedBox(height: AppSpacing.sm));
       widgets.addAll(pending.map(_incomingCard));
     }
     if (others.isNotEmpty) {
       widgets.add(const SizedBox(height: AppSpacing.sm));
-      widgets.add(_sectionLabel('Other Requests'));
+      widgets.add(_sectionLabel('Other Requests'.tr()));
       widgets.add(const SizedBox(height: AppSpacing.sm));
       widgets.addAll(others.map(_incomingCard));
     }
@@ -760,7 +813,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                 Expanded(
                   child: Center(
                     child: IconButton(
-                      tooltip: 'Approve',
+                      tooltip: 'Approve'.tr(),
                       onPressed: () =>
                           _handleRentalAction(id: id, action: 'approve'),
                       icon: const Icon(Icons.check_circle_outline, size: 30),
@@ -771,7 +824,7 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
                 Expanded(
                   child: Center(
                     child: IconButton(
-                      tooltip: 'Reject',
+                      tooltip: 'Reject'.tr(),
                       onPressed: () => _handleRentalAction(id: id, action: 'reject'),
                       icon: const Icon(Icons.cancel_outlined, size: 30),
                       color: AppColors.success,

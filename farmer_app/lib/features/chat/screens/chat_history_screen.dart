@@ -116,8 +116,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: context.appColors.card,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Clear all chat history?'),
-        content: const Text('This will permanently delete all your chat sessions.'),
+        title: Text('screen.chat_history_screen.clear_all_chat_history'.tr()),
+        content: Text(
+          'screen.chat_history_screen.this_will_permanently_delete_all_your_chat_sessions'
+              .tr(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -125,8 +128,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Clear All',
+            child: Text(
+              'screen.chat_history_screen.clear_all'.tr(),
               style: TextStyle(color: AppColors.danger),
             ),
           ),
@@ -142,7 +145,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
       if (!mounted) return;
       setState(() => _sessions = []);
-      context.showSnack('Chat history cleared');
+      context.showSnack('screen.chat_history_screen.chat_history_cleared'.tr());
     } catch (_) {
       if (!mounted) return;
       context.showSnack('common.error'.tr(), isError: true);
@@ -151,7 +154,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
   void _openSession(ChatSession session) {
     if (session.sessionId.trim().isEmpty) {
-      context.showSnack('Invalid chat session', isError: true);
+      context.showSnack('screen.chat_history_screen.invalid_chat_session'.tr(), isError: true);
       return;
     }
     final agentType = session.agentType ?? 'general';
@@ -192,7 +195,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: 'Clear all sessions',
+            tooltip: 'screen.chat_history_screen.clear_all_sessions'.tr(),
             onPressed: _clearAll,
           ),
         ],
