@@ -57,13 +57,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _turnLanguageHint;
   int _micWavePhase = 0;
   int _loadingHintIndex = 0;
-  String _loadingHint = 'Thinking...';
+  String _loadingHint = '';
   Timer? _micWaveTimer;
   Timer? _loadingHintTimer;
   ChatMessage? _replyTarget;
 
   static const List<String> _loadingHints =
       SharedThinkingTemplates.loadingHints;
+
+  List<String> _activeLoadingHints() {
+    if (context.locale.languageCode == 'hi') {
+      return const <String>[
+        'आपका सवाल समझ रहा हूँ...',
+        'भाषा और आशय पहचान रहा हूँ...',
+        'ज़रूरी संदर्भ इकट्ठा कर रहा हूँ...',
+        'सटीक उत्तर तैयार कर रहा हूँ...',
+        'अंतिम उत्तर लिख रहा हूँ...',
+      ];
+    }
+    return _loadingHints;
+  }
 
   @override
   void initState() {
@@ -90,6 +103,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadingHint.isEmpty) {
+      _loadingHint = _activeLoadingHints().first;
+    }
+  }
+
   void _onTextChanged() {
     final hasText = _controller.text.trim().isNotEmpty;
     if (hasText != _hasText) {
@@ -112,17 +133,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String get _chatTitle {
     switch (widget.agentType.toLowerCase()) {
       case 'weather':
-        return 'Weather AI';
+        return 'screen.chat_screen.weather_ai'.tr();
       case 'market':
-        return 'Market AI';
+        return 'screen.chat_screen.market_ai'.tr();
       case 'cattle':
-        return 'Cattle AI';
+        return 'screen.chat_screen.cattle_ai'.tr();
       case 'crop':
-        return 'Crop AI';
+        return 'screen.chat_screen.crop_ai'.tr();
       case 'mental_health':
-        return 'Mental Health AI';
+        return 'screen.chat_screen.mental_health_ai'.tr();
       default:
-        return 'Kisan AI Chat';
+        return 'screen.chat_screen.kisan_ai_chat'.tr();
     }
   }
 
@@ -176,23 +197,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _startLoadingHints() {
+    final hints = _activeLoadingHints();
     _loadingHintTimer?.cancel();
     _loadingHintIndex = 0;
-    _loadingHint = _loadingHints.first;
+    _loadingHint = hints.first;
     _loadingHintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted || !_isLoading) return;
       setState(() {
-        _loadingHintIndex = (_loadingHintIndex + 1) % _loadingHints.length;
-        _loadingHint = _loadingHints[_loadingHintIndex];
+        _loadingHintIndex = (_loadingHintIndex + 1) % hints.length;
+        _loadingHint = hints[_loadingHintIndex];
       });
     });
   }
 
   void _stopLoadingHints() {
+    final hints = _activeLoadingHints();
     _loadingHintTimer?.cancel();
     _loadingHintTimer = null;
     _loadingHintIndex = 0;
-    _loadingHint = _loadingHints.first;
+    _loadingHint = hints.first;
   }
 
   void _scrollToLatest() {
@@ -807,69 +830,78 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   // â”€â”€ Chip data with icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static const _chipData = <_ChipInfo>[
-    _ChipInfo('Marketplace', Icons.storefront_outlined, AppColors.info),
-    _ChipInfo('Calendar', Icons.calendar_month_outlined, AppColors.accent),
-    _ChipInfo('Cattle', Icons.pets_outlined, AppColors.warning),
-    _ChipInfo('Weather', Icons.cloud_outlined, AppColors.primary),
-    _ChipInfo('Soil Moisture', Icons.water_drop_outlined, AppColors.primary),
-    _ChipInfo('Best Out of Waste', Icons.recycling_outlined, AppColors.success),
-    _ChipInfo('Education & Finance', Icons.school_outlined, AppColors.success),
     _ChipInfo(
-      'Document Builder',
+      'screen.chat_screen.marketplace',
+      Icons.storefront_outlined,
+      AppColors.info,
+      RoutePaths.marketplace,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.calendar',
+      Icons.calendar_month_outlined,
+      AppColors.accent,
+      RoutePaths.calendar,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.cattle',
+      Icons.pets_outlined,
+      AppColors.warning,
+      RoutePaths.cattle,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.weather',
+      Icons.cloud_outlined,
+      AppColors.primary,
+      RoutePaths.weather,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.soil_moisture',
+      Icons.water_drop_outlined,
+      AppColors.primary,
+      RoutePaths.soilMoisture,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.best_out_of_waste',
+      Icons.recycling_outlined,
+      AppColors.success,
+      RoutePaths.waste,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.education_finance',
+      Icons.school_outlined,
+      AppColors.success,
+      RoutePaths.upi,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.document_builder',
       Icons.description_outlined,
       Color(0xFF2563EB),
+      RoutePaths.documents,
     ),
-    _ChipInfo('Crop Doctor', Icons.local_florist_outlined, Color(0xFFDC2626)),
     _ChipInfo(
-      'Equipment Rental',
+      'screen.chat_screen.crop_doctor',
+      Icons.local_florist_outlined,
+      Color(0xFFDC2626),
+      RoutePaths.cropDoctor,
+    ),
+    _ChipInfo(
+      'screen.chat_screen.equipment_rental',
       Icons.agriculture_outlined,
       Color(0xFF7C3AED),
+      RoutePaths.rental,
     ),
-    _ChipInfo('Mental Health', Icons.favorite_outline, Color(0xFFDB2777)),
+    _ChipInfo(
+      'screen.chat_screen.mental_health_2',
+      Icons.favorite_outline,
+      Color(0xFFDB2777),
+      RoutePaths.mentalHealth,
+    ),
   ];
 
-  void _onChipTap(String text) {
-    switch (text) {
-      case 'Marketplace':
-        context.push(RoutePaths.marketplace);
-        return;
-      case 'Calendar':
-        context.push(RoutePaths.calendar);
-        return;
-      case 'Cattle':
-        context.push(RoutePaths.cattle);
-        return;
-      case 'Weather':
-        context.push(RoutePaths.weather);
-        return;
-      case 'Soil Moisture':
-        context.push(RoutePaths.soilMoisture);
-        return;
-      case 'Best Out of Waste':
-        context.push(RoutePaths.waste);
-        return;
-      case 'Education & Finance':
-        context.push(RoutePaths.upi);
-        return;
-      case 'Document Builder':
-        context.push(RoutePaths.documents);
-        return;
-      case 'Crop Doctor':
-        context.push(RoutePaths.cropDoctor);
-        return;
-      case 'Equipment Rental':
-        context.push(RoutePaths.rental);
-        return;
-      case 'Mental Health':
-        context.push(RoutePaths.mentalHealth);
-        return;
-    }
-  }
-
-  Widget _modeChip(String value, String label) {
+  Widget _modeChip(String value, String labelKey) {
     final selected = _responseMode == value;
     return ChoiceChip(
-      label: Text(label),
+      label: Text(labelKey.tr()),
       selected: selected,
       onSelected: (_) {
         setState(() => _responseMode = value);
@@ -962,7 +994,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ? null
                               : () {
                                   setState(() => _replyTarget = msg);
-                                  context.showSnack('Reply target selected');
+                                  context.showSnack(
+                                    'screen.chat_screen.reply_target_selected'
+                                        .tr(),
+                                  );
                                 },
                           onSuggestionTap: (suggestion) {
                             final clean = suggestion.trim();
@@ -1056,7 +1091,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               children: _chipData.map((chip) {
                                 return InkWell(
                                   borderRadius: BorderRadius.circular(18),
-                                  onTap: () => _onChipTap(chip.label),
+                                  onTap: () => context.push(chip.route),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
@@ -1092,7 +1127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         ),
                                         const SizedBox(width: 7),
                                         Text(
-                                          chip.label,
+                                          chip.labelKey.tr(),
                                           style: context.textTheme.bodySmall
                                               ?.copyWith(color: chipBorder),
                                         ),
@@ -1118,10 +1153,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _modeChip('brief', 'Brief'),
-                  _modeChip('detailed', 'Detailed'),
-                  _modeChip('step-by-step', 'Step-by-step'),
-                  _modeChip('voice-friendly', 'Voice'),
+                  _modeChip('brief', 'screen.chat_screen.brief'),
+                  _modeChip('detailed', 'screen.chat_screen.detailed'),
+                  _modeChip('step-by-step', 'screen.chat_screen.step_by_step'),
+                  _modeChip('voice-friendly', 'screen.chat_screen.voice'),
                 ],
               ),
             ),
@@ -1155,10 +1190,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 // â”€â”€ Chip info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ChipInfo {
-  final String label;
+  final String labelKey;
   final IconData icon;
   final Color color;
-  const _ChipInfo(this.label, this.icon, this.color);
+  final String route;
+  const _ChipInfo(this.labelKey, this.icon, this.color, this.route);
 }
 
 // â”€â”€ Chat bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1176,7 +1212,7 @@ class _ChatBubble extends StatefulWidget {
   const _ChatBubble({
     super.key,
     required this.message,
-    this.loadingText = 'Gathering context...',
+    this.loadingText = '',
     this.thinkingContext,
     this.allowTypingAnimation = true,
     this.isPlaying = false,
@@ -1224,236 +1260,238 @@ class _ChatBubble extends StatefulWidget {
     return out;
   }
 
-  List<({String label, IconData icon, String route})> _contextActions() {
+  List<({String label, IconData icon, String route})> _contextActions(
+    BuildContext context,
+  ) {
     final actionsByTag =
         <String, ({String label, IconData icon, String route})>{
           'home': (
-            label: 'Open Home',
+            label: 'screen.chat_screen.open_home'.tr(),
             icon: Icons.home_outlined,
             route: RoutePaths.home,
           ),
           'featured': (
-            label: 'Open Featured',
+            label: 'screen.chat_screen.open_featured'.tr(),
             icon: Icons.star_outline,
             route: RoutePaths.featured,
           ),
           'chat': (
-            label: 'Open Chat',
+            label: 'screen.chat_screen.open_chat'.tr(),
             icon: Icons.chat_bubble_outline,
             route: RoutePaths.chat,
           ),
           'live_voice': (
-            label: 'Open Live Voice',
+            label: 'screen.chat_screen.open_live_voice'.tr(),
             icon: Icons.keyboard_voice_outlined,
             route: RoutePaths.liveVoice,
           ),
           'chat_history': (
-            label: 'Open Chat History',
+            label: 'screen.chat_screen.open_chat_history'.tr(),
             icon: Icons.history_outlined,
             route: RoutePaths.chatHistory,
           ),
           'profile': (
-            label: 'Open Profile',
+            label: 'screen.chat_screen.open_profile'.tr(),
             icon: Icons.person_outline,
             route: RoutePaths.profile,
           ),
           'crop_cycle': (
-            label: 'Open Crop Cycle',
+            label: 'screen.chat_screen.open_crop_cycle'.tr(),
             icon: Icons.timeline_outlined,
             route: RoutePaths.cropCycle,
           ),
           'crop_intelligence': (
-            label: 'Open Crop Intelligence',
+            label: 'screen.chat_screen.open_crop_intelligence'.tr(),
             icon: Icons.insights_outlined,
             route: RoutePaths.cropIntelligence,
           ),
           'crop_doctor': (
-            label: 'Open Crop Doctor',
+            label: 'screen.chat_screen.open_crop_doctor'.tr(),
             icon: Icons.medical_services_outlined,
             route: RoutePaths.cropDoctor,
           ),
           'contract_farming': (
-            label: 'Open Contract Farming',
+            label: 'screen.chat_screen.open_contract_farming'.tr(),
             icon: Icons.description_outlined,
             route: RoutePaths.contractFarming,
           ),
           'credit_sources': (
-            label: 'Open Credit Sources',
+            label: 'screen.chat_screen.open_credit_sources'.tr(),
             icon: Icons.account_balance_outlined,
             route: RoutePaths.creditSources,
           ),
           'crop_insurance': (
-            label: 'Open Crop Insurance',
+            label: 'screen.chat_screen.open_crop_insurance'.tr(),
             icon: Icons.shield_outlined,
             route: RoutePaths.cropInsurance,
           ),
           'market_strategy': (
-            label: 'Open Market Strategy',
+            label: 'screen.chat_screen.open_market_strategy'.tr(),
             icon: Icons.trending_up_outlined,
             route: RoutePaths.marketStrategy,
           ),
           'power_supply': (
-            label: 'Open Power Supply',
+            label: 'screen.chat_screen.open_power_supply'.tr(),
             icon: Icons.bolt_outlined,
             route: RoutePaths.powerSupply,
           ),
           'soil_health': (
-            label: 'Open Soil Health',
+            label: 'screen.chat_screen.open_soil_health'.tr(),
             icon: Icons.science_outlined,
             route: RoutePaths.soilHealth,
           ),
           'marketplace': (
-            label: 'Open Marketplace',
+            label: 'screen.chat_screen.open_marketplace'.tr(),
             icon: Icons.storefront_outlined,
             route: RoutePaths.marketplace,
           ),
           'market_prices': (
-            label: 'Open Market Prices',
+            label: 'screen.chat_screen.open_market_prices'.tr(),
             icon: Icons.attach_money_outlined,
             route: RoutePaths.marketPrices,
           ),
           'add_listing': (
-            label: 'Open Add Listing',
+            label: 'screen.chat_screen.open_add_listing'.tr(),
             icon: Icons.add_box_outlined,
             route: RoutePaths.addListing,
           ),
           'rental': (
-            label: 'Open Rental Hub',
+            label: 'screen.chat_screen.open_rental_hub'.tr(),
             icon: Icons.build_outlined,
             route: RoutePaths.rental,
           ),
           'equipment_hub': (
-            label: 'Open Equipment Hub',
+            label: 'screen.chat_screen.open_equipment_hub'.tr(),
             icon: Icons.handyman_outlined,
             route: RoutePaths.equipmentHub,
           ),
           'equipment_marketplace': (
-            label: 'Open Equipment',
+            label: 'screen.chat_screen.open_equipment'.tr(),
             icon: Icons.agriculture_outlined,
             route: RoutePaths.equipmentMarketplace,
           ),
           'rental_ticket': (
-            label: 'Open Rental Ticket',
+            label: 'screen.chat_screen.open_rental_ticket'.tr(),
             icon: Icons.confirmation_number_outlined,
             route: RoutePaths.rentalTicket,
           ),
           'rental_rate_detail': (
-            label: 'Open Rental Rate Detail',
+            label: 'screen.chat_screen.open_rental_rate_detail'.tr(),
             icon: Icons.receipt_long_outlined,
             route: RoutePaths.rentalRateDetail,
           ),
           'my_equipment': (
-            label: 'Open My Equipment',
+            label: 'screen.chat_screen.open_my_equipment'.tr(),
             icon: Icons.inventory_2_outlined,
             route: RoutePaths.myEquipment,
           ),
           'listing_details': (
-            label: 'Open Listing Details',
+            label: 'screen.chat_screen.open_listing_details'.tr(),
             icon: Icons.bookmark_outline,
             route: RoutePaths.listingDetails,
           ),
           'my_bookings': (
-            label: 'Open My Bookings',
+            label: 'screen.chat_screen.open_my_bookings'.tr(),
             icon: Icons.event_available_outlined,
             route: RoutePaths.myBookings,
           ),
           'earnings': (
-            label: 'Open Earnings',
+            label: 'screen.chat_screen.open_earnings'.tr(),
             icon: Icons.payments_outlined,
             route: RoutePaths.earnings,
           ),
           'weather': (
-            label: 'Open Weather',
+            label: 'screen.chat_screen.open_weather'.tr(),
             icon: Icons.cloud_outlined,
             route: RoutePaths.weather,
           ),
           'soil_moisture': (
-            label: 'Open Soil Moisture',
+            label: 'screen.chat_screen.open_soil_moisture'.tr(),
             icon: Icons.water_drop_outlined,
             route: RoutePaths.soilMoisture,
           ),
           'cattle': (
-            label: 'Open Cattle',
+            label: 'screen.chat_screen.open_cattle'.tr(),
             icon: Icons.pets_outlined,
             route: RoutePaths.cattle,
           ),
           'calendar': (
-            label: 'Open Calendar',
+            label: 'screen.chat_screen.open_calendar'.tr(),
             icon: Icons.calendar_month_outlined,
             route: RoutePaths.calendar,
           ),
           'notifications': (
-            label: 'Open Notifications',
+            label: 'screen.chat_screen.open_notifications'.tr(),
             icon: Icons.notifications_outlined,
             route: RoutePaths.notifications,
           ),
           'upi': (
-            label: 'Open UPI',
+            label: 'screen.chat_screen.open_upi'.tr(),
             icon: Icons.account_balance_wallet_outlined,
             route: RoutePaths.upi,
           ),
           'documents': (
-            label: 'Open Schemes',
+            label: 'screen.chat_screen.open_schemes'.tr(),
             icon: Icons.account_balance_wallet_outlined,
             route: RoutePaths.documents,
           ),
           'document_builder': (
-            label: 'Open Documents',
+            label: 'screen.chat_screen.open_documents'.tr(),
             icon: Icons.description_outlined,
             route: RoutePaths.documentBuilder,
           ),
           'document_build': (
-            label: 'Open Document Build',
+            label: 'screen.chat_screen.open_document_build'.tr(),
             icon: Icons.description_outlined,
             route: RoutePaths.documentBuild,
           ),
           'document_vault': (
-            label: 'Open Document Vault',
+            label: 'screen.chat_screen.open_document_vault'.tr(),
             icon: Icons.folder_outlined,
             route: RoutePaths.documentVault,
           ),
           'document_agent': (
-            label: 'Open Document Agent',
+            label: 'screen.chat_screen.open_document_agent'.tr(),
             icon: Icons.chat_bubble_outline,
             route: RoutePaths.documentAgent,
           ),
           'equipment_rental_rates': (
-            label: 'Open Equipment Rates',
+            label: 'screen.chat_screen.open_equipment_rates'.tr(),
             icon: Icons.attach_money_outlined,
             route: RoutePaths.equipmentRentalRates,
           ),
           'waste': (
-            label: 'Open Waste',
+            label: 'screen.chat_screen.open_waste'.tr(),
             icon: Icons.recycling_outlined,
             route: RoutePaths.waste,
           ),
           'mental_health': (
-            label: 'Open Mental Health',
+            label: 'screen.chat_screen.open_mental_health'.tr(),
             icon: Icons.self_improvement_outlined,
             route: RoutePaths.mentalHealth,
           ),
           'farm_viz': (
-            label: 'Open Farm Viz',
+            label: 'screen.chat_screen.open_farm_viz'.tr(),
             icon: Icons.map_outlined,
             route: RoutePaths.farmViz,
           ),
           'language_select': (
-            label: 'Open Language',
+            label: 'screen.chat_screen.open_language'.tr(),
             icon: Icons.language_outlined,
             route: RoutePaths.languageSelect,
           ),
           'login': (
-            label: 'Open Login',
+            label: 'screen.chat_screen.open_login'.tr(),
             icon: Icons.person_outline,
             route: RoutePaths.login,
           ),
           'fetching_location': (
-            label: 'Open Location Setup',
+            label: 'screen.chat_screen.open_location_setup'.tr(),
             icon: Icons.map_outlined,
             route: RoutePaths.fetchingLocation,
           ),
           'splash': (
-            label: 'Open Splash',
+            label: 'screen.chat_screen.open_splash'.tr(),
             icon: Icons.star_outline,
             route: RoutePaths.splash,
           ),
@@ -1655,7 +1693,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
     final showTailUi = !shouldAnimateTyping || _typingComplete;
     final contextActions = isUser
         ? const <({String label, IconData icon, String route})>[]
-        : widget._contextActions();
+      : widget._contextActions(context);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1948,6 +1986,14 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   int _thoughtCursor = 0;
 
   List<String> _buildThoughtTemplates() {
+    if (context.locale.languageCode == 'hi') {
+      return <String>[
+        'आपका सवाल ध्यान से पढ़ रहा हूँ',
+        'भाषा और आशय पहचान रहा हूँ',
+        'पिछली बातचीत का संदर्भ देख रहा हूँ',
+        'सटीक और उपयोगी उत्तर तैयार कर रहा हूँ',
+      ];
+    }
     return SharedThinkingTemplates.buildThoughtTemplates(
       phase: widget.text,
       contextHint: widget.contextHint,
@@ -2304,8 +2350,8 @@ class _ChatInputBar extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   isMicProcessing
-                                      ? 'Processing...'
-                                      : 'Listening...',
+                                      ? 'screen.chat_screen.processing'.tr()
+                                      : 'screen.chat_screen.listening'.tr(),
                                   style: context.textTheme.bodyMedium?.copyWith(
                                     color: context.appColors.textSecondary,
                                     fontWeight: FontWeight.w600,
@@ -2447,17 +2493,17 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
   final isDark = context.isDark;
   final actions = const <_AttachmentAction>[
     _AttachmentAction(
-      'Camera',
+      'screen.chat_screen.camera',
       Icons.photo_camera_outlined,
       RoutePaths.cropDoctor,
     ),
     _AttachmentAction(
-      'Photos',
+      'screen.chat_screen.photos',
       Icons.photo_library_outlined,
       RoutePaths.cropDoctor,
     ),
     _AttachmentAction(
-      'Files',
+      'screen.chat_screen.files',
       Icons.insert_drive_file_outlined,
       RoutePaths.documents,
     ),
@@ -2523,7 +2569,7 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                action.label,
+                                action.label.tr(),
                                 style: TextStyle(
                                   color: textColor,
                                   fontWeight: FontWeight.w600,

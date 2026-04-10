@@ -54,9 +54,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   _MarketSection _activeSection = _MarketSection.prices;
   String _stateFilter = '';
   String? _selectedCrop;
-  String _aiSummary = 'Generate AI overview for personalized market insights.';
-  String _aiDetails =
-      'Uses your farmer profile, location, and nearby market records. Cached for 24 hours.';
+  String _aiSummary = '';
+  String _aiDetails = '';
   DateTime? _aiUpdatedAt;
   Map<String, dynamic> _profile = <String, dynamic>{};
 
@@ -290,10 +289,12 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   String _aiUpdatedLabel() {
     final dt = _aiUpdatedAt;
-    if (dt == null) return 'Not generated yet';
+    if (dt == null) return 'screen.market_prices_screen.not_generated_yet'.tr();
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
-    return 'Updated at $hh:$mm';
+    return 'screen.market_prices_screen.updated_at_hh_mm'.tr(
+      namedArgs: {'hh': hh, 'mm': mm},
+    );
   }
 
   Future<void> _generateAiOverview({bool forceRefresh = true}) async {
@@ -790,6 +791,17 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_aiSummary.isEmpty) {
+      _aiSummary =
+          'screen.market_prices_screen.generate_ai_overview_for_personalized_market_insight'
+              .tr();
+    }
+    if (_aiDetails.isEmpty) {
+      _aiDetails =
+          'screen.market_prices_screen.uses_your_farmer_profile_location_and_nearby_market'
+              .tr();
+    }
+
     final isDark = context.isDark;
     final cardColor = isDark
         ? AppColors.darkCard.withValues(alpha: 0.72)
@@ -867,7 +879,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
                             Text(
-                              'Market Intelligence',
+                              'screen.market_prices_screen.market_intelligence'
+                                  .tr(),
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
@@ -876,7 +889,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                   ),
                             ),
                             Text(
-                              'Live prices, mandi network, and listing control',
+                              'screen.market_prices_screen.live_prices_mandi_network_and_listing_control'
+                                  .tr(),
                               textAlign: TextAlign.center,
                               style: Theme.of(
                                 context,
@@ -905,7 +919,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'Marketplace Overview',
+                          'screen.market_prices_screen.marketplace_overview'
+                              .tr(),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: textColor,
@@ -914,7 +929,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Aligned with your state, selected crop, and nearby records.',
+                          'screen.market_prices_screen.aligned_with_your_state_selected_crop_and_nearby_rec'
+                              .tr(),
                           style: Theme.of(
                             context,
                           ).textTheme.bodySmall?.copyWith(color: subColor),
@@ -924,12 +940,28 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                           spacing: AppSpacing.sm,
                           runSpacing: AppSpacing.xs,
                           children: <Widget>[
-                            _headerBadge('Prices ${_prices.length}'),
-                            _headerBadge('Mandis ${_mandis.length}'),
-                            _headerBadge('Schemes ${_schemes.length}'),
-                            _headerBadge('Listings ${_listings.length}'),
+                            _headerBadge(
+                              'screen.market_prices_screen.prices_prices_length'
+                                  .tr(namedArgs: {'_prices.length': '${_prices.length}'}),
+                            ),
+                            _headerBadge(
+                              'screen.market_prices_screen.mandis_mandis_length'
+                                  .tr(namedArgs: {'_mandis.length': '${_mandis.length}'}),
+                            ),
+                            _headerBadge(
+                              'screen.market_prices_screen.schemes_schemes_length'
+                                  .tr(namedArgs: {'_schemes.length': '${_schemes.length}'}),
+                            ),
+                            _headerBadge(
+                              'screen.market_prices_screen.listings_listings_length'
+                                  .tr(namedArgs: {'_listings.length': '${_listings.length}'}),
+                            ),
                             if (_stateFilter.trim().isNotEmpty)
-                              _headerBadge('State $_stateFilter'),
+                              _headerBadge(
+                                'screen.market_prices_screen.state_state'.tr(
+                                  namedArgs: {'state': _stateFilter},
+                                ),
+                              ),
                           ],
                         ),
                       ],
@@ -970,7 +1002,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                             fillColor: isDark
                                 ? AppColors.darkSurface.withValues(alpha: 0.8)
                                 : Colors.white.withValues(alpha: 0.92),
-                            hintText: 'Search prices, mandis, and listings',
+                            hintText:
+                              'screen.market_prices_screen.search_prices_mandis_and_listings'
+                                .tr(),
                             hintStyle: TextStyle(color: subColor),
                             prefixIcon: const Icon(
                               Icons.search,
@@ -1002,7 +1036,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                               final crop = cropOptions[index];
                               final selected = crop == _selectedCrop;
                               return FilterChip(
-                                label: Text(crop),
+                                label: Text(_cropLabel(crop)),
                                 selected: selected,
                                 onSelected: (_) => _toggleCrop(crop),
                                 backgroundColor: isDark
@@ -1035,7 +1069,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                           alpha: 0.8,
                                         )
                                       : Colors.white.withValues(alpha: 0.92),
-                                  hintText: 'State filter (optional)',
+                                    hintText:
+                                      'screen.market_prices_screen.state_filter_optional'
+                                        .tr(),
                                   hintStyle: TextStyle(color: subColor),
                                   prefixIcon: const Icon(
                                     Icons.location_on_outlined,
@@ -1079,8 +1115,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                                   ),
                                   elevation: 0,
                                 ),
-                                child: const Text(
-                                  'Apply',
+                                child: Text(
+                                  'screen.market_prices_screen.apply'.tr(),
                                   style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
@@ -1271,25 +1307,25 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         children: <Widget>[
           _tabButton(
             _MarketSection.prices,
-            'Prices',
+            'screen.market_prices_screen.prices',
             Icons.trending_up,
             textColor,
           ),
           _tabButton(
             _MarketSection.mandis,
-            'Mandis',
+            'screen.market_prices_screen.mandis',
             Icons.storefront,
             textColor,
           ),
           _tabButton(
             _MarketSection.schemes,
-            'Schemes',
+            'screen.market_prices_screen.schemes',
             Icons.account_balance_outlined,
             textColor,
           ),
           _tabButton(
             _MarketSection.listings,
-            'Listings',
+            'screen.market_prices_screen.listings',
             Icons.sell_outlined,
             textColor,
           ),
@@ -1300,7 +1336,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
 
   Widget _tabButton(
     _MarketSection section,
-    String label,
+    String labelKey,
     IconData icon,
     Color textColor,
   ) {
@@ -1332,7 +1368,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                label,
+                labelKey.tr(),
                 style: TextStyle(
                   color: selected ? AppColors.primaryDark : textColor,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
@@ -1366,7 +1402,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'Could not load marketplace data',
+              'screen.market_prices_screen.could_not_load_marketplace_data'
+                  .tr(),
               style: TextStyle(
                 color: textColor,
                 fontWeight: FontWeight.w700,
@@ -1387,8 +1424,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                     borderRadius: BorderRadius.circular(40),
                   ),
                 ),
-                child: const Text(
-                  'Retry',
+                child: Text(
+                  'screen.market_prices_screen.retry'.tr(),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1421,7 +1458,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
                 Icon(Icons.inbox_outlined, color: subColor, size: 36),
                 const SizedBox(height: 10),
                 Text(
-                  'No data available for current filters',
+                  'screen.market_prices_screen.no_data_available_for_current_filters'
+                      .tr(),
                   style: TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.w600,
@@ -1491,8 +1529,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           side: BorderSide(color: Colors.white.withValues(alpha: 0.8)),
         ),
         icon: const Icon(Icons.add_circle_outline_rounded),
-        label: const Text(
-          'Add Listing',
+        label: Text(
+          'screen.market_prices_screen.add_listing'.tr(),
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -1505,8 +1543,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    final crop = item['crop_name']?.toString() ?? 'Crop';
-    final mandi = (item['mandi_name'] ?? item['market'])?.toString() ?? 'Mandi';
+    final crop = item['crop_name']?.toString() ?? 'screen.market_prices_screen.crop'.tr();
+    final mandi = (item['mandi_name'] ?? item['market'])?.toString() ??
+      'screen.market_prices_screen.mandi'.tr();
     final district = item['district']?.toString() ?? '';
     final state = item['state']?.toString() ?? '';
     final source = item['source']?.toString() ?? '';
@@ -1545,7 +1584,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           const SizedBox(height: 4),
           Text(
             locationParts.isEmpty
-                ? 'Location unavailable'
+                ? 'screen.market_prices_screen.location_unavailable'.tr()
                 : locationParts.join(', '),
             style: TextStyle(color: subColor, fontSize: 12),
           ),
@@ -1554,7 +1593,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
             children: <Widget>[
               Expanded(
                 child: _metric(
-                  label: 'Min',
+                  label: 'screen.market_prices_screen.min'.tr(),
                   value: _formatPrice(item['min_price']),
                   textColor: textColor,
                   subColor: subColor,
@@ -1563,7 +1602,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _metric(
-                  label: 'Modal',
+                  label: 'screen.market_prices_screen.modal'.tr(),
                   value: _formatPrice(item['modal_price']),
                   textColor: textColor,
                   subColor: subColor,
@@ -1573,7 +1612,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _metric(
-                  label: 'Max',
+                  label: 'screen.market_prices_screen.max'.tr(),
                   value: _formatPrice(item['max_price']),
                   textColor: textColor,
                   subColor: subColor,
@@ -1584,7 +1623,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           if (source.trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 10),
             Text(
-              'Source: $source',
+              'screen.market_prices_screen.source_source'.tr(
+                namedArgs: {'source': source},
+              ),
               style: TextStyle(color: subColor, fontSize: 11),
             ),
           ],
@@ -1632,7 +1673,7 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   }) {
     final name =
         (item['name'] ?? item['mandi_name'] ?? item['market'])?.toString() ??
-        'Mandi';
+      'screen.market_prices_screen.mandi'.tr();
     final district = item['district']?.toString() ?? '';
     final state = item['state']?.toString() ?? '';
     final address = item['address']?.toString() ?? '';
@@ -1663,7 +1704,8 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
               Expanded(
                 child: Text(
                   locationParts.isEmpty
-                      ? 'District and state not available'
+                      ? 'screen.market_prices_screen.district_and_state_not_available'
+                            .tr()
                       : locationParts.join(', '),
                   style: TextStyle(color: subColor),
                 ),
@@ -1686,14 +1728,20 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color subColor,
   }) {
     final name =
-        (item['name'] ?? item['short_name'] ?? item['title'] ?? 'Scheme')
+      (item['name'] ?? item['short_name'] ?? item['title'] ??
+          'screen.market_prices_screen.scheme'.tr())
             .toString();
-    final category = (item['category'] ?? 'support').toString();
-    final state = (item['state'] ?? 'All').toString();
+    final category =
+      (item['category'] ?? 'screen.market_prices_screen.support'.tr())
+        .toString();
+    final state = (item['state'] ?? 'screen.market_prices_screen.all'.tr())
+      .toString();
     final eligibilityRaw = item['eligibility'];
     final eligibility = eligibilityRaw is List && eligibilityRaw.isNotEmpty
         ? eligibilityRaw.first.toString()
-        : eligibilityRaw?.toString() ?? 'See official eligibility criteria.';
+        : eligibilityRaw?.toString() ??
+            'screen.market_prices_screen.see_official_eligibility_criteria'
+              .tr();
 
     return _glassCard(
       cardColor: cardColor,
@@ -1731,7 +1779,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'State: $state',
+            'screen.market_prices_screen.state_state'.tr(
+              namedArgs: {'state': state},
+            ),
             style: TextStyle(color: subColor, fontSize: 12),
           ),
           const SizedBox(height: 6),
@@ -1770,19 +1820,26 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    final name = item['name']?.toString() ?? 'Listing';
-    final location = item['location']?.toString() ?? 'Location not set';
+    final name = item['name']?.toString() ?? 'screen.market_prices_screen.listing'.tr();
+    final location = item['location']?.toString() ??
+      'screen.market_prices_screen.location_not_set'.tr();
     final rateDay = _toDouble(item['rate_per_day']);
     final rateHour = _toDouble(item['rate_per_hour']);
     final status = (item['status']?.toString().trim().isNotEmpty ?? false)
         ? item['status'].toString().toUpperCase()
-        : ((item['available'] as bool? ?? true) ? 'ACTIVE' : 'PAUSED');
+          : ((item['available'] as bool? ?? true)
+            ? 'screen.market_prices_screen.active'.tr().toUpperCase()
+            : 'screen.market_prices_screen.paused'.tr().toUpperCase());
 
     final rateText = rateDay != null
-        ? '${rateDay.inr}/day'
+        ? 'screen.market_prices_screen.rateday_inr_day'.tr(
+            namedArgs: {'rateDay.inr': rateDay.inr},
+          )
         : rateHour != null
-        ? '${rateHour.inr}/hr'
-        : 'Rate not set';
+        ? 'screen.market_prices_screen.ratehour_inr_hr'.tr(
+            namedArgs: {'rateHour.inr': rateHour.inr},
+          )
+        : 'screen.market_prices_screen.rate_not_set'.tr();
 
     return _glassCard(
       cardColor: cardColor,
@@ -1820,7 +1877,9 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
   }
 
   Widget _statusTag(String status) {
-    final isActive = status == 'ACTIVE';
+    final activeText =
+        'screen.market_prices_screen.active'.tr().toUpperCase();
+    final isActive = status.toUpperCase() == activeText;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -1838,6 +1897,23 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
         ),
       ),
     );
+  }
+
+  String _cropLabel(String crop) {
+    switch (crop.toLowerCase()) {
+      case 'rice':
+        return 'screen.market_prices_screen.rice'.tr();
+      case 'wheat':
+        return 'screen.market_prices_screen.wheat'.tr();
+      case 'cotton':
+        return 'screen.market_prices_screen.cotton'.tr();
+      case 'soybean':
+        return 'screen.market_prices_screen.soybean'.tr();
+      case 'sugarcane':
+        return 'screen.market_prices_screen.sugarcane'.tr();
+      default:
+        return crop;
+    }
   }
 
   Widget _glassCard({required Color cardColor, required Widget child}) {

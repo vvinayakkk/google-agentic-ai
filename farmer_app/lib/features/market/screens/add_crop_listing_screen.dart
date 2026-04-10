@@ -20,6 +20,21 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
   final _qualityController = TextEditingController();
   String _unit = 'Quintal';
 
+  static const List<String> _unitValues = <String>['Quintal', 'Kg', 'Ton'];
+
+  String _unitLabel(String unit) {
+    switch (unit) {
+      case 'Quintal':
+        return 'screen.add_crop_listing_screen.quintal'.tr();
+      case 'Kg':
+        return 'screen.add_crop_listing_screen.kg'.tr();
+      case 'Ton':
+        return 'screen.add_crop_listing_screen.ton'.tr();
+      default:
+        return unit;
+    }
+  }
+
   @override
   void dispose() {
     _cropController.dispose();
@@ -68,7 +83,7 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Add Listing',
+                        'screen.add_crop_listing_screen.add_listing'.tr(),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: textColor,
                               fontWeight: FontWeight.w700,
@@ -91,10 +106,21 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          _label('Crop Name', subColor),
-                          _input(_cropController, hint: 'e.g. Basmati Rice'),
+                          _label(
+                            'screen.add_crop_listing_screen.crop_name'.tr(),
+                            subColor,
+                          ),
+                          _input(
+                            _cropController,
+                            hint:
+                                'screen.add_crop_listing_screen.e_g_basmati_rice'
+                                    .tr(),
+                          ),
                           const SizedBox(height: 12),
-                          _label('Quantity', subColor),
+                          _label(
+                            'screen.add_crop_listing_screen.quantity'.tr(),
+                            subColor,
+                          ),
                           Row(
                             children: <Widget>[
                               Expanded(
@@ -120,10 +146,10 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                                       _unit = value ?? _unit;
                                     });
                                   },
-                                  items: const <String>['Quintal', 'Kg', 'Ton']
+                                  items: _unitValues
                                       .map((u) => DropdownMenuItem<String>(
                                             value: u,
-                                            child: Text(u),
+                                            child: Text(_unitLabel(u)),
                                           ))
                                       .toList(),
                                 ),
@@ -131,20 +157,38 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          _label('Expected Price (per unit)', subColor),
+                          _label(
+                            'screen.add_crop_listing_screen.expected_price_per_unit'
+                                .tr(),
+                            subColor,
+                          ),
                           _input(
                             _priceController,
                             hint: '₹',
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: 12),
-                          _label('Location', subColor),
-                          _input(_locationController, hint: 'Village, District, State'),
+                          _label(
+                            'screen.add_crop_listing_screen.location'.tr(),
+                            subColor,
+                          ),
+                          _input(
+                            _locationController,
+                            hint:
+                                'screen.add_crop_listing_screen.village_district_state'
+                                    .tr(),
+                          ),
                           const SizedBox(height: 12),
-                          _label('Variety & Quality Notes', subColor),
+                          _label(
+                            'screen.add_crop_listing_screen.variety_quality_notes'
+                                .tr(),
+                            subColor,
+                          ),
                           _input(
                             _qualityController,
-                            hint: 'Add grain quality, moisture, grade, and any notes',
+                            hint:
+                                'screen.add_crop_listing_screen.add_grain_quality_moisture_grade_and_any_notes'
+                                    .tr(),
                             maxLines: 4,
                           ),
                           const SizedBox(height: 18),
@@ -157,7 +201,7 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        'Listing draft saved. Backend save will be wired next.'
+                                        'screen.add_crop_listing_screen.listing_draft_saved_backend_save_will_be_wired_next'
                                             .tr(),
                                       ),
                                     ),
@@ -166,7 +210,8 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                               },
                               icon: const Icon(Icons.publish_rounded),
                               label: Text(
-                                'Publish Listing'.tr(),
+                                'screen.add_crop_listing_screen.publish_listing'
+                                    .tr(),
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -244,7 +289,7 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'List Your Harvest',
+                  'screen.add_crop_listing_screen.list_your_harvest'.tr(),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -252,7 +297,8 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Use complete details for better buyer visibility.',
+                  'screen.add_crop_listing_screen.use_complete_details_for_better_buyer_visibility'
+                      .tr(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -287,7 +333,7 @@ class _AddCropListingScreenState extends State<AddCropListingScreen> {
       maxLines: maxLines,
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Required';
+          return 'screen.add_crop_listing_screen.required'.tr();
         }
         return null;
       },

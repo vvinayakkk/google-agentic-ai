@@ -7,22 +7,22 @@ abstract final class AppColors {
   static const brandPrimary = Color(0xFF10B981);
   static const brandPrimaryLight = Color(0xFF34D399);
   static const brandPrimaryDark = Color(0xFF059669);
-  static const primary = Color(0xFFFFFFFF);
-  static const primaryLight = Color(0xFFFFFFFF);
-  static const primaryDark = Color(0xFFFFFFFF);
+  static const primary = Color(0xFF10B981);
+  static const primaryLight = Color(0xFF34D399);
+  static const primaryDark = Color(0xFF059669);
   static const darkPrimary = Color(0xFFFFFFFF);
   static const darkPrimaryLight = Color(0xFFFFFFFF);
   static const darkPrimaryDark = Color(0xFFFFFFFF);
 
   // ── Semantic ───────────────────────────────────────────
   static const brandSuccess = Color(0xFF22C55E);
-  static const success = Color(0xFFFFFFFF);
+  static const success = Color(0xFF22C55E);
   static const danger = Color(0xFFFF5722);
   static const warning = Color(0xFFF59E0B);
   static const brandInfo = Color(0xFF16A34A);
   static const brandAccent = Color(0xFF34D399);
-  static const info = Color(0xFFFFFFFF);
-  static const accent = Color(0xFFFFFFFF);
+  static const info = Color(0xFF16A34A);
+  static const accent = Color(0xFF34D399);
   static const darkSuccess = Color(0xFFFFFFFF);
   static const darkWarning = Color(0xFFFFFFFF);
   static const darkInfo = Color(0xFFFFFFFF);

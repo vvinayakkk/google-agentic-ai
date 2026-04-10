@@ -82,7 +82,7 @@ abstract final class AppTheme {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: isDark ? primary : AppColors.primaryDark,
+          foregroundColor: isDark ? primary : AppColors.brandPrimaryDark,
         ),
       ),
       textTheme: textTheme,
@@ -104,7 +104,7 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDark ? primary : AppColors.primary,
+          backgroundColor: isDark ? primary : AppColors.brandPrimary,
           foregroundColor: isDark ? Colors.black : Colors.white,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
@@ -113,10 +113,10 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: isDark ? primary : AppColors.primary,
+          foregroundColor: isDark ? primary : AppColors.brandPrimary,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-          side: BorderSide(color: isDark ? primary : AppColors.primary),
+          side: BorderSide(color: isDark ? primary : AppColors.brandPrimary),
           textStyle: textTheme.labelLarge,
         ),
       ),
@@ -134,13 +134,13 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
-          borderSide: BorderSide(color: isDark ? primary : AppColors.primary, width: 2),
+          borderSide: BorderSide(color: isDark ? primary : AppColors.brandPrimary, width: 2),
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: textSecondary),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: card,
-        selectedItemColor: isDark ? primary : AppColors.primary,
+        selectedItemColor: isDark ? primary : AppColors.brandPrimary,
         unselectedItemColor: textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -148,7 +148,7 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(color: border, thickness: 0.5),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: (isDark ? primary : AppColors.primary).withValues(alpha: 0.15),
+        selectedColor: (isDark ? primary : AppColors.brandPrimary).withValues(alpha: 0.15),
         labelStyle: textTheme.labelMedium,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
         side: BorderSide(color: border),
