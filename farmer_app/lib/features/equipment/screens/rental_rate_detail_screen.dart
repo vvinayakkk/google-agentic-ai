@@ -436,7 +436,7 @@ class _RentalRateDetailScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Request Rental'.tr(),
+                      'Request Rental',
                       style: context.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -745,7 +745,7 @@ class _RentalRateDetailScreenState
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.assignment_rounded, size: 18),
-                label: Text('Request Rental'.tr()),
+                label: const Text('Request Rental'),
               ),
             ],
           ),

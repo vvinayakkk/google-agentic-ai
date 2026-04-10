@@ -221,7 +221,7 @@ class AiOverviewCard extends StatelessWidget {
               maxLines: expanded ? null : collapsedLines,
             ),
           ],
-          if (resolvedActions.isNotEmpty) ...<Widget>[
+          if (expanded && resolvedActions.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             Text(
               'Suggested Actions',

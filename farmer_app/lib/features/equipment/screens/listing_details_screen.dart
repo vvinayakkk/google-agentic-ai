@@ -170,7 +170,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Request Rental'.tr(),
+                    'Request Rental',
                     style: context.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),

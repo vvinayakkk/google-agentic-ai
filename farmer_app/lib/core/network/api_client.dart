@@ -120,11 +120,11 @@ String _defaultBaseUrl() {
   // - emulator: for Android emulator using host alias 10.0.2.2
   const androidNetworkMode = String.fromEnvironment(
     'ANDROID_NETWORK_MODE',
-    defaultValue: 'usb',
+    defaultValue: 'lan',
   );
   const androidLanHost = String.fromEnvironment(
     'ANDROID_LAN_HOST',
-    defaultValue: '192.168.0.101',
+    defaultValue: '192.168.0.103',
   );
 
   switch (defaultTargetPlatform) {

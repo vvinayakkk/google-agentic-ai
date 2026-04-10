@@ -21,8 +21,8 @@ class AppPrefetchService {
     double? lon,
     Future<void> Function(int stepIndex)? onStepChanged,
     Duration minStepDuration = const Duration(milliseconds: 650),
-    Duration maxStepDuration = const Duration(milliseconds: 1600),
-    Duration perTaskTimeout = const Duration(seconds: 5),
+    Duration maxStepDuration = const Duration(seconds: 8),
+    Duration perTaskTimeout = const Duration(seconds: 12),
   }) async {
     final farmer = _ref.read(farmerServiceProvider);
     final crop = _ref.read(cropServiceProvider);
@@ -130,12 +130,12 @@ class AppPrefetchService {
     await runStep(4, [
       () => equipment.listEquipment(),
       () => equipment.browseAllEquipment(),
+      () => equipment.listRentalRatesFiltered(limit: 500),
       () => equipment.listRentalRatesFiltered(
         state: state.isEmpty ? null : state,
         district: district.isEmpty ? null : district,
-        limit: 10,
+        limit: 500,
       ),
-      if (state.isEmpty) () => equipment.listRentalRatesFiltered(limit: 50),
       () => equipment.listRentalCategories(),
       () => equipment.getChcInfo(),
       () => equipment.getMechanizationStats(),
@@ -144,19 +144,37 @@ class AppPrefetchService {
       () => docBuilder.listSchemeDocs(),
     ]);
 
-    // Warm individual equipment detail bundles for the first 8 items
+    // Warm individual equipment detail bundles for frequently opened items.
     // so that tapping any equipment card loads instantly from cache.
     try {
+      final globalRatesData = await guardValue<Map<String, dynamic>>(
+        () => equipment.listRentalRatesFiltered(
+          limit: 500,
+          preferCache: true,
+          forceRefresh: false,
+        ),
+      );
       final ratesData = await guardValue<Map<String, dynamic>>(
         () => equipment.listRentalRatesFiltered(
           state: state.isEmpty ? null : state,
           district: district.isEmpty ? null : district,
-          limit: 10,
+          limit: 500,
           preferCache: true,
           forceRefresh: false,
         ),
       );
       final rows = <Map<String, dynamic>>[];
+      if (globalRatesData != null) {
+        final raw =
+            globalRatesData['rows'] ??
+            globalRatesData['equipment'] ??
+            globalRatesData['items'];
+        if (raw is List) {
+          for (final item in raw) {
+            if (item is Map) rows.add(Map<String, dynamic>.from(item));
+          }
+        }
+      }
       if (ratesData != null) {
         final raw = ratesData['rows'] ?? ratesData['equipment'] ?? ratesData['items'];
         if (raw is List) {
@@ -170,7 +188,7 @@ class AppPrefetchService {
             .map((r) => (r['equipment_name'] ?? r['name'] ?? '').toString().trim())
             .where((n) => n.isNotEmpty)
             .toSet()
-            .take(8)
+            .take(36)
             .toList(growable: false);
         await Future.wait(
           names.map((name) => guard(

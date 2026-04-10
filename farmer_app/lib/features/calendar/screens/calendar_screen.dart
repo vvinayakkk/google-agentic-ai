@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/services/auth_service.dart';
 import '../../../shared/services/agent_service.dart';
 import '../../../shared/services/notification_service.dart';
 
@@ -61,6 +63,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Map<DateTime, List<String>> _events = <DateTime, List<String>>{};
 
   final List<_TaskEntry> _customTasks = <_TaskEntry>[];
+  bool _composerOpen = false;
+
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(fn);
+      });
+      return;
+    }
+    setState(fn);
+  }
 
   @override
   void initState() {
@@ -81,13 +96,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   void _startAnimations() {
     Future<void>.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) setState(() => _heroVisible = true);
+      _safeSetState(() => _heroVisible = true);
     });
 
     const delays = <int>[100, 200, 300];
     for (var i = 0; i < delays.length; i++) {
       Future<void>.delayed(Duration(milliseconds: delays[i]), () {
-        if (mounted) setState(() => _taskVisible[i] = true);
+        _safeSetState(() => _taskVisible[i] = true);
       });
     }
   }
@@ -155,7 +170,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Future<void> _loadBackendCalendarSignals() async {
     if (!mounted) return;
 
-    setState(() {
+    _safeSetState(() {
       _backendLoading = true;
       _heroLoading = true;
     });
@@ -233,7 +248,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       }
 
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         _backendTasks = parsedTasks;
         _heroRecommendation = recommendation;
         _backendLoading = false;
@@ -242,7 +257,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         _backendLoading = false;
         _heroLoading = false;
         _heroRecommendation = _fallbackRecommendation();
@@ -253,8 +268,39 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   List<String> _getEventsForDay(DateTime day) =>
       _events[_stripTime(day)] ?? const <String>[];
 
+  Future<void> _syncTaskToBackend(_TaskEntry task) async {
+    try {
+      final me = await ref.read(authServiceProvider).getMe();
+      final profile = me['profile'] is Map
+          ? Map<String, dynamic>.from((me['profile'] as Map).cast<dynamic, dynamic>())
+          : <String, dynamic>{};
+      final state = (profile['state'] ?? '').toString().trim();
+      final district = (profile['district'] ?? '').toString().trim();
+      final date =
+          '${task.date.year.toString().padLeft(4, '0')}-${task.date.month.toString().padLeft(2, '0')}-${task.date.day.toString().padLeft(2, '0')}';
+      final time =
+          '${task.time.hour.toString().padLeft(2, '0')}:${task.time.minute.toString().padLeft(2, '0')}';
+      final prompt =
+          'Create one calendar event for me: title "${task.title}" on $date at $time. '
+          'Details: "${task.subtitle}". '
+          'Priority: ${task.isHigh ? 'high' : 'normal'}. '
+          'State: ${state.isEmpty ? 'unknown' : state}. '
+          'District: ${district.isEmpty ? 'unknown' : district}. '
+          'Please save it in backend calendar.';
+
+      await ref.read(agentServiceProvider).chat(
+        message: prompt,
+        language: context.locale.languageCode,
+      );
+
+      await _loadBackendCalendarSignals();
+    } catch (_) {
+      // Keep local task even if backend sync fails.
+    }
+  }
+
   void _changeMonth(int delta) {
-    setState(() {
+    _safeSetState(() {
       _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + delta, 1);
     });
   }
@@ -274,31 +320,33 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     String? initialTitle,
     String? initialNotes,
   }) async {
-    final titleController = TextEditingController(
-      text: initialTitle?.trim() ?? '',
-    );
-    final notesController = TextEditingController(
-      text: initialNotes?.trim() ?? '',
-    );
+    if (_composerOpen) return;
+    _composerOpen = true;
+
+    var titleText = initialTitle?.trim() ?? '';
+    var notesText = initialNotes?.trim() ?? '';
     var pickedDate = _selectedDay;
     var pickedTime = TimeOfDay.now();
     var highPriority = false;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (sheetContext, setSheetState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
+    _TaskEntry? createdTask;
+    try {
+      createdTask = await showModalBottomSheet<_TaskEntry>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) {
+          return StatefulBuilder(
+            builder: (sheetContext, setSheetState) {
+            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
             final fieldBg = isDark
                 ? AppColors.darkCard
                 : Colors.white.withValues(alpha: 0.72);
             final borderColor = isDark
                 ? Colors.white
                 : Colors.white.withValues(alpha: 0.88);
-            final titleStyle = Theme.of(context).textTheme.titleMedium
+            final titleStyle = Theme.of(sheetContext).textTheme.titleMedium
                 ?.copyWith(
                   color: isDark ? AppColors.darkText : AppColors.lightText,
                   fontWeight: FontWeight.w700,
@@ -328,12 +376,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     ),
                   ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(sheetContext).size.height * 0.86,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
                       Center(
                         child: Container(
                           width: 44,
@@ -368,8 +421,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      TextField(
-                        controller: titleController,
+                      TextFormField(
+                        initialValue: titleText,
+                        onChanged: (v) => titleText = v,
                         decoration: InputDecoration(
                           hintText: 'screen.calendar_screen.task_title'.tr(),
                           filled: true,
@@ -408,8 +462,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      TextField(
-                        controller: notesController,
+                      TextFormField(
+                        initialValue: notesText,
+                        onChanged: (v) => notesText = v,
                         minLines: 2,
                         maxLines: 2,
                         decoration: InputDecoration(
@@ -459,11 +514,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 final picked = await showDatePicker(
-                                  context: context,
+                                  context: sheetContext,
                                   initialDate: pickedDate,
                                   firstDate: DateTime(2023, 1, 1),
                                   lastDate: DateTime(2028, 12, 31),
                                 );
+                                if (!sheetContext.mounted) return;
                                 if (picked != null) {
                                   setSheetState(() {
                                     pickedDate = picked;
@@ -495,9 +551,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 final picked = await showTimePicker(
-                                  context: context,
+                                  context: sheetContext,
                                   initialTime: pickedTime,
                                 );
+                                if (!sheetContext.mounted) return;
                                 if (picked != null) {
                                   setSheetState(() {
                                     pickedTime = picked;
@@ -591,32 +648,23 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         height: 46,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            final title = titleController.text.trim();
+                            final title = titleText.trim();
                             if (title.isEmpty) {
                               _showSnack('screen.calendar_screen.please_enter_task_title'.tr());
                               return;
                             }
 
-                            final details = notesController.text.trim();
-
-                            setState(() {
-                              _customTasks.insert(
-                                0,
-                                _TaskEntry(
-                                  title: title,
-                                  subtitle: details.isEmpty
-                                      ? 'screen.calendar_screen.planned_task_from_calendar'.tr()
-                                      : details,
-                                  date: pickedDate,
-                                  time: pickedTime,
-                                  isHigh: highPriority,
-                                ),
-                              );
-                              _rebuildEventMap();
-                            });
-
-                            Navigator.of(sheetContext).pop();
-                            _showSnack('screen.calendar_screen.task_scheduled_successfully'.tr());
+                            final details = notesText.trim();
+                            final task = _TaskEntry(
+                              title: title,
+                              subtitle: details.isEmpty
+                                  ? 'screen.calendar_screen.planned_task_from_calendar'.tr()
+                                  : details,
+                              date: pickedDate,
+                              time: pickedTime,
+                              isHigh: highPriority,
+                            );
+                            Navigator.of(sheetContext).pop(task);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -634,17 +682,28 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                     ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             );
-          },
-        );
-      },
-    );
+            },
+          );
+        },
+      );
+    } finally {
+      _composerOpen = false;
+    }
 
-    titleController.dispose();
-    notesController.dispose();
+    if (!mounted || createdTask == null) return;
+    final newTask = createdTask;
+    _safeSetState(() {
+      _customTasks.insert(0, newTask);
+      _rebuildEventMap();
+    });
+    Future<void>.microtask(() => _syncTaskToBackend(newTask));
+    _showSnack('screen.calendar_screen.task_scheduled_successfully'.tr());
   }
 
   @override
@@ -782,6 +841,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         const SizedBox(height: 12),
                         _CalendarCard(
+                          key: ValueKey<int>(
+                            _focusedDay.year * 100 + _focusedDay.month,
+                          ),
                           focusedDay: _focusedDay,
                           selectedDay: _selectedDay,
                           eventLoader: _getEventsForDay,
@@ -789,7 +851,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           textColor: textColor,
                           subColor: subColor,
                           onDaySelected: (selected, focused) {
-                            setState(() {
+                            if (isSameDay(_selectedDay, selected) &&
+                                _focusedDay.year == focused.year &&
+                                _focusedDay.month == focused.month &&
+                                _focusedDay.day == focused.day) {
+                              return;
+                            }
+                            _safeSetState(() {
                               _selectedDay = selected;
                               _focusedDay = focused;
                             });
@@ -878,6 +946,36 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 ),
                               ),
                         ],
+                        if (_customTasks.isNotEmpty) ...<Widget>[
+                          ..._customTasks.map(
+                            (task) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _TaskCard(
+                                iconBg: task.isHigh
+                                    ? const Color(0xFFFFEBEE)
+                                    : const Color(0xFFE8F5E9),
+                                iconColor: task.isHigh
+                                    ? const Color(0xFFC62828)
+                                    : AppColors.primaryDark,
+                                icon: Icons.event_note_rounded,
+                                title: task.title,
+                                subtitle: task.subtitle,
+                                dateTime:
+                                    '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
+                                priority: task.isHigh
+                                    ? 'screen.calendar_screen.high'.tr()
+                                    : 'screen.calendar_screen.normal'.tr(),
+                                isHigh: task.isHigh,
+                                cardColor: cardColor,
+                                textColor: textColor,
+                                subColor: subColor,
+                                onTap: () =>
+                                    _showSnack('Opening ${task.title}...'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
                         _AnimatedTaskCard(
                           visible: _taskVisible[0],
                           child: _TaskCard(
@@ -937,36 +1035,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 _showSnack('screen.calendar_screen.opening_soil_fertilization'.tr()),
                           ),
                         ),
-                        if (_customTasks.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 10),
-                          ..._customTasks.map(
-                            (task) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _TaskCard(
-                                iconBg: task.isHigh
-                                    ? const Color(0xFFFFEBEE)
-                                    : const Color(0xFFE8F5E9),
-                                iconColor: task.isHigh
-                                    ? const Color(0xFFC62828)
-                                    : AppColors.primaryDark,
-                                icon: Icons.event_note_rounded,
-                                title: task.title,
-                                subtitle: task.subtitle,
-                                dateTime:
-                                    '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
-                                priority: task.isHigh
-                                  ? 'screen.calendar_screen.high'.tr()
-                                  : 'screen.calendar_screen.normal'.tr(),
-                                isHigh: task.isHigh,
-                                cardColor: cardColor,
-                                textColor: textColor,
-                                subColor: subColor,
-                                onTap: () =>
-                                  _showSnack('Opening ${task.title}...'),
-                              ),
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 16),
                         Center(
                           child: TextButton(
@@ -1137,6 +1205,7 @@ class _HeroCard extends StatelessWidget {
 
 class _CalendarCard extends StatelessWidget {
   const _CalendarCard({
+    super.key,
     required this.focusedDay,
     required this.selectedDay,
     required this.onDaySelected,
@@ -1249,11 +1318,12 @@ class _CalendarCard extends StatelessWidget {
             calendarBuilders: CalendarBuilders<String>(
               markerBuilder: (context, day, events) {
                 if (events.isEmpty) return const SizedBox.shrink();
+                final markerEvents = events.take(3).toList(growable: false);
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    for (final e in events)
+                    for (final e in markerEvents)
                       Container(
                         width: 5,
                         height: 5,

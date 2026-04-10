@@ -22,8 +22,8 @@ class _SuicidePreventionScreenState
     extends ConsumerState<SuicidePreventionScreen> {
   int? _selectedMood;
 
-  static const String _aiHelplineDisplay = '+91 9930679651';
-  static const String _aiHelplineDial = '+919930679651';
+  static const String _aiHelplineDisplay = '+1 6592160017';
+  static const String _aiHelplineDial = '+16592160017';
   static const String _whatsAppScheme = 'whatsapp:+14155238886';
   static const String _whatsAppFallback = 'https://wa.me/14155238886';
 
@@ -121,7 +121,7 @@ class _SuicidePreventionScreenState
   }
 
   void _navigateToAiCounselor() {
-    context.push('${RoutePaths.chat}?agent=mental_health');
+    _openWhatsAppSupport();
   }
 
   void _onMoodSelected(int index) {
