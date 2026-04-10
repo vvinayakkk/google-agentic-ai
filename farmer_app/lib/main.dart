@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'core/network/api_client.dart';
 import 'app.dart';
 
@@ -19,7 +20,26 @@ void main() async {
 
   if (savedUrl.isNotEmpty) {
     final lowered = savedUrl.toLowerCase();
-    if (lowered.contains('127.0.0.1') || lowered.contains('localhost')) {
+    const androidNetworkMode = String.fromEnvironment(
+      'ANDROID_NETWORK_MODE',
+      defaultValue: 'lan',
+    );
+    const androidLanHost = String.fromEnvironment(
+      'ANDROID_LAN_HOST',
+      defaultValue: '192.168.0.103',
+    );
+    final isAndroidLanMode =
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        androidNetworkMode.toLowerCase() == 'lan';
+
+    final expectedLanBase = 'http://$androidLanHost:8000';
+    final isLoopback =
+        lowered.contains('127.0.0.1') || lowered.contains('localhost');
+    final isStaleLanOverride =
+        isAndroidLanMode && lowered != expectedLanBase.toLowerCase();
+
+    if (isLoopback || isStaleLanOverride) {
       await prefs.remove('backend_url');
       ApiClient.overrideUrl = null;
     } else {

@@ -57,3 +57,32 @@ APK output path:
 - Phone and backend host machine must be on the same Wi-Fi network.
 - Backend server must be running and reachable on port `8000`.
 - If your IP changes, rebuild APK with updated host/IP.
+
+## If APK says "Cannot reach backend"
+
+1. Confirm backend from PC:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://192.168.0.103:8000/health
+```
+
+Expected status: `200`.
+
+2. On phone browser, open:
+
+```text
+http://192.168.0.103:8000/health
+```
+
+If this does not open on phone, it is a network/firewall issue (not app code).
+
+3. Clear stale backend URL cache in app:
+
+- Uninstall old app from phone, then install the new APK.
+- Or clear app storage before reopening.
+
+4. Rebuild APK after IP update:
+
+```powershell
+flutter build apk --release --dart-define=ANDROID_NETWORK_MODE=lan --dart-define=ANDROID_LAN_HOST=192.168.0.103
+```
