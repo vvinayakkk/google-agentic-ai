@@ -107,7 +107,10 @@ final routerProvider = Provider<GoRouter>((ref) {
   // GoRouter (resetting to initialLocation) on every auth-state change.
   // Instead, listen and poke the ChangeNotifier so GoRouter re-runs redirect.
   final notifier = _RouterChangeNotifier();
-  ref.listen<AsyncValue>(authStateProvider, (previous, next) => notifier.notify());
+  ref.listen<AsyncValue>(
+    authStateProvider,
+    (previous, next) => notifier.notify(),
+  );
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
@@ -307,7 +310,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: RoutePaths.cattle, builder: (_, _) => const CattleScreen()),
       GoRoute(
         path: RoutePaths.calendar,
-        builder: (_, _) => const CalendarScreen(),
+        builder: (_, state) => CalendarScreen(
+          openComposer: state.uri.queryParameters['open_add'] == '1',
+          prefillTitle: state.uri.queryParameters['title'],
+          prefillNotes: state.uri.queryParameters['notes'],
+        ),
       ),
 
       // ── Other features ──────────────────────────────

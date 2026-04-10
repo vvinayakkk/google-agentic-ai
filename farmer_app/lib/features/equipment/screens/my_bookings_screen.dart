@@ -11,7 +11,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/services/equipment_service.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../widgets/equipment_shell.dart';
 
@@ -140,89 +139,236 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    const textColor = Colors.black;
+    const subColor = Colors.black54;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('my_bookings.title'.tr()),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Completed'),
-            Tab(text: 'Cancelled'),
-            Tab(text: 'As Owner'),
-          ],
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? <Color>[
+                    AppColors.darkBackground,
+                    AppColors.darkSurface,
+                    AppColors.darkBackground,
+                  ]
+                : <Color>[
+                    AppColors.lightBackground,
+                    AppColors.lightSurface,
+                    AppColors.lightBackground,
+                  ],
+          ),
         ),
-      ),
-      body: EquipmentPageBackground(
-        child: _loading && !_hasSnapshot
-            ? const EquipmentContentSkeleton(cardCount: 6)
-            : _error != null && !_hasSnapshot
-                ? ErrorView(message: _error!, onRetry: () => _loadRentals(forceRefresh: true))
-                : Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            EquipmentHeaderCard(
-                              title: 'Rental Bookings',
-                              subtitle: 'Track active rentals, completed history, and owner approvals in one place.',
-                              icon: Icons.event_note_outlined,
-                              badges: [
-                                EquipmentInfoBadge(label: '${_active.length} active'),
-                                EquipmentInfoBadge(label: '${_asOwner.length} as owner'),
+        child: SafeArea(
+          bottom: false,
+          child: _loading && !_hasSnapshot
+              ? const EquipmentContentSkeleton(cardCount: 6)
+              : _error != null && !_hasSnapshot
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _loadRentals(forceRefresh: true),
+                )
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                      ),
+                      child: Row(
+                        children: [
+                          _topAction(
+                            icon: Icons.arrow_back_rounded,
+                            onTap: () => Navigator.of(context).maybePop(),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'my_bookings.title'.tr(),
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
+                                Text(
+                                  'Manage active, completed, and owner-side rentals',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: subColor),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.sm),
-                            EquipmentRefreshStrip(
-                              refreshing: _refreshing,
-                              label: 'Refreshing your booking timeline...',
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _topAction(
+                            icon: Icons.refresh_rounded,
+                            onTap: () => _loadRentals(forceRefresh: true),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _tabContent(
-                              items: _active,
-                              icon: Icons.event_available,
-                              emptyTitle: 'No active bookings',
-                              emptyActionLabel: 'Browse Equipment',
-                              onEmptyAction: () => context.push(RoutePaths.equipmentMarketplace),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      child: EquipmentRefreshStrip(
+                        refreshing: _refreshing,
+                        label: 'Refreshing your booking timeline...',
+                      ),
+                    ),
+                    if (_error != null && _hasSnapshot) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          0,
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Text(
+                            'Showing cached booking data while connection recovers.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w700,
                             ),
-                            _tabContent(
-                              items: _completed,
-                              icon: Icons.task_alt,
-                              emptyTitle: 'No completed rentals yet',
-                              emptyActionLabel: 'View Active',
-                              onEmptyAction: () => _tabController.animateTo(0),
-                            ),
-                            _tabContent(
-                              items: _cancelled,
-                              icon: Icons.cancel_outlined,
-                              emptyTitle: 'No cancelled bookings',
-                              emptyActionLabel: 'View Active',
-                              onEmptyAction: () => _tabController.animateTo(0),
-                            ),
-                            _tabContent(
-                              items: _asOwner,
-                              icon: Icons.handshake_outlined,
-                              emptyTitle: 'No owner-side bookings',
-                              emptyActionLabel: 'My Equipment',
-                              onEmptyAction: () => context.push(RoutePaths.myEquipment),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                      ),
+                      child: _glassCard(
+                        cardColor: cardColor,
+                        child: Row(
+                          children: [
+                            _metricPill(
+                              icon: Icons.event_available_rounded,
+                              label: 'Active',
+                              value: _active.length,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _metricPill(
+                              icon: Icons.task_alt_rounded,
+                              label: 'Done',
+                              value: _completed.length,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _metricPill(
+                              icon: Icons.handshake_outlined,
+                              label: 'Owner',
+                              value: _asOwner.length,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      child: _glassCard(
+                        cardColor: cardColor,
+                        child: TabBar(
+                          controller: _tabController,
+                          isScrollable: false,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicator: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: Colors.black26),
+                          ),
+                          labelColor: textColor,
+                          unselectedLabelColor: subColor,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                          tabs: const [
+                            Tab(text: 'Active'),
+                            Tab(text: 'Completed'),
+                            Tab(text: 'Cancelled'),
+                            Tab(text: 'Owner'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _tabContent(
+                            items: _active,
+                            icon: Icons.event_available,
+                            emptyTitle: 'No active bookings',
+                            emptyActionLabel: 'Browse Equipment',
+                            onEmptyAction: () =>
+                                context.push(RoutePaths.equipmentMarketplace),
+                          ),
+                          _tabContent(
+                            items: _completed,
+                            icon: Icons.task_alt,
+                            emptyTitle: 'No completed rentals yet',
+                            emptyActionLabel: 'View Active',
+                            onEmptyAction: () => _tabController.animateTo(0),
+                          ),
+                          _tabContent(
+                            items: _cancelled,
+                            icon: Icons.cancel_outlined,
+                            emptyTitle: 'No cancelled bookings',
+                            emptyActionLabel: 'View Active',
+                            onEmptyAction: () => _tabController.animateTo(0),
+                          ),
+                          _tabContent(
+                            items: _asOwner,
+                            icon: Icons.handshake_outlined,
+                            emptyTitle: 'No owner-side bookings',
+                            emptyActionLabel: 'My Equipment',
+                            onEmptyAction: () => context.push(RoutePaths.myEquipment),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -235,19 +381,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     required VoidCallback onEmptyAction,
   }) {
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: () => _loadRentals(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            EmptyView(
-              icon: icon,
-              title: emptyTitle,
-              subtitle: emptyActionLabel,
-            ),
+            EmptyView(icon: icon, title: emptyTitle, subtitle: emptyActionLabel),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton(
-              onPressed: onEmptyAction,
-              child: Text(emptyActionLabel),
+            Center(
+              child: OutlinedButton(
+                onPressed: onEmptyAction,
+                child: Text(emptyActionLabel),
+              ),
             ),
           ],
         ),
@@ -257,6 +403,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     return RefreshIndicator(
       onRefresh: () => _loadRentals(forceRefresh: true),
       child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: items.length,
         itemBuilder: (_, i) => _bookingCard(items[i]),
@@ -271,95 +418,210 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     final userId = _currentUserId();
     final isOwner = (row['owner_id'] ?? '').toString() == userId;
 
-    final color = status == 'pending'
-        ? AppColors.warning
-        : status == 'approved'
-            ? AppColors.success
-            : status == 'completed'
-                ? AppColors.info
-                : Colors.grey;
-
     final start = DateTime.tryParse((row['start_date'] ?? '').toString());
     final end = DateTime.tryParse((row['end_date'] ?? '').toString());
-    final duration = (start != null && end != null) ? end.difference(start).inDays + 1 : null;
+    final duration = (start != null && end != null)
+        ? end.difference(start).inDays + 1
+        : null;
+    final actionBar = _actionBar(id: id, status: status, isOwner: isOwner);
+    final isDark = context.isDark;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: InkWell(
+      child: _glassCard(
+        cardColor: cardColor,
         onTap: () {
           HapticFeedback.lightImpact();
           context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(id)}');
         },
-        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border(left: BorderSide(color: color, width: 4)),
+            color: Colors.white,
+            border: Border.all(color: Colors.black12),
           ),
-          child: AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(equipmentName, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_month_rounded,
+                    color: AppColors.success,
+                    size: 22,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      equipmentName,
+                      style: context.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black,
+                      ),
                     ),
+                  ),
+                  _statusPill(status: status),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: AppColors.success,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      '${(row['start_date'] ?? '').toString()} → ${(row['end_date'] ?? '').toString()}',
+                      style: context.textTheme.bodySmall?.copyWith(color: Colors.black87),
+                    ),
+                  ),
+                  if (duration != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: Colors.white,
+                        border: Border.all(color: Colors.black26),
                         borderRadius: BorderRadius.circular(AppRadius.full),
                       ),
-                      child: Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined, size: 14),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      '${(row['start_date'] ?? '').toString()} → ${(row['end_date'] ?? '').toString()}',
-                      style: context.textTheme.bodySmall,
-                    ),
-                    if (duration != null) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: Text(
+                        '$duration days',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          color: Colors.black,
                         ),
-                        child: Text('$duration days', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
                       ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(
-                    color: (isOwner ? AppColors.success : AppColors.info).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  child: Text(
-                    isOwner ? "You're Lending" : "You're Renting",
-                    style: TextStyle(
-                      color: isOwner ? AppColors.success : AppColors.info,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
                     ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black26),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Text(
+                  isOwner ? "You're Lending" : "You're Renting",
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
                   ),
                 ),
-                if (_actionBar(id: id, status: status, isOwner: isOwner) != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _actionBar(id: id, status: status, isOwner: isOwner)!,
-                ],
+              ),
+              if (actionBar != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                actionBar,
               ],
-            ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusPill({required String status}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black26),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  Widget _topAction({required IconData icon, required VoidCallback onTap}) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, size: 22, color: AppColors.success),
+    );
+  }
+
+  Widget _glassCard({
+    required Color cardColor,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(10), child: child),
+        ),
+      ),
+    );
+  }
+
+  Widget _metricPill({
+    required IconData icon,
+    required String label,
+    required int value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: AppColors.success),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              '$label $value',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
       ),
     );

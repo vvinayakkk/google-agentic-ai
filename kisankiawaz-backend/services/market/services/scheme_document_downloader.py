@@ -47,6 +47,16 @@ FORM_FILE_EXTS = {
     ".rtf",
 }
 
+_DEFAULT_DISCOVERY_BLOCKLIST = "nrlm.gov.in,farmer.gov.in"
+DISCOVERY_BLOCKLIST = {
+    host.strip().lower()
+    for host in os.getenv(
+        "MARKET_LINK_DISCOVERY_BLOCKLIST",
+        _DEFAULT_DISCOVERY_BLOCKLIST,
+    ).split(",")
+    if host.strip()
+}
+
 
 class SchemeDocumentDownloader:
     """Downloads and manages government scheme documents for farmers."""
@@ -164,6 +174,14 @@ class SchemeDocumentDownloader:
         if not app_url:
             return []
 
+        host = (urlparse(app_url).hostname or "").lower()
+        if host and any(
+            host == blocked or host.endswith(f".{blocked}")
+            for blocked in DISCOVERY_BLOCKLIST
+        ):
+            logger.info("Skipping link discovery for %s (host blocklist)", app_url)
+            return []
+
         discovered: List[Dict[str, str]] = []
         try:
             response = await client.get(app_url)
@@ -188,7 +206,23 @@ class SchemeDocumentDownloader:
                 if len(discovered) >= 40:
                     break
         except Exception as exc:
-            logger.warning(f"Link discovery failed for {app_url}: {exc}")
+            message = str(exc).lower()
+            non_fatal_hints = (
+                "certificate verify failed",
+                "name or service not known",
+                "temporary failure in name resolution",
+                "nodename nor servname provided",
+                "connection refused",
+                "timed out",
+            )
+            if any(hint in message for hint in non_fatal_hints):
+                logger.info(
+                    "Link discovery skipped for %s due to upstream connectivity issue: %s",
+                    app_url,
+                    exc,
+                )
+            else:
+                logger.warning("Link discovery failed for %s: %s", app_url, exc)
 
         return discovered
 

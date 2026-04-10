@@ -84,6 +84,7 @@ class AppPrefetchService {
       () => farmer.getDashboard(),
       () => crop.listCrops(),
       () => livestock.listLivestock(),
+      () => livestock.warmAnimalProfile(),
       () => notifications.getUnreadCount(),
       () => notifications.list(perPage: 30),
     ]);

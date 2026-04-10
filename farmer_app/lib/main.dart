@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/api_client.dart';
+import 'core/localization/merged_json_asset_loader.dart';
 import 'app.dart';
 
 void main() async {
@@ -36,6 +37,7 @@ void main() async {
         Locale('kn'),
       ],
       path: 'assets/translations',
+      assetLoader: const MergedJsonAssetLoader(),
       fallbackLocale: const Locale('en'),
       child: const ProviderScope(
         child: KisanApp(),

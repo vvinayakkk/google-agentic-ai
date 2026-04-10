@@ -19,8 +19,13 @@ class SuicidePreventionScreen extends ConsumerStatefulWidget {
 }
 
 class _SuicidePreventionScreenState
-  extends ConsumerState<SuicidePreventionScreen> {
+    extends ConsumerState<SuicidePreventionScreen> {
   int? _selectedMood;
+
+  static const String _aiHelplineDisplay = '+91 9930679651';
+  static const String _aiHelplineDial = '+919930679651';
+  static const String _whatsAppScheme = 'whatsapp:+14155238886';
+  static const String _whatsAppFallback = 'https://wa.me/14155238886';
 
   static const _moods = [
     {'emoji': '😊', 'key': 'great', 'color': 0xFF10B981},
@@ -36,6 +41,12 @@ class _SuicidePreventionScreenState
       'number': '1800-599-0019',
       'desc': 'Govt of India — Free, 24/7',
       'icon': Icons.local_hospital_rounded,
+    },
+    {
+      'name': 'AI Mental Health Helpline',
+      'number': _aiHelplineDisplay,
+      'desc': 'Direct counsellor support line',
+      'icon': Icons.support_agent_rounded,
     },
     {
       'name': 'Farmer Distress Helpline',
@@ -93,6 +104,22 @@ class _SuicidePreventionScreenState
     }
   }
 
+  Future<void> _openWhatsAppSupport() async {
+    final appUri = Uri.parse(_whatsAppScheme);
+    final webUri = Uri.parse(_whatsAppFallback);
+    if (await canLaunchUrl(appUri)) {
+      await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (mounted) {
+      context.showSnack('Could not open WhatsApp', isError: true);
+    }
+  }
+
   void _navigateToAiCounselor() {
     context.push('${RoutePaths.chat}?agent=mental_health');
   }
@@ -120,8 +147,7 @@ class _SuicidePreventionScreenState
     }
   }
 
-  bool get _showUrgentBanner =>
-      _selectedMood != null && _selectedMood! >= 3;
+  bool get _showUrgentBanner => _selectedMood != null && _selectedMood! >= 3;
 
   // ── Build ──────────────────────────────────────────────────────────────
 
@@ -137,7 +163,9 @@ class _SuicidePreventionScreenState
         : Colors.white.withValues(alpha: 0.88);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -186,6 +214,14 @@ class _SuicidePreventionScreenState
                         ],
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
+                    _topAction(
+                      icon: Icons.chat_outlined,
+                      color: AppColors.primaryDark,
+                      background: iconBg,
+                      onTap: _openWhatsAppSupport,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     _topAction(
                       icon: Icons.info_outline_rounded,
                       color: AppColors.primaryDark,
@@ -261,9 +297,7 @@ class _SuicidePreventionScreenState
           Container(
             decoration: BoxDecoration(
               color: context.appColors.card.withValues(alpha: 0.7),
-              border: Border.all(
-                color: context.appColors.border,
-              ),
+              border: Border.all(color: context.appColors.border),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -350,8 +384,9 @@ class _SuicidePreventionScreenState
                         label,
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: selected
                               ? Color(mood['color'] as int)
                               : context.appColors.textSecondary,
@@ -369,8 +404,9 @@ class _SuicidePreventionScreenState
               width: double.infinity,
               padding: AppSpacing.allMd,
               decoration: BoxDecoration(
-                color: Color(_moods[_selectedMood!]['color'] as int)
-                    .withValues(alpha: 0.08),
+                color: Color(
+                  _moods[_selectedMood!]['color'] as int,
+                ).withValues(alpha: 0.08),
                 borderRadius: AppRadius.mdAll,
               ),
               child: Text(
@@ -398,8 +434,11 @@ class _SuicidePreventionScreenState
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: AppColors.danger, size: 28),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.danger,
+            size: 28,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -435,9 +474,7 @@ class _SuicidePreventionScreenState
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.mdAll,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
             ),
           ),
         ],
@@ -492,9 +529,7 @@ class _SuicidePreventionScreenState
                   ),
                   minimumSize: const Size(40, 40),
                   padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.mdAll,
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
                 ),
                 child: const Icon(Icons.call, size: 18),
               ),
@@ -577,22 +612,55 @@ class _SuicidePreventionScreenState
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _navigateToAiCounselor,
-              icon: const Icon(Icons.chat_bubble_rounded),
-              label: Text('mental_health.chat'.tr()),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.info,
-                side: BorderSide(color: AppColors.info.withValues(alpha: 0.5)),
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.md,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadius.mdAll,
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _navigateToAiCounselor,
+                  icon: const Icon(Icons.chat_bubble_rounded),
+                  label: Text('mental_health.chat'.tr()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: BorderSide(
+                      color: AppColors.info.withValues(alpha: 0.5),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _callNumber(_aiHelplineDial),
+                  icon: const Icon(Icons.call_rounded),
+                  label: const Text('Call AI Helpline'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: BorderSide(
+                      color: AppColors.info.withValues(alpha: 0.5),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Direct helpline: $_aiHelplineDisplay',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.appColors.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -606,7 +674,7 @@ class _SuicidePreventionScreenState
               'mental_health.disclaimer'.tr().isNotEmpty
                   ? 'mental_health.disclaimer'.tr()
                   : 'This AI is not a replacement for professional help. '
-                      'In an emergency, please call a helpline.',
+                        'In an emergency, please call a helpline.',
               style: context.textTheme.bodySmall?.copyWith(
                 color: context.appColors.textSecondary,
                 fontStyle: FontStyle.italic,
@@ -649,8 +717,11 @@ class _SuicidePreventionScreenState
                   color: AppColors.info.withValues(alpha: 0.12),
                   borderRadius: AppRadius.mdAll,
                 ),
-                child: const Icon(Icons.groups_rounded,
-                    color: AppColors.info, size: 24),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: AppColors.info,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -683,7 +754,11 @@ class _SuicidePreventionScreenState
   }
 
   Widget _resourceCard(
-      IconData icon, String title, String desc, String number) {
+    IconData icon,
+    String title,
+    String desc,
+    String number,
+  ) {
     return _buildChoiceEffectCard(
       padding: AppSpacing.allMd,
       child: Row(
@@ -763,17 +838,15 @@ class _SuicidePreventionScreenState
         border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : AppColors.primaryDark)
-                .withValues(alpha: isDark ? 0.22 : 0.08),
+            color: (isDark ? Colors.black : AppColors.primaryDark).withValues(
+              alpha: isDark ? 0.22 : 0.08,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Padding(
-        padding: padding ?? AppSpacing.allLg,
-        child: child,
-      ),
+      child: Padding(padding: padding ?? AppSpacing.allLg, child: child),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_client.dart';
@@ -16,10 +17,13 @@ class EquipmentService {
 
   String _cacheKey(String base, [Map<String, dynamic>? params]) {
     if (params == null || params.isEmpty) return base;
-    final normalized = params.entries
-        .where((e) => e.value != null && e.value.toString().trim().isNotEmpty)
-        .toList(growable: false)
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final normalized =
+        params.entries
+            .where(
+              (e) => e.value != null && e.value.toString().trim().isNotEmpty,
+            )
+            .toList(growable: false)
+          ..sort((a, b) => a.key.compareTo(b.key));
     if (normalized.isEmpty) return base;
     final suffix = normalized
         .map(
@@ -146,7 +150,8 @@ class EquipmentService {
     String? contactPhone,
     bool? available,
   }) async {
-    final resolvedStatus = status ?? (available == false ? 'unavailable' : 'available');
+    final resolvedStatus =
+        status ?? (available == false ? 'unavailable' : 'available');
     final res = await _client.post(
       ApiEndpoints.equipment,
       data: {
@@ -186,7 +191,9 @@ class EquipmentService {
 
   /// PUT /api/v1/equipment/{id} → update equipment.
   Future<Map<String, dynamic>> updateEquipment(
-      String id, Map<String, dynamic> data) async {
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     final res = await _client.put(ApiEndpoints.equipmentById(id), data: data);
     await _invalidateEquipmentCaches(equipmentId: id);
     await _invalidateRentalCaches();
@@ -222,8 +229,7 @@ class EquipmentService {
   }
 
   /// POST /api/v1/equipment/rentals/ → create rental.
-  Future<Map<String, dynamic>> createRental(
-      Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createRental(Map<String, dynamic> data) async {
     final res = await _client.post(ApiEndpoints.rentals, data: data);
     final payload = _mapFromResponse(res.data);
     await _invalidateRentalCaches(rentalId: payload['id']?.toString());
@@ -323,8 +329,7 @@ class EquipmentService {
               .toList(growable: false);
         }
         if (data is Map && data['categories'] is Map) {
-          return (data['categories'] as Map)
-              .keys
+          return (data['categories'] as Map).keys
               .map((e) => e.toString())
               .toList(growable: false);
         }
@@ -352,7 +357,9 @@ class EquipmentService {
       forceRefresh: forceRefresh,
       ttlSeconds: _ttlMedium,
       request: () async {
-        final res = await _client.get(ApiEndpoints.equipmentRentalByCategory(category));
+        final res = await _client.get(
+          ApiEndpoints.equipmentRentalByCategory(category),
+        );
         return _listFromResponse(res.data, primaryField: 'equipment');
       },
       fromCache: _listFromResponse,
@@ -372,7 +379,9 @@ class EquipmentService {
       forceRefresh: forceRefresh,
       ttlSeconds: _ttlMedium,
       request: () async {
-        final res = await _client.get(ApiEndpoints.equipmentRentalByState(state));
+        final res = await _client.get(
+          ApiEndpoints.equipmentRentalByState(state),
+        );
         return _listFromResponse(res.data, primaryField: 'equipment');
       },
       fromCache: _listFromResponse,
@@ -421,6 +430,7 @@ class EquipmentService {
     String? state,
     String? district,
     int limit = 20,
+    Duration receiveTimeout = const Duration(seconds: 12),
     bool preferCache = true,
     bool forceRefresh = false,
   }) async {
@@ -444,6 +454,7 @@ class EquipmentService {
             if (state != null && state.isNotEmpty) 'state': state,
             if (district != null && district.isNotEmpty) 'district': district,
           },
+          options: Options(receiveTimeout: receiveTimeout),
         );
         return _mapFromResponse(res.data);
       },
@@ -482,7 +493,9 @@ class EquipmentService {
       forceRefresh: forceRefresh,
       ttlSeconds: _ttlLong,
       request: () async {
-        final res = await _client.get('/api/v1/equipment/rental-rates/chc-info');
+        final res = await _client.get(
+          '/api/v1/equipment/rental-rates/chc-info',
+        );
         return _mapFromResponse(res.data);
       },
       fromCache: _mapFromResponse,
@@ -537,6 +550,7 @@ class EquipmentService {
   Future<Map<String, dynamic>> getRateHistory(
     String equipmentName, {
     String? state,
+    Duration receiveTimeout = const Duration(seconds: 8),
     bool preferCache = true,
     bool forceRefresh = false,
   }) async {
@@ -554,12 +568,54 @@ class EquipmentService {
         final res = await _client.get(
           '/api/v1/equipment/rental-rates/rate-history',
           queryParameters: params,
+          options: Options(receiveTimeout: receiveTimeout),
         );
         return _mapFromResponse(res.data);
       },
       fromCache: _mapFromResponse,
       toCache: (value) => value,
     );
+  }
+
+  Future<void> warmRentalRateDetailBundle({
+    required String equipmentName,
+    String? state,
+    String? district,
+  }) async {
+    try {
+      await Future.wait([
+        getRentalRateDetail(
+          equipmentName: equipmentName,
+          state: state,
+          district: district,
+          limit: 50,
+          preferCache: true,
+          forceRefresh: false,
+        ),
+        getRateHistory(
+          equipmentName,
+          state: state,
+          preferCache: true,
+          forceRefresh: false,
+        ),
+        getChcInfo(preferCache: true, forceRefresh: false),
+      ]);
+    } catch (_) {
+      // Best-effort prefetch should never block UI navigation.
+    }
+  }
+
+  Future<void> warmEquipmentListingDetail(String equipmentId) async {
+    if (equipmentId.trim().isEmpty) return;
+    try {
+      await getEquipmentById(
+        equipmentId,
+        preferCache: true,
+        forceRefresh: false,
+      );
+    } catch (_) {
+      // Best-effort prefetch should never block UI navigation.
+    }
   }
 }
 

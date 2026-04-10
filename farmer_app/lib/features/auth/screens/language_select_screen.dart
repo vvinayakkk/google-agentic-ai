@@ -90,9 +90,9 @@ class LanguageSelectScreen extends ConsumerWidget {
                     children: [
 
                   /// Title
-                  const Text(
-                    "Hello Farmer,",
-                    style: TextStyle(
+                  Text(
+                    'language_select.title'.tr(),
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: AppColors.lightText,
@@ -101,9 +101,9 @@ class LanguageSelectScreen extends ConsumerWidget {
 
                   const SizedBox(height: 6),
 
-                  const Text(
-                    "Please choose your language",
-                    style: TextStyle(
+                  Text(
+                    'language_select.subtitle'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       color: AppColors.lightTextSecondary,
                     ),
@@ -126,8 +126,8 @@ class LanguageSelectScreen extends ConsumerWidget {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: GestureDetector(
-                        onTap: () {
-                          ref
+                        onTap: () async {
+                          await ref
                               .read(localeProvider.notifier)
                               .setLocale(context, code);
                         },

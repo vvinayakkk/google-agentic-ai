@@ -5,15 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/livestock_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/loading_overlay.dart';
-import '../../weather/widgets/glass_widgets.dart';
 import 'animal_profile_screen.dart';
 
 class CattleScreen extends ConsumerStatefulWidget {
@@ -32,10 +30,15 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
   bool _aiLoading = false;
   bool _aiGenerated = false;
   bool _aiExpanded = false;
-  String _aiSummary = 'Generate AI overview to get herd actions tailored to your location.';
+  String _aiSummary =
+      'Generate AI overview to get herd actions tailored to your location.';
   String _aiDetails =
       'Uses your livestock mix, health status, and nearby profile context. Cached for 24 hours.';
   DateTime? _aiUpdatedAt;
+
+  // ─── shared style tokens ──────────────────────────────────────────────────
+  static const _textColor = AppColors.lightText;
+  static const _subColor = AppColors.lightTextSecondary;
 
   @override
   void initState() {
@@ -44,6 +47,8 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     _fetchLivestock();
   }
 
+  // ─── Data ─────────────────────────────────────────────────────────────────
+
   Future<void> _fetchLivestock() async {
     setState(() {
       _loading = true;
@@ -51,13 +56,19 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     });
     try {
       final items = await ref.read(livestockServiceProvider).listLivestock();
-      final profile = await ref.read(personalizationServiceProvider).getProfileContext();
+      final profile = await ref
+          .read(personalizationServiceProvider)
+          .getProfileContext();
       if (!mounted) return;
       setState(() {
         _livestock = items;
         _profile = profile;
         _loading = false;
       });
+
+      if (!_aiGenerated && !_aiLoading) {
+        _generateAiOverview(forceRefresh: false);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -66,6 +77,8 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
       });
     }
   }
+
+  // ─── AI overview ──────────────────────────────────────────────────────────
 
   Future<void> _loadCachedAiOverview() async {
     final cached = await ref
@@ -94,18 +107,29 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
           .sortNearby(profile: profile, items: _livestock)
           .take(8)
           .map((item) {
-        final type = (item['animal_type'] ?? item['name'] ?? 'animal').toString();
-        final breed = (item['breed'] ?? 'mixed').toString();
-        final health = (item['health_status'] ?? 'unknown').toString();
-        final count = (item['count'] ?? 1).toString();
-        return '$count x $type ($breed), health: $health';
-      }).toList(growable: false);
+            final type = (item['animal_type'] ?? item['name'] ?? 'animal')
+                .toString();
+            final breed = (item['breed'] ?? 'mixed').toString();
+            final health = (item['health_status'] ?? 'unknown').toString();
+            final count = (item['count'] ?? 1).toString();
+            return '$count x $type ($breed), health: $health';
+          })
+          .toList(growable: false);
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'cattle_overview_v1',
             pageName: 'Cattle Care',
             languageCode: context.locale.languageCode,
             nearbyData: nearby,
+            capabilities: const <String>[
+              'View herd list with animal type, breed, and health status',
+              'Add, edit, and delete cattle profiles from this screen',
+              'Plan vaccination, feed, and veterinary readiness tasks',
+              'Open AI chat for herd-specific management advice',
+              'Prepare weekly cattle care action plan from profile context',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -132,6 +156,8 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     final mm = dt.minute.toString().padLeft(2, '0');
     return 'Updated at $hh:$mm';
   }
+
+  // ─── Actions ──────────────────────────────────────────────────────────────
 
   Future<void> _deleteLivestock(String id) async {
     final confirmed = await showDialog<bool>(
@@ -184,14 +210,14 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
 
           return Padding(
             padding: EdgeInsets.only(
-              left: AppSpacing.xl,
-              right: AppSpacing.xl,
-              top: AppSpacing.xl,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl,
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Colors.white.withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
                 boxShadow: [
@@ -214,115 +240,79 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.lightTextSecondary.withValues(alpha: 0.35),
+                            color: AppColors.lightTextSecondary.withValues(
+                              alpha: 0.3,
+                            ),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: 16),
                       Text(
                         'cattle.add_cattle'.tr(),
                         style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
+                          color: AppColors.lightText,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Create a livestock profile synced to backend records.',
                         style: context.textTheme.bodySmall?.copyWith(
-                          color: context.appColors.textSecondary,
+                          color: AppColors.lightTextSecondary,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      TextField(
+                      const SizedBox(height: 20),
+                      _sheetField(
                         controller: typeC,
-                        decoration: InputDecoration(
-                          labelText: 'cattle.animal_type'.tr(),
-                          filled: true,
-                          fillColor: fieldBg,
-                          prefixIcon: const Icon(Icons.pets),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                        ),
+                        label: 'cattle.animal_type'.tr(),
+                        icon: Icons.pets,
+                        fieldBg: fieldBg,
+                        borderColor: borderColor,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
+                      const SizedBox(height: 12),
+                      _sheetField(
                         controller: breedC,
-                        decoration: InputDecoration(
-                          labelText: 'cattle.breed'.tr(),
-                          filled: true,
-                          fillColor: fieldBg,
-                          prefixIcon: const Icon(Icons.category),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                        ),
+                        label: 'cattle.breed'.tr(),
+                        icon: Icons.category,
+                        fieldBg: fieldBg,
+                        borderColor: borderColor,
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
+                            child: _sheetField(
                               controller: countC,
-                              decoration: InputDecoration(
-                                labelText: 'cattle.count'.tr(),
-                                filled: true,
-                                fillColor: fieldBg,
-                                prefixIcon: const Icon(Icons.tag),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide(color: borderColor),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide(color: borderColor),
-                                ),
-                              ),
+                              label: 'cattle.count'.tr(),
+                              icon: Icons.tag,
+                              fieldBg: fieldBg,
+                              borderColor: borderColor,
                               keyboardType: TextInputType.number,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: TextField(
+                            child: _sheetField(
                               controller: ageC,
-                              decoration: InputDecoration(
-                                labelText: 'cattle.age'.tr(),
-                                filled: true,
-                                fillColor: fieldBg,
-                                prefixIcon: const Icon(Icons.cake),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide(color: borderColor),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide(color: borderColor),
-                                ),
-                              ),
+                              label: 'cattle.age'.tr(),
+                              icon: Icons.cake,
+                              fieldBg: fieldBg,
+                              borderColor: borderColor,
                               keyboardType: TextInputType.number,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: 14),
                       Text(
                         'Health Status',
                         style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: AppColors.lightText,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -330,27 +320,37 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                           ChoiceChip(
                             label: const Text('Healthy'),
                             selected: healthStatus == 'healthy',
-                            onSelected: (_) => setLocal(() => healthStatus = 'healthy'),
-                            selectedColor: AppColors.success.withValues(alpha: 0.2),
+                            onSelected: (_) =>
+                                setLocal(() => healthStatus = 'healthy'),
+                            selectedColor: AppColors.success.withValues(
+                              alpha: 0.2,
+                            ),
                             side: BorderSide(color: borderColor),
                           ),
                           ChoiceChip(
                             label: const Text('Under Treatment'),
                             selected: healthStatus == 'under_treatment',
-                            onSelected: (_) => setLocal(() => healthStatus = 'under_treatment'),
-                            selectedColor: AppColors.warning.withValues(alpha: 0.2),
+                            onSelected: (_) => setLocal(
+                              () => healthStatus = 'under_treatment',
+                            ),
+                            selectedColor: AppColors.warning.withValues(
+                              alpha: 0.2,
+                            ),
                             side: BorderSide(color: borderColor),
                           ),
                           ChoiceChip(
                             label: const Text('Sick'),
                             selected: healthStatus == 'sick',
-                            onSelected: (_) => setLocal(() => healthStatus = 'sick'),
-                            selectedColor: AppColors.danger.withValues(alpha: 0.2),
+                            onSelected: (_) =>
+                                setLocal(() => healthStatus = 'sick'),
+                            selectedColor: AppColors.danger.withValues(
+                              alpha: 0.2,
+                            ),
                             side: BorderSide(color: borderColor),
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         height: 46,
@@ -366,6 +366,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(40),
                             ),
+                            elevation: 0,
                           ),
                           onPressed: () async {
                             if (typeC.text.isEmpty) {
@@ -408,9 +409,50 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     );
   }
 
+  Widget _sheetField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required Color fieldBg,
+    required Color borderColor,
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: AppColors.lightText),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(
+          color: AppColors.lightTextSecondary,
+          fontSize: 13,
+        ),
+        filled: true,
+        fillColor: fieldBg,
+        prefixIcon: Icon(icon, color: AppColors.primaryDark, size: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppColors.primaryDark.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openQuickAction(String topic) {
     final prompt = switch (topic) {
-      'vet' => 'Give me a 7-day preventive veterinary checklist for my livestock.',
+      'vet' =>
+        'Give me a 7-day preventive veterinary checklist for my livestock.',
       'feed' =>
         'Create a practical feed plan for my herd for the next 7 days with low-cost options.',
       _ => 'Give me cattle management advice for this week.',
@@ -419,83 +461,110 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
     context.push('${RoutePaths.chat}?agent=general&q=$encoded');
   }
 
-  Widget _summaryChip(
-    String label,
-    int count,
-    IconData icon,
-    BuildContext context,
-  ) {
-    final isDark = context.isDark;
-    final border = isDark ? Colors.white24 : Colors.black12;
+  void _openAiActionCard(String actionText) {
+    final prompt = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$prompt');
+  }
+
+  // ─── Shared card builder (matches CropDoctorScreen exactly) ──────────────
+
+  Widget _glassCard({required Widget child, EdgeInsetsGeometry? padding}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      width: double.infinity,
       decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border),
-        color: Colors.white.withValues(alpha: 0.06),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: border),
-            ),
-            child: Center(
-              child: Icon(icon, size: 14, color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$count',
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                label,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
-              ),
-            ],
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(14),
+        child: child,
       ),
     );
   }
 
+  // ─── Header icon button (same as CropDoctorScreen) ───────────────────────
+
+  Widget _headerAction({
+    required IconData icon,
+    VoidCallback? onTap,
+    bool loading = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primaryDark,
+                ),
+              )
+            : Icon(icon, color: AppColors.primaryDark, size: 20),
+      ),
+    );
+  }
+
+  // ─── AI overview card ─────────────────────────────────────────────────────
+
+  Widget _aiOverviewSection() {
+    return AiOverviewCard(
+      title: 'AI Herd Advisory',
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _aiUpdatedLabel(),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      margin: EdgeInsets.zero,
+      cardColor: Colors.white.withValues(alpha: 0.56),
+      textColor: _textColor,
+      subColor: _subColor,
+      onActionTap: _openAiActionCard,
+    );
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    // compute counts
+
+    // counts
     final counts = <String, int>{};
     for (final a in _livestock) {
       final t = (a['animal_type']?.toString() ?? 'Unknown').toLowerCase();
+      final n = a['count'] is int ? a['count'] as int : 1;
       if (t.contains('cow') || t.contains('cattle')) {
-        counts['Cows'] =
-            (counts['Cows'] ?? 0) + (a['count'] is int ? a['count'] as int : 1);
+        counts['Cows'] = (counts['Cows'] ?? 0) + n;
       } else if (t.contains('buffalo')) {
-        counts['Buffalo'] =
-            (counts['Buffalo'] ?? 0) +
-            (a['count'] is int ? a['count'] as int : 1);
+        counts['Buffalo'] = (counts['Buffalo'] ?? 0) + n;
       } else if (t.contains('goat')) {
-        counts['Goats'] =
-            (counts['Goats'] ?? 0) +
-            (a['count'] is int ? a['count'] as int : 1);
+        counts['Goats'] = (counts['Goats'] ?? 0) + n;
       } else {
-        counts['Other'] =
-            (counts['Other'] ?? 0) +
-            (a['count'] is int ? a['count'] as int : 1);
+        counts['Other'] = (counts['Other'] ?? 0) + n;
       }
     }
 
-    // try to find upcoming vaccine
+    // upcoming vaccine
     Map<String, dynamic>? dueAnimal;
     for (final a in _livestock) {
       String? cand;
@@ -510,8 +579,7 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
       if (cand == null) continue;
       final dt = DateTime.tryParse(cand);
       if (dt == null) continue;
-      final diff = dt.difference(DateTime.now()).inDays;
-      if (diff <= 7) {
+      if (dt.difference(DateTime.now()).inDays <= 7) {
         dueAnimal = a;
         break;
       }
@@ -529,497 +597,415 @@ class _CattleScreenState extends ConsumerState<CattleScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isDark
-                ? [AppColors.darkBackground, AppColors.darkSurface]
-                : [AppColors.lightBackground, AppColors.lightSurface],
+                ? <Color>[AppColors.darkBackground, AppColors.darkSurface]
+                : <Color>[AppColors.lightBackground, AppColors.lightSurface],
           ),
         ),
         child: SafeArea(
           bottom: false,
-          child: _loading
-              ? const LoadingState(itemCount: 5)
-              : _error != null
-              ? ErrorView(message: _error!, onRetry: _fetchLivestock)
-              : RefreshIndicator(
-                  onRefresh: _fetchLivestock,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: AppSpacing.allLg,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // top bar
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
-                          child: SizedBox(
-                            height: 56,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: GlassIconButton(
-                                    icon: const Icon(
-                                      Icons.arrow_back,
-                                      size: 20,
-                                    ),
-                                    onPressed: () =>
-                                        Navigator.of(context).maybePop(),
-                                  ),
-                                ),
-                                Text(
-                                  'My Livestock',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        color: AppColors.lightText,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                ),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: GestureDetector(
-                                    onTap: _showAddCattleSheet,
-                                    child: Container(
-                                      height: 44,
-                                      width: 44,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.primaryDark
-                                                .withValues(alpha: 0.08),
-                                            blurRadius: 6,
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+          child: Column(
+            children: [
+              // ── Header ───────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: SizedBox(
+                  height: 56,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _headerAction(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: () => Navigator.of(context).maybePop(),
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // summary chips
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.only(left: 24),
-                          child: Row(
-                            children: [
-                              _summaryChip(
-                                'Cows',
-                                counts['Cows'] ?? 0,
-                                Icons.pets,
-                                context,
-                              ),
-                              const SizedBox(width: 8),
-                              _summaryChip(
-                                'Buffalo',
-                                counts['Buffalo'] ?? 0,
-                                Icons.grass,
-                                context,
-                              ),
-                              const SizedBox(width: 8),
-                              _summaryChip(
-                                'Goats',
-                                counts['Goats'] ?? 0,
-                                Icons.energy_savings_leaf,
-                                context,
-                              ),
-                              const SizedBox(width: 8),
-                              _summaryChip(
-                                'Other',
-                                counts['Other'] ?? 0,
-                                Icons.list,
-                                context,
-                              ),
-                            ],
-                          ),
+                      ),
+                      Text(
+                        'My Livestock',
+                        style: context.textTheme.titleLarge?.copyWith(
+                          color: _textColor,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // alert
-                        if (dueAnimal != null) ...[
-                          GlassCard(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withValues(alpha: 0.85),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${dueAnimal['name'] ?? dueAnimal['animal_type'] ?? 'Animal'} — FMD vaccine due',
-                                        style: context.textTheme.bodyLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Last checked: ${dueAnimal['last_checked'] ?? '3h ago'}',
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: context
-                                                  .appColors
-                                                  .textSecondary,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                  onPressed: () {
-                                    final name =
-                                        (dueAnimal!['name'] ??
-                                                dueAnimal['animal_type'] ??
-                                                'my animal')
-                                            .toString();
-                                    final query = Uri.encodeQueryComponent(
-                                      'Help me schedule a vet visit for $name and list immediate pre-visit checks.',
-                                    );
-                                    context.push(
-                                      '${RoutePaths.chat}?agent=general&q=$query',
-                                    );
-                                  },
-                                  child: Row(
-                                    children: const [
-                                      Text('Schedule Vet'),
-                                      SizedBox(width: 6),
-                                      Icon(Icons.arrow_forward, size: 16),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                        ],
-
-                        // AI overview with manual generation.
-                        GlassCard(
-                          featured: true,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.auto_awesome,
-                                    color: AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'AI Herd Advisory',
-                                    style: context.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                _aiExpanded ? _aiDetails : _aiSummary,
-                                style: context.textTheme.bodyMedium?.copyWith(
-                                  height: 1.45,
-                                ),
-                                maxLines: _aiExpanded ? null : 4,
-                                overflow: _aiExpanded
-                                    ? TextOverflow.visible
-                                    : TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              if (_aiLoading)
-                                Row(
-                                  children: [
-                                    const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      'Generating recommendations...',
-                                      style: context.textTheme.bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                _aiUpdatedLabel(),
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: context.appColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: _aiLoading
-                                          ? null
-                                          : () => _generateAiOverview(forceRefresh: true),
-                                      icon: Icon(
-                                        _aiGenerated ? Icons.refresh : Icons.auto_awesome,
-                                      ),
-                                      label: Text(
-                                        _aiGenerated
-                                            ? 'Generate Fresh'
-                                            : 'Generate AI Overview',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white.withValues(alpha: 0.85),
-                                        foregroundColor: AppColors.lightText,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(40),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      setState(() => _aiExpanded = !_aiExpanded);
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(40),
-                                      ),
-                                    ),
-                                    child: Text(_aiExpanded ? 'Less' : 'More'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // quick actions
-                        Row(
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: _QuickActionCard(
-                                title: 'Ask Vet AI',
-                                icon: Icons.support_agent,
-                                color: AppColors.primary,
-                                onTap: () => _openQuickAction('vet'),
-                              ),
+                            _headerAction(
+                              icon: Icons.refresh_rounded,
+                              onTap: _loading ? null : _fetchLivestock,
+                              loading: _loading,
                             ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: _QuickActionCard(
-                                title: 'Feed Planner',
-                                icon: Icons.restaurant,
-                                color: AppColors.success,
-                                onTap: () => _openQuickAction('feed'),
-                              ),
+                            const SizedBox(width: 8),
+                            _headerAction(
+                              icon: Icons.add_rounded,
+                              onTap: _showAddCattleSheet,
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.lg),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
 
-                        // header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // ── Body ─────────────────────────────────────────────────────
+              Expanded(
+                child: _error != null && _livestock.isEmpty
+                    ? ErrorView(message: _error!, onRetry: _fetchLivestock)
+                    : RefreshIndicator(
+                        onRefresh: _fetchLivestock,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Your Animals',
-                                style: context.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                              if (_loading)
+                                LinearProgressIndicator(
+                                  minHeight: 2,
+                                  color: AppColors.primaryDark,
+                                  backgroundColor: AppColors.primaryDark
+                                      .withValues(alpha: 0.1),
+                                ),
+                              if (_loading) const SizedBox(height: 12),
+
+                              // Summary chips
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _summaryChip(
+                                      'Cows',
+                                      counts['Cows'] ?? 0,
+                                      Icons.pets,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _summaryChip(
+                                      'Buffalo',
+                                      counts['Buffalo'] ?? 0,
+                                      Icons.grass,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _summaryChip(
+                                      'Goats',
+                                      counts['Goats'] ?? 0,
+                                      Icons.energy_savings_leaf,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _summaryChip(
+                                      'Other',
+                                      counts['Other'] ?? 0,
+                                      Icons.list,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                'SORT: RECENT',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: context.appColors.textSecondary,
+                              const SizedBox(height: 14),
+
+                              // Vaccine alert
+                              if (dueAnimal != null) ...[
+                                _glassCard(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.warning.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.warning.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: AppColors.warning,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${dueAnimal['name'] ?? dueAnimal['animal_type'] ?? 'Animal'} — FMD vaccine due',
+                                              style: context
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: _textColor,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              'Last checked: ${dueAnimal['last_checked'] ?? '3h ago'}',
+                                              style: context.textTheme.bodySmall
+                                                  ?.copyWith(color: _subColor),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      SizedBox(
+                                        height: 36,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            final name =
+                                                (dueAnimal!['name'] ??
+                                                        dueAnimal['animal_type'] ??
+                                                        'my animal')
+                                                    .toString();
+                                            final q = Uri.encodeQueryComponent(
+                                              'Help me schedule a vet visit for $name and list immediate pre-visit checks.',
+                                            );
+                                            context.push(
+                                              '${RoutePaths.chat}?agent=general&q=$q',
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppColors.primaryDark,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(40),
+                                            ),
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Schedule Vet',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+
+                              // AI overview
+                              _aiOverviewSection(),
+                              const SizedBox(height: 14),
+
+                              // Quick actions
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _quickActionCard(
+                                      title: 'Ask Vet AI',
+                                      icon: Icons.support_agent,
+                                      onTap: () => _openQuickAction('vet'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _quickActionCard(
+                                      title: 'Feed Planner',
+                                      icon: Icons.restaurant,
+                                      onTap: () => _openQuickAction('feed'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+
+                              // Section header
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Your Animals',
+                                    style: context.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: _textColor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  Text(
+                                    '${_livestock.length} total',
+                                    style: context.textTheme.bodySmall
+                                        ?.copyWith(color: _subColor),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Animal list
+                              if (_livestock.isEmpty && !_loading)
+                                _glassCard(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 52,
+                                        height: 52,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.75,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.85,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.pets_outlined,
+                                          color: AppColors.primaryDark,
+                                          size: 26,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'cattle.no_cattle'.tr(),
+                                        style: context.textTheme.titleSmall
+                                            ?.copyWith(
+                                              color: _textColor,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'cattle.no_animals'.tr(),
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(color: _subColor),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                ..._livestock.map(
+                                  (animal) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        final id =
+                                            animal['livestock_id']
+                                                ?.toString() ??
+                                            animal['id']?.toString() ??
+                                            '';
+                                        if (id.isNotEmpty) {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  AnimalProfileScreen(
+                                                    livestockId: id,
+                                                  ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: _CattleCard(
+                                        data: animal,
+                                        onDelete: () => _deleteLivestock(
+                                          animal['livestock_id']?.toString() ??
+                                              animal['id']?.toString() ??
+                                              '',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 14),
+
+                              // Add new animal button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton.icon(
+                                  onPressed: _showAddCattleSheet,
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: const Text(
+                                    'Add New Animal',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryDark,
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      width: 1.2,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(40),
+                                    ),
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.56,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Bottom info card
+                              _glassCard(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.75,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.85,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.info_outline,
+                                        color: AppColors.primaryDark,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Manage herd health and productivity effortlessly with AI-driven insights.',
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: _subColor,
+                                              height: 1.4,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // list
-                        if (_livestock.isEmpty)
-                          EmptyView(
-                            icon: Icons.pets_outlined,
-                            title: 'cattle.no_cattle'.tr(),
-                            subtitle: 'cattle.no_animals'.tr(),
-                          )
-                        else
-                          ..._livestock.map(
-                            (animal) => Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.md,
-                              ),
-                              child: GestureDetector(
-                                onTap: () {
-                                  final id =
-                                      animal['livestock_id']?.toString() ??
-                                      animal['id']?.toString() ??
-                                      '';
-                                  if (id.isNotEmpty)
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => AnimalProfileScreen(
-                                          livestockId: id,
-                                        ),
-                                      ),
-                                    );
-                                },
-                                child: _CattleCard(
-                                  data: animal,
-                                  onDelete: () => _deleteLivestock(
-                                    animal['livestock_id']?.toString() ??
-                                        animal['id']?.toString() ??
-                                        '',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        const SizedBox(height: AppSpacing.xl),
-
-                        // add new animal
-                        GestureDetector(
-                          onTap: _showAddCattleSheet,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.55,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Add New Animal',
-                                  style: context.textTheme.bodyLarge?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: AppSpacing.xl),
-
-                        // bottom banner
-                        GlassCard(
-                          featured: true,
-                          padding: const EdgeInsets.all(12),
-                          child: Container(
-                            height: 110,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.primary.withValues(alpha: 0.22),
-                                  Colors.transparent,
-                                ],
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Manage herd health and productivity effortlessly.',
-                                style: context.textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 120),
-                      ],
-                    ),
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-// Quick Action Card (kept lightweight)
-class _QuickActionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: context.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      ),
               ),
             ],
           ),
@@ -1027,9 +1013,122 @@ class _QuickActionCard extends StatelessWidget {
       ),
     );
   }
+
+  // ─── Widget helpers ───────────────────────────────────────────────────────
+
+  Widget _summaryChip(String label, int count, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+            ),
+            child: Icon(icon, size: 15, color: AppColors.primaryDark),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$count',
+                style: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: _textColor,
+                ),
+              ),
+              Text(
+                label,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: _subColor,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickActionCard({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.56),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.8),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryDark.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primaryDark.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primaryDark.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Icon(icon, color: AppColors.primaryDark, size: 20),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: _textColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// Cattle Card
+// ─── Cattle card ──────────────────────────────────────────────────────────────
+
 class _CattleCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final VoidCallback onDelete;
@@ -1057,67 +1156,89 @@ class _CattleCard extends StatelessWidget {
     final count = data['count'] ?? 1;
     final ageMonths = data['age_months'];
     final health = data['health_status']?.toString() ?? 'healthy';
+    final hColor = _healthColor(health);
 
-    return GlassCard(
+    return Container(
       padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: AppRadius.smAll,
+              color: Colors.white.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
             ),
-            child: const Icon(Icons.pets, color: AppColors.primary, size: 24),
+            child: const Icon(
+              Icons.pets,
+              color: AppColors.primaryDark,
+              size: 22,
+            ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   animalType.capitalize,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.lightText,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   [
                     if (breed?.isNotEmpty == true) breed!,
-                    '${'cattle.count'.tr()}: $count',
-                    if (ageMonths != null) '$ageMonths ${'common.months'.tr()}',
-                  ].join(' • '),
+                    'Count: $count',
+                    if (ageMonths != null) '$ageMonths months',
+                  ].join(' · '),
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: context.appColors.textSecondary,
+                    color: AppColors.lightTextSecondary,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _healthColor(health).withValues(alpha: 0.1),
-              borderRadius: AppRadius.smAll,
+              color: hColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: hColor.withValues(alpha: 0.25)),
             ),
             child: Text(
               health.capitalize,
-              style: context.textTheme.labelSmall?.copyWith(
-                color: _healthColor(health),
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                color: hColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
           IconButton(
             icon: const Icon(
               Icons.delete_outline,
-              size: 20,
-              color: AppColors.danger,
+              size: 18,
+              color: AppColors.lightTextSecondary,
             ),
             onPressed: onDelete,
             tooltip: 'common.delete'.tr(),

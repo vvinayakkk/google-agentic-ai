@@ -18,6 +18,7 @@ import '../../../core/utils/extensions.dart';
 import '../../../shared/models/equipment_model.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../weather/widgets/glass_widgets.dart';
@@ -35,10 +36,12 @@ class RentalRateDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<RentalRateDetailScreen> createState() => _RentalRateDetailScreenState();
+  ConsumerState<RentalRateDetailScreen> createState() =>
+      _RentalRateDetailScreenState();
 }
 
-class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen> {
+class _RentalRateDetailScreenState
+    extends ConsumerState<RentalRateDetailScreen> {
   bool _loading = true;
   bool _refreshing = false;
   bool _filtersExpanded = false;
@@ -127,39 +130,88 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
 
     try {
       final svc = ref.read(equipmentServiceProvider);
-      final detail = await svc.getRentalRateDetail(
+      var detail = await svc.getRentalRateDetail(
         equipmentName: widget.equipmentName,
         state: _selectedState,
         limit: 50,
         preferCache: !forceRefresh,
         forceRefresh: forceRefresh,
       );
-      if (!mounted) return;
-      final history = await svc.getRateHistory(
-        widget.equipmentName,
-        state: _selectedState,
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
-      final chc = await svc.getChcInfo(
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
+
+      var providersJson =
+          (detail['providers'] as List?)?.cast<Map<String, dynamic>>() ??
+          const [];
+
+      if (providersJson.isEmpty &&
+          _selectedState != null &&
+          _selectedState!.isNotEmpty) {
+        detail = await svc.getRentalRateDetail(
+          equipmentName: widget.equipmentName,
+          limit: 50,
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        );
+        providersJson =
+            (detail['providers'] as List?)?.cast<Map<String, dynamic>>() ??
+            const [];
+      }
+
       if (!mounted) return;
 
-      final providersJson = (detail['providers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      final providers = providersJson.map(EquipmentProvider.fromJson).toList(growable: false);
-      final summary = RateSummary.fromJson((detail['rate_summary'] as Map?)?.cast<String, dynamic>() ?? const {});
-
-      final realHistory = (history['history'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      final hasReal = history['has_real_data'] == true;
+      final providers = providersJson
+          .map(EquipmentProvider.fromJson)
+          .toList(growable: false);
+      final summary = RateSummary.fromJson(
+        (detail['rate_summary'] as Map?)?.cast<String, dynamic>() ?? const {},
+      );
 
       setState(() {
         _providers = providers;
         _rateSummary = summary;
+        _loading = false;
+        _refreshing = true;
+      });
+
+      if (!_aiGenerated && !_aiLoading) {
+        _generateAiOverview(forceRefresh: false);
+      }
+
+      final historyFuture = svc
+          .getRateHistory(
+            widget.equipmentName,
+            state: _selectedState,
+            preferCache: !forceRefresh,
+            forceRefresh: forceRefresh,
+          )
+          .catchError(
+            (_) => const <String, dynamic>{
+              'has_real_data': false,
+              'history': <Map<String, dynamic>>[],
+            },
+          );
+
+      final chcFuture = svc
+          .getChcInfo(preferCache: !forceRefresh, forceRefresh: forceRefresh)
+          .catchError(
+            (_) => const <String, dynamic>{'chc': <String, dynamic>{}},
+          );
+
+      final secondary = await Future.wait([historyFuture, chcFuture]);
+      if (!mounted) return;
+
+      final history = secondary[0] as Map<String, dynamic>;
+      final chc = secondary[1] as Map<String, dynamic>;
+
+      final realHistory =
+          (history['history'] as List?)?.cast<Map<String, dynamic>>() ??
+          const [];
+      final hasReal = history['has_real_data'] == true;
+
+      setState(() {
         _hasRealHistory = hasReal;
-        _rateHistory = hasReal ? realHistory : _simulatedHistory(summary.dailyMin ?? 0);
+        _rateHistory = hasReal
+            ? realHistory
+            : _simulatedHistory(summary.dailyMin ?? 0);
         _chcInfo = (chc['chc'] as Map?)?.cast<String, dynamic>() ?? const {};
         _loading = false;
         _refreshing = false;
@@ -174,13 +226,18 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
         _loading = false;
       });
       if (hasSnapshot) {
-        context.showSnack('Unable to sync latest rates. Showing recent snapshot.', isError: true);
+        context.showSnack(
+          'Unable to sync latest rates. Showing recent snapshot.',
+          isError: true,
+        );
       }
     }
   }
 
   Future<void> _loadCachedAiOverview() async {
-    final cached = await ref.read(aiOverviewServiceProvider).getCached(_aiCacheKey);
+    final cached = await ref
+        .read(aiOverviewServiceProvider)
+        .getCached(_aiCacheKey);
     if (!mounted || cached == null) return;
     setState(() {
       _aiSummary = cached.summary;
@@ -222,14 +279,25 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
         final period = (row['period'] ?? '').toString();
         final rate = (row['rate_daily'] as num?)?.toDouble();
         if (period.isEmpty || rate == null) continue;
-        snippets.add('Trend point: $period daily rate INR ${rate.toStringAsFixed(0)}.');
+        snippets.add(
+          'Trend point: $period daily rate INR ${rate.toStringAsFixed(0)}.',
+        );
       }
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: _aiCacheKey,
             pageName: 'Rental Rate Detail',
             languageCode: context.locale.languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Compare providers by daily and hourly rates on this page',
+              'Filter by state and sort providers by price or availability',
+              'Open call or WhatsApp for selected provider',
+              'Submit rental request directly from this page',
+              'Ask AI in chat for negotiation and booking checklist',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -256,13 +324,20 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     return 'Updated at $hh:$mm';
   }
 
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
+  }
+
   List<Map<String, dynamic>> _simulatedHistory(double baseDaily) {
     final now = DateTime.now();
     final safeBase = baseDaily <= 0 ? 2000 : baseDaily;
     final rows = <Map<String, dynamic>>[];
     final name = widget.equipmentName.toLowerCase();
     final seed = name.codeUnits.fold<int>(0, (acc, e) => (acc * 31 + e) % 9973);
-    final basePeakMonth = name.contains('irrigation') || name.contains('pump') ? 6 : 11;
+    final basePeakMonth = name.contains('irrigation') || name.contains('pump')
+        ? 6
+        : 11;
     final peakMonth = ((basePeakMonth + (seed % 4) - 2) % 12) + 1;
 
     for (int i = 23; i >= 0; i--) {
@@ -271,9 +346,10 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
       final seasonal = math.sin((12 - monthDist) / 12 * math.pi);
       final secondaryWave = math.sin(((i + (seed % 9)) / 6) * math.pi);
       final monthNoise = (((seed + (i * 37)) % 21) - 10) / 100;
-      final multiplier = (0.82 + (0.2 * seasonal) + (0.06 * secondaryWave) + monthNoise)
-          .clamp(0.62, 1.25)
-          .toDouble();
+      final multiplier =
+          (0.82 + (0.2 * seasonal) + (0.06 * secondaryWave) + monthNoise)
+              .clamp(0.62, 1.25)
+              .toDouble();
       final value = safeBase * multiplier;
       rows.add({
         'period': DateFormat('yyyy-MM').format(d),
@@ -303,7 +379,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   Future<void> _share() async {
     final minDaily = _rateSummary.dailyMin?.toStringAsFixed(0) ?? '--';
     final maxDaily = _rateSummary.dailyMax?.toStringAsFixed(0) ?? '--';
-    await Share.share('Check ${widget.equipmentName} rental rates: ₹$minDaily–₹$maxDaily/day on KisanKiAwaaz.');
+    await Share.share(
+      'Check ${widget.equipmentName} rental rates: ₹$minDaily–₹$maxDaily/day on KisanKiAwaaz.',
+    );
   }
 
   Future<void> _showRentalRequestSheet() async {
@@ -311,24 +389,26 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     DateTime? endDate;
     String messageText = '';
     final providerOptions = _sortedProviders;
-    final stateOptions = providerOptions
-        .map((p) => p.location.state.trim())
-        .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList(growable: false)
-      ..sort();
+    final stateOptions =
+        providerOptions
+            .map((p) => p.location.state.trim())
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList(growable: false)
+          ..sort();
     String? selectedState = stateOptions.isNotEmpty ? stateOptions.first : null;
     List<String> districtOptionsForState(String? state) {
       final rows = providerOptions.where((p) {
         if (state == null || state.isEmpty) return true;
         return p.location.state.trim() == state;
       });
-      final districts = rows
-          .map((p) => p.location.district.trim())
-          .where((d) => d.isNotEmpty)
-          .toSet()
-          .toList(growable: false)
-        ..sort();
+      final districts =
+          rows
+              .map((p) => p.location.district.trim())
+              .where((d) => d.isNotEmpty)
+              .toSet()
+              .toList(growable: false)
+            ..sort();
       return districts;
     }
 
@@ -357,9 +437,17 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Request Rental', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(
+                      'Request Rental',
+                      style: context.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    Text(widget.equipmentName, style: context.textTheme.bodyLarge),
+                    Text(
+                      widget.equipmentName,
+                      style: context.textTheme.bodyLarge,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     if (providerOptions.isNotEmpty) ...[
                       DropdownButtonFormField<String>(
@@ -380,25 +468,41 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                         onChanged: (v) {
                           setLocal(() {
                             selectedState = v;
-                            final districtOptions = districtOptionsForState(selectedState);
-                            selectedDistrict = districtOptions.isNotEmpty ? districtOptions.first : null;
-                            final filtered = providerOptions.where((p) {
-                              final stateOk = selectedState == null || selectedState!.isEmpty
-                                  ? true
-                                  : p.location.state.trim() == selectedState;
-                              final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
-                                  ? true
-                                  : p.location.district.trim() == selectedDistrict;
-                              return stateOk && districtOk;
-                            }).toList(growable: false);
-                            selectedProviderId = filtered.isNotEmpty ? filtered.first.id.trim() : null;
+                            final districtOptions = districtOptionsForState(
+                              selectedState,
+                            );
+                            selectedDistrict = districtOptions.isNotEmpty
+                                ? districtOptions.first
+                                : null;
+                            final filtered = providerOptions
+                                .where((p) {
+                                  final stateOk =
+                                      selectedState == null ||
+                                          selectedState!.isEmpty
+                                      ? true
+                                      : p.location.state.trim() ==
+                                            selectedState;
+                                  final districtOk =
+                                      selectedDistrict == null ||
+                                          selectedDistrict!.isEmpty
+                                      ? true
+                                      : p.location.district.trim() ==
+                                            selectedDistrict;
+                                  return stateOk && districtOk;
+                                })
+                                .toList(growable: false);
+                            selectedProviderId = filtered.isNotEmpty
+                                ? filtered.first.id.trim()
+                                : null;
                           });
                         },
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Builder(
                         builder: (_) {
-                          final districtOptions = districtOptionsForState(selectedState);
+                          final districtOptions = districtOptionsForState(
+                            selectedState,
+                          );
                           return DropdownButtonFormField<String>(
                             value: selectedDistrict,
                             decoration: const InputDecoration(
@@ -417,16 +521,26 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                             onChanged: (v) {
                               setLocal(() {
                                 selectedDistrict = v;
-                                final filtered = providerOptions.where((p) {
-                                  final stateOk = selectedState == null || selectedState!.isEmpty
-                                      ? true
-                                      : p.location.state.trim() == selectedState;
-                                  final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
-                                      ? true
-                                      : p.location.district.trim() == selectedDistrict;
-                                  return stateOk && districtOk;
-                                }).toList(growable: false);
-                                selectedProviderId = filtered.isNotEmpty ? filtered.first.id.trim() : null;
+                                final filtered = providerOptions
+                                    .where((p) {
+                                      final stateOk =
+                                          selectedState == null ||
+                                              selectedState!.isEmpty
+                                          ? true
+                                          : p.location.state.trim() ==
+                                                selectedState;
+                                      final districtOk =
+                                          selectedDistrict == null ||
+                                              selectedDistrict!.isEmpty
+                                          ? true
+                                          : p.location.district.trim() ==
+                                                selectedDistrict;
+                                      return stateOk && districtOk;
+                                    })
+                                    .toList(growable: false);
+                                selectedProviderId = filtered.isNotEmpty
+                                    ? filtered.first.id.trim()
+                                    : null;
                               });
                             },
                           );
@@ -435,15 +549,22 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                       const SizedBox(height: AppSpacing.sm),
                       Builder(
                         builder: (_) {
-                          final scopedProviders = providerOptions.where((p) {
-                            final stateOk = selectedState == null || selectedState!.isEmpty
-                                ? true
-                                : p.location.state.trim() == selectedState;
-                            final districtOk = selectedDistrict == null || selectedDistrict!.isEmpty
-                                ? true
-                                : p.location.district.trim() == selectedDistrict;
-                            return stateOk && districtOk;
-                          }).toList(growable: false);
+                          final scopedProviders = providerOptions
+                              .where((p) {
+                                final stateOk =
+                                    selectedState == null ||
+                                        selectedState!.isEmpty
+                                    ? true
+                                    : p.location.state.trim() == selectedState;
+                                final districtOk =
+                                    selectedDistrict == null ||
+                                        selectedDistrict!.isEmpty
+                                    ? true
+                                    : p.location.district.trim() ==
+                                          selectedDistrict;
+                                return stateOk && districtOk;
+                              })
+                              .toList(growable: false);
 
                           return DropdownButtonFormField<String>(
                             value: selectedProviderId,
@@ -452,27 +573,30 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                               hintText: 'Choose where you want to rent from',
                             ),
                             isExpanded: true,
-                            items: scopedProviders.map((p) {
-                              final daily = p.rates.daily;
-                              final rateText = daily == null
-                                  ? 'Rate on call'
-                                  : 'Rs ${daily.toStringAsFixed(0)}/day';
-                              final label = '${p.provider.name} - ${p.location.district}, ${p.location.state} - $rateText';
-                              return DropdownMenuItem<String>(
-                                value: p.id.trim(),
-                                child: Text(
-                                  label,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              );
-                            }).toList(growable: false),
-                            onChanged: (v) => setLocal(() => selectedProviderId = v),
+                            items: scopedProviders
+                                .map((p) {
+                                  final daily = p.rates.daily;
+                                  final rateText = daily == null
+                                      ? 'Rate on call'
+                                      : 'Rs ${daily.toStringAsFixed(0)}/day';
+                                  final label =
+                                      '${p.provider.name} - ${p.location.district}, ${p.location.state} - $rateText';
+                                  return DropdownMenuItem<String>(
+                                    value: p.id.trim(),
+                                    child: Text(
+                                      label,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                })
+                                .toList(growable: false),
+                            onChanged: (v) =>
+                                setLocal(() => selectedProviderId = v),
                           );
                         },
                       ),
-                    ]
-                    else
+                    ] else
                       Text(
                         'No providers available right now.',
                         style: context.textTheme.bodyMedium?.copyWith(
@@ -482,13 +606,19 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                     const SizedBox(height: AppSpacing.sm),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(startDate == null ? 'Select start date' : DateFormat('dd MMM yyyy').format(startDate!)),
+                      title: Text(
+                        startDate == null
+                            ? 'Select start date'
+                            : DateFormat('dd MMM yyyy').format(startDate!),
+                      ),
                       trailing: const Icon(Icons.calendar_today_outlined),
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: ctx,
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           initialDate: DateTime.now(),
                         );
                         if (picked != null) setLocal(() => startDate = picked);
@@ -496,13 +626,19 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(endDate == null ? 'Select end date' : DateFormat('dd MMM yyyy').format(endDate!)),
+                      title: Text(
+                        endDate == null
+                            ? 'Select end date'
+                            : DateFormat('dd MMM yyyy').format(endDate!),
+                      ),
                       trailing: const Icon(Icons.calendar_today_outlined),
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: ctx,
                           firstDate: startDate ?? DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           initialDate: startDate ?? DateTime.now(),
                         );
                         if (picked != null) setLocal(() => endDate = picked);
@@ -520,29 +656,41 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                       child: OutlinedButton(
                         onPressed: () async {
                           if (startDate == null || endDate == null) {
-                            context.showSnack('Select start and end dates', isError: true);
+                            context.showSnack(
+                              'Select start and end dates',
+                              isError: true,
+                            );
                             return;
                           }
                           final equipmentId = (selectedProviderId ?? '').trim();
                           if (equipmentId.isEmpty) {
-                            context.showSnack('Select a provider/mandi first', isError: true);
+                            context.showSnack(
+                              'Select a provider/mandi first',
+                              isError: true,
+                            );
                             return;
                           }
 
                           try {
-                            final created = await ref.read(equipmentServiceProvider).createRental({
-                              'equipment_id': equipmentId,
-                              'start_date': startDate!.toIso8601String(),
-                              'end_date': endDate!.toIso8601String(),
-                              'message': messageText.trim(),
-                            });
+                            final created = await ref
+                                .read(equipmentServiceProvider)
+                                .createRental({
+                                  'equipment_id': equipmentId,
+                                  'start_date': startDate!.toIso8601String(),
+                                  'end_date': endDate!.toIso8601String(),
+                                  'message': messageText.trim(),
+                                });
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);
                             if (!mounted) return;
                             context.showSnack('Rental request submitted');
-                            final rentalId = (created['id'] ?? created['rental_id'] ?? '').toString();
+                            final rentalId =
+                                (created['id'] ?? created['rental_id'] ?? '')
+                                    .toString();
                             if (rentalId.isNotEmpty) {
-                              context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}');
+                              context.push(
+                                '${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}',
+                              );
                             }
                           } catch (e) {
                             if (!ctx.mounted) return;
@@ -611,180 +759,236 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
           child: _loading && !_hasSnapshot
               ? const EquipmentContentSkeleton(cardCount: 8)
               : _error != null && !_hasSnapshot
-                  ? ErrorView(message: _error!, onRetry: () => _loadData(forceRefresh: true))
-                  : RefreshIndicator(
-                      onRefresh: () => _loadData(forceRefresh: true),
-                      child: ListView(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        children: [
-                          _detailHeader(minDaily: minDaily, maxDaily: maxDaily),
-                          const SizedBox(height: AppSpacing.sm),
-                          EquipmentRefreshStrip(
-                            refreshing: _refreshing,
-                            label: 'Refreshing prices, history, and provider availability...',
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _loadData(forceRefresh: true),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _loadData(forceRefresh: true),
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      _detailHeader(minDaily: minDaily, maxDaily: maxDaily),
+                      const SizedBox(height: AppSpacing.sm),
+                      EquipmentRefreshStrip(
+                        refreshing: _refreshing,
+                        label:
+                            'Refreshing prices, history, and provider availability...',
+                      ),
+                      if (_error != null && _hasSnapshot)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
-                          if (_error != null && _hasSnapshot)
-                            Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                              padding: const EdgeInsets.all(AppSpacing.sm),
-                              decoration: BoxDecoration(
-                                color: AppColors.warning.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                              ),
-                              child: Text(
-                                'Showing cached rate intelligence while network reconnects.',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.warning,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          _activeFiltersRow(),
-                          const SizedBox(height: AppSpacing.md),
-                          SizedBox(
-                            height: 110,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                _summaryCard('Min Daily', _rateSummary.dailyMin, '/day'),
-                                const SizedBox(width: AppSpacing.sm),
-                                _summaryCard('Max Daily', _rateSummary.dailyMax, '/day'),
-                                const SizedBox(width: AppSpacing.sm),
-                                _summaryCard('Avg Hourly', _avgHourly(), '/hr'),
-                              ],
+                          child: Text(
+                            'Showing cached rate intelligence while network reconnects.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          _aiOverviewSection(),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      _activeFiltersRow(),
+                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(
+                        height: 110,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            _summaryCard(
+                              'Min Daily',
+                              _rateSummary.dailyMin,
+                              '/day',
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _summaryCard(
+                              'Max Daily',
+                              _rateSummary.dailyMax,
+                              '/day',
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _summaryCard('Avg Hourly', _avgHourly(), '/hr'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _aiOverviewSection(),
+                      const SizedBox(height: AppSpacing.md),
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _hasRealHistory
+                                  ? 'Demand & Price Trend (Real Data)'
+                                  : 'Demand & Price Trend (Estimated from current rates)',
+                              style: context.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              _historyCoverageLabel(),
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.appColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            SizedBox(height: 250, child: _trendChart()),
+                            const SizedBox(height: AppSpacing.xs),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  _hasRealHistory
-                                      ? 'Demand & Price Trend (Real Data)'
-                                      : 'Demand & Price Trend (Estimated from current rates)',
-                                  style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  _historyCoverageLabel(),
+                                  'Y-axis: Daily Rate (INR)',
                                   style: context.textTheme.bodySmall?.copyWith(
                                     color: context.appColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: AppSpacing.md),
-                                SizedBox(height: 250, child: _trendChart()),
-                                const SizedBox(height: AppSpacing.xs),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Y-axis: Daily Rate (INR)',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: context.appColors.textSecondary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'X-axis: Month-Year',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: context.appColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  'X-axis: Month-Year',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.appColors.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(child: _comparisonTable()),
-                          const SizedBox(height: AppSpacing.md),
-                          ...List.generate(
-                            sortedProviders.length,
-                            (i) => _providerCard(i, sortedProviders[i]),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text('SMAM Subsidy Calculator', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                                  trailing: Icon(_subsidyExpanded ? Icons.expand_less : Icons.expand_more),
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    setState(() => _subsidyExpanded = !_subsidyExpanded);
-                                  },
-                                ),
-                                if (_subsidyExpanded) ...[
-                                  AppTextField(
-                                    label: 'Equipment Purchase Price',
-                                    hint: 'Enter amount',
-                                    keyboardType: TextInputType.number,
-                                    controller: _equipCostController,
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  SegmentedButton<String>(
-                                    segments: const [
-                                      ButtonSegment(value: 'general', label: Text('General Farmer')),
-                                      ButtonSegment(value: 'scst', label: Text('SC/ST or Small-Marginal')),
-                                    ],
-                                    selected: {_subsidyCategory},
-                                    onSelectionChanged: (s) => setState(() => _subsidyCategory = s.first),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _subsidyResult(),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    'SMAM caps: ₹1L max (SC/ST individual), ₹50K max (general), ₹25L max (CHC project).',
-                                    style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  OutlinedButton(
-                                    onPressed: () => launchUrl(Uri.parse('https://agrimachinery.nic.in'), mode: LaunchMode.externalApplication),
-                                    child: const Text('Apply for SMAM Subsidy Online'),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: const Text('What is a Custom Hiring Centre?'),
-                                  trailing: Icon(_chcExpanded ? Icons.expand_less : Icons.expand_more),
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    setState(() => _chcExpanded = !_chcExpanded);
-                                  },
-                                ),
-                                if (_chcExpanded) ...[
-                                  Text((_chcInfo['description'] ?? '').toString()),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  ...(((_chcInfo['how_to_find'] as List?)?.map((e) => e.toString()) ?? const [])
-                                      .map((e) => Padding(
-                                            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                                            child: Row(
-                                              children: [
-                                                const Icon(Icons.check_circle_outline, size: 16, color: AppColors.primary),
-                                                const SizedBox(width: AppSpacing.xs),
-                                                Expanded(child: Text(e)),
-                                              ],
-                                            ),
-                                          ))),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.md),
+                      GlassCard(child: _comparisonTable()),
+                      const SizedBox(height: AppSpacing.md),
+                      ...List.generate(
+                        sortedProviders.length,
+                        (i) => _providerCard(i, sortedProviders[i]),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      GlassCard(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'SMAM Subsidy Calculator',
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              trailing: Icon(
+                                _subsidyExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                              ),
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                setState(
+                                  () => _subsidyExpanded = !_subsidyExpanded,
+                                );
+                              },
+                            ),
+                            if (_subsidyExpanded) ...[
+                              AppTextField(
+                                label: 'Equipment Purchase Price',
+                                hint: 'Enter amount',
+                                keyboardType: TextInputType.number,
+                                controller: _equipCostController,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              SegmentedButton<String>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: 'general',
+                                    label: Text('General Farmer'),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'scst',
+                                    label: Text('SC/ST or Small-Marginal'),
+                                  ),
+                                ],
+                                selected: {_subsidyCategory},
+                                onSelectionChanged: (s) =>
+                                    setState(() => _subsidyCategory = s.first),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _subsidyResult(),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'SMAM caps: ₹1L max (SC/ST individual), ₹50K max (general), ₹25L max (CHC project).',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.appColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              OutlinedButton(
+                                onPressed: () => launchUrl(
+                                  Uri.parse('https://agrimachinery.nic.in'),
+                                  mode: LaunchMode.externalApplication,
+                                ),
+                                child: const Text(
+                                  'Apply for SMAM Subsidy Online',
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      GlassCard(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'What is a Custom Hiring Centre?',
+                              ),
+                              trailing: Icon(
+                                _chcExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                              ),
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _chcExpanded = !_chcExpanded);
+                              },
+                            ),
+                            if (_chcExpanded) ...[
+                              Text((_chcInfo['description'] ?? '').toString()),
+                              const SizedBox(height: AppSpacing.sm),
+                              ...(((_chcInfo['how_to_find'] as List?)?.map(
+                                        (e) => e.toString(),
+                                      ) ??
+                                      const [])
+                                  .map(
+                                    (e) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: AppSpacing.xs,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle_outline,
+                                            size: 16,
+                                            color: AppColors.primary,
+                                          ),
+                                          const SizedBox(width: AppSpacing.xs),
+                                          Expanded(child: Text(e)),
+                                        ],
+                                      ),
+                                    ),
+                                  )),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
@@ -936,11 +1140,17 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
               ),
               child: Row(
                 children: [
-                  Icon(Icons.tune_rounded, color: context.appColors.info, size: 18),
+                  Icon(
+                    Icons.tune_rounded,
+                    color: context.appColors.info,
+                    size: 18,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      chips.isEmpty ? 'Filters' : 'Filters (${chips.length} active)',
+                      chips.isEmpty
+                          ? 'Filters'
+                          : 'Filters (${chips.length} active)',
                       style: context.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.colors.onSurface,
@@ -1019,8 +1229,8 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                           text: _providerSortBy == 'rate_desc'
                               ? 'High to Low'
                               : _providerSortBy == 'availability'
-                                  ? 'Availability'
-                                  : 'Low to High',
+                              ? 'Availability'
+                              : 'Low to High',
                         ),
                       ),
                     ],
@@ -1068,8 +1278,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                 ],
               ),
             ),
-            crossFadeState:
-                _filtersExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _filtersExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 180),
           ),
         ],
@@ -1108,88 +1319,15 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   }
 
   Widget _aiOverviewSection() {
-    return GlassCard(
-      featured: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                'AI Overview',
-                style: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiExpanded ? _aiDetails : _aiSummary,
-            style: context.textTheme.bodyMedium?.copyWith(height: 1.45),
-            maxLines: _aiExpanded ? null : 4,
-            overflow: _aiExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (_aiLoading)
-            Row(
-              children: [
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Generating recommendations...',
-                  style: context.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiUpdatedLabel(),
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _aiLoading
-                      ? null
-                      : () => _generateAiOverview(forceRefresh: true),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: context.colors.onSurface,
-                    side: BorderSide(color: context.appColors.border),
-                  ),
-                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
-                  label: Text(
-                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              OutlinedButton(
-                onPressed: () {
-                  setState(() => _aiExpanded = !_aiExpanded);
-                },
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                ),
-                child: Text(_aiExpanded ? 'Less' : 'More'),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return AiOverviewCard(
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _aiUpdatedLabel(),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      onActionTap: _openAiActionCard,
     );
   }
 
@@ -1200,9 +1338,20 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
+            Text(
+              label,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xs),
-            Text(value == null ? '--' : '${value.inr}$unit', style: context.textTheme.titleMedium?.copyWith(color: AppColors.info, fontWeight: FontWeight.w800)),
+            Text(
+              value == null ? '--' : '${value.inr}$unit',
+              style: context.textTheme.titleMedium?.copyWith(
+                color: AppColors.info,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
       ),
@@ -1210,7 +1359,10 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
   }
 
   double? _avgHourly() {
-    final hourly = _providers.map((e) => e.rates.hourly).whereType<double>().toList(growable: false);
+    final hourly = _providers
+        .map((e) => e.rates.hourly)
+        .whereType<double>()
+        .toList(growable: false);
     if (hourly.isEmpty) return _rateSummary.hourlyMin;
     return hourly.reduce((a, b) => a + b) / hourly.length;
   }
@@ -1228,7 +1380,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     }
 
     const maxPoints = 10;
-    final stride = cleaned.length <= maxPoints ? 1 : (cleaned.length / maxPoints).ceil();
+    final stride = cleaned.length <= maxPoints
+        ? 1
+        : (cleaned.length / maxPoints).ceil();
     final sampled = <Map<String, dynamic>>[];
     for (int i = 0; i < cleaned.length; i += stride) {
       sampled.add(cleaned[i]);
@@ -1278,7 +1432,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
               final period = (sampled[idx]['period'] ?? '').toString();
               String shortPeriod = period;
               try {
-                shortPeriod = DateFormat('MMM yy').format(DateFormat('yyyy-MM').parse(period));
+                shortPeriod = DateFormat(
+                  'MMM yy',
+                ).format(DateFormat('yyyy-MM').parse(period));
               } catch (_) {}
               return BarTooltipItem(
                 '$shortPeriod\n₹${rod.toY.toStringAsFixed(0)}',
@@ -1292,8 +1448,12 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
           ),
         ),
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -1321,13 +1481,16 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
               reservedSize: 24,
               getTitlesWidget: (value, _) {
                 final idx = value.toInt();
-                if (idx < 0 || idx >= sampled.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= sampled.length)
+                  return const SizedBox.shrink();
                 final period = (sampled[idx]['period'] ?? '').toString();
                 DateTime? date;
                 try {
                   date = DateFormat('yyyy-MM').parse(period);
                 } catch (_) {}
-                final label = date == null ? period : DateFormat('MMM').format(date);
+                final label = date == null
+                    ? period
+                    : DateFormat('MMM').format(date);
                 return Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(label, style: const TextStyle(fontSize: 9)),
@@ -1368,7 +1531,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
     final rows = [..._providers]
       ..sort((a, b) => (a.rates.daily ?? 0).compareTo(b.rates.daily ?? 0));
 
-    final dailyRates = rows.map((e) => e.rates.daily ?? 0).toList(growable: false);
+    final dailyRates = rows
+        .map((e) => e.rates.daily ?? 0)
+        .toList(growable: false);
     final minRate = dailyRates.isEmpty ? 0 : dailyRates.first;
     final maxRate = dailyRates.isEmpty ? 0 : dailyRates.last;
 
@@ -1385,12 +1550,18 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Row(
               children: [
-                const Icon(Icons.table_chart_rounded, size: 18, color: AppColors.info),
+                const Icon(
+                  Icons.table_chart_rounded,
+                  size: 18,
+                  color: AppColors.info,
+                ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     'Provider Rate Matrix',
-                    style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: context.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 Icon(
@@ -1418,31 +1589,50 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                     DataColumn(label: Text('Fuel')),
                     DataColumn(label: Text('Availability')),
                   ],
-                  rows: rows.map((p) {
-                    final rate = p.rates.daily ?? 0;
-                    Color tint = AppColors.warning.withValues(alpha: 0.15);
-                    if (rate == minRate) tint = AppColors.success.withValues(alpha: 0.15);
-                    if (rate == maxRate) tint = AppColors.danger.withValues(alpha: 0.12);
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(p.provider.name)),
-                        DataCell(Container(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                          decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          child: Text(rate == 0 ? '--' : '₹${rate.toStringAsFixed(0)}'),
-                        )),
-                        DataCell(Text(p.operatorIncluded ? 'Yes' : 'No')),
-                        DataCell(Text(p.fuelExtra ? 'Extra' : 'Included')),
-                        DataCell(availabilityBadge(p.availability)),
-                      ],
-                    );
-                  }).toList(growable: false),
+                  rows: rows
+                      .map((p) {
+                        final rate = p.rates.daily ?? 0;
+                        Color tint = AppColors.warning.withValues(alpha: 0.15);
+                        if (rate == minRate)
+                          tint = AppColors.success.withValues(alpha: 0.15);
+                        if (rate == maxRate)
+                          tint = AppColors.danger.withValues(alpha: 0.12);
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(p.provider.name)),
+                            DataCell(
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: tint,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.sm,
+                                  ),
+                                ),
+                                child: Text(
+                                  rate == 0
+                                      ? '--'
+                                      : '₹${rate.toStringAsFixed(0)}',
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(p.operatorIncluded ? 'Yes' : 'No')),
+                            DataCell(Text(p.fuelExtra ? 'Extra' : 'Included')),
+                            DataCell(availabilityBadge(p.availability)),
+                          ],
+                        );
+                      })
+                      .toList(growable: false),
                 ),
               ),
             ],
           ),
-          crossFadeState:
-              _comparisonExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _comparisonExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 180),
         ),
       ],
@@ -1498,7 +1688,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                       ),
                     ),
                     Icon(
-                      expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                      expanded
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
                       color: context.appColors.textSecondary,
                     ),
                   ],
@@ -1544,12 +1736,14 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                           child: const Text('Call'),
                         ),
                       ),
-                    if (provider.provider.phone.isNotEmpty && provider.provider.whatsapp.isNotEmpty)
+                    if (provider.provider.phone.isNotEmpty &&
+                        provider.provider.whatsapp.isNotEmpty)
                       const SizedBox(width: AppSpacing.sm),
                     if (provider.provider.whatsapp.isNotEmpty)
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => _openWhatsApp(provider.provider.whatsapp),
+                          onPressed: () =>
+                              _openWhatsApp(provider.provider.whatsapp),
                           child: const Text('WhatsApp'),
                         ),
                       ),
@@ -1562,13 +1756,20 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                   _line('WhatsApp', provider.provider.whatsapp),
                   _line('Working Hours', provider.provider.workingHours),
                   _line('Address', provider.location.address),
-                  _line('Service Radius', provider.location.serviceRadiusKm == null ? '' : '${provider.location.serviceRadiusKm} km'),
+                  _line(
+                    'Service Radius',
+                    provider.location.serviceRadiusKm == null
+                        ? ''
+                        : '${provider.location.serviceRadiusKm} km',
+                  ),
                   if (provider.eligibility.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
                     Wrap(
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
-                      children: provider.eligibility.map((e) => _tag(e)).toList(growable: false),
+                      children: provider.eligibility
+                          .map((e) => _tag(e))
+                          .toList(growable: false),
                     ),
                   ],
                   if (provider.documentsRequired.isNotEmpty) ...[
@@ -1576,7 +1777,9 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
                     Wrap(
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
-                      children: provider.documentsRequired.map((e) => _tag(e)).toList(growable: false),
+                      children: provider.documentsRequired
+                          .map((e) => _tag(e))
+                          .toList(growable: false),
                     ),
                   ],
                 ],
@@ -1642,7 +1845,15 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 110, child: Text(label, style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary))),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+          ),
           Expanded(child: Text(value)),
         ],
       ),
@@ -1651,7 +1862,10 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
 
   Widget _tag(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: context.appColors.card,
         borderRadius: BorderRadius.circular(AppRadius.full),
@@ -1683,7 +1897,13 @@ class _RentalRateDetailScreenState extends ConsumerState<RentalRateDetailScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text(value, style: context.textTheme.titleSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: context.textTheme.titleSmall?.copyWith(
+              color: AppColors.success,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );

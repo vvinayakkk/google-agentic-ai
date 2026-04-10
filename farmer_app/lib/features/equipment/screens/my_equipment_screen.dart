@@ -11,7 +11,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/services/equipment_service.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../utils/equipment_utils.dart';
@@ -322,192 +321,343 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
+
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: const Text('My Equipment'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddEditSheet(),
-        icon: const Icon(Icons.add),
-        label: const Text('List Equipment'),
-      ),
-      body: EquipmentPageBackground(
-        child: _loading && !_hasSnapshot
-            ? const EquipmentContentSkeleton(cardCount: 8)
-            : _error != null && !_hasSnapshot
-                ? ErrorView(message: _error!, onRetry: () => _loadData(forceRefresh: true))
-                : RefreshIndicator(
-                    onRefresh: () => _loadData(forceRefresh: true),
-                    child: ListView(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      children: [
-                        EquipmentHeaderCard(
-                          title: 'My Equipment Control',
-                          subtitle: 'Manage listings, approve requests, and keep your equipment discoverable.',
-                          icon: Icons.inventory_2_outlined,
-                          badges: [
-                            EquipmentInfoBadge(label: '${_equipment.length} listed'),
-                            EquipmentInfoBadge(label: '$_pendingIncomingCount pending'),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        EquipmentRefreshStrip(refreshing: _refreshing, label: 'Refreshing your inventory and requests...'),
-                        if (_error != null && _hasSnapshot) ...[
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? <Color>[
+                    AppColors.darkBackground,
+                    AppColors.darkSurface,
+                    AppColors.darkBackground,
+                  ]
+                : <Color>[
+                    AppColors.lightBackground,
+                    AppColors.lightSurface,
+                    AppColors.lightBackground,
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: _loading && !_hasSnapshot
+              ? const EquipmentContentSkeleton(cardCount: 8)
+              : _error != null && !_hasSnapshot
+              ? ErrorView(
+                  message: _error!,
+                  onRetry: () => _loadData(forceRefresh: true),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _loadData(forceRefresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.xxxl,
+                    ),
+                    children: [
+                      Row(
+                        children: [
+                          _iconAction(
+                            icon: Icons.arrow_back_rounded,
+                            onTap: () => Navigator.of(context).maybePop(),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
                             child: Text(
-                              'Showing cached snapshot while network reconnects.',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
+                              'My Equipment',
+                              textAlign: TextAlign.center,
+                              style: context.textTheme.titleLarge?.copyWith(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _iconAction(
+                            icon: Icons.refresh_rounded,
+                            onTap: () => _loadData(forceRefresh: true),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          _iconAction(
+                            icon: Icons.add_rounded,
+                            onTap: () => _showAddEditSheet(),
                           ),
                         ],
-                        Row(
-                          children: [
-                            _statChip('Total', _equipment.length.toString(), AppColors.info),
-                            const SizedBox(width: AppSpacing.sm),
-                            _statChip('Available', _availableCount.toString(), AppColors.success),
-                            const SizedBox(width: AppSpacing.sm),
-                            _statChip('Pending', _pendingIncomingCount.toString(), AppColors.warning),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text('My Listings', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: AppSpacing.sm),
-                        if (_equipment.isEmpty)
-                          EmptyView(
-                            icon: Icons.inventory_2_outlined,
-                            title: 'No equipment listed yet',
-                            subtitle: 'Tap List Equipment to publish your first listing.',
-                          )
-                        else
-                          ..._equipment.map((row) {
-                            final id = (row['id'] ?? '').toString();
-                            final status = (row['status'] ?? '').toString().toLowerCase();
-                            final available = status == 'available';
-                            final type = (row['type'] ?? '').toString();
-                            final rateDay = (row['rate_per_day'] as num?)?.toDouble() ?? 0;
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: AppCard(
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(AppSpacing.sm),
-                                          decoration: BoxDecoration(
-                                            color: categoryColor(type).withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(AppRadius.md),
-                                          ),
-                                          child: Icon(categoryIcon(type), color: categoryColor(type)),
-                                        ),
-                                        const SizedBox(width: AppSpacing.md),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text((row['name'] ?? '').toString(), style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                                              Text('${(row['type'] ?? '').toString()} • ${rateDay.inr}/day', style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
-                                              Text((row['location'] ?? '').toString(), style: context.textTheme.bodySmall),
-                                            ],
-                                          ),
-                                        ),
-                                        availabilityBadge(available ? 'available' : 'low'),
-                                      ],
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _showAddEditSheet(row: row),
-                                            icon: const Icon(Icons.edit_outlined),
-                                            label: const Text('Edit'),
-                                          ),
-                                        ),
-                                        const SizedBox(width: AppSpacing.sm),
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _toggleAvailability(row),
-                                            icon: Icon(available ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                                            label: Text(available ? 'Unavailable' : 'Available'),
-                                          ),
-                                        ),
-                                        const SizedBox(width: AppSpacing.sm),
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _deleteEquipment(id),
-                                            icon: const Icon(Icons.delete_outline, color: AppColors.danger),
-                                            label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                        const SizedBox(height: AppSpacing.md),
-                        Text('Incoming Rental Requests', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: AppSpacing.sm),
-                        ..._incomingSection(),
-                        const SizedBox(height: AppSpacing.md),
-                        InkWell(
-                          onTap: () => context.push(RoutePaths.earnings),
-                          child: Container(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text('Completed rentals: $_completedRentalsCount', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
-                                ),
-                                const Text('View Earnings →', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w800)),
-                              ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      EquipmentRefreshStrip(
+                        refreshing: _refreshing,
+                        label: 'Refreshing your inventory and requests...',
+                      ),
+                      if (_error != null && _hasSnapshot) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Text(
+                            'Showing cached snapshot while network reconnects.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.xxl),
                       ],
-                    ),
+                      Row(
+                        children: [
+                          _statChip('Total', _equipment.length.toString()),
+                          const SizedBox(width: AppSpacing.sm),
+                          _statChip('Available', _availableCount.toString()),
+                          const SizedBox(width: AppSpacing.sm),
+                          _statChip('Pending', _pendingIncomingCount.toString()),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _sectionLabel('My Listings'),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (_equipment.isEmpty)
+                        EmptyView(
+                          icon: Icons.inventory_2_outlined,
+                          title: 'No equipment listed yet',
+                          subtitle: 'Tap + to publish your first listing.',
+                        )
+                      else
+                        ..._equipment.map(_listingCard),
+                      const SizedBox(height: AppSpacing.md),
+                      _sectionLabel('Incoming Rental Requests'),
+                      const SizedBox(height: AppSpacing.sm),
+                      ..._incomingSection(),
+                      const SizedBox(height: AppSpacing.md),
+                      _choiceCard(
+                        cardColor: cardColor,
+                        onTap: () => context.push(RoutePaths.earnings),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.analytics_outlined,
+                              size: 30,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Text(
+                                'Completed rentals: $_completedRentalsCount',
+                                style: context.textTheme.bodyLarge?.copyWith(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+        ),
       ),
     );
   }
 
-  Widget _statChip(String label, String value, Color color) {
+  Widget _iconAction({required IconData icon, required VoidCallback onTap}) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, size: 24, color: AppColors.success),
+    );
+  }
+
+  Widget _choiceCard({
+    required Color cardColor,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(12), child: child),
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(String label, String value) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: Colors.white.withValues(alpha: 0.76),
           borderRadius: BorderRadius.circular(AppRadius.full),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: Colors.black12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('$label: ', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+            Text('$label: ', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700)),
+            Text(value, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label) {
+    return Text(
+      label,
+      style: context.textTheme.titleMedium?.copyWith(
+        color: Colors.black,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+
+  Widget _listingCard(Map<String, dynamic> row) {
+    final id = (row['id'] ?? '').toString();
+    final status = (row['status'] ?? '').toString().toLowerCase();
+    final available = status == 'available';
+    final type = (row['type'] ?? '').toString();
+    final rateDay = (row['rate_per_day'] as num?)?.toDouble() ?? 0;
+    final isDark = context.isDark;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
+
+    return _choiceCard(
+      cardColor: cardColor,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                categoryIcon(type),
+                color: AppColors.success,
+                size: 32,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (row['name'] ?? '').toString(),
+                      style: context.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      '${(row['type'] ?? '').toString()} • ${rateDay.inr}/day',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      (row['location'] ?? '').toString(),
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  border: Border.all(color: Colors.black26),
+                ),
+                child: Text(
+                  available ? 'AVAILABLE' : 'UNAVAILABLE',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Center(
+                  child: IconButton(
+                    tooltip: 'Edit',
+                    onPressed: () => _showAddEditSheet(row: row),
+                    icon: const Icon(Icons.edit_outlined, size: 30),
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: IconButton(
+                    tooltip: available ? 'Mark unavailable' : 'Mark available',
+                    onPressed: () => _toggleAvailability(row),
+                    icon: Icon(
+                      available
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 30,
+                    ),
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: IconButton(
+                    tooltip: 'Delete',
+                    onPressed: () => _deleteEquipment(id),
+                    icon: const Icon(Icons.delete_outline, size: 30),
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -528,72 +678,110 @@ class _MyEquipmentScreenState extends ConsumerState<MyEquipmentScreen> {
 
     final widgets = <Widget>[];
     if (pending.isNotEmpty) {
-      widgets.add(_sectionLabel('Pending Requests', AppColors.warning));
+      widgets.add(_sectionLabel('Pending Requests'));
+      widgets.add(const SizedBox(height: AppSpacing.sm));
       widgets.addAll(pending.map(_incomingCard));
     }
     if (others.isNotEmpty) {
-      widgets.add(_sectionLabel('Other Requests', AppColors.info));
+      widgets.add(const SizedBox(height: AppSpacing.sm));
+      widgets.add(_sectionLabel('Other Requests'));
+      widgets.add(const SizedBox(height: AppSpacing.sm));
       widgets.addAll(others.map(_incomingCard));
     }
     return widgets;
-  }
-
-  Widget _sectionLabel(String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm, top: AppSpacing.sm),
-      child: Text(label, style: context.textTheme.bodyLarge?.copyWith(color: color, fontWeight: FontWeight.w800)),
-    );
   }
 
   Widget _incomingCard(Map<String, dynamic> row) {
     final id = (row['id'] ?? '').toString();
     final status = (row['status'] ?? '').toString().toLowerCase();
     final pending = status == 'pending';
+    final isDark = context.isDark;
+    final cardColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.74);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        onTap: () => context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(id)}'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return _choiceCard(
+      cardColor: cardColor,
+      onTap: () => context.push('${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(id)}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  (row['equipment_name'] ?? '').toString(),
+                  style: context.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  border: Border.all(color: Colors.black26),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${(row['start_date'] ?? '').toString()} → ${(row['end_date'] ?? '').toString()}',
+            style: context.textTheme.bodySmall?.copyWith(color: Colors.black87),
+          ),
+          if ((row['message'] ?? '').toString().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                (row['message'] ?? '').toString(),
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          if (pending) ...[
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(
-                  child: Text((row['equipment_name'] ?? '').toString(), style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  child: Center(
+                    child: IconButton(
+                      tooltip: 'Approve',
+                      onPressed: () =>
+                          _handleRentalAction(id: id, action: 'approve'),
+                      icon: const Icon(Icons.check_circle_outline, size: 30),
+                      color: AppColors.success,
+                    ),
+                  ),
                 ),
-                availabilityBadge(status),
+                Expanded(
+                  child: Center(
+                    child: IconButton(
+                      tooltip: 'Reject',
+                      onPressed: () => _handleRentalAction(id: id, action: 'reject'),
+                      icon: const Icon(Icons.cancel_outlined, size: 30),
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text('${(row['start_date'] ?? '').toString()} → ${(row['end_date'] ?? '').toString()}', style: context.textTheme.bodySmall),
-            if ((row['message'] ?? '').toString().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Text((row['message'] ?? '').toString(), style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary)),
-              ),
-            if (pending) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _handleRentalAction(id: id, action: 'approve'),
-                      child: const Text('Approve'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _handleRentalAction(id: id, action: 'reject'),
-                      child: const Text('Reject'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }

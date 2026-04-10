@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -757,7 +757,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _stopInlineMic() async {
-    final languageCode = context.locale.languageCode;
     _micWaveTimer?.cancel();
     final path = await _micRecorder.stop();
 
@@ -1580,6 +1579,33 @@ class _ChatBubble extends StatefulWidget {
 class _ChatBubbleState extends State<_ChatBubble> {
   bool _typingComplete = false;
 
+  String _calendarComposerRoute() {
+    final raw = widget.message.content.trim();
+    final firstLine = raw.split('\n').first.trim();
+    final titleSeed = firstLine.isEmpty
+        ? 'Farm Task from AI Chat'
+        : (firstLine.length > 72
+              ? '${firstLine.substring(0, 72)}...'
+              : firstLine);
+    final notesSeed = raw.length > 400 ? raw.substring(0, 400) : raw;
+    return Uri(
+      path: RoutePaths.calendar,
+      queryParameters: <String, String>{
+        'open_add': '1',
+        'title': titleSeed,
+        if (notesSeed.isNotEmpty) 'notes': notesSeed,
+      },
+    ).toString();
+  }
+
+  void _openContextRoute(String route) {
+    if (route == RoutePaths.calendar) {
+      context.push(_calendarComposerRoute());
+      return;
+    }
+    context.push(route);
+  }
+
   bool _shouldAnimateTypingFor(ChatMessage msg) {
     return widget.allowTypingAnimation &&
         !msg.isUser &&
@@ -1764,7 +1790,8 @@ class _ChatBubbleState extends State<_ChatBubble> {
                               (action) => ActionChip(
                                 label: Text(action.label),
                                 avatar: Icon(action.icon, size: 16),
-                                onPressed: () => context.push(action.route),
+                                onPressed: () =>
+                                    _openContextRoute(action.route),
                               ),
                             )
                             .toList(growable: false),

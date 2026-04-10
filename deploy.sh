@@ -1,16 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-shot launcher for backend (Docker), admin dashboard (Vite), Flutter app,
+# One-shot launcher for backend (Docker), admin dashboard (Vite),
 # and an optional public tunnel for Twilio/local webhooks.
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$ROOT/.logs"
 mkdir -p "$LOG_DIR"
 
-info() { printf "[deploy] %s\n" "$*"; }
-warn() { printf "[deploy][warn] %s\n" "$*"; }
-fail() { printf "[deploy][error] %s\n" "$*" >&2; exit 1; }
+if [ -t 1 ]; then
+  COLOR_BLUE='\033[1;34m'
+  COLOR_GREEN='\033[1;32m'
+  COLOR_YELLOW='\033[1;33m'
+  COLOR_RED='\033[1;31m'
+  COLOR_DIM='\033[2m'
+  COLOR_RESET='\033[0m'
+else
+  COLOR_BLUE=''
+  COLOR_GREEN=''
+  COLOR_YELLOW=''
+  COLOR_RED=''
+  COLOR_DIM=''
+  COLOR_RESET=''
+fi
+
+section() { printf "\n${COLOR_BLUE}=== %s ===${COLOR_RESET}\n" "$*"; }
+info() { printf "${COLOR_GREEN}[deploy]${COLOR_RESET} %s\n" "$*"; }
+warn() { printf "${COLOR_YELLOW}[deploy][warn]${COLOR_RESET} %s\n" "$*"; }
+fail() { printf "${COLOR_RED}[deploy][error]${COLOR_RESET} %s\n" "$*" >&2; exit 1; }
+note() { printf "${COLOR_DIM}%s${COLOR_RESET}\n" "$*"; }
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
 is_port_listening() {
@@ -59,18 +77,9 @@ ensure_env_file() {
   fi
 }
 
-ensure_base_image() {
-  local image_name="kisan-base:latest"
-  if ! docker image inspect "$image_name" >/dev/null 2>&1; then
-    info "Building base image ($image_name)..."
-    docker build -f "$ROOT/Dockerfile.base" -t "$image_name" "$ROOT"
-  fi
-}
-
 start_backend() {
   local compose_cmd="$1"
   ensure_env_file "$ROOT/kisankiawaz-backend/.env.example" "$ROOT/kisankiawaz-backend/.env"
-  ensure_base_image
 
   local all_services=() running_services=() missing_services=() stopped_services=()
   local svc container_id
@@ -97,14 +106,64 @@ start_backend() {
   fi
 
   if [ "${#missing_services[@]}" -gt 0 ]; then
-    info "Creating missing backend services (no forced rebuild): ${missing_services[*]}"
-    (cd "$ROOT" && $compose_cmd up -d "${missing_services[@]}")
+    info "Creating missing backend services (strictly no rebuild): ${missing_services[*]}"
+    if ! (cd "$ROOT" && $compose_cmd up -d --no-build "${missing_services[@]}"); then
+      fail "Could not start missing services without build. Run a one-time manual build outside deploy.sh if images are not present."
+    fi
   fi
 
   if [ "${#stopped_services[@]}" -gt 0 ]; then
     info "Starting existing stopped backend services: ${stopped_services[*]}"
     (cd "$ROOT" && $compose_cmd start "${stopped_services[@]}")
   fi
+}
+
+show_backend_panel() {
+  local compose_cmd="$1"
+  section "Backend Services"
+  (cd "$ROOT" && $compose_cmd ps)
+}
+
+show_admin_panel() {
+  local pid_file="$LOG_DIR/admin-dashboard.pid"
+  section "Admin Dashboard"
+  if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+    info "Admin dashboard running (pid $(cat "$pid_file"))"
+  else
+    warn "Admin dashboard process not detected"
+  fi
+  note "Admin URL: http://localhost:${ADMIN_PORT:-5173}"
+  note "Admin log: $LOG_DIR/admin-dashboard.log"
+  if [ -f "$LOG_DIR/admin-dashboard.log" ]; then
+    note "Recent admin logs:"
+    tail -n 20 "$LOG_DIR/admin-dashboard.log" || true
+  fi
+}
+
+show_recent_docker_logs() {
+  local compose_cmd="$1"
+  section "Recent Docker Logs"
+  local services=(
+    gateway
+    auth-service
+    farmer-service
+    crop-service
+    market-service
+    equipment-service
+    agent-service
+    voice-service
+    notification-service
+    schemes-service
+    geo-service
+    admin-service
+    analytics-service
+  )
+
+  local svc
+  for svc in "${services[@]}"; do
+    printf "\n${COLOR_BLUE}[%s]${COLOR_RESET}\n" "$svc"
+    (cd "$ROOT" && $compose_cmd logs --tail 10 "$svc" 2>/dev/null) || true
+  done
 }
 
 start_admin_dashboard() {
@@ -223,56 +282,34 @@ start_tunnel() {
   fi
 }
 
-start_flutter_app() {
-  if ! command_exists flutter; then
-    info "Flutter SDK not found; skipping farmer app launch. Install Flutter to enable."
-    return
-  fi
-  local host="${FLUTTER_HOST:-0.0.0.0}" port="${FLUTTER_PORT:-5175}" device="${FLUTTER_DEVICE_ID:-}"
-  info "Ensuring Flutter dependencies..."
-  (cd "$ROOT/farmer_app" && flutter pub get)
-  if [ -z "$device" ]; then
-    if flutter devices | grep -qi "chrome"; then
-      device="chrome"
-    elif flutter devices | grep -qi "web-server"; then
-      device="web-server"
-    fi
-  fi
-  if [ -z "$device" ]; then
-    info "No Flutter web-capable device found; skipping farmer app launch. Set FLUTTER_DEVICE_ID to override."
-    return
-  fi
-  local pid_file="$LOG_DIR/farmer-app.pid"
-  if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
-    info "Farmer app already running (pid $(cat "$pid_file")). Skipping start."
-    return
-  fi
-  info "Starting farmer app on device ${device} (host ${host}, port ${port})..."
-  if [ "$device" = "chrome" ] || [ "$device" = "web-server" ]; then
-    (cd "$ROOT/farmer_app" && nohup flutter run -d "$device" --web-hostname "$host" --web-port "$port" --web-renderer html > "$LOG_DIR/farmer-app.log" 2>&1 & echo $! > "$pid_file")
-  else
-    (cd "$ROOT/farmer_app" && nohup flutter run -d "$device" > "$LOG_DIR/farmer-app.log" 2>&1 & echo $! > "$pid_file")
-  fi
-}
-
 main() {
+  section "Deploy Startup"
   info "Workspace: $ROOT"
   load_backend_env
   command_exists docker || fail "Docker is required. Install Docker Desktop."
   local compose_cmd
   compose_cmd="$(choose_compose)"
 
+  section "Backend Boot"
   start_backend "$compose_cmd"
-  start_admin_dashboard
-  start_tunnel
-  start_flutter_app
 
+  section "Admin Boot"
+  start_admin_dashboard
+
+  section "Tunnel"
+  start_tunnel
+
+  show_backend_panel "$compose_cmd"
+  show_admin_panel
+  show_recent_docker_logs "$compose_cmd"
+
+  section "Endpoints"
   info "Backend gateway: http://localhost:8000"
-  info "Admin dashboard: http://localhost:${ADMIN_PORT:-5173} (logs: $LOG_DIR/admin-dashboard.log)"
+  info "Admin dashboard: http://localhost:${ADMIN_PORT:-5173}"
   if [ -n "$TUNNEL_URL" ]; then
-    info "Tunnel URL: $TUNNEL_URL (logs: $LOG_DIR/tunnel.log)"
+    info "Tunnel URL: $TUNNEL_URL"
+    note "Tunnel log: $LOG_DIR/tunnel.log"
   fi
-  info "Farmer app: http://localhost:${FLUTTER_PORT:-5175} (logs: $LOG_DIR/farmer-app.log)"
   info "To stop everything: ./stop.sh"
 }
 

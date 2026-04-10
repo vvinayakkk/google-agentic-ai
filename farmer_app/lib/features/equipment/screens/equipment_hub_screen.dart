@@ -12,6 +12,7 @@ import '../../../core/utils/extensions.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../utils/equipment_utils.dart';
 import '../widgets/equipment_shell.dart';
@@ -84,25 +85,29 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       final profileState = (profile['state'] ?? '').toString().trim();
       final profileDistrict = (profile['district'] ?? '').toString().trim();
 
-      final rates = await svc.listRentalRatesFiltered(
-        state: profileState.isEmpty ? null : profileState,
-        district: profileDistrict.isEmpty ? null : profileDistrict,
-        limit: 10,
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
+      final results = await Future.wait([
+        svc.listRentalRatesFiltered(
+          state: profileState.isEmpty ? null : profileState,
+          district: profileDistrict.isEmpty ? null : profileDistrict,
+          limit: 10,
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+        svc.listRentalCategories(
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+        svc.getMechanizationStats(
+          state: (profile['state'] ?? '').toString(),
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+      ]);
       if (!mounted) return;
-      final categories = await svc.listRentalCategories(
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
-      final mech = await svc.getMechanizationStats(
-        state: (profile['state'] ?? '').toString(),
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
+
+      final rates = results[0] as Map<String, dynamic>;
+      final categories = results[1] as List<String>;
+      final mech = results[2] as Map<String, dynamic>;
 
       final rows =
           (rates['rows'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
@@ -115,6 +120,10 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
         _loading = false;
         _refreshing = false;
       });
+
+      if (!_aiGenerated && !_aiLoading) {
+        _generateAiOverview();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -150,18 +159,45 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     if (_aiLoading) return;
     setState(() => _aiLoading = true);
     try {
-      final snippets = _featuredProviders
-          .take(8)
-          .map((item) {
-            final name = (item['equipment'] ?? item['name'] ?? '').toString();
-            final provider = ((item['provider'] as Map?)?['name'] ?? '')
-                .toString();
-            final district = ((item['location'] as Map?)?['district'] ?? '')
-                .toString();
-            final daily = ((item['rates'] as Map?)?['daily'] ?? '').toString();
-            return '$name by $provider in $district at daily rate $daily';
-          })
-          .toList(growable: false);
+      final snippets = <String>[];
+      final district = (_profile['district'] ?? '').toString().trim();
+      final state = (_profile['state'] ?? '').toString().trim();
+      if (district.isNotEmpty || state.isNotEmpty) {
+        snippets.add(
+          'Farmer profile location: ${[district, state].where((e) => e.isNotEmpty).join(', ')}.',
+        );
+      }
+
+      snippets.add('Live providers loaded: $_totalProviders.');
+      snippets.add(
+        'Categories visible in hub: ${_categories.take(8).join(', ')}.',
+      );
+
+      final records =
+          (_mechanizationStats['records'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          const <Map<String, dynamic>>[];
+      if (records.isNotEmpty) {
+        final first = records.first;
+        snippets.add(
+          'Mechanization snapshot for ${first['state'] ?? 'state'}: ${first['mechanization_percentage'] ?? '--'}% mechanization, ${first['tractors_per_1000ha'] ?? '--'} tractors/1000ha.',
+        );
+      }
+
+      snippets.addAll(
+        _featuredProviders.take(8).map((item) {
+          final name = (item['equipment'] ?? item['name'] ?? '').toString();
+          final provider = ((item['provider'] as Map?)?['name'] ?? '')
+              .toString();
+          final location =
+              (item['location'] as Map?)?.cast<String, dynamic>() ??
+              const <String, dynamic>{};
+          final district = (location['district'] ?? '').toString();
+          final state = (location['state'] ?? '').toString();
+          final daily = ((item['rates'] as Map?)?['daily'] ?? '').toString();
+          return 'Recent rental history: $name by $provider in $district, $state at daily rate $daily.';
+        }),
+      );
 
       final ai = await ref
           .read(aiOverviewServiceProvider)
@@ -170,6 +206,13 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
             pageName: 'Equipment Hub',
             languageCode: Localizations.localeOf(context).languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Browse featured rental providers and open provider details',
+              'Open equipment marketplace filtered by category',
+              'Open rental rate intelligence for specific equipment',
+              'Track bookings from My Bookings and listing control screens',
+              'Ask AI in chat for booking and pricing strategy',
+            ],
             forceRefresh: true,
           );
       if (!mounted) return;
@@ -192,6 +235,11 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     final hh = _aiUpdatedAt!.hour.toString().padLeft(2, '0');
     final mm = _aiUpdatedAt!.minute.toString().padLeft(2, '0');
     return 'Updated at $hh:$mm';
+  }
+
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
   }
 
   Future<void> _openChcApp() async {
@@ -499,7 +547,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                color: AppColors.warning.withValues(alpha: 0.08),
+                                color: AppColors.warning.withValues(
+                                  alpha: 0.08,
+                                ),
                               ),
                               padding: const EdgeInsets.all(AppSpacing.md),
                               child: Column(
@@ -549,9 +599,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                                     'India has 75,000+ CHCs, SMAM subsidy 40–80%, and USD 4.6B market size by 2025.',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
+                                    style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(color: textColor),
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
@@ -725,7 +773,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                color: AppColors.success.withValues(alpha: 0.08),
+                                color: AppColors.success.withValues(
+                                  alpha: 0.08,
+                                ),
                               ),
                               padding: const EdgeInsets.all(AppSpacing.md),
                               child: Column(
@@ -775,9 +825,7 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                                     '75,000+ govt hiring centres near your village.',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
+                                    style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(color: textColor),
                                   ),
                                 ],
@@ -930,9 +978,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
                   description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textColor,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: textColor),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -953,95 +1001,16 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
   }
 
   Widget _aiOverviewCard() {
-    return Container(
+    return AiOverviewCard(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: GlassCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.auto_awesome, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'AI Overview',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _aiExpanded ? _aiDetails : _aiSummary,
-              style: context.textTheme.bodyMedium?.copyWith(height: 1.45),
-              maxLines: _aiExpanded ? null : 4,
-              overflow: _aiExpanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (_aiLoading)
-              Row(
-                children: [
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Generating recommendations...',
-                    style: context.textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _updatedAtLabel(),
-              style: context.textTheme.bodySmall?.copyWith(
-                color: context.appColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _aiLoading ? null : () => _generateAiOverview(),
-                    icon: Icon(
-                      _aiGenerated ? Icons.refresh : Icons.auto_awesome,
-                    ),
-                    label: Text(
-                      _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.85),
-                      foregroundColor: AppColors.lightText,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() => _aiExpanded = !_aiExpanded);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
-                  child: Text(_aiExpanded ? 'Less' : 'More'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _updatedAtLabel(),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: _generateAiOverview,
+      onActionTap: _openAiActionCard,
     );
   }
 
@@ -1177,9 +1146,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       height: 460,
       backgroundColor: sectionColor,
       backgroundGradient: sectionGradient,
-      borderColor: const Color(0xFF0F4D2F).withValues(
-        alpha: context.isDark ? 0.9 : 0.74,
-      ),
+      borderColor: const Color(
+        0xFF0F4D2F,
+      ).withValues(alpha: context.isDark ? 0.9 : 0.74),
       shadowColor: Colors.black.withValues(alpha: context.isDark ? 0.34 : 0.14),
       cornerRadius: 20,
       scallopRadius: 7,
@@ -1280,8 +1249,21 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       onTap: () {
         HapticFeedback.lightImpact();
         final name = (item['equipment'] ?? '').toString();
+        final district = (location['district'] ?? '').toString().trim();
+        final state = (location['state'] ?? '').toString().trim();
+        ref
+            .read(equipmentServiceProvider)
+            .warmRentalRateDetailBundle(
+              equipmentName: name,
+              state: state.isEmpty ? null : state,
+              district: district.isEmpty ? null : district,
+            );
+        final encodedName = Uri.encodeComponent(name);
+        final encodedCategory = Uri.encodeComponent(
+          (item['category'] ?? '').toString(),
+        );
         context.push(
-          '${RoutePaths.rentalRateDetail}?name=$name&category=${item['category'] ?? ''}',
+          '${RoutePaths.rentalRateDetail}?name=$encodedName&category=$encodedCategory',
         );
       },
       child: Padding(
@@ -1543,9 +1525,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFF0F4D2F).withValues(
-              alpha: context.isDark ? 0.74 : 0.32,
-            ),
+            color: const Color(
+              0xFF0F4D2F,
+            ).withValues(alpha: context.isDark ? 0.74 : 0.32),
           ),
         ),
         child: Column(
@@ -1607,7 +1589,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.success.withValues(alpha: context.isDark ? 0.24 : 0.14),
+            color: AppColors.success.withValues(
+              alpha: context.isDark ? 0.24 : 0.14,
+            ),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: const Icon(
@@ -1639,7 +1623,9 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
     return InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
-        context.push('${RoutePaths.equipmentMarketplace}?category=$categoryKey');
+        context.push(
+          '${RoutePaths.equipmentMarketplace}?category=$categoryKey',
+        );
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1647,13 +1633,15 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
           color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.98),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFF0F4D2F).withValues(
-              alpha: context.isDark ? 0.5 : 0.2,
-            ),
+            color: const Color(
+              0xFF0F4D2F,
+            ).withValues(alpha: context.isDark ? 0.5 : 0.2),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: context.isDark ? 0.22 : 0.08),
+              color: Colors.black.withValues(
+                alpha: context.isDark ? 0.22 : 0.08,
+              ),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1887,7 +1875,6 @@ class _EquipmentHubScreenState extends ConsumerState<EquipmentHubScreen> {
       },
     );
   }
-
 }
 
 // ─── Data classes ─────────────────────────────────────────────────────────────

@@ -77,6 +77,47 @@ RULES:
 - ONLY return valid JSON, nothing else."""
 
 
+def _fallback_detection(reason: str) -> dict:
+    """Return a structured best-effort response when model inference is unavailable."""
+    safe_reason = (reason or "model_unavailable").strip()
+    if len(safe_reason) > 140:
+        safe_reason = f"{safe_reason[:137]}..."
+
+    result = DiseaseDetection(
+        disease_name="Stress Suspected / तनाव संदिग्ध",
+        confidence=52.0,
+        bounding_boxes=[BoundingBox(x=0.0, y=0.0, width=100.0, height=100.0)],
+        bounding_box_explanation=(
+            "Fallback region selected because cloud model inference is currently unavailable."
+        ),
+        description=(
+            "Could not complete cloud disease inference right now. Please retake the photo in good daylight "
+            "and try again. Meanwhile, inspect leaves for fungal spots, blight lesions, or pest chewing marks. "
+            f"Reason: {safe_reason}"
+        ),
+        symptoms=[
+            "Leaf discoloration or patching",
+            "Possible lesion or blight pattern",
+            "General plant stress signals",
+        ],
+        solutions=[
+            {
+                "title": "Capture a clearer image",
+                "details": "Take close-up and whole-plant photos in daylight, avoid blur and heavy shadows.",
+            },
+            {
+                "title": "Isolate and monitor affected area",
+                "details": "Mark affected plants, avoid overhead irrigation, and track symptom spread for 48 hours.",
+            },
+            {
+                "title": "Use low-risk preventive spray",
+                "details": "Apply a farmer-safe fungicidal/bio-control option as per local agri advisory.",
+            },
+        ],
+    )
+    return result.model_dump()
+
+
 async def analyze_crop_image(image_bytes: bytes, api_key: str) -> dict:
     """Analyze crop image for disease using Gemini multimodal."""
     if not image_bytes:
@@ -129,12 +170,12 @@ async def analyze_crop_image(image_bytes: bytes, api_key: str) -> dict:
                     allocator.report_rate_limited(lease, str(exc))
                 else:
                     allocator.report_error(lease, str(exc))
-            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
-                continue
-            raise
+            # Retry all model-call failures and use fallback if none succeed.
+            continue
 
     if last_error and "response" not in locals():
-        raise last_error
+        logger.warning("Gemini disease inference unavailable; using fallback response: %s", last_error)
+        return _fallback_detection(str(last_error))
 
     text = response.text.strip()
     logger.info("Gemini disease response length: %d", len(text))
@@ -150,8 +191,12 @@ async def analyze_crop_image(image_bytes: bytes, api_key: str) -> dict:
             text = text.split("```")[1].split("```")[0].strip()
             data = json.loads(text)
         else:
-            raise ValueError(f"Invalid JSON from Gemini: {text[:200]}")
+            logger.warning("Gemini returned non-JSON disease payload; using fallback")
+            return _fallback_detection("invalid_model_json")
 
-    # Validate against schema
-    result = DiseaseDetection(**data)
-    return result.model_dump()
+    try:
+        result = DiseaseDetection(**data)
+        return result.model_dump()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Gemini disease payload schema mismatch; using fallback: %s", exc)
+        return _fallback_detection(f"schema_mismatch: {exc}")

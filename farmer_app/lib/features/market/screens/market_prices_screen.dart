@@ -15,6 +15,7 @@ import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/live_market_service.dart';
 import '../../../shared/services/market_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 
 class MarketPricesScreen extends ConsumerStatefulWidget {
   const MarketPricesScreen({
@@ -354,6 +355,13 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
             pageName: 'Marketplace',
             languageCode: languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Switch between prices, mandis, listings, and schemes sections',
+              'Filter market records by state and commodity',
+              'Open crop listing creation and related market tools',
+              'Open equipment rental flows from listing section',
+              'Ask AI in chat for selling and timing strategy',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -386,6 +394,11 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
       onError(error);
       return <Map<String, dynamic>>[];
     }
+  }
+
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
   }
 
   bool _isUnauthorized(Object error) {
@@ -1186,121 +1199,19 @@ class _MarketPricesScreenState extends ConsumerState<MarketPricesScreen> {
     required Color textColor,
     required Color subColor,
   }) {
-    return Container(
+    return AiOverviewCard(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.6),
-          width: 1,
-        ),
-        color: cardColor,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.14),
-            blurRadius: 22,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(
-                Icons.auto_awesome,
-                color: AppColors.primaryDark.withValues(alpha: 0.82),
-                size: 18,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'AI Overview',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiExpanded ? _aiDetails : _aiSummary,
-            maxLines: _aiExpanded ? null : 3,
-            overflow: _aiExpanded
-                ? TextOverflow.visible
-                : TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.35),
-          ),
-          if (_aiLoading) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            const LinearProgressIndicator(minHeight: 2),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiUpdatedLabel(),
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: subColor),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _aiLoading
-                        ? null
-                        : () => _generateAiOverview(forceRefresh: true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: Icon(
-                      _aiGenerated ? Icons.refresh : Icons.auto_awesome,
-                    ),
-                    label: Text(
-                      _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              SizedBox(
-                height: 40,
-                child: OutlinedButton(
-                  onPressed: () {
-                    setState(() => _aiExpanded = !_aiExpanded);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.72),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                    ),
-                  ),
-                  child: Text(_aiExpanded ? 'Less' : 'More'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      cardColor: cardColor,
+      textColor: textColor,
+      subColor: subColor,
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _aiUpdatedLabel(),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      onActionTap: _openAiActionCard,
     );
   }
 

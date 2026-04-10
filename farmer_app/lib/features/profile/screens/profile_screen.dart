@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -192,11 +193,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   String _display(String? value) {
     final text = (value ?? '').trim();
-    return text.isEmpty ? 'Not set' : text;
+    return text.isEmpty ? 'screen.profile_screen.not_set'.tr() : text;
   }
 
   String _displayNum(num? value) {
-    if (value == null) return 'Not set';
+    if (value == null) return 'screen.profile_screen.not_set'.tr();
     if (value % 1 == 0) return value.toStringAsFixed(0);
     return value.toStringAsFixed(2);
   }
@@ -259,9 +260,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             pinCode == null ||
             landSize == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Village, district, state, pincode and land size are required to create profile.',
+                'screen.profile_screen.village_district_state_pincode_and_land_size_are_req'
+                    .tr(),
               ),
             ),
           );
@@ -305,7 +307,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully.')),
+        SnackBar(
+          content: Text('screen.profile_screen.profile_updated_successfully'.tr()),
+        ),
       );
 
       await _loadAll();
@@ -325,17 +329,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text('screen.profile_screen.logout'.tr()),
+        content: Text('screen.profile_screen.are_you_sure_you_want_to_logout'.tr()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text('screen.profile_screen.cancel'.tr()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Logout'),
+            child: Text('screen.profile_screen.logout'.tr()),
           ),
         ],
       ),
@@ -418,7 +422,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               Expanded(
                                 child: Text(
-                                  'Profile',
+                                  'screen.profile_screen.profile'.tr(),
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context)
                                       .textTheme
@@ -452,9 +456,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               Icons.logout_rounded,
                               color: AppColors.danger,
                             ),
-                            label: const Text(
-                              'Logout',
-                              style: TextStyle(color: AppColors.danger),
+                            label: Text(
+                              'screen.profile_screen.logout'.tr(),
+                              style: const TextStyle(color: AppColors.danger),
                             ),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: AppColors.danger),
@@ -474,7 +478,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _headerCard() {
     final user = ref.watch(authStateProvider).value?.user;
-    final role = (user?['role'] ?? 'farmer').toString();
+    final role =
+        (user?['role'] ?? 'screen.profile_screen.farmer'.tr()).toString();
 
     final name = _display(_nullable(_nameCtrl.text));
     final phone = _display(_nullable(_phoneCtrl.text));
@@ -485,7 +490,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _nullable(_stateCtrl.text),
     ].whereType<String>().join(', ');
 
-    final initials = name == 'Not set'
+    final initials = name == 'screen.profile_screen.not_set'.tr()
         ? 'F'
         : name
             .split(' ')
@@ -535,7 +540,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  location.isEmpty ? 'Location not set' : location,
+                  location.isEmpty
+                      ? 'screen.profile_screen.location_not_set'.tr()
+                      : location,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: context.isDark
                             ? AppColors.darkTextSecondary
@@ -552,7 +559,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 icon: Icon(
                   _isEditing ? Icons.close_rounded : Icons.edit_rounded,
                 ),
-                tooltip: _isEditing ? 'Cancel editing' : 'Edit here',
+                tooltip: _isEditing
+                    ? 'screen.profile_screen.cancel_editing'.tr()
+                    : 'screen.profile_screen.edit_here'.tr(),
               ),
               _tag(role.toUpperCase()),
             ],
@@ -564,15 +573,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _statsStrip({required double? landSize, required Color iconTone}) {
     final stats = [
-      _ProfileStat('Crops', '$_cropsCount', Icons.grass_rounded),
-      _ProfileStat('Livestock', '$_livestockCount', Icons.pets_rounded),
       _ProfileStat(
-        'Land',
-        landSize == null ? 'NA' : _displayNum(landSize),
+        'screen.profile_screen.crops'.tr(),
+        '$_cropsCount',
+        Icons.grass_rounded,
+      ),
+      _ProfileStat(
+        'screen.profile_screen.livestock'.tr(),
+        '$_livestockCount',
+        Icons.pets_rounded,
+      ),
+      _ProfileStat(
+        'screen.profile_screen.land'.tr(),
+        landSize == null ? 'screen.profile_screen.na'.tr() : _displayNum(landSize),
         Icons.landscape_rounded,
       ),
       _ProfileStat(
-        'Alerts',
+        'screen.profile_screen.alerts'.tr(),
         '$_unreadNotifications',
         Icons.notifications_active_rounded,
       ),
@@ -627,23 +644,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _farmerInformationCard() {
     final fields = <_EditableFieldConfig>[
-      _EditableFieldConfig('Name', _nameCtrl),
-      _EditableFieldConfig('Phone', _phoneCtrl, keyboardType: TextInputType.phone),
-      _EditableFieldConfig('Village', _villageCtrl),
-      _EditableFieldConfig('District', _districtCtrl),
-      _EditableFieldConfig('State', _stateCtrl),
-      _EditableFieldConfig('Pincode', _pincodeCtrl, keyboardType: TextInputType.number),
-      _EditableFieldConfig('Soil Type', _soilTypeCtrl),
-      _EditableFieldConfig('Irrigation', _irrigationCtrl),
+      _EditableFieldConfig('screen.profile_screen.name'.tr(), _nameCtrl),
       _EditableFieldConfig(
-        'Land Size (acres)',
+        'screen.profile_screen.phone'.tr(),
+        _phoneCtrl,
+        keyboardType: TextInputType.phone,
+      ),
+      _EditableFieldConfig('screen.profile_screen.village'.tr(), _villageCtrl),
+      _EditableFieldConfig('screen.profile_screen.district'.tr(), _districtCtrl),
+      _EditableFieldConfig('screen.profile_screen.state'.tr(), _stateCtrl),
+      _EditableFieldConfig(
+        'screen.profile_screen.pincode'.tr(),
+        _pincodeCtrl,
+        keyboardType: TextInputType.number,
+      ),
+      _EditableFieldConfig('screen.profile_screen.soil_type_2'.tr(), _soilTypeCtrl),
+      _EditableFieldConfig('screen.profile_screen.irrigation'.tr(), _irrigationCtrl),
+      _EditableFieldConfig(
+        'screen.profile_screen.land_size_acres_2'.tr(),
         _landSizeCtrl,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
       ),
-      _EditableFieldConfig('Land Unit', _landUnitCtrl),
-      _EditableFieldConfig('Language', _languageCtrl),
+      _EditableFieldConfig('screen.profile_screen.land_unit_2'.tr(), _landUnitCtrl),
+      _EditableFieldConfig('screen.profile_screen.language'.tr(), _languageCtrl),
       _EditableFieldConfig(
-        'Crops (comma separated)',
+        'screen.profile_screen.crops_comma_separated'.tr(),
         _cropsCtrl,
         maxLines: 2,
       ),
@@ -660,7 +685,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Farmer Information',
+                  'screen.profile_screen.farmer_information'.tr(),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
@@ -676,8 +701,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
-                  child: const Text(
-                    'Editing',
+                  child: Text(
+                    'screen.profile_screen.editing'.tr(),
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -715,7 +740,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _isSaving ? null : _toggleEditMode,
-                    child: const Text('Cancel'),
+                    child: Text('screen.profile_screen.cancel'.tr()),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -729,7 +754,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.save_rounded),
-                    label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
+                    label: Text(
+                      _isSaving
+                          ? 'screen.profile_screen.saving'.tr()
+                          : 'screen.profile_screen.save_changes'.tr(),
+                    ),
                   ),
                 ),
               ],
@@ -811,7 +840,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Language & Theme',
+            'screen.profile_screen.language_theme'.tr(),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
@@ -829,7 +858,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Language: $currentName',
+                    '${'screen.profile_screen.language'.tr()}: $currentName',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -869,7 +898,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    darkMode ? 'Dark Theme' : 'Light Theme',
+                    darkMode
+                        ? 'screen.profile_screen.dark_theme'.tr()
+                        : 'screen.profile_screen.light_theme'.tr(),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -890,17 +921,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _actionsSection({required Color iconTone}) {
     final actions = [
       _ProfileAction(
-        title: 'Equipment Hub',
+        title: 'screen.profile_screen.equipment_hub'.tr(),
         icon: Icons.handyman_rounded,
         onTap: () => context.push(RoutePaths.equipmentHub),
       ),
       _ProfileAction(
-        title: 'My Bookings',
+        title: 'screen.profile_screen.my_bookings'.tr(),
         icon: Icons.calendar_month_rounded,
         onTap: () => context.push(RoutePaths.myBookings),
       ),
       _ProfileAction(
-        title: 'Notifications',
+        title: 'screen.profile_screen.notifications'.tr(),
         icon: Icons.notifications_rounded,
         onTap: () => context.push(RoutePaths.notifications),
       ),
@@ -910,7 +941,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          'Quick Actions',
+          'screen.profile_screen.quick_actions'.tr(),
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w900,

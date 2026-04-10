@@ -4,6 +4,7 @@ import re
 import hashlib
 from urllib.parse import quote_plus
 from typing import Optional, Any
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -21,6 +22,9 @@ from services.equipment_rental_data import (
 )
 
 router = APIRouter(prefix="/rental-rates", tags=["Equipment Rental Rates"])
+
+_RATE_HISTORY_CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
+_RATE_HISTORY_TTL_SECONDS = 300
 
 
 def _to_float(value: Any) -> float:
@@ -186,6 +190,44 @@ async def _load_provider_rows(
     return out
 
 
+async def _load_provider_rows_with_location_fallback(
+    *,
+    state: Optional[str],
+    district: Optional[str],
+    category: Optional[str] = None,
+    equipment_name: Optional[str] = None,
+    search: Optional[str] = None,
+    source_type: Optional[str] = None,
+    limit: int = 300,
+) -> tuple[list[dict[str, Any]], Optional[str], Optional[str]]:
+    attempts: list[tuple[Optional[str], Optional[str]]] = [
+        (state, district),
+        (state, None),
+        (None, None),
+    ]
+
+    seen: set[tuple[str, str]] = set()
+    for st, dist in attempts:
+        key = ((st or "").strip().lower(), (dist or "").strip().lower())
+        if key in seen:
+            continue
+        seen.add(key)
+
+        rows = await _load_provider_rows(
+            state=(st or None),
+            district=(dist or None),
+            category=category,
+            equipment_name=equipment_name,
+            search=search,
+            source_type=source_type,
+            limit=limit,
+        )
+        if rows:
+            return rows, (st or None), (dist or None)
+
+    return [], None, None
+
+
 def _provider_view(row: dict[str, Any]) -> dict[str, Any]:
     metrics = _derived_metrics(row)
     return {
@@ -293,7 +335,7 @@ async def list_rental_rates(
         ):
             effective_district = profile_district
 
-    provider_rows = await _load_provider_rows(
+    provider_rows, applied_state, applied_district = await _load_provider_rows_with_location_fallback(
         state=effective_state or None,
         district=effective_district or None,
         category=category,
@@ -309,8 +351,8 @@ async def list_rental_rates(
             "total": len(rows),
             "data_source": "ref_equipment_providers",
             "filters": {
-                "state": state,
-                "district": district,
+                "state": applied_state,
+                "district": applied_district,
                 "category": category,
                 "equipment_name": equipment_name,
                 "search": search,
@@ -324,8 +366,8 @@ async def list_rental_rates(
         "data_source": "ref_equipment_providers",
         "message": "No provider listings found for the selected filters.",
         "filters": {
-            "state": state,
-            "district": district,
+            "state": applied_state,
+            "district": applied_district,
             "category": category,
             "equipment_name": equipment_name,
             "search": search,
@@ -378,7 +420,7 @@ async def search_rental_equipment(
         ):
             effective_district = profile_district
 
-    provider_rows = await _load_provider_rows(
+    provider_rows, _, _ = await _load_provider_rows_with_location_fallback(
         state=effective_state or None,
         district=effective_district or None,
         search=q,
@@ -414,11 +456,35 @@ async def get_mechanization_stats(
 async def get_rate_history(
     equipment_name: str = Query(..., min_length=1),
     state: Optional[str] = Query(default=None),
+    max_periods: int = Query(default=24, ge=6, le=120),
     user: dict = Depends(get_current_user),
 ):
     """Return historical rate entries for a specific equipment name and optional state."""
     db = get_async_db()
-    docs = [d async for d in db.collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY).stream()]
+    cache_key = f"{equipment_name.strip().lower()}|{(state or '').strip().lower()}|{max_periods}"
+    now = datetime.now(timezone.utc)
+    cached = _RATE_HISTORY_CACHE.get(cache_key)
+    if cached and cached[0] > now:
+        return cached[1]
+
+    exact_docs = [
+        d
+        async for d in db
+        .collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY)
+        .where(filter=FieldFilter("equipment_name", "==", equipment_name.strip()))
+        .limit(5000)
+        .stream()
+    ]
+
+    docs = exact_docs
+    if not docs:
+        docs = [
+            d
+            async for d in db
+            .collection(MongoCollections.REF_EQUIPMENT_RATE_HISTORY)
+            .limit(6000)
+            .stream()
+        ]
 
     equipment_q = equipment_name.strip().lower()
     equipment_norm = _normalize_equipment_key(equipment_name)
@@ -511,13 +577,21 @@ async def get_rate_history(
             }
         )
 
-    return {
+    if len(rows) > max_periods:
+        rows = rows[-max_periods:]
+
+    payload = {
         "has_real_data": bool(rows),
         "history": rows,
         "note": "Historical rates sourced from admin-seeded dataset."
         if rows
         else "No historical rate data found for this equipment/state.",
     }
+    _RATE_HISTORY_CACHE[cache_key] = (
+        now + timedelta(seconds=_RATE_HISTORY_TTL_SECONDS),
+        payload,
+    )
+    return payload
 
 
 @router.get("/{equipment_name}", status_code=HttpStatus.OK)
@@ -546,7 +620,7 @@ async def get_equipment_rate(
         ):
             effective_district = profile_district
 
-    provider_rows = await _load_provider_rows(
+    provider_rows, applied_state, applied_district = await _load_provider_rows_with_location_fallback(
         state=effective_state or None,
         district=effective_district or None,
         equipment_name=equipment_name,
@@ -558,8 +632,8 @@ async def get_equipment_rate(
         hourly_rates = [x.get("rates", {}).get("hourly") for x in rows if isinstance(x.get("rates", {}).get("hourly"), (int, float))]
         return {
             "equipment_name": equipment_name,
-            "state": state,
-            "district": district,
+            "state": applied_state,
+            "district": applied_district,
             "providers": rows,
             "providers_count": len(rows),
             "rate_summary": {
@@ -573,8 +647,8 @@ async def get_equipment_rate(
 
     return {
         "equipment_name": equipment_name,
-        "state": state,
-        "district": district,
+        "state": applied_state,
+        "district": applied_district,
         "providers": [],
         "providers_count": 0,
         "rate_summary": {

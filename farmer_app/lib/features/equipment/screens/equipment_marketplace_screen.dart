@@ -13,6 +13,7 @@ import '../../../shared/models/equipment_model.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/equipment_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../utils/equipment_utils.dart';
 import '../widgets/equipment_shell.dart';
@@ -115,27 +116,31 @@ class _EquipmentMarketplaceScreenState
         profile = _profile;
       }
 
-      final categories = await svc.listRentalCategories(
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
+      final results = await Future.wait([
+        svc.listRentalCategories(
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+        svc.listRentalRatesFiltered(
+          state: _selectedState,
+          category: _selectedCategory,
+          search: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+          limit: 500,
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+        svc.browseAllEquipment(
+          preferCache: !forceRefresh,
+          forceRefresh: forceRefresh,
+        ),
+      ]);
       if (!mounted) return;
-      final data = await svc.listRentalRatesFiltered(
-        state: _selectedState,
-        category: _selectedCategory,
-        search: _searchController.text.trim().isEmpty
-            ? null
-            : _searchController.text.trim(),
-        limit: 500,
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
-      final listings = await svc.browseAllEquipment(
-        preferCache: !forceRefresh,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
+
+      final categories = results[0] as List<String>;
+      final data = results[1] as Map<String, dynamic>;
+      final listings = results[2] as List<Map<String, dynamic>>;
 
       final rows =
           (data['rows'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
@@ -176,6 +181,10 @@ class _EquipmentMarketplaceScreenState
         _loading = false;
         _refreshing = false;
       });
+
+      if (!_aiGenerated && !_aiLoading) {
+        _generateAiOverview(forceRefresh: false);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -263,6 +272,13 @@ class _EquipmentMarketplaceScreenState
             pageName: 'Equipment Marketplace',
             languageCode: context.locale.languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Browse equipment providers by category and state filters',
+              'Open provider details and compare daily rental rates',
+              'Open farmer listings and view listing details',
+              'Track rentals from My Bookings screen',
+              'Ask AI in chat to plan equipment booking decisions',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -287,6 +303,11 @@ class _EquipmentMarketplaceScreenState
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
     return 'Updated at $hh:$mm';
+  }
+
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
   }
 
   List<EquipmentProvider> _dedupeProviders(List<EquipmentProvider> items) {
@@ -472,7 +493,9 @@ class _EquipmentMarketplaceScreenState
           const SizedBox(height: AppSpacing.sm),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.6),
+              color: Colors.white.withValues(
+                alpha: context.isDark ? 0.08 : 0.6,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.full),
               border: Border.all(color: context.appColors.border),
             ),
@@ -499,7 +522,9 @@ class _EquipmentMarketplaceScreenState
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: context.isDark ? 0.08 : 0.55),
+              color: Colors.white.withValues(
+                alpha: context.isDark ? 0.08 : 0.55,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.full),
               border: Border.all(color: context.appColors.border),
             ),
@@ -511,7 +536,9 @@ class _EquipmentMarketplaceScreenState
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadius.full),
-                color: Colors.white.withValues(alpha: context.isDark ? 0.16 : 0.9),
+                color: Colors.white.withValues(
+                  alpha: context.isDark ? 0.16 : 0.9,
+                ),
               ),
               labelStyle: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -651,7 +678,11 @@ class _EquipmentMarketplaceScreenState
               ),
               child: Row(
                 children: [
-                  Icon(Icons.tune_rounded, color: context.appColors.info, size: 18),
+                  Icon(
+                    Icons.tune_rounded,
+                    color: context.appColors.info,
+                    size: 18,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
@@ -743,7 +774,9 @@ class _EquipmentMarketplaceScreenState
                       PopupMenuButton<String>(
                         onSelected: (value) {
                           setState(() {
-                            _selectedCategory = value == '__all__' ? null : value;
+                            _selectedCategory = value == '__all__'
+                                ? null
+                                : value;
                           });
                         },
                         itemBuilder: (_) => [
@@ -899,93 +932,15 @@ class _EquipmentMarketplaceScreenState
   }
 
   Widget _aiOverviewSection() {
-    return GlassCard(
-      featured: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                'AI Overview',
-                style: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiExpanded ? _aiDetails : _aiSummary,
-            style: context.textTheme.bodyMedium?.copyWith(height: 1.45),
-            maxLines: _aiExpanded ? null : 4,
-            overflow: _aiExpanded
-                ? TextOverflow.visible
-                : TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (_aiLoading)
-            Row(
-              children: [
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Generating recommendations...',
-                  style: context.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiUpdatedLabel(),
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _aiLoading
-                      ? null
-                      : () => _generateAiOverview(forceRefresh: true),
-                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
-                  label: Text(
-                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.85),
-                    foregroundColor: AppColors.lightText,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              OutlinedButton(
-                onPressed: () {
-                  setState(() => _aiExpanded = !_aiExpanded);
-                },
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                ),
-                child: Text(_aiExpanded ? 'Less' : 'More'),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return AiOverviewCard(
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _aiUpdatedLabel(),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      onActionTap: _openAiActionCard,
     );
   }
 
@@ -1078,6 +1033,12 @@ class _EquipmentMarketplaceScreenState
                 HapticFeedback.lightImpact();
                 final encoded = Uri.encodeComponent(sample.equipmentName);
                 final cat = Uri.encodeComponent(sample.category);
+                ref
+                    .read(equipmentServiceProvider)
+                    .warmRentalRateDetailBundle(
+                      equipmentName: sample.equipmentName,
+                      state: _selectedState,
+                    );
                 context.push(
                   '${RoutePaths.rentalRateDetail}?name=$encoded&category=$cat',
                 );
@@ -1244,6 +1205,10 @@ class _EquipmentMarketplaceScreenState
               onTap: () {
                 HapticFeedback.lightImpact();
                 final id = Uri.encodeComponent((row['id'] ?? '').toString());
+                final rawId = (row['id'] ?? '').toString();
+                ref
+                    .read(equipmentServiceProvider)
+                    .warmEquipmentListingDetail(rawId);
                 context.push('${RoutePaths.listingDetails}?id=$id');
               },
               child: Container(

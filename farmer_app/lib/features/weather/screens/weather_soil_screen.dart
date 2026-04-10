@@ -4,14 +4,17 @@ import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/personalization_service.dart';
 import '../../../shared/services/weather_soil_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../widgets/glass_widgets.dart';
 
 class WeatherSoilScreen extends ConsumerStatefulWidget {
@@ -31,7 +34,8 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
   bool _aiExpanded = false;
   bool _aiLoading = false;
   bool _aiGenerated = false;
-  String _aiSummary = 'Generate AI briefing for today\'s farm weather and soil.';
+  String _aiSummary =
+      'Generate AI briefing for today\'s farm weather and soil.';
   String _aiDetails =
       'Combines weather, soil moisture profile, ET0, and farm decisions. Cached for 24 hours.';
   DateTime? _aiUpdatedAt;
@@ -84,7 +88,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
     try {
       Map<String, dynamic> profile = <String, dynamic>{};
       try {
-        profile = await ref.read(personalizationServiceProvider).getProfileContext();
+        profile = await ref
+            .read(personalizationServiceProvider)
+            .getProfileContext();
       } catch (_) {
         profile = <String, dynamic>{};
       }
@@ -95,11 +101,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
 
       final weather = await ref
           .read(weatherSoilServiceProvider)
-          .getFullWeather(
-            lat: lat,
-            lon: lon,
-            forceRefresh: forceRefresh,
-          );
+          .getFullWeather(lat: lat, lon: lon, forceRefresh: forceRefresh);
       final location =
           (weather['location'] as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
@@ -120,6 +122,10 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         _loading = false;
         _refreshing = false;
       });
+
+      if (!_aiGenerated && !_aiLoading) {
+        _generateAiOverview(forceRefresh: false);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -247,7 +253,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         final series = values.map(_num).toList(growable: false);
         fallback = series;
 
-        final hasMeaningful = series.any((v) => v != null && v.abs() > 0.000001);
+        final hasMeaningful = series.any(
+          (v) => v != null && v.abs() > 0.000001,
+        );
         if (hasMeaningful) {
           return series;
         }
@@ -294,7 +302,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
     final uvHourly = _hourlyValueAt(const ['uv_index'], idx);
     if (uvHourly != null && uvHourly > 0) return uvHourly;
 
-    final uvDaily = _num(_list(_daily['uv_max']).elementAtOrNull(_todayDailyStartIndex()));
+    final uvDaily = _num(
+      _list(_daily['uv_max']).elementAtOrNull(_todayDailyStartIndex()),
+    );
     if (uvDaily != null) return uvDaily;
     return 0;
   }
@@ -341,8 +351,11 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       final humidity = _num(_current['humidity']) ?? 70;
       final wind = _num(_current['wind_speed']) ?? 3;
       final condition = (_current['condition'] ?? 'Clear').toString();
-      final rootMoisture = _num(
-            _list(_hourly['soil_moisture_root']).elementAtOrNull(_currentHourlyIndex()),
+      final rootMoisture =
+          _num(
+            _list(
+              _hourly['soil_moisture_root'],
+            ).elementAtOrNull(_currentHourlyIndex()),
           ) ??
           0.22;
 
@@ -358,18 +371,31 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         'Root-zone soil moisture: ${rootMoisture.toStringAsFixed(2)} volumetric fraction.',
       ];
 
-      for (var j = 0; j < math.min(4, math.max(0, dailyDates.length - start)); j++) {
+      for (
+        var j = 0;
+        j < math.min(4, math.max(0, dailyDates.length - start));
+        j++
+      ) {
         final i = start + j;
         snippets.add(
           '${dailyDates[i]}: max ${_num(dailyMax.elementAtOrNull(i))?.toStringAsFixed(1) ?? '--'}C, min ${_num(dailyMin.elementAtOrNull(i))?.toStringAsFixed(1) ?? '--'}C, rain ${_num(dailyRain.elementAtOrNull(i))?.toStringAsFixed(1) ?? '--'} mm, ET0 ${_num(dailyEt0.elementAtOrNull(i))?.toStringAsFixed(1) ?? '--'} mm.',
         );
       }
 
-      final result = await ref.read(aiOverviewServiceProvider).generate(
+      final result = await ref
+          .read(aiOverviewServiceProvider)
+          .generate(
             key: 'weather_overview_v2',
             pageName: 'Weather and Soil Intelligence',
             languageCode: context.locale.languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Track hourly and 7-day weather outlook for the farm location',
+              'Use rain, ET0, and wind data for irrigation and spray timing',
+              'Review UV, soil moisture, and humidity stress indicators',
+              'Open AI chat for crop-specific weather action planning',
+              'Plan daily farm decisions from weather and soil trends',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -396,6 +422,11 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         backgroundColor: isError ? AppColors.danger : null,
       ),
     );
+  }
+
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
   }
 
   void _showSourceInfo() {
@@ -441,13 +472,25 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final bgTop = isDark ? AppColors.darkBackground : const Color(0xFFFBF8F3);
-    final bgBottom = isDark ? AppColors.darkSurface : const Color(0xFFF6F0E8);
+    final pageGradient = isDark
+        ? <Color>[
+            AppColors.darkBackground,
+            AppColors.darkSurface,
+            AppColors.darkBackground,
+          ]
+        : <Color>[
+            AppColors.lightBackground,
+            AppColors.lightSurface,
+            AppColors.lightBackground,
+          ];
 
     final sections = <Widget>[
       if (_error != null)
         GlassCard(
-          child: Text(_error!, style: TextStyle(color: context.appColors.textSecondary)),
+          child: Text(
+            _error!,
+            style: TextStyle(color: context.appColors.textSecondary),
+          ),
         ),
       _aiOverviewSection(),
       _heroWeatherCard(),
@@ -462,7 +505,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: bgTop,
+      backgroundColor: pageGradient.first,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
         child: Container(
@@ -513,7 +556,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        onPressed: _refreshing ? null : () => _fetch(forceRefresh: true),
+                        onPressed: _refreshing
+                            ? null
+                            : () => _fetch(forceRefresh: true),
                         icon: _refreshing
                             ? const SizedBox(
                                 width: 18,
@@ -530,7 +575,10 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       GlassIconButton(
-                        icon: const Icon(Icons.info_outline, color: AppColors.lightText),
+                        icon: const Icon(
+                          Icons.info_outline,
+                          color: AppColors.lightText,
+                        ),
                         onPressed: _showSourceInfo,
                       ),
                     ],
@@ -544,15 +592,17 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [bgTop, bgBottom],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: pageGradient,
           ),
         ),
         child: SafeArea(
           bottom: false,
           child: _loading && _full == null
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
               : RefreshIndicator(
                   onRefresh: () => _fetch(forceRefresh: true),
                   child: ListView.separated(
@@ -565,7 +615,8 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                       }
                       return sections[_refreshing ? i - 1 : i];
                     },
-                    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xl),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.xl),
                   ),
                 ),
         ),
@@ -624,11 +675,23 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    _statTile(Icons.water_drop_outlined, 'Humidity', '${humidity.toStringAsFixed(0)}%'),
+                    _statTile(
+                      Icons.water_drop_outlined,
+                      'Humidity',
+                      '${humidity.toStringAsFixed(0)}%',
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    _statTile(Icons.air, 'Wind', '${wind.toStringAsFixed(1)} m/s'),
+                    _statTile(
+                      Icons.air,
+                      'Wind',
+                      '${wind.toStringAsFixed(1)} m/s',
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    _statTile(Icons.thermostat, 'Dew Pt', dew == null ? '--' : '${dew.toStringAsFixed(1)}C'),
+                    _statTile(
+                      Icons.thermostat,
+                      'Dew Pt',
+                      dew == null ? '--' : '${dew.toStringAsFixed(1)}C',
+                    ),
                   ],
                 ),
               ),
@@ -652,7 +715,8 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
   Widget _farmDecisionsSection() {
     final cards = <_DecisionCardData>[];
 
-    final irrigate = (_decisions['irrigate_today'] as Map?)?.cast<String, dynamic>();
+    final irrigate = (_decisions['irrigate_today'] as Map?)
+        ?.cast<String, dynamic>();
     if (irrigate != null) {
       final needed = irrigate['needed'] == true;
       cards.add(
@@ -707,7 +771,8 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       );
     }
 
-    final harvest = (_decisions['harvest_window'] as Map?)?.cast<String, dynamic>();
+    final harvest = (_decisions['harvest_window'] as Map?)
+        ?.cast<String, dynamic>();
     if (harvest != null) {
       final good = harvest['good_3day'] == true;
       cards.add(
@@ -734,9 +799,11 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       );
     }
 
-    final sow = (_decisions['sowing_conditions'] as Map?)?.cast<String, dynamic>();
+    final sow = (_decisions['sowing_conditions'] as Map?)
+        ?.cast<String, dynamic>();
     if (sow != null) {
-      final good = sow['soil_temp_ok'] == true && sow['soil_moisture_ok'] == true;
+      final good =
+          sow['soil_temp_ok'] == true && sow['soil_moisture_ok'] == true;
       cards.add(
         _DecisionCardData(
           title: 'Sowing',
@@ -753,7 +820,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       children: [
         Text(
           'Farm Decisions',
-          style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: context.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
@@ -766,7 +835,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
               final item = cards[i];
               final tone = item.positive
                   ? AppColors.success
-                  : (item.verdict.contains('WAIT') ? AppColors.warning : AppColors.danger);
+                  : (item.verdict.contains('WAIT')
+                        ? AppColors.warning
+                        : AppColors.danger);
               return SizedBox(
                 width: 236,
                 child: GlassCard(
@@ -831,7 +902,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           hourlyKeys: const ['soil_moisture_surface', 'soil_moisture_0_1cm'],
           currentKey: 'soil_moisture_0_1cm',
         ),
-        'Tractor entry OK?'
+        'Tractor entry OK?',
       ),
       (
         'Shallow Root (1-3cm)',
@@ -839,7 +910,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           hourlyKeys: const ['soil_moisture_1_3cm'],
           currentKey: 'soil_moisture_1_3cm',
         ),
-        'Seedbed moisture'
+        'Seedbed moisture',
       ),
       (
         'Root Zone (3-9cm)',
@@ -847,7 +918,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           hourlyKeys: const ['soil_moisture_root', 'soil_moisture_3_9cm'],
           currentKey: 'soil_moisture_3_9cm',
         ),
-        'Irrigation signal'
+        'Irrigation signal',
       ),
       (
         'Deep Root (9-27cm)',
@@ -855,7 +926,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           hourlyKeys: const ['soil_moisture_9_27cm'],
           currentKey: 'soil_moisture_9_27cm',
         ),
-        'Stored moisture'
+        'Stored moisture',
       ),
       (
         'Subsoil (27-81cm)',
@@ -863,7 +934,7 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           hourlyKeys: const ['soil_moisture_deep', 'soil_moisture_27_81cm'],
           currentKey: 'soil_moisture_27_81cm',
         ),
-        'Long-term reserve'
+        'Long-term reserve',
       ),
     ];
 
@@ -873,7 +944,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         children: [
           Text(
             'Soil Moisture Depth Profile',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           for (final row in rows) ...[
@@ -911,7 +984,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       children: [
         Text(
           '16-Day Forecast',
-          style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: context.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
@@ -935,7 +1010,10 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,16 +1074,20 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
   Widget _hourlyChartSection() {
     final idx = _currentHourlyIndex();
     final timesSrc = _hourlyTimes();
-    final precipSrc = _hourlySeriesForKeys(
-      const ['precip_prob', 'precipitation_probability'],
-    );
-    final et0Src = _hourlySeriesForKeys(
-      const ['et0', 'et0_fao_evapotranspiration'],
-    );
+    final precipSrc = _hourlySeriesForKeys(const [
+      'precip_prob',
+      'precipitation_probability',
+    ]);
+    final et0Src = _hourlySeriesForKeys(const [
+      'et0',
+      'et0_fao_evapotranspiration',
+    ]);
 
-    final available = <int>[timesSrc.length, precipSrc.length, et0Src.length]
-        .where((e) => e > 0)
-        .fold<int>(0, (p, e) => math.max(p, e));
+    final available = <int>[
+      timesSrc.length,
+      precipSrc.length,
+      et0Src.length,
+    ].where((e) => e > 0).fold<int>(0, (p, e) => math.max(p, e));
     if (available == 0) {
       return GlassCard(
         child: Column(
@@ -1013,7 +1095,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           children: [
             Text(
               'Hourly Rain Probability + ET0 (24h)',
-              style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
@@ -1053,7 +1137,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         children: [
           Text(
             'Hourly Rain Probability + ET0 (24h)',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -1077,7 +1163,8 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
 
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) => updateSelection(details.localPosition),
+                  onTapDown: (details) =>
+                      updateSelection(details.localPosition),
                   onHorizontalDragUpdate: (details) =>
                       updateSelection(details.localPosition),
                   child: CustomPaint(
@@ -1140,7 +1227,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Selected ${_fmtTime(times.elementAtOrNull(selected))}: Rain ${precipProb[selected].toStringAsFixed(0)}%, ET0 ${et0[selected].toStringAsFixed(2)} mm',
-            style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1156,8 +1245,13 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         : null;
 
     final uv = _currentUv();
-    final solar = _num(_nasa['solar_radiation']) ??
-        _num(_list(_hourly['solar_radiation']).elementAtOrNull(_currentHourlyIndex()));
+    final solar =
+        _num(_nasa['solar_radiation']) ??
+        _num(
+          _list(
+            _hourly['solar_radiation'],
+          ).elementAtOrNull(_currentHourlyIndex()),
+        );
 
     final now = DateTime.now();
     final sr = sunrise != null ? DateTime.tryParse(sunrise) : null;
@@ -1183,7 +1277,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         children: [
           Text(
             'Sun & UV',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
@@ -1222,7 +1318,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         children: [
           Text(
             'Wind',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
@@ -1233,7 +1331,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Speed ${wind.toStringAsFixed(1)} m/s • Gust ${gust.toStringAsFixed(1)} m/s'),
+          Text(
+            'Speed ${wind.toStringAsFixed(1)} m/s • Gust ${gust.toStringAsFixed(1)} m/s',
+          ),
           const SizedBox(height: AppSpacing.xs),
           _pill(
             spraySafe ? 'Safe to spray' : 'High drift risk',
@@ -1262,14 +1362,26 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         children: [
           Text(
             'Air Quality',
-            style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(child: _metricMini('PM2.5', pm25 == null ? '--' : pm25.toStringAsFixed(1))),
+              Expanded(
+                child: _metricMini(
+                  'PM2.5',
+                  pm25 == null ? '--' : pm25.toStringAsFixed(1),
+                ),
+              ),
               const SizedBox(width: AppSpacing.md),
-              Expanded(child: _metricMini('PM10', pm10 == null ? '--' : pm10.toStringAsFixed(1))),
+              Expanded(
+                child: _metricMini(
+                  'PM10',
+                  pm10 == null ? '--' : pm10.toStringAsFixed(1),
+                ),
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Container(
@@ -1300,97 +1412,26 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
   }
 
   Widget _aiOverviewSection() {
-    return GlassCard(
-      featured: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                'AI Weather Advisory',
-                style: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiExpanded ? _aiDetails : _aiSummary,
-            style: context.textTheme.bodyMedium?.copyWith(height: 1.45),
-            maxLines: _aiExpanded ? null : 4,
-            overflow: _aiExpanded
-                ? TextOverflow.visible
-                : TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (_aiLoading)
-            Row(
-              children: [
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Generating recommendations...',
-                  style: context.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _formatUpdatedAt(_aiUpdatedAt),
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _aiLoading ? null : () => _generateAiOverview(forceRefresh: true),
-                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
-                  label: Text(
-                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.85),
-                    foregroundColor: AppColors.lightText,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              OutlinedButton(
-                onPressed: () => setState(() => _aiExpanded = !_aiExpanded),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                  ),
-                ),
-                child: Text(_aiExpanded ? 'Less' : 'More'),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return AiOverviewCard(
+      title: 'AI Weather Advisory',
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _formatUpdatedAt(_aiUpdatedAt),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      onActionTap: _openAiActionCard,
     );
   }
 
   Widget _depthBar(String label, double? value, String note) {
     final v = (value ?? 0).clamp(0.0, 1.0);
-    final tone = Color.lerp(const Color(0xFF90CAF9), const Color(0xFF1565C0), v)!;
+    final tone = Color.lerp(
+      const Color(0xFF90CAF9),
+      const Color(0xFF1565C0),
+      v,
+    )!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1400,7 +1441,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
             Expanded(
               child: Text(
                 label,
-                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             Text(value == null ? '--' : value.toStringAsFixed(2)),
@@ -1419,7 +1462,9 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
         const SizedBox(height: AppSpacing.xs),
         Text(
           note,
-          style: context.textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.appColors.textSecondary,
+          ),
         ),
       ],
     );
@@ -1454,7 +1499,12 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
       child: Column(
         children: [
           Text(title, style: context.textTheme.bodySmall),
-          Text(value, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: context.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -1478,7 +1528,12 @@ class _WeatherSoilScreenState extends ConsumerState<WeatherSoilScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: context.textTheme.bodySmall),
-              Text(value, style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                value,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
         ),
@@ -1633,7 +1688,13 @@ class _SunArcPainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
     canvas.drawArc(rect, math.pi, math.pi, false, base);
-    canvas.drawArc(rect, math.pi, math.pi * progress.clamp(0.0, 1.0), false, active);
+    canvas.drawArc(
+      rect,
+      math.pi,
+      math.pi * progress.clamp(0.0, 1.0),
+      false,
+      active,
+    );
 
     final angle = math.pi + math.pi * progress.clamp(0.0, 1.0);
     final sun = Offset(
@@ -1642,7 +1703,11 @@ class _SunArcPainter extends CustomPainter {
     );
 
     canvas.drawCircle(sun, 7, Paint()..color = AppColors.warning);
-    canvas.drawCircle(sun, 11, Paint()..color = AppColors.warning.withValues(alpha: 0.18));
+    canvas.drawCircle(
+      sun,
+      11,
+      Paint()..color = AppColors.warning.withValues(alpha: 0.18),
+    );
   }
 
   @override

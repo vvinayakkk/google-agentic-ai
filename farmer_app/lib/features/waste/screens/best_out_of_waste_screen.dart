@@ -18,6 +18,7 @@ import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/crop_service.dart';
 import '../../../shared/services/market_service.dart';
 import '../../../shared/services/personalization_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 
 class BestOutOfWasteScreen extends ConsumerStatefulWidget {
   const BestOutOfWasteScreen({super.key});
@@ -32,6 +33,7 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
 
   bool _loading = true;
   bool _aiOverviewLoading = false;
+  bool _aiExpanded = false;
   bool _impactLoading = false;
   String? _loadError;
 
@@ -701,6 +703,13 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
             pageName: 'Best Out Of Waste Hub',
             languageCode: context.locale.languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Browse waste-to-wealth streams with setup cost and expected returns',
+              'Track quick daily tasks and progress for implementation',
+              'Use the impact calculator for savings, earnings, and CO2 prevention',
+              'Review matching schemes and subsidy options by stream',
+              'Open AI chat for practical buyer, setup, and execution advice',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -1326,6 +1335,11 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
     return _streams.map((s) => s.title).toList(growable: false);
   }
 
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
+  }
+
   Future<void> _refreshAll() async {
     await _bootstrap(forceRefresh: true);
     await _generateAiOverview(forceRefresh: true);
@@ -1485,77 +1499,20 @@ class _BestOutOfWasteScreenState extends ConsumerState<BestOutOfWasteScreen> {
   }
 
   Widget _aiOverviewCard(Color cardColor, Color textColor, Color subColor) {
-    return _glassCard(
+    return AiOverviewCard(
       cardColor: cardColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.auto_awesome,
-                color: AppColors.primaryDark,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'AI Overview',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _normalizeAiSummary(_overviewSummary),
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 6),
-          MarkdownBody(
-            data: _normalizeAiDetails(_overviewDetails),
-            styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-              p: TextStyle(color: subColor, height: 1.35),
-              listBullet: TextStyle(color: subColor),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _aiOverviewLoading
-                  ? null
-                  : () => _generateAiOverview(forceRefresh: true),
-              icon: Icon(
-                _aiOverviewLoading ? Icons.hourglass_top : Icons.refresh,
-              ),
-              label: Text(
-                _aiOverviewLoading
-                    ? 'Generating...'
-                    : 'Generate Fresh Overview',
-              ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 44),
-                backgroundColor: Colors.white.withValues(alpha: 0.85),
-                foregroundColor: AppColors.lightText,
-                side: BorderSide(
-                  color: AppColors.primary.withValues(alpha: 0.26),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      textColor: textColor,
+      subColor: subColor,
+      summary: _normalizeAiSummary(_overviewSummary),
+      details: _normalizeAiDetails(_overviewDetails),
+      expanded: _aiExpanded,
+      loading: _aiOverviewLoading,
+      updatedLabel: _overviewUpdatedAt == null
+          ? 'Not generated yet'
+          : 'Updated at ${_overviewUpdatedAt!.hour.toString().padLeft(2, '0')}:${_overviewUpdatedAt!.minute.toString().padLeft(2, '0')}',
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      onActionTap: _openAiActionCard,
     );
   }
 

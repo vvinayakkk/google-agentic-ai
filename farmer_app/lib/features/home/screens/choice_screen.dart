@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +21,7 @@ class ChoiceScreen extends ConsumerStatefulWidget {
 
 class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
   static const primaryGreen = Color(0xFF10B981);
-  String _locationName = 'Location unavailable';
+  String _locationName = '';
 
   @override
   void initState() {
@@ -34,7 +35,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     final saved = prefs.getString('last_location_name') ?? '';
     if (!mounted) return;
     setState(() {
-      _locationName = saved.isEmpty ? 'Location unavailable' : saved;
+      _locationName = saved;
     });
   }
 
@@ -58,7 +59,10 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
           permission != LocationPermission.always) {
         if (mounted && showError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission denied')),
+            SnackBar(
+              content:
+                  Text('screen.choice_screen.location_permission_denied'.tr()),
+            ),
           );
         }
         return;
@@ -76,7 +80,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
         position.longitude,
       );
 
-      String name = 'Location detected';
+      String name = 'screen.choice_screen.location_detected'.tr();
       if (marks.isNotEmpty) {
         final p = marks.first;
         final parts = <String>[
@@ -92,7 +96,9 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
     } catch (_) {
       if (mounted && showError) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not fetch live location')),
+          SnackBar(
+            content: Text('screen.choice_screen.could_not_fetch_live_location'.tr()),
+          ),
         );
       }
     }
@@ -104,23 +110,23 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Set location manually'),
+          title: Text('screen.choice_screen.set_location_manually'.tr()),
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Village, City, State',
+            decoration: InputDecoration(
+              hintText: 'screen.choice_screen.village_city_state'.tr(),
               border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+              child: Text('screen.choice_screen.cancel'.tr()),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: const Text('Save'),
+              child: Text('screen.choice_screen.save'.tr()),
             ),
           ],
         );
@@ -195,14 +201,14 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                               _setManualLocation();
                             }
                           },
-                          itemBuilder: (_) => const [
+                          itemBuilder: (_) => [
                             PopupMenuItem(
                               value: 'live',
-                              child: Text('Fetch live location'),
+                              child: Text('screen.choice_screen.fetch_live_location'.tr()),
                             ),
                             PopupMenuItem(
                               value: 'manual',
-                              child: Text('Enter manually'),
+                              child: Text('screen.choice_screen.enter_manually'.tr()),
                             ),
                           ],
                           child: Row(
@@ -212,7 +218,9 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  _locationName,
+                                  _locationName.isEmpty
+                                      ? 'screen.choice_screen.location_unavailable'.tr()
+                                      : _locationName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -260,7 +268,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
               const SizedBox(height: 6),
 
               Text(
-                'Choose Interaction Mode',
+                'screen.choice_screen.choose_interaction_mode'.tr(),
                 textAlign: TextAlign.center,
                 style: context.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -274,8 +282,9 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
               _interactionCard(
                 context: context,
                 icon: Icons.mic,
-                title: 'Voice Pilot',
-                subtitle: 'Speak naturally to get instant farming advice',
+                title: 'screen.choice_screen.voice_pilot'.tr(),
+                subtitle:
+                    'screen.choice_screen.speak_naturally_to_get_instant_farming_advice'.tr(),
                 onTap: () => context.push(RoutePaths.liveVoice),
                 cardColor: cardColor,
                 textColor: textColor,
@@ -291,8 +300,9 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
               _interactionCard(
                 context: context,
                 icon: Icons.edit,
-                title: 'Manual Mode',
-                subtitle: 'Type your questions for detailed responses',
+                title: 'screen.choice_screen.manual_mode'.tr(),
+                subtitle:
+                    'screen.choice_screen.type_your_questions_for_detailed_responses'.tr(),
                 onTap: () => context.push(RoutePaths.chat),
                 cardColor: cardColor,
                 textColor: textColor,
@@ -303,7 +313,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
 
               Center(
                 child: Text(
-                  'Quick Access',
+                  'screen.choice_screen.quick_access'.tr(),
                   style: context.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: textColor,
@@ -320,8 +330,8 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                       context: context,
                       icon: Icons.recycling,
                       iconColor: primaryGreen,
-                      title: 'Best Out of Waste',
-                      subtitle: 'Sustainable solutions',
+                      title: 'screen.choice_screen.best_out_of_waste'.tr(),
+                      subtitle: 'screen.choice_screen.sustainable_solutions'.tr(),
                       onTap: () => context.push(RoutePaths.waste),
                       cardColor: cardColor,
                       textColor: textColor,
@@ -334,8 +344,8 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
                       context: context,
                       icon: Icons.trending_up,
                       iconColor: Colors.orange,
-                      title: 'View Market Prices',
-                      subtitle: 'Real-time rates',
+                      title: 'screen.choice_screen.view_market_prices'.tr(),
+                      subtitle: 'screen.choice_screen.real_time_rates'.tr(),
                       onTap: () => context.push(RoutePaths.marketPrices),
                       cardColor: cardColor,
                       textColor: textColor,
@@ -473,7 +483,7 @@ class _ChoiceScreenState extends ConsumerState<ChoiceScreen> {
         const Expanded(child: Divider()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('OR',
+          child: Text('screen.choice_screen.or'.tr(),
               style: TextStyle(fontWeight: FontWeight.w600, color: subColor)),
         ),
         const Expanded(child: Divider()),

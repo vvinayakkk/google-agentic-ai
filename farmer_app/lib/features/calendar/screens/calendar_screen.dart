@@ -27,7 +27,16 @@ class _TaskEntry {
 }
 
 class CalendarScreen extends ConsumerStatefulWidget {
-  const CalendarScreen({super.key});
+  final bool openComposer;
+  final String? prefillTitle;
+  final String? prefillNotes;
+
+  const CalendarScreen({
+    super.key,
+    this.openComposer = false,
+    this.prefillTitle,
+    this.prefillNotes,
+  });
 
   @override
   ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
@@ -45,13 +54,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String? _heroRecommendation;
   List<_TaskEntry> _backendTasks = <_TaskEntry>[];
 
-  static final Map<DateTime, List<String>> _seedEvents = <DateTime, List<String>>{
-    DateTime(2026, 3, 3): <String>['high', 'normal'],
-    DateTime(2026, 3, 8): <String>['normal'],
-    DateTime(2026, 3, 14): <String>['high'],
-    DateTime(2026, 3, 17): <String>['ai'],
-    DateTime(2026, 3, 18): <String>['normal', 'ai'],
-  };
+  static final Map<DateTime, List<String>> _seedEvents =
+      <DateTime, List<String>>{
+        DateTime(2026, 3, 3): <String>['high', 'normal'],
+        DateTime(2026, 3, 8): <String>['normal'],
+        DateTime(2026, 3, 14): <String>['high'],
+        DateTime(2026, 3, 17): <String>['ai'],
+        DateTime(2026, 3, 18): <String>['normal', 'ai'],
+      };
 
   Map<DateTime, List<String>> _events = <DateTime, List<String>>{};
 
@@ -63,6 +73,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     _rebuildEventMap();
     _startAnimations();
     _loadBackendCalendarSignals();
+    if (widget.openComposer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _openScheduleTaskSheet(
+          initialTitle: widget.prefillTitle,
+          initialNotes: widget.prefillNotes,
+        );
+      });
+    }
   }
 
   void _startAnimations() {
@@ -138,14 +157,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     try {
       final notificationService = ref.read(notificationServiceProvider);
       final raw = await notificationService.list(perPage: 100);
-      final items = (raw['items'] as List?) ??
+      final items =
+          (raw['items'] as List?) ??
           (raw['notifications'] as List?) ??
           const <dynamic>[];
 
       final parsedTasks = <_TaskEntry>[];
       for (final item in items) {
         if (item is! Map) continue;
-        final map = Map<String, dynamic>.from(item as Map<dynamic, dynamic>);
+        final map = Map<String, dynamic>.from(item);
         final title = (map['title'] ?? '').toString().trim();
         final body = (map['body'] ?? '').toString().trim();
         final type = (map['type'] ?? '').toString().toLowerCase();
@@ -158,10 +178,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         if (parsedDate == null) continue;
 
         final isTaskLike =
-            type.contains('reminder') || type.contains('calendar') || type.contains('crop') || type.contains('weather');
+            type.contains('reminder') ||
+            type.contains('calendar') ||
+            type.contains('crop') ||
+            type.contains('weather');
         if (!isTaskLike && title.isEmpty && body.isEmpty) continue;
 
-        final isHigh = type.contains('alert') ||
+        final isHigh =
+            type.contains('alert') ||
             title.toLowerCase().contains('urgent') ||
             body.toLowerCase().contains('urgent') ||
             title.toLowerCase().contains('high');
@@ -169,7 +193,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         parsedTasks.add(
           _TaskEntry(
             title: title.isNotEmpty ? title : 'Farm Task',
-            subtitle: body.isNotEmpty ? body : 'Synced from backend notifications',
+            subtitle: body.isNotEmpty
+                ? body
+                : 'Synced from backend notifications',
             date: parsedDate,
             time: _parseTime(data['time']),
             isHigh: isHigh,
@@ -181,15 +207,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       try {
         final topTasks = parsedTasks
             .take(3)
-            .map((t) => '${t.title} on ${_shortDate(t.date)} at ${_formatTime(t.time)}')
+            .map(
+              (t) =>
+                  '${t.title} on ${_shortDate(t.date)} at ${_formatTime(t.time)}',
+            )
             .join('; ');
         final prompt =
             'Give one concise daily farming recommendation in 1-2 sentences for calendar planning. '
             'Upcoming tasks: ${topTasks.isEmpty ? 'None provided' : topTasks}.';
-        final ai = await ref.read(agentServiceProvider).chat(
-              message: prompt,
-              language: 'en',
-            );
+        final ai = await ref
+            .read(agentServiceProvider)
+            .chat(message: prompt, language: 'en');
         final text = ai['response']?.toString().trim();
         if (text != null && text.isNotEmpty) {
           recommendation = text;
@@ -250,9 +278,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return '$hour:$minute $period';
   }
 
-  Future<void> _openScheduleTaskSheet() async {
-    final titleController = TextEditingController();
-    final notesController = TextEditingController();
+  Future<void> _openScheduleTaskSheet({
+    String? initialTitle,
+    String? initialNotes,
+  }) async {
+    final titleController = TextEditingController(
+      text: initialTitle?.trim() ?? '',
+    );
+    final notesController = TextEditingController(
+      text: initialNotes?.trim() ?? '',
+    );
     var pickedDate = _selectedDay;
     var pickedTime = TimeOfDay.now();
     var highPriority = false;
@@ -266,7 +301,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           builder: (sheetContext, setSheetState) {
             final fieldBg = Colors.white.withValues(alpha: 0.72);
             final borderColor = Colors.white.withValues(alpha: 0.88);
-            final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+            final titleStyle = Theme.of(context).textTheme.titleMedium
+                ?.copyWith(
                   color: AppColors.lightText,
                   fontWeight: FontWeight.w700,
                 );
@@ -282,7 +318,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
                       color: AppColors.primaryDark.withValues(alpha: 0.08),
@@ -302,16 +340,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.lightTextSecondary.withValues(alpha: 0.35),
+                            color: AppColors.lightTextSecondary.withValues(
+                              alpha: 0.35,
+                            ),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        'Schedule New Task',
-                        style: titleStyle,
-                      ),
+                      Text('Schedule New Task', style: titleStyle),
                       const SizedBox(height: 4),
                       Text(
                         'Add a quick farm task for your selected date.',
@@ -352,7 +389,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
-                              color: AppColors.primaryDark.withValues(alpha: 0.65),
+                              color: AppColors.primaryDark.withValues(
+                                alpha: 0.65,
+                              ),
                               width: 1.2,
                             ),
                           ),
@@ -395,7 +434,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
-                              color: AppColors.primaryDark.withValues(alpha: 0.65),
+                              color: AppColors.primaryDark.withValues(
+                                alpha: 0.65,
+                              ),
                               width: 1.2,
                             ),
                           ),
@@ -440,7 +481,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               icon: const Icon(Icons.event_outlined, size: 16),
                               label: Text(
                                 _shortDate(pickedDate),
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -470,7 +513,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               icon: const Icon(Icons.access_time, size: 16),
                               label: Text(
                                 _formatTime(pickedTime),
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -498,7 +543,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 });
                               },
                               backgroundColor: fieldBg,
-                              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                              selectedColor: AppColors.primary.withValues(
+                                alpha: 0.2,
+                              ),
                               side: BorderSide(color: borderColor),
                               labelStyle: TextStyle(
                                 color: AppColors.lightText,
@@ -519,7 +566,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               backgroundColor: fieldBg,
                               selectedColor: CalendarColors.highBadgeBg,
                               side: BorderSide(
-                                color: CalendarColors.highBadgeText.withValues(alpha: 0.3),
+                                color: CalendarColors.highBadgeText.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                               labelStyle: TextStyle(
                                 color: CalendarColors.highBadgeText,
@@ -541,8 +590,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               return;
                             }
 
-                            final dateKey = _stripTime(pickedDate);
-                            final marker = highPriority ? 'high' : 'normal';
                             final details = notesController.text.trim();
 
                             setState(() {
@@ -602,7 +649,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final iconBg = Colors.white.withValues(alpha: 0.56);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -638,9 +687,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       Text(
                         'Calendar',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          color: textColor,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       Align(
                         alignment: Alignment.centerRight,
@@ -665,229 +714,252 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                      AnimatedSlide(
-                        offset: _heroVisible ? Offset.zero : const Offset(0, -0.05),
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                        child: AnimatedOpacity(
+                        AnimatedSlide(
+                          offset: _heroVisible
+                              ? Offset.zero
+                              : const Offset(0, -0.05),
                           duration: const Duration(milliseconds: 300),
-                          opacity: _heroVisible ? 1 : 0,
-                          child: _HeroCard(
-                            recommendation: _heroRecommendation,
-                            isLoading: _heroLoading,
-                            onSchedule: _openScheduleTaskSheet,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: <Widget>[
-                          Text(
-                            'Farming Calendar',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const Spacer(),
-                          _miniMonthAction(
-                            icon: Icons.chevron_left_rounded,
-                            subColor: subColor,
-                            onTap: () => _changeMonth(-1),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _monthLabel(_focusedDay),
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                          curve: Curves.easeOut,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: _heroVisible ? 1 : 0,
+                            child: _HeroCard(
+                              recommendation: _heroRecommendation,
+                              isLoading: _heroLoading,
+                              onSchedule: _openScheduleTaskSheet,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          _miniMonthAction(
-                            icon: Icons.chevron_right_rounded,
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              'Farming Calendar',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            const Spacer(),
+                            _miniMonthAction(
+                              icon: Icons.chevron_left_rounded,
+                              subColor: subColor,
+                              onTap: () => _changeMonth(-1),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _monthLabel(_focusedDay),
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _miniMonthAction(
+                              icon: Icons.chevron_right_rounded,
+                              subColor: subColor,
+                              onTap: () => _changeMonth(1),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _CalendarCard(
+                          focusedDay: _focusedDay,
+                          selectedDay: _selectedDay,
+                          eventLoader: _getEventsForDay,
+                          cardColor: cardColor,
+                          textColor: textColor,
+                          subColor: subColor,
+                          onDaySelected: (selected, focused) {
+                            setState(() {
+                              _selectedDay = selected;
+                              _focusedDay = focused;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Upcoming Tasks',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 42,
+                          child: ElevatedButton.icon(
+                            onPressed: _openScheduleTaskSheet,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.86,
+                              ),
+                              foregroundColor: AppColors.lightText,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              side: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.88),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add_task_rounded),
+                            label: const Text(
+                              'Schedule New Task',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_backendLoading)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: LinearProgressIndicator(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.45,
+                              ),
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        if (_backendTasks.isNotEmpty) ...<Widget>[
+                          ..._backendTasks
+                              .take(3)
+                              .map(
+                                (task) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _TaskCard(
+                                    iconBg: task.isHigh
+                                        ? const Color(0xFFFFEBEE)
+                                        : const Color(0xFFE8F5E9),
+                                    iconColor: task.isHigh
+                                        ? const Color(0xFFC62828)
+                                        : AppColors.primaryDark,
+                                    icon: task.isHigh
+                                        ? Icons.priority_high_rounded
+                                        : Icons.notifications_active_outlined,
+                                    title: task.title,
+                                    subtitle: task.subtitle,
+                                    dateTime:
+                                        '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
+                                    priority: task.isHigh ? 'HIGH' : 'SYNCED',
+                                    isHigh: task.isHigh,
+                                    cardColor: cardColor,
+                                    textColor: textColor,
+                                    subColor: subColor,
+                                    onTap: () => _showSnack(
+                                      'Synced task: ${task.title}',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        ],
+                        _AnimatedTaskCard(
+                          visible: _taskVisible[0],
+                          child: _TaskCard(
+                            iconBg: const Color(0xFFFFEBEE),
+                            iconColor: const Color(0xFFC62828),
+                            icon: Icons.bug_report_outlined,
+                            title: 'Pest Treatment',
+                            subtitle:
+                                'Wheat Field C - Aphid infestation warning',
+                            dateTime: 'Mar 08  •  08:30 AM',
+                            priority: 'HIGH',
+                            isHigh: true,
+                            cardColor: cardColor,
+                            textColor: textColor,
                             subColor: subColor,
-                            onTap: () => _changeMonth(1),
+                            onTap: () =>
+                                _showSnack('Opening Pest Treatment...'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _AnimatedTaskCard(
+                          visible: _taskVisible[1],
+                          child: _TaskCard(
+                            iconBg: const Color(0xFFE3F2FD),
+                            iconColor: const Color(0xFF1565C0),
+                            icon: Icons.water_drop_outlined,
+                            title: 'Irrigation for Wheat',
+                            subtitle: 'North Quad - Standard hydration cycle',
+                            dateTime: 'Mar 08  •  05:30 AM',
+                            priority: 'NORMAL',
+                            isHigh: false,
+                            cardColor: cardColor,
+                            textColor: textColor,
+                            subColor: subColor,
+                            onTap: () =>
+                                _showSnack('Opening Irrigation for Wheat...'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _AnimatedTaskCard(
+                          visible: _taskVisible[2],
+                          child: _TaskCard(
+                            iconBg: CalendarColors.tagGreenBg,
+                            iconColor: CalendarColors.primaryDark,
+                            icon: Icons.science_outlined,
+                            title: 'Soil Fertilization',
+                            subtitle:
+                                'Organic Zone 2 - Nitrogen boost required',
+                            dateTime: 'Mar 08  •  07:00 AM',
+                            priority: 'NORMAL',
+                            isHigh: false,
+                            cardColor: cardColor,
+                            textColor: textColor,
+                            subColor: subColor,
+                            onTap: () =>
+                                _showSnack('Opening Soil Fertilization...'),
+                          ),
+                        ),
+                        if (_customTasks.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 10),
+                          ..._customTasks.map(
+                            (task) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _TaskCard(
+                                iconBg: task.isHigh
+                                    ? const Color(0xFFFFEBEE)
+                                    : const Color(0xFFE8F5E9),
+                                iconColor: task.isHigh
+                                    ? const Color(0xFFC62828)
+                                    : AppColors.primaryDark,
+                                icon: Icons.event_note_rounded,
+                                title: task.title,
+                                subtitle: task.subtitle,
+                                dateTime:
+                                    '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
+                                priority: task.isHigh ? 'HIGH' : 'NORMAL',
+                                isHigh: task.isHigh,
+                                cardColor: cardColor,
+                                textColor: textColor,
+                                subColor: subColor,
+                                onTap: () =>
+                                    _showSnack('Opening ${task.title}...'),
+                              ),
+                            ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      _CalendarCard(
-                        focusedDay: _focusedDay,
-                        selectedDay: _selectedDay,
-                        eventLoader: _getEventsForDay,
-                        cardColor: cardColor,
-                        textColor: textColor,
-                        subColor: subColor,
-                        onDaySelected: (selected, focused) {
-                          setState(() {
-                            _selectedDay = selected;
-                            _focusedDay = focused;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Upcoming Tasks',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 42,
-                        child: ElevatedButton.icon(
-                          onPressed: _openScheduleTaskSheet,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.86),
-                            foregroundColor: AppColors.lightText,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(40),
-                            ),
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.88)),
-                          ),
-                          icon: const Icon(Icons.add_task_rounded),
-                          label: const Text(
-                            'Schedule New Task',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_backendLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: LinearProgressIndicator(
-                            backgroundColor: Colors.white.withValues(alpha: 0.45),
-                            color: AppColors.primaryDark,
-                          ),
-                        ),
-                      if (_backendTasks.isNotEmpty) ...<Widget>[
-                        ..._backendTasks.take(3).map(
-                          (task) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _TaskCard(
-                              iconBg: task.isHigh
-                                  ? const Color(0xFFFFEBEE)
-                                  : const Color(0xFFE8F5E9),
-                              iconColor: task.isHigh
-                                  ? const Color(0xFFC62828)
-                                  : AppColors.primaryDark,
-                              icon: task.isHigh
-                                  ? Icons.priority_high_rounded
-                                  : Icons.notifications_active_outlined,
-                              title: task.title,
-                              subtitle: task.subtitle,
-                              dateTime: '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
-                              priority: task.isHigh ? 'HIGH' : 'SYNCED',
-                              isHigh: task.isHigh,
-                              cardColor: cardColor,
-                              textColor: textColor,
-                              subColor: subColor,
-                              onTap: () => _showSnack('Synced task: ${task.title}'),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: TextButton(
+                            onPressed: () =>
+                                context.push(RoutePaths.notifications),
+                            child: Text(
+                              'View All Tasks  →',
+                              style: TextStyle(
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
                       ],
-                      _AnimatedTaskCard(
-                        visible: _taskVisible[0],
-                        child: _TaskCard(
-                          iconBg: const Color(0xFFFFEBEE),
-                          iconColor: const Color(0xFFC62828),
-                          icon: Icons.bug_report_outlined,
-                          title: 'Pest Treatment',
-                          subtitle: 'Wheat Field C - Aphid infestation warning',
-                          dateTime: 'Mar 08  •  08:30 AM',
-                          priority: 'HIGH',
-                          isHigh: true,
-                          cardColor: cardColor,
-                          textColor: textColor,
-                          subColor: subColor,
-                          onTap: () => _showSnack('Opening Pest Treatment...'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _AnimatedTaskCard(
-                        visible: _taskVisible[1],
-                        child: _TaskCard(
-                          iconBg: const Color(0xFFE3F2FD),
-                          iconColor: const Color(0xFF1565C0),
-                          icon: Icons.water_drop_outlined,
-                          title: 'Irrigation for Wheat',
-                          subtitle: 'North Quad - Standard hydration cycle',
-                          dateTime: 'Mar 08  •  05:30 AM',
-                          priority: 'NORMAL',
-                          isHigh: false,
-                          cardColor: cardColor,
-                          textColor: textColor,
-                          subColor: subColor,
-                          onTap: () => _showSnack('Opening Irrigation for Wheat...'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _AnimatedTaskCard(
-                        visible: _taskVisible[2],
-                        child: _TaskCard(
-                          iconBg: CalendarColors.tagGreenBg,
-                          iconColor: CalendarColors.primaryDark,
-                          icon: Icons.science_outlined,
-                          title: 'Soil Fertilization',
-                          subtitle: 'Organic Zone 2 - Nitrogen boost required',
-                          dateTime: 'Mar 08  •  07:00 AM',
-                          priority: 'NORMAL',
-                          isHigh: false,
-                          cardColor: cardColor,
-                          textColor: textColor,
-                          subColor: subColor,
-                          onTap: () => _showSnack('Opening Soil Fertilization...'),
-                        ),
-                      ),
-                      if (_customTasks.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 10),
-                        ..._customTasks.map(
-                          (task) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _TaskCard(
-                              iconBg: task.isHigh
-                                  ? const Color(0xFFFFEBEE)
-                                  : const Color(0xFFE8F5E9),
-                              iconColor: task.isHigh
-                                  ? const Color(0xFFC62828)
-                                  : AppColors.primaryDark,
-                              icon: Icons.event_note_rounded,
-                              title: task.title,
-                              subtitle: task.subtitle,
-                              dateTime: '${_shortDate(task.date)}  •  ${_formatTime(task.time)}',
-                              priority: task.isHigh ? 'HIGH' : 'NORMAL',
-                              isHigh: task.isHigh,
-                              cardColor: cardColor,
-                              textColor: textColor,
-                              subColor: subColor,
-                              onTap: () => _showSnack('Opening ${task.title}...'),
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Center(
-                        child: TextButton(
-                          onPressed: () => context.push(RoutePaths.notifications),
-                          child: Text(
-                            'View All Tasks  →',
-                            style: TextStyle(
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
                 ),
               ),
             ],
@@ -1015,7 +1087,7 @@ class _HeroCard extends StatelessWidget {
                 isLoading
                     ? 'Syncing backend recommendations...'
                     : (recommendation ??
-                        'Soil moisture levels in the North Quad are at 18%. Based on the 4 PM forecast, we recommend starting irrigation at 05:00 AM tomorrow.'),
+                          'Soil moisture levels in the North Quad are at 18%. Based on the 4 PM forecast, we recommend starting irrigation at 05:00 AM tomorrow.'),
                 style: CalendarTextStyles.heroBody,
               ),
               const SizedBox(height: 14),
@@ -1068,7 +1140,10 @@ class _CalendarCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: AppColors.primaryDark.withValues(alpha: 0.08),
@@ -1162,14 +1237,18 @@ class _CalendarCard extends StatelessWidget {
                       Container(
                         width: 5,
                         height: 5,
-                        margin: const EdgeInsets.only(top: 2, right: 2, left: 2),
+                        margin: const EdgeInsets.only(
+                          top: 2,
+                          right: 2,
+                          left: 2,
+                        ),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: e == 'high'
                               ? CalendarColors.highDot
                               : e == 'ai'
-                                  ? CalendarColors.aiDot
-                                  : CalendarColors.normalDot,
+                              ? CalendarColors.aiDot
+                              : CalendarColors.normalDot,
                         ),
                       ),
                   ],
@@ -1247,7 +1326,9 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor = isHigh ? CalendarColors.highBadgeText : AppColors.primaryDark;
+    final badgeColor = isHigh
+        ? CalendarColors.highBadgeText
+        : AppColors.primaryDark;
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -1256,7 +1337,10 @@ class _TaskCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.8),
+            width: 1.2,
+          ),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: AppColors.primaryDark.withValues(alpha: 0.08),
@@ -1284,7 +1368,11 @@ class _TaskCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, color: iconColor.withValues(alpha: 0.92), size: 20),
+              child: Icon(
+                icon,
+                color: iconColor.withValues(alpha: 0.92),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1305,11 +1393,16 @@ class _TaskCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.78),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: badgeColor.withValues(alpha: 0.28)),
+                          border: Border.all(
+                            color: badgeColor.withValues(alpha: 0.28),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1345,7 +1438,11 @@ class _TaskCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: <Widget>[
-                      Icon(Icons.access_time_outlined, color: subColor, size: 12),
+                      Icon(
+                        Icons.access_time_outlined,
+                        color: subColor,
+                        size: 12,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         dateTime,

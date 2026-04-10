@@ -8,7 +8,6 @@ import '../../../core/utils/extensions.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../../../shared/services/livestock_service.dart';
-import '../../weather/widgets/glass_widgets.dart';
 
 class AnimalProfileScreen extends ConsumerStatefulWidget {
   final String livestockId;
@@ -23,8 +22,11 @@ class AnimalProfileScreen extends ConsumerStatefulWidget {
 
 class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
   bool _loading = true;
+  bool _refreshing = false;
   String? _error;
   Map<String, dynamic>? _data;
+
+  bool get _hasSnapshot => _data != null;
 
   String _displayAnimalName(Map<String, dynamic>? data) {
     final name = data?['name']?.toString().trim();
@@ -75,7 +77,8 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
     if (data == null) return '--';
     final direct = data['avg_milk_liters_per_day'] ?? data['milk_per_day'];
     final liters = double.tryParse(direct?.toString() ?? '');
-    if (liters != null) return '${liters.toStringAsFixed(liters % 1 == 0 ? 0 : 1)}L/day';
+    if (liters != null)
+      return '${liters.toStringAsFixed(liters % 1 == 0 ? 0 : 1)}L/day';
 
     final trend = _extractMilk(data);
     if (trend.isNotEmpty) {
@@ -119,36 +122,65 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _fetch();
+    _primeData();
   }
 
-  Future<void> _fetch() async {
+  Future<void> _primeData() async {
+    await _fetch();
+    if (!mounted) return;
+    _fetch(forceRefresh: true, silent: true);
+  }
+
+  Future<void> _fetch({bool forceRefresh = false, bool silent = false}) async {
+    final hasSnapshot = _hasSnapshot;
     setState(() {
-      _loading = true;
+      if (silent || hasSnapshot) {
+        _refreshing = true;
+      } else {
+        _loading = true;
+      }
       _error = null;
     });
     try {
       final res = await ref
           .read(livestockServiceProvider)
-          .getLivestockById(widget.livestockId);
+          .getLivestockById(
+            widget.livestockId,
+            preferCache: !forceRefresh,
+            forceRefresh: forceRefresh,
+          );
       if (!mounted) return;
       setState(() {
         _data = res;
         _loading = false;
+        _refreshing = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        if (!hasSnapshot) {
+          _error = e.toString();
+        }
         _loading = false;
+        _refreshing = false;
       });
+      if (hasSnapshot) {
+        context.showSnack(
+          'Could not refresh animal profile. Showing recent data.',
+          isError: true,
+        );
+      }
     }
   }
 
   Future<void> _showEditAnimalSheet() async {
     final data = _data ?? <String, dynamic>{};
-    final nameCtrl = TextEditingController(text: data['name']?.toString() ?? '');
-    final breedCtrl = TextEditingController(text: data['breed']?.toString() ?? '');
+    final nameCtrl = TextEditingController(
+      text: data['name']?.toString() ?? '',
+    );
+    final breedCtrl = TextEditingController(
+      text: data['breed']?.toString() ?? '',
+    );
     final countCtrl = TextEditingController(
       text: (data['count'] ?? 1).toString(),
     );
@@ -182,122 +214,133 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Text(
-                  'Edit Animal Profile',
-                  style: context.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    'Edit Animal Profile',
+                    style: context.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    prefixIcon: Icon(Icons.pets),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      prefixIcon: Icon(Icons.pets),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: breedCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Breed',
-                    prefixIcon: Icon(Icons.category),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: breedCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Breed',
+                      prefixIcon: Icon(Icons.category),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: countCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Count',
-                          prefixIcon: Icon(Icons.numbers),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: countCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Count',
+                            prefixIcon: Icon(Icons.numbers),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: TextField(
-                        controller: ageCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Age (months)',
-                          prefixIcon: Icon(Icons.cake),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: TextField(
+                          controller: ageCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Age (months)',
+                            prefixIcon: Icon(Icons.cake),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  initialValue: healthStatus,
-                  decoration: const InputDecoration(
-                    labelText: 'Health Status',
-                    prefixIcon: Icon(Icons.health_and_safety),
+                    ],
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'healthy', child: Text('Healthy')),
-                    DropdownMenuItem(
-                      value: 'under_treatment',
-                      child: Text('Under Treatment'),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: healthStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Health Status',
+                      prefixIcon: Icon(Icons.health_and_safety),
                     ),
-                    DropdownMenuItem(value: 'sick', child: Text('Sick')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setSheetState(() => healthStatus = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            setSheetState(() => saving = true);
-                            try {
-                              await ref.read(livestockServiceProvider).updateLivestock(
-                                widget.livestockId,
-                                {
-                                  'name': nameCtrl.text.trim(),
-                                  'breed': breedCtrl.text.trim(),
-                                  'count': int.tryParse(countCtrl.text.trim()) ?? 1,
-                                  'age_months': int.tryParse(ageCtrl.text.trim()),
-                                  'health_status': healthStatus,
-                                },
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              await _fetch();
-                              if (mounted) {
-                                context.showSnack('Animal profile updated');
-                              }
-                            } catch (e) {
-                              if (ctx.mounted) {
-                                setSheetState(() => saving = false);
-                                ctx.showSnack(e.toString(), isError: true);
-                              }
-                            }
-                          },
-                    icon: const Icon(Icons.save),
-                    label: Text(saving ? 'Saving...' : 'Save Changes'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'healthy',
+                        child: Text('Healthy'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'under_treatment',
+                        child: Text('Under Treatment'),
+                      ),
+                      DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setSheetState(() => healthStatus = value);
+                      }
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              setSheetState(() => saving = true);
+                              try {
+                                await ref
+                                    .read(livestockServiceProvider)
+                                    .updateLivestock(widget.livestockId, {
+                                      'name': nameCtrl.text.trim(),
+                                      'breed': breedCtrl.text.trim(),
+                                      'count':
+                                          int.tryParse(countCtrl.text.trim()) ??
+                                          1,
+                                      'age_months': int.tryParse(
+                                        ageCtrl.text.trim(),
+                                      ),
+                                      'health_status': healthStatus,
+                                    });
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                await _fetch();
+                                if (mounted) {
+                                  context.showSnack('Animal profile updated');
+                                }
+                              } catch (e) {
+                                if (ctx.mounted) {
+                                  setSheetState(() => saving = false);
+                                  ctx.showSnack(e.toString(), isError: true);
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.save),
+                      label: Text(saving ? 'Saving...' : 'Save Changes'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   Future<void> _showAddHealthRecordSheet() async {
     final notesCtrl = TextEditingController();
-    final milkCtrl = TextEditingController(text: _data?['milk_per_day']?.toString() ?? '');
-    final weightCtrl = TextEditingController(text: _data?['weight_kg']?.toString() ?? '');
+    final milkCtrl = TextEditingController(
+      text: _data?['milk_per_day']?.toString() ?? '',
+    );
+    final weightCtrl = TextEditingController(
+      text: _data?['weight_kg']?.toString() ?? '',
+    );
     String healthStatus = _statusRaw(_data);
     bool saving = false;
 
@@ -325,121 +368,135 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Text(
-                  'Add Health Record',
-                  style: context.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    'Add Health Record',
+                    style: context.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: notesCtrl,
-                  minLines: 3,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Health Notes',
-                    hintText: 'Symptoms, treatment, observations...',
-                    prefixIcon: Icon(Icons.note_alt_outlined),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: notesCtrl,
+                    minLines: 3,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Health Notes',
+                      hintText: 'Symptoms, treatment, observations...',
+                      prefixIcon: Icon(Icons.note_alt_outlined),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: milkCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Milk (L/day)',
-                          prefixIcon: Icon(Icons.water_drop_outlined),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: milkCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Milk (L/day)',
+                            prefixIcon: Icon(Icons.water_drop_outlined),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: TextField(
-                        controller: weightCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Weight (kg)',
-                          prefixIcon: Icon(Icons.monitor_weight_outlined),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: TextField(
+                          controller: weightCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Weight (kg)',
+                            prefixIcon: Icon(Icons.monitor_weight_outlined),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  initialValue: healthStatus,
-                  decoration: const InputDecoration(
-                    labelText: 'Current Health Status',
-                    prefixIcon: Icon(Icons.health_and_safety),
+                    ],
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'healthy', child: Text('Healthy')),
-                    DropdownMenuItem(
-                      value: 'under_treatment',
-                      child: Text('Under Treatment'),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: healthStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Current Health Status',
+                      prefixIcon: Icon(Icons.health_and_safety),
                     ),
-                    DropdownMenuItem(value: 'sick', child: Text('Sick')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setSheetState(() => healthStatus = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            if (notesCtrl.text.trim().isEmpty &&
-                                milkCtrl.text.trim().isEmpty &&
-                                weightCtrl.text.trim().isEmpty) {
-                              ctx.showSnack('Add at least one health detail', isError: true);
-                              return;
-                            }
-
-                            final payload = <String, dynamic>{
-                              'health_status': healthStatus,
-                              if (notesCtrl.text.trim().isNotEmpty)
-                                'health_notes': notesCtrl.text.trim(),
-                              if (milkCtrl.text.trim().isNotEmpty)
-                                'milk_per_day': double.tryParse(milkCtrl.text.trim()),
-                              if (weightCtrl.text.trim().isNotEmpty)
-                                'weight_kg': double.tryParse(weightCtrl.text.trim()),
-                            };
-
-                            setSheetState(() => saving = true);
-                            try {
-                              await ref
-                                  .read(livestockServiceProvider)
-                                  .updateLivestock(widget.livestockId, payload);
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              await _fetch();
-                              if (mounted) {
-                                context.showSnack('Health record added');
-                              }
-                            } catch (e) {
-                              if (ctx.mounted) {
-                                setSheetState(() => saving = false);
-                                ctx.showSnack(e.toString(), isError: true);
-                              }
-                            }
-                          },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: Text(saving ? 'Saving...' : 'Save Health Record'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'healthy',
+                        child: Text('Healthy'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'under_treatment',
+                        child: Text('Under Treatment'),
+                      ),
+                      DropdownMenuItem(value: 'sick', child: Text('Sick')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setSheetState(() => healthStatus = value);
+                      }
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (notesCtrl.text.trim().isEmpty &&
+                                  milkCtrl.text.trim().isEmpty &&
+                                  weightCtrl.text.trim().isEmpty) {
+                                ctx.showSnack(
+                                  'Add at least one health detail',
+                                  isError: true,
+                                );
+                                return;
+                              }
+
+                              final payload = <String, dynamic>{
+                                'health_status': healthStatus,
+                                if (notesCtrl.text.trim().isNotEmpty)
+                                  'health_notes': notesCtrl.text.trim(),
+                                if (milkCtrl.text.trim().isNotEmpty)
+                                  'milk_per_day': double.tryParse(
+                                    milkCtrl.text.trim(),
+                                  ),
+                                if (weightCtrl.text.trim().isNotEmpty)
+                                  'weight_kg': double.tryParse(
+                                    weightCtrl.text.trim(),
+                                  ),
+                              };
+
+                              setSheetState(() => saving = true);
+                              try {
+                                await ref
+                                    .read(livestockServiceProvider)
+                                    .updateLivestock(
+                                      widget.livestockId,
+                                      payload,
+                                    );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                await _fetch();
+                                if (mounted) {
+                                  context.showSnack('Health record added');
+                                }
+                              } catch (e) {
+                                if (ctx.mounted) {
+                                  setSheetState(() => saving = false);
+                                  ctx.showSnack(e.toString(), isError: true);
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: Text(saving ? 'Saving...' : 'Save Health Record'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   @override
@@ -455,9 +512,9 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
       backgroundColor: isDark
           ? AppColors.darkBackground
           : AppColors.lightBackground,
-      body: _loading
+      body: _loading && !_hasSnapshot
           ? const LoadingState(itemCount: 5)
-          : _error != null
+          : _error != null && !_hasSnapshot
           ? ErrorView(message: _error!, onRetry: _fetch)
           : SafeArea(
               bottom: false,
@@ -466,6 +523,10 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_refreshing) ...[
+                      const LinearProgressIndicator(minHeight: 2),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
                     // Top bar
                     Padding(
                       padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
@@ -476,7 +537,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                           children: [
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: GlassIconButton(
+                              child: _headerAction(
                                 icon: const Icon(Icons.arrow_back, size: 20),
                                 onPressed: () =>
                                     Navigator.of(context).maybePop(),
@@ -489,7 +550,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                             ),
                             Align(
                               alignment: Alignment.centerRight,
-                              child: GlassIconButton(
+                              child: _headerAction(
                                 icon: const Icon(Icons.edit, size: 18),
                                 onPressed: _showEditAnimalSheet,
                               ),
@@ -501,8 +562,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                     const SizedBox(height: AppSpacing.lg),
 
                     // Hero card
-                    GlassCard(
-                      featured: true,
+                    _glassCard(
                       padding: const EdgeInsets.all(18),
                       child: Column(
                         children: [
@@ -550,7 +610,9 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                                 ),
                               ),
                               ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 120),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 120,
+                                ),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
@@ -558,18 +620,17 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
-                                    color: statusColor.withValues(
-                                      alpha: 0.12,
-                                    ),
+                                    color: statusColor.withValues(alpha: 0.12),
                                   ),
                                   child: Text(
                                     _statusLabel(statusRaw).toUpperCase(),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: context.textTheme.labelSmall?.copyWith(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style: context.textTheme.labelSmall
+                                        ?.copyWith(
+                                          color: statusColor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -578,11 +639,29 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                           const SizedBox(height: AppSpacing.lg),
                           Row(
                             children: [
-                              Expanded(child: _statBox(context, _milkStat(_data), 'Milk')),
+                              Expanded(
+                                child: _statBox(
+                                  context,
+                                  _milkStat(_data),
+                                  'Milk',
+                                ),
+                              ),
                               const SizedBox(width: AppSpacing.sm),
-                              Expanded(child: _statBox(context, _weightStat(_data), 'Weight')),
+                              Expanded(
+                                child: _statBox(
+                                  context,
+                                  _weightStat(_data),
+                                  'Weight',
+                                ),
+                              ),
                               const SizedBox(width: AppSpacing.sm),
-                              Expanded(child: _statBox(context, _taggedStat(_data), 'Tagged')),
+                              Expanded(
+                                child: _statBox(
+                                  context,
+                                  _taggedStat(_data),
+                                  'Tagged',
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -609,7 +688,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    GlassCard(
+                    _glassCard(
                       child: _SimpleBarChart(values: _extractMilk(_data)),
                     ),
                     const SizedBox(height: AppSpacing.xl),
@@ -653,7 +732,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    GlassCard(
+                    _glassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
@@ -674,19 +753,25 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-          child: ElevatedButton(
+          child: OutlinedButton.icon(
             onPressed: _showAddHealthRecordSheet,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primaryDark,
               padding: const EdgeInsets.symmetric(vertical: 16),
+              side: BorderSide(
+                color: AppColors.primaryDark.withValues(alpha: 0.4),
+                width: 1.2,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
             ),
-            child: Text(
-              '+ ADD HEALTH RECORD',
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: Text(
+              'Add Health Record',
               style: context.textTheme.bodyLarge?.copyWith(
-                color: Colors.white,
+                color: AppColors.primaryDark,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -764,7 +849,7 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
       final done = (v['status']?.toString() ?? '').toLowerCase() == 'done';
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.md),
-        child: GlassCard(
+        child: _glassCard(
           child: Row(
             children: [
               Expanded(
@@ -831,6 +916,46 @@ class _AnimalProfileScreenState extends ConsumerState<AnimalProfileScreen> {
       );
     }).toList();
   }
+
+  Widget _glassCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(14),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _headerAction({required Widget icon, VoidCallback? onPressed}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: icon,
+        color: AppColors.primaryDark,
+      ),
+    );
+  }
 }
 
 class _SimpleBarChart extends StatelessWidget {
@@ -847,7 +972,7 @@ class _SimpleBarChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: List.generate(7, (i) {
           final v = i < values.length ? values[i] : 0.0;
-          final h = (v / (max == 0 ? 1 : max)) * 90 + 10;
+          final h = (v / (max == 0 ? 1 : max)) * 74 + 8;
           return Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,

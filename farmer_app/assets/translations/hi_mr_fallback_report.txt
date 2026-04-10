@@ -1,0 +1,308 @@
+﻿Hindi/Marathi Screen Fallback Report
+Generated: 2026-04-10T16:54:13.9831917+05:30
+
+Total screen keys: 3053
+Fallback in both hi and mr: 2370
+User-visible fallback candidates: 1448
+
+Top 300 user-visible fallback entries:
+screen.live_voice_screen.schemes_2 | à²ˆà²— à²¯à³‹à²œà²¨à³† à²µà²¿à²µà²°à²—à²³à²¨à³à²¨à³ à²¤à²°à²²à³ à²¸à²®à²¸à³à²¯à³† à²‡à²¦à³†. à²•à³†à²³à²—à²¿à²¨ Schemes à²•à²¾à²°à³à²¡à³ à²¤à²Ÿà³à²Ÿà²¿ à²…à²°à³à²¹à²¤à³† à²®à²¤à³à²¤à³ à²¦à²¾à²–à²²à³† à²®à²¾à²¹à²¿à²¤à²¿à²¯à²¨à³à²¨à³ à²¤à²•à³à²·à²£ à²¨à³‹à²¡à²¿.
+screen.live_voice_screen.weather_soil_moisture | à²ˆà²— à²²à³ˆà²µà³ à²¹à²µà²¾à²®à²¾à²¨ à²‰à²¤à³à²¤à²° à²¤à²°à²²à³ à²¸à²®à²¸à³à²¯à³† à²‡à²¦à³†. à²•à³†à²³à²—à²¿à²¨ Weather à²…à²¥à²µà²¾ Soil Moisture à²•à²¾à²°à³à²¡à³ à²¤à²Ÿà³à²Ÿà²¿ à²¤à²•à³à²·à²£à²¦ à²®à²¾à²¹à²¿à²¤à²¿ à²¨à³‹à²¡à²¿.
+screen.rental_rate_detail_screen.smam_caps_1l_max_sc_st_individual_50k_max_general_25 | SMAM caps: â‚¹1L max (SC/ST individual), â‚¹50K max (general), â‚¹25L max (CHC project).
+screen.equipment_marketplace_screen.no_marketplace_rows_loaded_yet_generate_advice_based | No marketplace rows loaded yet. Generate advice based on general equipment demand.
+screen.equipment_hub_screen.india_has_75_000_chcs_smam_subsidy_40_80_and_usd_4_6 | India has 75,000+ CHCs, SMAM subsidy 40â€“80%, and USD 4.6B market size by 2025.
+screen.preview_download_screen.no_mapped_official_links_yet_use_sync_to_discover_li | No mapped official links yet. Use Sync to discover links from the scheme portal.
+screen.profile_screen.village_district_state_pincode_and_land_size_are_req | Village, district, state, pincode and land size are required to create profile.
+screen.soil_health_screen.organic_carbon_is_low_add_compost_fym_and_crop_resid | Organic carbon is low. Add compost, FYM, and crop residue to improve structure.
+screen.soil_health_screen.root_zone_moisture_is_below_target_plan_light_irriga | Root-zone moisture is below target. Plan light irrigation to avoid crop stress.
+screen.best_out_of_waste_screen.could_not_fully_sync_profile_data_right_now_showing | Could not fully sync profile data right now. Showing resilient fallback plans.
+screen.farm_visualizer_screen.monsoon_season_expect_moderate_to_heavy_rainfall_ide | Monsoon season â€” expect moderate to heavy rainfall. Ideal for Kharif crops.
+screen.farm_visualizer_screen.post_monsoon_decreasing_rainfall_cooler_nights_prepa | Post-monsoon â€” decreasing rainfall, cooler nights. Prepare for Rabi sowing.
+screen.loan_application_screen.completedrequired_requiredcount_required_optionalski | $completedRequired/$requiredCount required, $optionalSkipped optional skipped
+screen.weather_soil_screen.y_axis_rain_bars_and_et0_mm_line_tap_drag_on_chart_t | Y-axis: Rain % (bars) and ET0 mm (line). Tap/drag on chart to inspect values.
+screen.best_out_of_waste_screen.include_weekly_execution_checklist_expected_earnings | Include weekly execution checklist, expected earnings, and scheme shortlist.
+screen.best_out_of_waste_screen.generate_your_ai_summary_to_see_the_best_waste_to_we | Generate your AI summary to see the best waste-to-wealth options for today.
+screen.cattle_screen.help_me_schedule_a_vet_visit_for_name_and_list_immed | Help me schedule a vet visit for $name and list immediate pre-visit checks.
+screen.document_agent_screen.include_eligibility_step_by_step_application_process | Include: eligibility, step-by-step application process, required documents,
+screen.equipment_marketplace_screen.generate_ai_overview_for_local_equipment_demand_and | Generate AI overview for local equipment demand and pricing opportunities.
+screen.farm_visualizer_screen.location_location_crops_cropinfo_total_area_totalacr | }, Location: $_location, Crops: $cropInfo, Total area: $_totalAcres acres.
+screen.farm_visualizer_screen.pre_monsoon_rising_temperatures_occasional_showers_z | Pre-monsoon â€” rising temperatures, occasional showers. Zaid crop window.
+screen.farm_visualizer_screen.winter_season_cool_dry_weather_good_conditions_for_r | Winter season â€” cool, dry weather. Good conditions for Rabi crop growth.
+screen.soil_health_screen.soil_is_acidic_apply_agricultural_lime_in_split_dose | Soil is acidic. Apply agricultural lime in split doses before next sowing.
+screen.cattle_screen.manage_herd_health_and_productivity_effortlessly_wit | Manage herd health and productivity effortlessly with AI-driven insights.
+screen.weather_soil_screen.best_foliar_spray_early_morning_or_late_afternoon_av | Best foliar spray: early morning or late afternoon (avoid peak UV hours).
+screen.crop_doctor_screen.remove_heavily_infected_tissue_and_clean_tools_to_re | Remove heavily infected tissue and clean tools to reduce disease spread.
+screen.document_builder_screen.bulk_sync_is_still_running_forms_will_keep_appearing | Bulk sync is still running. Forms will keep appearing as sync completes.
+screen.rental_rate_detail_screen.generate_ai_insights_to_identify_the_best_window_to | Generate AI insights to identify the best window to rent this equipment.
+screen.soil_health_screen.root_zone_moisture_is_high_delay_field_operations_an | Root-zone moisture is high. Delay field operations and improve aeration.
+screen.best_out_of_waste_screen.respond_in_3_short_bullet_points_with_practical_advi | Respond in 3 short bullet points with practical advice and one caution.
+screen.best_out_of_waste_screen.estimate_earnings_savings_and_climate_impact_from_yo | Estimate earnings, savings, and climate impact from your waste stream.
+screen.equipment_hub_screen.could_not_sync_latest_values_right_now_displaying_re | Could not sync latest values right now. Displaying recent cached data.
+screen.crop_doctor_screen.plan_next_field_action_and_monitoring_checklist_from | Plan next field action and monitoring checklist from diagnosis output
+screen.best_out_of_waste_screen.browse_waste_to_wealth_streams_with_setup_cost_and_e | Browse waste-to-wealth streams with setup cost and expected returns
+screen.best_out_of_waste_screen.review_pkvy_gobardhan_and_nmsa_requirements_with_pro | Review PKVY, GOBARdhan, and NMSA requirements with profile updates.
+screen.best_out_of_waste_screen.use_the_impact_calculator_for_savings_earnings_and_c | Use the impact calculator for savings, earnings, and CO2 prevention
+screen.cattle_screen.generate_ai_overview_to_get_herd_actions_tailored_to | Generate AI overview to get herd actions tailored to your location.
+screen.document_agent_screen.pradhan_mantri_fasal_bima_yojana_crop_insurance_at_l | Pradhan Mantri Fasal Bima Yojana â€” crop insurance at low premium.
+screen.soil_health_screen.review_soil_score_moisture_depth_trend_and_soil_temp | Review soil score, moisture depth trend, and soil temperature trend
+screen.scheme_details_page.could_not_open_direct_preview_opening_official_forms | Could not open direct preview. Opening Official Forms Hub instead.
+screen.soil_health_screen.assess_soil_composition_metrics_and_nutrient_correct | Assess soil composition metrics and nutrient correction priorities
+screen.best_out_of_waste_screen.build_a_concise_waste_to_wealth_explanation_for_an_i | Build a concise waste-to-wealth explanation for an Indian farmer.
+screen.cattle_screen.give_me_a_7_day_preventive_veterinary_checklist_for | Give me a 7-day preventive veterinary checklist for my livestock.
+screen.crop_doctor_screen.review_disease_confidence_detected_symptoms_and_trea | Review disease confidence, detected symptoms, and treatment steps
+screen.best_out_of_waste_screen.croplabel_ke_avshesh_ko_alag_stack_me_rakhkar_nami_s | $cropLabel ke avshesh ko alag stack me rakhkar nami se bachayen.
+screen.best_out_of_waste_screen.this_uses_your_profile_crop_records_and_nearby_polic | This uses your profile, crop records, and nearby policy context.
+screen.best_out_of_waste_screen.topstream_ke_liye_ek_chhota_batch_banakar_progress_n | $topStream ke liye ek chhota batch banakar progress note karein.
+screen.soil_health_screen.estimated_current_water_stock_in_top_30cm_from_moist | Estimated current water stock in top 30cm from moisture profile.
+screen.best_out_of_waste_screen.collect_recycler_or_mandi_contacts_around_district_f | Collect recycler or mandi contacts around $district for pickup.
+screen.best_out_of_waste_screen.could_not_generate_ai_explanation_metrics_are_still | Could not generate AI explanation. Metrics are still available.
+screen.best_out_of_waste_screen.pkvy_gobardhan_aur_nmsa_ke_liye_profile_details_upda | PKVY, GOBARdhan aur NMSA ke liye profile details update karein.
+screen.best_out_of_waste_screen.state_ke_liye_pkvy_gobardhan_aur_nmsa_documents_read | $state ke liye PKVY, GOBARdhan aur NMSA documents ready karein.
+screen.crop_doctor_screen.use_ai_chat_to_ask_follow_up_treatment_and_preventio | Use AI chat to ask follow-up treatment and prevention questions
+screen.live_voice_screen.weather_rain_forecast_temperature_humidity_wind_toda | weather|rain|forecast|temperature|humidity|wind|today|right now
+screen.soil_health_screen.showing_forecast_rain_vs_et0_demand_tap_drag_to_insp | Showing forecast rain vs ET0 demand. Tap/drag to inspect a day.
+screen.soil_health_screen.bars_root_zone_moisture_fraction_line_soil_temp_at_d | Bars = root-zone moisture fraction, line = soil temp at depth.
+screen.weather_soil_screen.weather_service_expects_both_coordinates_when_passed | Weather service expects both coordinates when passed manually.
+screen.best_out_of_waste_screen.do_not_include_labels_like_data_now_or_data_last_upd_2 | Do not include labels like "Data now" or "Data last updated".
+screen.best_out_of_waste_screen.open_ai_chat_for_practical_buyer_setup_and_execution | Open AI chat for practical buyer, setup, and execution advice
+screen.crop_insurance_screen.include_coverage_premium_rates_how_to_apply_and_dead | Include coverage, premium rates, how to apply, and deadlines.
+screen.document_agent_screen.include_types_how_to_obtain_where_to_apply_fees_and | Include types, how to obtain, where to apply, fees, and tips.
+screen.equipment_hub_screen.generate_an_ai_overview_for_equipment_opportunities | Generate an AI overview for equipment opportunities near you.
+screen.market_prices_screen.switch_between_prices_mandis_listings_and_schemes_se | Switch between prices, mandis, listings, and schemes sections
+screen.soil_health_screen.open_ai_chat_for_crop_specific_soil_treatment_recomm | Open AI chat for crop-specific soil treatment recommendations
+screen.best_out_of_waste_screen.run_a_small_trial_for_topstream_and_track_output_thi | Run a small trial for $topStream and track output this week.
+screen.document_agent_screen.affordable_credit_for_crop_production_and_allied_act | Affordable credit for crop production and allied activities.
+screen.rental_rate_detail_screen.source_estimated_monthly_pattern_from_current_market | Source: Estimated monthly pattern from current market rates.
+screen.best_out_of_waste_screen.district_ke_recycler_ya_mandi_agent_ka_number_save_k | $district ke recycler ya mandi agent ka number save karein.
+screen.best_out_of_waste_screen.official_application_link_is_not_available_for_this | Official application link is not available for this scheme.
+screen.cattle_screen.prepare_weekly_cattle_care_action_plan_from_profile | Prepare weekly cattle care action plan from profile context
+screen.contract_farming_screen.explain_contract_farming_in_india_include_benefits_h | Explain contract farming in India. Include benefits, how to
+screen.credit_sources_screen.list_all_agricultural_credit_sources_available_in_in | List all agricultural credit sources available in India for
+screen.equipment_hub_screen.track_bookings_from_my_bookings_and_listing_control | Track bookings from My Bookings and listing control screens
+screen.market_prices_screen.aligned_with_your_state_selected_crop_and_nearby_rec | Aligned with your state, selected crop, and nearby records.
+screen.my_equipment_screen.when_farmers_request_your_equipment_they_will_appear | When farmers request your equipment, they will appear here.
+screen.rental_rate_detail_screen.filter_by_state_and_sort_providers_by_price_or_avail | Filter by state and sort providers by price or availability
+screen.rental_rate_detail_screen.source_live_historical_rates_from_rental_rate_histor | Source: Live historical rates from rental rate history API.
+screen.scheme_details_page.could_not_fetch_downloaded_docs_tap_download_all_to | Could not fetch downloaded docs. Tap Download All to retry.
+screen.shared_thinking_templates.checking_if_today_looks_buyer_favorable_or_seller_fa | Checking if today looks buyer-favorable or seller-favorable
+screen.soil_health_screen.current_9_27cm_deep_root_moisture_from_hourly_weathe | Current 9-27cm deep-root moisture from hourly weather feed.
+screen.soil_health_screen.current_temperature_at_18cm_depth_from_hourly_weathe | Current temperature at 18cm depth from hourly weather feed.
+screen.suicide_prevention_screen.it_s_okay_to_feel_neutral_consider_a_short_walk_in_n | It's okay to feel neutral. Consider a short walk in nature.
+screen.suicide_prevention_screen.we_re_sorry_you_re_struggling_please_reach_out_help | We're sorry you're struggling. Please reach out â€” help is
+screen.weather_soil_screen.farm_decisions_are_computed_server_side_and_updated | Farm decisions are computed server-side and updated hourly.
+screen.best_out_of_waste_screen.build_a_complete_waste_to_wealth_plan_for_my_farm_pr | Build a complete waste-to-wealth plan for my farm profile.
+screen.best_out_of_waste_screen.validate_pkvy_gobardhan_and_nmsa_eligibility_for_sta | Validate PKVY, GOBARdhan, and NMSA eligibility for $state.
+screen.document_agent_screen.direct_income_support_of_6_000_year_to_farmer_famili | Direct income support of â‚¹6,000/year to farmer families.
+screen.document_builder_screen.could_not_open_instant_preview_opening_forms_hub_ins | Could not open instant preview. Opening forms hub instead.
+screen.equipment_hub_screen.browse_featured_rental_providers_and_open_provider_d | Browse featured rental providers and open provider details
+screen.rental_rate_detail_screen.showing_cached_rate_intelligence_while_network_recon | Showing cached rate intelligence while network reconnects.
+screen.soil_health_screen.current_3_9cm_root_zone_moisture_from_hourly_weather | Current 3-9cm root-zone moisture from hourly weather feed.
+screen.soil_health_screen.using_latest_available_legacy_soil_record_for_this_m | Using latest available legacy soil record for this metric.
+screen.best_out_of_waste_screen.do_not_include_labels_like_data_now_or_data_last_upd | Do not include labels like Data now or Data last updated.
+screen.best_out_of_waste_screen.separate_croplabel_residue_and_keep_one_dry_stack_re | Separate $cropLabel residue and keep one dry stack ready.
+screen.cattle_screen.view_herd_list_with_animal_type_breed_and_health_sta | View herd list with animal type, breed, and health status
+screen.crop_doctor_screen.e_g_yellow_patches_leaf_curling_brown_spots_near_edg | e.g. yellow patches, leaf curling, brown spots near edges
+screen.crop_intelligence_screen.yield_estimation_growth_stages_market_outlook_and_be | yield estimation, growth stages, market outlook, and best
+screen.document_agent_screen.solar_pumps_grid_connected_renewable_power_for_farme | Solar pumps & grid-connected renewable power for farmers.
+screen.market_strategy_screen.best_time_to_sell_price_trends_storage_tips_and_mark | best time to sell, price trends, storage tips, and market
+screen.shared_thinking_templates.checking_pricing_context_against_crop_quality_assump | Checking pricing context against crop quality assumptions
+screen.suicide_prevention_screen.you_matter_please_talk_to_someone_now_call_any_helpl | You matter. Please talk to someone now. Call any helpline
+screen.credit_sources_screen.farmers_include_government_schemes_banks_cooperative | farmers. Include government schemes, banks, cooperatives
+screen.crop_doctor_screen.describe_symptoms_in_text_and_run_symptom_based_anal | Describe symptoms in text and run symptom-based analysis
+screen.crop_intelligence_screen.water_needs_season_soil_requirements_pest_management | water needs, season, soil requirements, pest management,
+screen.document_agent_screen.promotes_sustainable_farming_through_climate_adaptat | Promotes sustainable farming through climate adaptation.
+screen.earnings_screen.could_not_sync_latest_earnings_showing_recent_snapsh | Could not sync latest earnings. Showing recent snapshot.
+screen.equipment_marketplace_screen.browse_equipment_providers_by_category_and_state_fil | Browse equipment providers by category and state filters
+screen.market_strategy_screen.give_market_strategy_for_selling_crop_in_india_inclu | Give market strategy for selling $crop in India. Include
+screen.power_supply_screen.explain_power_supply_options_for_indian_farmers_incl | Explain power supply options for Indian farmers. Include
+screen.rental_rate_detail_screen.compare_providers_by_daily_and_hourly_rates_on_this | Compare providers by daily and hourly rates on this page
+screen.rental_rate_detail_screen.refreshing_prices_history_and_provider_availability | Refreshing prices, history, and provider availability...
+screen.soil_health_screen.provider_reports_near_uniform_temperature_across_dep | Provider reports near-uniform temperature across depths.
+screen.suicide_prevention_screen.glad_to_hear_you_re_doing_well_remember_to_take_brea | Glad to hear you're doing well. Remember to take breaks!
+screen.weather_soil_screen.review_uv_soil_moisture_and_humidity_stress_indicato | Review UV, soil moisture, and humidity stress indicators
+screen.best_out_of_waste_screen.prepare_feedstock_mix_in_clean_fermentation_containe | Prepare feedstock mix in clean fermentation containers.
+screen.best_out_of_waste_screen.track_quick_daily_tasks_and_progress_for_implementat | Track quick daily tasks and progress for implementation
+screen.contract_farming_screen.get_started_legal_aspects_and_tips_for_small_farmers | get started, legal aspects, and tips for small farmers.
+screen.crop_doctor_screen.cannot_reach_server_please_check_connection_and_retr | Cannot reach server. Please check connection and retry.
+screen.crop_insurance_screen.explain_all_crop_insurance_schemes_in_india_like_pmf | Explain all crop insurance schemes in India like PMFBY.
+screen.equipment_marketplace_screen.showing_cached_results_pull_down_to_try_syncing_agai | Showing cached results. Pull down to try syncing again.
+screen.listing_details_screen.are_you_sure_you_want_to_delete_this_equipment_listi | Are you sure you want to delete this equipment listing?
+screen.shared_thinking_templates.assessing_enrollment_prerequisites_for_this_scheme_t | Assessing enrollment prerequisites for this scheme type
+screen.shared_thinking_templates.checking_for_potential_weather_related_operation_del | Checking for potential weather-related operation delays
+screen.shared_thinking_templates.checking_if_this_should_be_a_one_time_or_recurring_t | Checking if this should be a one-time or recurring task
+screen.shared_thinking_templates.checking_whether_local_rates_are_lagging_regional_tr | Checking whether local rates are lagging regional trend
+screen.shared_thinking_templates.evaluating_moisture_loss_pressure_from_forecast_prof | Evaluating moisture-loss pressure from forecast profile
+screen.weather_soil_screen.generate_ai_briefing_for_today_s_farm_weather_and_so | Generate AI briefing for today's farm weather and soil.
+screen.cattle_screen.add_edit_and_delete_cattle_profiles_from_this_screen | Add, edit, and delete cattle profiles from this screen
+screen.cattle_screen.plan_vaccination_feed_and_veterinary_readiness_tasks | Plan vaccination, feed, and veterinary readiness tasks
+screen.loan_application_screen.saved_answers_will_be_remembered_for_future_document | Saved answers will be remembered for future documents.
+screen.market_prices_screen.generate_ai_overview_for_personalized_market_insight | Generate AI overview for personalized market insights.
+screen.my_bookings_screen.showing_cached_booking_data_while_connection_recover | Showing cached booking data while connection recovers.
+screen.preview_download_screen.no_downloaded_docs_yet_sync_once_to_start_previewing | No downloaded docs yet. Sync once to start previewing.
+screen.shared_thinking_templates.assessing_whether_this_is_weather_sensitive_scheduli | Assessing whether this is weather-sensitive scheduling
+screen.shared_thinking_templates.checking_rain_probability_versus_expected_accumulati | Checking rain probability versus expected accumulation
+screen.shared_thinking_templates.checking_short_range_weather_outlook_for_your_locati | Checking short-range weather outlook for your location
+screen.shared_thinking_templates.checking_soil_moisture_implications_from_forecast_ra | Checking soil moisture implications from forecast rain
+screen.shared_thinking_templates.checking_which_market_has_better_realization_potenti | Checking which market has better realization potential
+screen.shared_thinking_templates.comparing_district_level_and_state_level_price_conte | Comparing district-level and state-level price context
+screen.shared_thinking_templates.ensuring_response_is_easy_to_apply_in_field_conditio | Ensuring response is easy to apply in field conditions
+screen.shared_thinking_templates.evaluating_temperature_swing_stress_on_sensitive_cro | Evaluating temperature swing stress on sensitive crops
+screen.shared_thinking_templates.reviewing_likely_eligibility_factors_from_your_conte | Reviewing likely eligibility factors from your context
+screen.shared_thinking_templates.reviewing_reminder_persistence_for_high_priority_tas | Reviewing reminder persistence for high-priority tasks
+screen.soil_health_screen.generate_ai_soil_briefing_for_today_s_farm_condition | Generate AI soil briefing for today's farm conditions.
+screen.weather_soil_screen.open_ai_chat_for_crop_specific_weather_action_planni | Open AI chat for crop-specific weather action planning
+screen.weather_soil_screen.plan_daily_farm_decisions_from_weather_and_soil_tren | Plan daily farm decisions from weather and soil trends
+screen.add_crop_listing_screen.listing_draft_saved_backend_save_will_be_wired_next | Listing draft saved. Backend save will be wired next.
+screen.best_out_of_waste_screen.apply_mature_compost_to_field_or_pack_for_local_sale | Apply mature compost to field or pack for local sale.
+screen.best_out_of_waste_screen.find_one_recycler_and_one_mandi_contact_in_your_area | Find one recycler and one mandi contact in your area.
+screen.best_out_of_waste_screen.review_matching_schemes_and_subsidy_options_by_strea | Review matching schemes and subsidy options by stream
+screen.best_out_of_waste_screen.separate_used_plastic_by_type_and_remove_mud_residue | Separate used plastic by type and remove mud residue.
+screen.cattle_screen.create_a_livestock_profile_synced_to_backend_records | Create a livestock profile synced to backend records.
+screen.crop_doctor_screen.diagnose_crop_disease_from_these_symptoms_symptoms | Diagnose crop disease from these symptoms: $symptoms.
+screen.document_agent_screen.free_soil_testing_and_nutrient_based_recommendations | Free soil testing and nutrient-based recommendations.
+screen.my_bookings_screen.unable_to_refresh_right_now_showing_recent_bookings | Unable to refresh right now. Showing recent bookings.
+screen.my_equipment_screen.could_not_refresh_now_displaying_recent_cached_data | Could not refresh now. Displaying recent cached data.
+screen.rental_rate_detail_screen.unable_to_sync_latest_rates_showing_recent_snapshot | Unable to sync latest rates. Showing recent snapshot.
+screen.scheme_details_page.opening_official_forms_hub_to_pick_the_matching_form | Opening Official Forms Hub to pick the matching form.
+screen.shared_thinking_templates.analyzing_resilience_of_forecast_for_decision_qualit | Analyzing resilience of forecast for decision quality
+screen.shared_thinking_templates.analyzing_temperature_stress_risk_for_your_crop_stag | Analyzing temperature stress risk for your crop stage
+screen.shared_thinking_templates.checking_alignment_with_your_stated_farming_objectiv | Checking alignment with your stated farming objective
+screen.shared_thinking_templates.checking_if_profile_details_are_sufficient_to_procee | Checking if profile details are sufficient to proceed
+screen.shared_thinking_templates.checking_outlier_rates_that_may_be_non_representativ | Checking outlier rates that may be non-representative
+screen.shared_thinking_templates.checking_profile_fields_needed_for_shortlist_accurac | Checking profile fields needed for shortlist accuracy
+screen.shared_thinking_templates.checking_rainfall_fit_with_sowing_or_transplant_stag | Checking rainfall fit with sowing or transplant stage
+screen.shared_thinking_templates.evaluating_tradeoff_between_distance_and_higher_pric | Evaluating tradeoff between distance and higher price
+screen.shared_thinking_templates.reviewing_agronomic_weather_triggers_for_your_reques | Reviewing agronomic weather triggers for your request
+screen.shared_thinking_templates.reviewing_expected_processing_path_and_waiting_point | Reviewing expected processing path and waiting points
+screen.shared_thinking_templates.reviewing_forecast_confidence_spread_across_interval | Reviewing forecast confidence spread across intervals
+screen.soil_health_screen.current_0_1cm_soil_moisture_from_hourly_weather_feed | Current 0-1cm soil moisture from hourly weather feed.
+screen.suicide_prevention_screen.contact_your_pradhan_mantri_fasal_bima_yojana_pmfby | Contact your Pradhan Mantri Fasal Bima Yojana (PMFBY)
+screen.best_out_of_waste_screen.collect_gas_for_cooking_and_store_slurry_for_fields | Collect gas for cooking and store slurry for fields.
+screen.best_out_of_waste_screen.coordinate_pickup_with_local_recycler_every_2_weeks | Coordinate pickup with local recycler every 2 weeks.
+screen.best_out_of_waste_screen.introduce_worms_and_feed_thin_layers_every_5_7_days | Introduce worms and feed thin layers every 5-7 days.
+screen.chat_history_screen.this_will_permanently_delete_all_your_chat_sessions | This will permanently delete all your chat sessions.
+screen.document_agent_screen.benefits_important_deadlines_and_helpline_numbers | benefits, important deadlines, and helpline numbers.
+screen.equipment_hub_screen.open_rental_rate_intelligence_for_specific_equipment | Open rental rate intelligence for specific equipment
+screen.equipment_hub_screen.update_equipment_availability_pricing_and_details | Update equipment availability, pricing, and details.
+screen.equipment_marketplace_screen.open_provider_details_and_compare_daily_rental_rates | Open provider details and compare daily rental rates
+screen.rental_rate_detail_screen.ask_ai_in_chat_for_negotiation_and_booking_checklist | Ask AI in chat for negotiation and booking checklist
+screen.shared_thinking_templates.analyzing_if_premium_mandis_justify_transport_effort | Analyzing if premium mandis justify transport effort
+screen.shared_thinking_templates.assessing_practical_route_for_better_net_realization | Assessing practical route for better net realization
+screen.shared_thinking_templates.checking_fallback_options_when_primary_scheme_misses | Checking fallback options when primary scheme misses
+screen.shared_thinking_templates.checking_if_eligibility_depends_on_location_category | Checking if eligibility depends on location category
+screen.shared_thinking_templates.checking_if_land_and_identity_proofs_may_be_required | Checking if land and identity proofs may be required
+screen.shared_thinking_templates.checking_if_renewal_or_periodic_updates_are_required | Checking if renewal or periodic updates are required
+screen.shared_thinking_templates.comparing_alternate_machine_options_for_same_outcome | Comparing alternate machine options for same outcome
+screen.shared_thinking_templates.estimating_crop_comfort_window_from_temperature_band | Estimating crop comfort window from temperature band
+screen.shared_thinking_templates.reviewing_humidity_pattern_for_disease_pressure_cues | Reviewing humidity pattern for disease pressure cues
+screen.shared_thinking_templates.reviewing_likely_wet_spell_versus_dry_spell_sequence | Reviewing likely wet spell versus dry spell sequence
+screen.shared_thinking_templates.reviewing_probable_match_for_income_support_programs | Reviewing probable match for income-support programs
+screen.shared_thinking_templates.reviewing_shortlisting_criteria_for_best_fit_machine | Reviewing shortlisting criteria for best fit machine
+screen.shared_thinking_templates.reviewing_support_pathways_for_first_time_applicants | Reviewing support pathways for first-time applicants
+screen.suicide_prevention_screen.wonderful_keep_nurturing_that_positive_energy | Wonderful! Keep nurturing that positive energy. ðŸŒ¿
+screen.best_out_of_waste_screen.install_the_digester_on_level_ground_with_drainage | Install the digester on level ground with drainage.
+screen.best_out_of_waste_screen.prepare_bed_with_cow_dung_and_partial_compost_base | Prepare bed with cow dung and partial compost base.
+screen.document_builder_screen.official_portal_link_not_available_for_this_scheme | Official portal link not available for this scheme.
+screen.equipment_hub_screen.view_nearby_machines_and_compare_live_rental_rates | View nearby machines and compare live rental rates.
+screen.fetching_location_screen.tap_4_points_around_your_farm_boundary_to_continue | Tap 4 points around your farm boundary to continue.
+screen.listing_details_screen.could_not_refresh_listing_now_showing_recent_data | Could not refresh listing now. Showing recent data.
+screen.market_prices_screen.open_crop_listing_creation_and_related_market_tools | Open crop listing creation and related market tools
+screen.official_form_preview_page.inline_preview_is_not_available_for_this_file_type | Inline preview is not available for this file type.
+screen.power_supply_screen.solar_pumps_government_subsidies_biogas_and_grid | solar pumps, government subsidies, biogas, and grid
+screen.rental_rate_detail_screen.demand_price_trend_estimated_from_current_rates | Demand & Price Trend (Estimated from current rates)
+screen.shared_thinking_templates.assessing_document_confidence_before_recommendation | Assessing document confidence before recommendation
+screen.shared_thinking_templates.assessing_practical_readiness_for_application_start | Assessing practical readiness for application start
+screen.shared_thinking_templates.checking_if_reminder_should_align_with_market_hours | Checking if reminder should align with market hours
+screen.shared_thinking_templates.checking_if_this_asks_for_grant_subsidy_or_credit | Checking if this asks for grant, subsidy, or credit
+screen.shared_thinking_templates.checking_maintenance_and_reliability_considerations | Checking maintenance and reliability considerations
+screen.shared_thinking_templates.checking_weather_volatility_around_key_work_windows | Checking weather volatility around key work windows
+screen.shared_thinking_templates.ensuring_every_recommendation_has_a_clear_next_step | Ensuring every recommendation has a clear next step
+screen.shared_thinking_templates.reviewing_heat_index_pressure_for_livestock_context | Reviewing heat index pressure for livestock context
+screen.shared_thinking_templates.reviewing_rainfall_probability_and_intensity_window | Reviewing rainfall probability and intensity window
+screen.shared_thinking_templates.reviewing_recurring_cycle_alignment_with_crop_stage | Reviewing recurring cycle alignment with crop stage
+screen.soil_health_screen.track_next_field_action_checklist_for_soil_recovery | Track next field action checklist for soil recovery
+screen.suicide_prevention_screen.this_ai_is_not_a_replacement_for_professional_help | This AI is not a replacement for professional help.
+screen.best_out_of_waste_screen.nazdeeki_recycler_ya_mandi_ka_contact_note_karein | Nazdeeki recycler ya mandi ka contact note karein.
+screen.crop_intelligence_screen.analyze_crop_crop_for_indian_farming_conditions | Analyze crop: $crop for Indian farming conditions.
+screen.equipment_hub_screen.check_booking_status_dates_and_provider_updates | Check booking status, dates, and provider updates.
+screen.equipment_hub_screen.monitor_local_trends_and_benchmark_rental_pricing | Monitor local trends and benchmark rental pricing.
+screen.equipment_marketplace_screen.ask_ai_in_chat_to_plan_equipment_booking_decisions | Ask AI in chat to plan equipment booking decisions
+screen.equipment_marketplace_screen.latest_sync_failed_showing_recent_cached_results | Latest sync failed. Showing recent cached results.
+screen.rental_ticket_screen.unable_to_refresh_ticket_now_showing_recent_data | Unable to refresh ticket now. Showing recent data.
+screen.shared_thinking_templates.assessing_overlap_with_harvest_or_spraying_windows | Assessing overlap with harvest or spraying windows
+screen.shared_thinking_templates.assessing_practical_timeline_for_execution_quality | Assessing practical timeline for execution quality
+screen.shared_thinking_templates.checking_compatibility_with_farm_power_constraints | Checking compatibility with farm power constraints
+screen.shared_thinking_templates.checking_if_training_or_operator_support_is_needed | Checking if training or operator support is needed
+screen.shared_thinking_templates.checking_if_your_query_points_to_insurance_support | Checking if your query points to insurance support
+screen.shared_thinking_templates.checking_near_term_market_narrative_for_your_query | Checking near-term market narrative for your query
+screen.shared_thinking_templates.checking_rain_timing_against_your_planned_activity | Checking rain timing against your planned activity
+screen.shared_thinking_templates.checking_task_timing_against_your_current_schedule | Checking task timing against your current schedule
+screen.shared_thinking_templates.checking_wind_impact_on_spray_and_field_operations | Checking wind impact on spray and field operations
+screen.shared_thinking_templates.evaluating_rainfall_uncertainty_for_field_planning | Evaluating rainfall uncertainty for field planning
+screen.shared_thinking_templates.evaluating_runoff_concern_from_high_intensity_rain | Evaluating runoff concern from high-intensity rain
+screen.shared_thinking_templates.mapping_your_query_to_relevant_government_programs | Mapping your query to relevant government programs
+screen.shared_thinking_templates.validating_whether_current_rates_are_stable_enough | Validating whether current rates are stable enough
+screen.suicide_prevention_screen.talk_to_pm_kisan_helpline_155261_or_011_24300606 | Talk to PM-KISAN helpline: 155261 or 011-24300606.
+screen.add_crop_listing_screen.add_grain_quality_moisture_grade_and_any_notes | Add grain quality, moisture, grade, and any notes
+screen.add_crop_listing_screen.use_complete_details_for_better_buyer_visibility | Use complete details for better buyer visibility.
+screen.best_out_of_waste_screen.keep_moisture_moderate_and_avoid_direct_sunlight | Keep moisture moderate and avoid direct sunlight.
+screen.best_out_of_waste_screen.use_internally_or_sell_to_nearby_organic_farmers | Use internally or sell to nearby organic farmers.
+screen.document_builder_screen.no_local_forms_yet_use_sync_official_forms_once | No local forms yet. Use Sync Official Forms once.
+screen.equipment_hub_screen.showing_previous_synced_data_pull_down_to_retry | Showing previous synced data. Pull down to retry.
+screen.live_voice_screen.disease_pest_leaf_crop_doctor | disease|pest|leaf|crop doctor|à¤°à¥‹à¤—|à¤•à¥€à¤Ÿ
+screen.live_voice_screen.streaming_slow_hai_backup_path_try_kar_raha_hoon | Streaming slow hai, backup path try kar raha hoon
+screen.live_voice_screen.tap_response_to_expand_long_press_for_full_view | Tap response to expand. Long press for full view.
+screen.loan_application_screen.completedrequired_requiredcount_fields_complete | $completedRequired/$requiredCount fields complete
+screen.my_equipment_screen.showing_cached_snapshot_while_network_reconnects | Showing cached snapshot while network reconnects.
+screen.shared_thinking_templates.assessing_overnight_temperature_drop_implications | Assessing overnight temperature drop implications
+screen.shared_thinking_templates.assessing_weather_risk_to_input_application_plans | Assessing weather risk to input application plans
+screen.shared_thinking_templates.breaking_the_request_into_smaller_decision_blocks | Breaking the request into smaller decision blocks
+screen.shared_thinking_templates.checking_calendar_fit_with_field_workload_pattern | Checking calendar fit with field workload pattern
+screen.shared_thinking_templates.checking_confidence_before_weather_recommendation | Checking confidence before weather recommendation
+screen.shared_thinking_templates.checking_if_follow_up_actions_should_be_suggested | Checking if follow-up actions should be suggested
+screen.shared_thinking_templates.checking_if_ownership_and_tenancy_context_matters | Checking if ownership and tenancy context matters
+screen.shared_thinking_templates.checking_if_partial_mechanization_is_better_first | Checking if partial mechanization is better first
+screen.shared_thinking_templates.checking_likely_application_channel_for_your_case | Checking likely application channel for your case
+screen.shared_thinking_templates.checking_machine_fit_for_crop_and_field_condition | Checking machine fit for crop and field condition
+screen.shared_thinking_templates.checking_operational_risk_from_gusty_wind_periods | Checking operational risk from gusty wind periods
+screen.shared_thinking_templates.checking_practical_cadence_for_repeated_reminders | Checking practical cadence for repeated reminders
+screen.shared_thinking_templates.cross_checking_for_conflicting_signals_in_context | Cross-checking for conflicting signals in context
+screen.shared_thinking_templates.keeping_your_preferred_language_and_style_in_mind | Keeping your preferred language and style in mind
+screen.shared_thinking_templates.preparing_equipment_guidance_you_can_act_on_today | Preparing equipment guidance you can act on today
+screen.shared_thinking_templates.reviewing_application_sequence_and_order_of_steps | Reviewing application sequence and order of steps
+screen.shared_thinking_templates.reviewing_convenience_of_suggested_reminder_slots | Reviewing convenience of suggested reminder slots
+screen.shared_thinking_templates.reviewing_morning_versus_evening_reminder_utility | Reviewing morning versus evening reminder utility
+screen.shared_thinking_templates.reviewing_required_document_readiness_checkpoints | Reviewing required document readiness checkpoints
+screen.shared_thinking_templates.reviewing_schedule_readiness_for_immediate_action | Reviewing schedule readiness for immediate action
+screen.shared_thinking_templates.reviewing_simple_action_plan_for_first_submission | Reviewing simple action plan for first submission
+screen.shared_thinking_templates.reviewing_temporal_pattern_for_intraday_sentiment | Reviewing temporal pattern for intraday sentiment
+screen.shared_thinking_templates.scanning_cloud_cover_impact_on_evapotranspiration | Scanning cloud cover impact on evapotranspiration
+screen.shared_thinking_templates.scanning_for_missing_details_that_affect_accuracy | Scanning for missing details that affect accuracy
+screen.shared_thinking_templates.scanning_market_pressure_from_supply_side_signals | Scanning market pressure from supply-side signals
+screen.shared_thinking_templates.scanning_trade_sentiment_from_latest_price_spread | Scanning trade sentiment from latest price spread
+screen.soil_health_screen.from_latest_historical_record_avg_smlvl_at15cm | From latest historical record (Avg_smlvl_at15cm).
+screen.soil_health_screen.plan_irrigation_windows_from_rain_and_et0_outlook | Plan irrigation windows from rain and ET0 outlook
+screen.best_out_of_waste_screen.dry_and_bundle_material_to_improve_resale_value | Dry and bundle material to improve resale value.
+screen.best_out_of_waste_screen.track_kg_sold_and_income_in_one_simple_register | Track kg sold and income in one simple register.
+screen.cattle_screen.open_ai_chat_for_herd_specific_management_advice | Open AI chat for herd-specific management advice
+screen.login_screen.send_otp_to_your_phone_then_set_a_new_password | Send OTP to your phone, then set a new password.
+screen.market_prices_screen.equipment_listing_name_at_location_rate_rate | Equipment listing: $name at $location rate $rate
+screen.market_prices_screen.open_equipment_rental_flows_from_listing_section | Open equipment rental flows from listing section
+screen.my_bookings_screen.manage_active_completed_and_owner_side_rentals | Manage active, completed, and owner-side rentals
+screen.preview_download_screen.no_required_doc_checklist_found_for_this_scheme | No required-doc checklist found for this scheme.
+screen.scheme_details_page.no_downloadable_files_found_yet_for_this_scheme | No downloadable files found yet for this scheme.
+screen.shared_thinking_templates.assessing_confidence_in_equipment_recommendation | Assessing confidence in equipment recommendation
+screen.shared_thinking_templates.assessing_practical_equipment_size_compatibility | Assessing practical equipment size compatibility
+screen.shared_thinking_templates.assessing_weather_suitability_for_harvest_timing | Assessing weather suitability for harvest timing
+screen.shared_thinking_templates.checking_if_follow_up_prompts_should_be_included | Checking if follow-up prompts should be included
+screen.shared_thinking_templates.checking_if_irrigation_schedule_needs_adjustment | Checking if irrigation schedule needs adjustment
+screen.shared_thinking_templates.checking_if_this_event_needs_escalation_reminder | Checking if this event needs escalation reminder
+screen.shared_thinking_templates.checking_if_this_needs_district_level_validation | Checking if this needs district-level validation
+screen.shared_thinking_templates.checking_if_this_should_trigger_a_checklist_flow | Checking if this should trigger a checklist flow
+screen.shared_thinking_templates.checking_market_depth_clues_from_spread_behavior | Checking market depth clues from spread behavior
+screen.shared_thinking_templates.checking_possible_route_for_assisted_application | Checking possible route for assisted application
+screen.shared_thinking_templates.checking_schedule_conflicts_with_existing_events | Checking schedule conflicts with existing events
+screen.shared_thinking_templates.comparing_this_week_against_last_week_trajectory | Comparing this week against last week trajectory
+screen.shared_thinking_templates.evaluating_final_scheme_ranking_for_your_context | Evaluating final scheme ranking for your context
+screen.shared_thinking_templates.maintaining_continuity_with_conversation_history | Maintaining continuity with conversation history
+screen.shared_thinking_templates.reviewing_event_details_for_clear_follow_through | Reviewing event details for clear follow-through

@@ -1,0 +1,340 @@
+﻿Generated: 2026-04-10T16:38:03.4691941+05:30
+Input file: C:\Users\vinay\OneDrive\Desktop\google\google-agentic-ai\farmer_app\assets\translations\en_screens_multilingual_full.json
+Total input keys: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+Kept keys: 3053
+Removed keys: 455
+Normalized values: 0
+
+Removed by reason:
+- code_block_fragment: 8
+- code_expression: 51
+- incomplete_interpolation: 16
+- opaque_text_token: 10
+- regex_literal: 28
+- route_path: 5
+- snake_case_token: 337
+
+Removed entries (first 300):
+opaque_text_token | screen.add_crop_listing_screen.text | â‚¹
+snake_case_token | screen.animal_profile_screen.age_months_2 | age_months
+snake_case_token | screen.animal_profile_screen.animal_type | animal_type
+snake_case_token | screen.animal_profile_screen.avg_milk_liters_per_day | avg_milk_liters_per_day
+snake_case_token | screen.animal_profile_screen.created_at | created_at
+snake_case_token | screen.animal_profile_screen.health_notes_2 | health_notes
+snake_case_token | screen.animal_profile_screen.health_status_2 | health_status
+snake_case_token | screen.animal_profile_screen.milk_per_day | milk_per_day
+snake_case_token | screen.animal_profile_screen.milk_production_2 | milk_production
+snake_case_token | screen.animal_profile_screen.tagged_on | tagged_on
+opaque_text_token | screen.animal_profile_screen.text | â€¢
+snake_case_token | screen.animal_profile_screen.under_treatment_2 | under_treatment
+snake_case_token | screen.animal_profile_screen.updated_at | updated_at
+snake_case_token | screen.animal_profile_screen.vaccination_history_2 | vaccination_history
+snake_case_token | screen.animal_profile_screen.weight_kg_2 | weight_kg
+snake_case_token | screen.best_out_of_waste_screen.application_url | application_url
+snake_case_token | screen.best_out_of_waste_screen.bio_input | bio_input
+snake_case_token | screen.best_out_of_waste_screen.contact_buyer | contact_buyer
+snake_case_token | screen.best_out_of_waste_screen.crop_compost | crop_compost
+snake_case_token | screen.best_out_of_waste_screen.crop_name | crop_name
+regex_literal | screen.best_out_of_waste_screen.d_s | ^[\-\*â€¢>\d\.\)\s]+
+snake_case_token | screen.best_out_of_waste_screen.dung_biogas | dung_biogas
+snake_case_token | screen.best_out_of_waste_screen.dung_vermi | dung_vermi
+snake_case_token | screen.best_out_of_waste_screen.farmer_name | farmer_name
+snake_case_token | screen.best_out_of_waste_screen.is_active | is_active
+snake_case_token | screen.best_out_of_waste_screen.land_size_acres | land_size_acres
+code_expression | screen.best_out_of_waste_screen.overviewupdatedat_minute_tostring_padleft_2 | )}:${_overviewUpdatedAt!.minute.toString().padLeft(2,
+snake_case_token | screen.best_out_of_waste_screen.pilot_batch | pilot_batch
+snake_case_token | screen.best_out_of_waste_screen.plastic_recycling | plastic_recycling
+code_expression | screen.best_out_of_waste_screen.routepaths_chat_agent_crop_q_q | ${RoutePaths.chat}?agent=crop&q=$q
+code_expression | screen.best_out_of_waste_screen.routepaths_chat_agent_general_q_query | ${RoutePaths.chat}?agent=general&q=$query
+code_expression | screen.best_out_of_waste_screen.routepaths_marketprices_section_mandis | ${RoutePaths.marketPrices}?section=mandis
+code_expression | screen.best_out_of_waste_screen.routepaths_marketprices_section_schemes_scheme_encod | ${RoutePaths.marketPrices}?section=schemes&scheme=$encoded
+regex_literal | screen.best_out_of_waste_screen.s_data_last_updated_last_updated | ^(\*\*|__)?\s*(data last updated|last updated)
+regex_literal | screen.best_out_of_waste_screen.s_data_now_data_last_updated_last_updated_s_s_s | ^(\*\*|__)?\s*(data now|data last updated|last updated)\s*(\*\*|__)?\s*[:\-]*\s*
+snake_case_token | screen.best_out_of_waste_screen.scheme_check | scheme_check
+snake_case_token | screen.best_out_of_waste_screen.segregate_today | segregate_today
+snake_case_token | screen.best_out_of_waste_screen.short_name | short_name
+snake_case_token | screen.best_out_of_waste_screen.straw_mushroom | straw_mushroom
+opaque_text_token | screen.best_out_of_waste_screen.text | â€¢
+regex_literal | screen.best_out_of_waste_screen.u0900_u097f | [\u0900-\u097F]
+code_expression | screen.best_out_of_waste_screen.updated_at_overviewupdatedat_hour_tostring_padleft_2 | Updated at ${_overviewUpdatedAt!.hour.toString().padLeft(2,
+snake_case_token | screen.best_out_of_waste_screen.user_id | user_id
+snake_case_token | screen.best_out_of_waste_screen.waste_economy_overview_v1 | waste_economy_overview_v1
+snake_case_token | screen.calendar_screen.created_at | created_at
+regex_literal | screen.calendar_screen.d_1_2_d_2 | ^(\d{1,2}):(\d{2})
+code_expression | screen.calendar_screen.months_date_month_1_date_day_tostring_padleft_2 | ${months[date.month - 1]} ${date.day.toString().padLeft(2,
+snake_case_token | screen.calendar_screen.task_date | task_date
+snake_case_token | screen.cattle_screen.age_months | age_months
+snake_case_token | screen.cattle_screen.animal_type | animal_type
+snake_case_token | screen.cattle_screen.cattle_overview_v1 | cattle_overview_v1
+incomplete_interpolation | screen.cattle_screen.dueanimal | ${dueAnimal[
+snake_case_token | screen.cattle_screen.health_status_2 | health_status
+snake_case_token | screen.cattle_screen.livestock_id | livestock_id
+code_expression | screen.cattle_screen.routepaths_chat_agent_general_q_encoded | ${RoutePaths.chat}?agent=general&q=$encoded
+code_expression | screen.cattle_screen.routepaths_chat_agent_general_q_prompt | ${RoutePaths.chat}?agent=general&q=$prompt
+code_expression | screen.cattle_screen.routepaths_chat_agent_general_q_q | ${RoutePaths.chat}?agent=general&q=$q
+opaque_text_token | screen.cattle_screen.text_2 | Â·
+snake_case_token | screen.cattle_screen.under_treatment_2 | under_treatment
+code_expression | screen.chat_history_screen.routepaths_chat_agent_agenttype_session_session_sess | ${RoutePaths.chat}?agent=$agentType&session=${session.sessionId}
+code_expression | screen.chat_history_screen.session_session_sessionid_substring_0_session_sessio | Session ${session.sessionId.substring(0, session.sessionId.length > 10 ? 10 : session.sessionId.length)}
+snake_case_token | screen.chat_screen.add_listing | add_listing
+snake_case_token | screen.chat_screen.audio_base64 | audio_base64
+snake_case_token | screen.chat_screen.chat_history_2 | chat_history
+code_expression | screen.chat_screen.compact_substring_0_157 | ${compact.substring(0, 157)}...
+snake_case_token | screen.chat_screen.contract_farming | contract_farming
+snake_case_token | screen.chat_screen.credit_sources | credit_sources
+snake_case_token | screen.chat_screen.crop_cycle | crop_cycle
+snake_case_token | screen.chat_screen.crop_doctor_2 | crop_doctor
+snake_case_token | screen.chat_screen.crop_insurance | crop_insurance
+snake_case_token | screen.chat_screen.crop_intelligence | crop_intelligence
+code_block_fragment | screen.chat_screen.current_phase_widget_text | Current phase: ${widget.text}
+snake_case_token | screen.chat_screen.document_agent | document_agent
+snake_case_token | screen.chat_screen.document_build | document_build
+snake_case_token | screen.chat_screen.document_builder_2 | document_builder
+snake_case_token | screen.chat_screen.document_vault | document_vault
+snake_case_token | screen.chat_screen.equipment_hub | equipment_hub
+snake_case_token | screen.chat_screen.equipment_marketplace | equipment_marketplace
+snake_case_token | screen.chat_screen.equipment_rental_rates | equipment_rental_rates
+snake_case_token | screen.chat_screen.farm_viz | farm_viz
+snake_case_token | screen.chat_screen.fetching_location | fetching_location
+snake_case_token | screen.chat_screen.final_response | final_response
+code_expression | screen.chat_screen.firstline_substring_0_72 | ${firstLine.substring(0, 72)}...
+code_expression | screen.chat_screen.item_tostring | - ${item.toString()}
+snake_case_token | screen.chat_screen.language_code | language_code
+snake_case_token | screen.chat_screen.language_select | language_select
+snake_case_token | screen.chat_screen.listing_details | listing_details
+snake_case_token | screen.chat_screen.live_voice_2 | live_voice
+snake_case_token | screen.chat_screen.market_prices | market_prices
+snake_case_token | screen.chat_screen.market_strategy | market_strategy
+snake_case_token | screen.chat_screen.mental_health | mental_health
+snake_case_token | screen.chat_screen.merged_response | merged_response
+snake_case_token | screen.chat_screen.my_bookings | my_bookings
+snake_case_token | screen.chat_screen.my_equipment | my_equipment
+snake_case_token | screen.chat_screen.open_add | open_add
+snake_case_token | screen.chat_screen.partial_response | partial_response
+snake_case_token | screen.chat_screen.power_supply | power_supply
+snake_case_token | screen.chat_screen.rental_rate_detail | rental_rate_detail
+snake_case_token | screen.chat_screen.rental_ticket | rental_ticket
+snake_case_token | screen.chat_screen.request_id | request_id
+regex_literal | screen.chat_screen.s | \s+
+route_path | screen.chat_screen.search | /search
+snake_case_token | screen.chat_screen.session_id | session_id
+snake_case_token | screen.chat_screen.ui_action_card_labels | ui_action_card_labels
+snake_case_token | screen.chat_screen.ui_action_cards | ui_action_cards
+snake_case_token | screen.chat_screen.ui_redirect_tag | ui_redirect_tag
+snake_case_token | screen.choice_screen.last_location_name | last_location_name
+snake_case_token | screen.crop_cycle_screen.area_acres | area_acres
+snake_case_token | screen.crop_cycle_screen.crop_id | crop_id
+snake_case_token | screen.crop_cycle_screen.crop_name | crop_name
+snake_case_token | screen.crop_cycle_screen.duration_days | duration_days
+snake_case_token | screen.crop_cycle_screen.expected_harvest_date | expected_harvest_date
+snake_case_token | screen.crop_cycle_screen.sowing_date | sowing_date
+snake_case_token | screen.crop_doctor_screen.bounding_box_explanation | bounding_box_explanation
+snake_case_token | screen.crop_doctor_screen.bounding_boxes | bounding_boxes
+snake_case_token | screen.crop_doctor_screen.crop_doctor_overview_v1 | crop_doctor_overview_v1
+snake_case_token | screen.crop_doctor_screen.crop_name | crop_name
+code_block_fragment | screen.crop_doctor_screen.detected_regions_widget_boundingboxes_length | Detected regions: ${widget.boundingBoxes.length}
+snake_case_token | screen.crop_doctor_screen.disease_name | disease_name
+snake_case_token | screen.crop_doctor_screen.growth_stage | growth_stage
+code_expression | screen.crop_doctor_screen.routepaths_chat_agent_general_q_query | ${RoutePaths.chat}?agent=general&q=$query
+regex_literal | screen.crop_doctor_screen.s | \s+
+snake_case_token | screen.crop_doctor_screen.scientific_name | scientific_name
+opaque_text_token | screen.crop_doctor_screen.text_2 | Ã‚
+code_block_fragment | screen.crop_doctor_screen.widget_confidencepercent_confidence | ${widget.confidencePercent}% confidence
+code_block_fragment | screen.crop_doctor_screen.widget_scientificname | (${widget.scientificName})
+incomplete_interpolation | screen.crop_intelligence_screen.state_isnotempty | ${state.isNotEmpty ?
+snake_case_token | screen.document_agent_screen.doc_checklist_v2 | doc_checklist_v2
+code_block_fragment | screen.document_agent_screen.style_context_texttheme_labelsmall_copywith_fontweig | ,
+ style: context.textTheme.labelSmall
+ ?.copyWith(fontWeight: FontWeight.w600)),
+ Expanded(
+ child: Text(value,
+ style: context.textTheme.labelSmall
+ ?.copyWith(color: context.appColors.textSecondary)),
+ ),
+ ],
+ );
+ }
+
+ Widget _buildFormResponseView() {
+ return Column(
+ children: [
+ Align(
+ alignment: Alignment.centerLeft,
+ child: Padding(
+ padding: const EdgeInsets.only(
+ left: AppSpacing.lg, top: AppSpacing.md),
+ child: TextButton.icon(
+ onPressed: () => setState(() {
+ _formResponse =
+snake_case_token | screen.document_builder_screen.aadhaar_number | aadhaar_number
+snake_case_token | screen.document_builder_screen.amount_range | amount_range
+snake_case_token | screen.document_builder_screen.application_process | application_process
+snake_case_token | screen.document_builder_screen.application_url | application_url
+snake_case_token | screen.document_builder_screen.bank_account | bank_account
+snake_case_token | screen.document_builder_screen.caste_certificate_available | caste_certificate_available
+snake_case_token | screen.document_builder_screen.crop_name | crop_name
+regex_literal | screen.document_builder_screen.d_d | (\d+[\d,]*)
+snake_case_token | screen.document_builder_screen.documents_required | documents_required
+code_expression | screen.document_builder_screen.e_0_touppercase_e_substring_1 | ${e[0].toUpperCase()}${e.substring(1)}
+snake_case_token | screen.document_builder_screen.farming_type | farming_type
+snake_case_token | screen.document_builder_screen.form_download_urls | form_download_urls
+snake_case_token | screen.document_builder_screen.form_fields | form_fields
+snake_case_token | screen.document_builder_screen.how_to_apply | how_to_apply
+snake_case_token | screen.document_builder_screen.ifsc_code | ifsc_code
+snake_case_token | screen.document_builder_screen.is_active | is_active
+snake_case_token | screen.document_builder_screen.is_organic | is_organic
+snake_case_token | screen.document_builder_screen.land_area | land_area
+snake_case_token | screen.document_builder_screen.land_records_available | land_records_available
+snake_case_token | screen.document_builder_screen.land_size_acres | land_size_acres
+snake_case_token | screen.document_builder_screen.land_size_hectares | land_size_hectares
+snake_case_token | screen.document_builder_screen.launch_year | launch_year
+snake_case_token | screen.document_builder_screen.launched_year | launched_year
+snake_case_token | screen.document_builder_screen.main_crop | main_crop
+snake_case_token | screen.document_builder_screen.photo_url | photo_url
+snake_case_token | screen.document_builder_screen.profile_photo | profile_photo
+snake_case_token | screen.document_builder_screen.required_documents | required_documents
+code_expression | screen.document_builder_screen.routepaths_documentbuild_scheme_id_sid_doc_type_dtyp | ${RoutePaths.documentBuild}?scheme_id=$sid&doc_type=$dtype
+snake_case_token | screen.document_builder_screen.scheme_id | scheme_id
+snake_case_token | screen.document_builder_screen.scheme_name | scheme_name
+snake_case_token | screen.document_builder_screen.short_name | short_name
+opaque_text_token | screen.document_builder_screen.text | \.|
+opaque_text_token | screen.document_builder_screen.text_2 | |\.
+snake_case_token | screen.document_builder_screen.total_cached | total_cached
+snake_case_token | screen.document_builder_screen.total_downloaded | total_downloaded
+snake_case_token | screen.document_builder_screen.total_failed | total_failed
+snake_case_token | screen.document_vault_screen.aadhaar_number | aadhaar_number
+snake_case_token | screen.document_vault_screen.bank_account | bank_account
+snake_case_token | screen.document_vault_screen.caste_certificate_available | caste_certificate_available
+snake_case_token | screen.document_vault_screen.content_type | content_type
+snake_case_token | screen.document_vault_screen.ifsc_code | ifsc_code
+snake_case_token | screen.document_vault_screen.land_area | land_area
+snake_case_token | screen.document_vault_screen.land_size_acres | land_size_acres
+snake_case_token | screen.document_vault_screen.photo_url | photo_url
+snake_case_token | screen.document_vault_screen.profile_photo | profile_photo
+snake_case_token | screen.document_vault_screen.scheme_name | scheme_name
+snake_case_token | screen.earnings_screen.end_date | end_date
+code_expression | screen.earnings_screen.enddate_year_enddate_month_tostring_padleft_2 | ${endDate.year}-${endDate.month.toString().padLeft(2,
+snake_case_token | screen.earnings_screen.equipment_id | equipment_id
+snake_case_token | screen.earnings_screen.equipment_name | equipment_name
+snake_case_token | screen.earnings_screen.start_date | start_date
+snake_case_token | screen.earnings_screen.total_price | total_price
+snake_case_token | screen.equipment_hub_screen.base_price | base_price
+snake_case_token | screen.equipment_hub_screen.crop_protection | crop_protection
+snake_case_token | screen.equipment_hub_screen.delivery_minutes | delivery_minutes
+snake_case_token | screen.equipment_hub_screen.discount_percent | discount_percent
+snake_case_token | screen.equipment_hub_screen.drone_technology | drone_technology
+snake_case_token | screen.equipment_hub_screen.equipment_hub_overview_v1 | equipment_hub_overview_v1
+snake_case_token | screen.equipment_hub_screen.equipment_image | equipment_image
+snake_case_token | screen.equipment_hub_screen.eta_mins | eta_mins
+snake_case_token | screen.equipment_hub_screen.how_to_find | how_to_find
+snake_case_token | screen.equipment_hub_screen.image_url | image_url
+snake_case_token | screen.equipment_hub_screen.land_preparation | land_preparation
+snake_case_token | screen.equipment_hub_screen.logo_url | logo_url
+snake_case_token | screen.equipment_hub_screen.mechanization_percentage | mechanization_percentage
+snake_case_token | screen.equipment_hub_screen.photo_url | photo_url
+snake_case_token | screen.equipment_hub_screen.review_count | review_count
+snake_case_token | screen.equipment_hub_screen.reviews_count | reviews_count
+code_expression | screen.equipment_hub_screen.reviews_tostring | (${reviews.toString()})
+code_expression | screen.equipment_hub_screen.routepaths_chat_agent_general_q_query | ${RoutePaths.chat}?agent=general&q=$query
+code_expression | screen.equipment_hub_screen.routepaths_equipmentmarketplace_category_categorykey | ${RoutePaths.equipmentMarketplace}?category=$categoryKey
+code_expression | screen.equipment_hub_screen.routepaths_rentalratedetail_name_encodedname_categor | ${RoutePaths.rentalRateDetail}?name=$encodedName&category=$encodedCategory
+snake_case_token | screen.equipment_hub_screen.sowing_planting | sowing_planting
+snake_case_token | screen.equipment_hub_screen.stock_left | stock_left
+snake_case_token | screen.equipment_hub_screen.tractors_per_1000ha | tractors_per_1000ha
+snake_case_token | screen.equipment_hub_screen.units_available | units_available
+snake_case_token | screen.equipment_marketplace_screen.rate_asc | rate_asc
+snake_case_token | screen.equipment_marketplace_screen.rate_desc | rate_desc
+snake_case_token | screen.equipment_marketplace_screen.rate_per_day | rate_per_day
+code_expression | screen.equipment_marketplace_screen.routepaths_chat_agent_general_q_query | ${RoutePaths.chat}?agent=general&q=$query
+code_expression | screen.equipment_marketplace_screen.routepaths_listingdetails_id_id | ${RoutePaths.listingDetails}?id=$id
+code_expression | screen.equipment_marketplace_screen.routepaths_rentalratedetail_name_encoded_category_ca | ${RoutePaths.rentalRateDetail}?name=$encoded&category=$cat
+incomplete_interpolation | screen.equipment_marketplace_screen.row | ${(row[
+code_expression | screen.equipment_marketplace_screen.tostring_rate_tostringasfixed_0_day | ).toString()} â€¢ â‚¹${rate.toStringAsFixed(0)}/day
+route_path | screen.farm_visualizer_screen.100 | /100
+incomplete_interpolation | screen.farm_visualizer_screen.c | ${c[
+incomplete_interpolation | screen.farm_visualizer_screen.crop | ${crop[
+snake_case_token | screen.farm_visualizer_screen.crop_name | crop_name
+incomplete_interpolation | screen.farm_visualizer_screen.crops_where_c_c | ${_crops.where((c) => (c[
+snake_case_token | screen.farm_visualizer_screen.harvest_date | harvest_date
+incomplete_interpolation | screen.farm_visualizer_screen.profile | ${_profile[
+code_expression | screen.farm_visualizer_screen.routepaths_chat_agent_crop_q_encoded | ${RoutePaths.chat}?agent=crop&q=$encoded
+snake_case_token | screen.farm_visualizer_screen.sowing_date | sowing_date
+incomplete_interpolation | screen.farm_visualizer_screen.text | ${
+code_expression | screen.farm_visualizer_screen.tostring_tolowercase | ).toString().toLowerCase() !=
+snake_case_token | screen.fetching_location_screen.last_location_lat | last_location_lat
+snake_case_token | screen.fetching_location_screen.last_location_lon | last_location_lon
+snake_case_token | screen.fetching_location_screen.last_location_name | last_location_name
+snake_case_token | screen.listing_details_screen.contact_phone_2 | contact_phone
+snake_case_token | screen.listing_details_screen.end_date_2 | end_date
+snake_case_token | screen.listing_details_screen.equipment_id | equipment_id
+snake_case_token | screen.listing_details_screen.farmer_id | farmer_id
+snake_case_token | screen.listing_details_screen.owner_id | owner_id
+snake_case_token | screen.listing_details_screen.rate_per_day_2 | rate_per_day
+snake_case_token | screen.listing_details_screen.rate_per_hour_2 | rate_per_hour
+code_expression | screen.listing_details_screen.routepaths_rentalticket_id_uri_encodecomponent_renta | ${RoutePaths.rentalTicket}?id=${Uri.encodeComponent(rentalId)}
+snake_case_token | screen.listing_details_screen.start_date_2 | start_date
+incomplete_interpolation | screen.listing_details_screen.type_isempty | ${type.isEmpty ?
+snake_case_token | screen.listing_details_screen.user_id | user_id
+snake_case_token | screen.live_voice_screen.action_stage | action_stage
+snake_case_token | screen.live_voice_screen.agent_metadata | agent_metadata
+snake_case_token | screen.live_voice_screen.audio_base64 | audio_base64
+regex_literal | screen.live_voice_screen.b_d_4_d_2_d_2_t_d_2_d_2_d_2_s | \b\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}[^\s,;)]*
+regex_literal | screen.live_voice_screen.b_last_s_available_s_date_updated_s_at_as_s_of_b_s_s | \b(last\s+available\s+date|updated\s+at|as\s+of)\b\s*[:\-]?\s*[^.
+]*
+regex_literal | screen.live_voice_screen.b_ref_profile_s_a_z0_9_b | \b(ref|profile)\s*[\-_][a-z0-9\-_]+\b
+regex_literal | screen.live_voice_screen.bdata_s_now_b_s | \bdata\s*now\b\s*[:\-]?
+code_expression | screen.live_voice_screen.buffer_tostring_word | ${buffer.toString()} $word
+snake_case_token | screen.live_voice_screen.chat_history_2 | chat_history
+regex_literal | screen.live_voice_screen.click_s_on_s_in_s_these_s_cards | click\s+on\s+in\s+these\s+cards
+snake_case_token | screen.live_voice_screen.crop_doctor_2 | crop_doctor
+incomplete_interpolation | screen.live_voice_screen.data | ${data[
+snake_case_token | screen.live_voice_screen.equipment_hub_2 | equipment_hub
+snake_case_token | screen.live_voice_screen.equipment_marketplace | equipment_marketplace
+snake_case_token | screen.live_voice_screen.farm_viz | farm_viz
+regex_literal | screen.live_voice_screen.https_s | https?:\/\/[^\s)]+
+snake_case_token | screen.live_voice_screen.live_voice_2 | live_voice
+snake_case_token | screen.live_voice_screen.market_prices | market_prices
+snake_case_token | screen.live_voice_screen.mental_health_2 | mental_health
+code_expression | screen.live_voice_screen.routepaths_chat_agent_general | ${RoutePaths.chat}?agent=general
+code_expression | screen.live_voice_screen.routepaths_chat_agent_general_q_encodedq | ${RoutePaths.chat}?agent=general&q=$encodedQ
+code_expression | screen.live_voice_screen.routepaths_chat_agent_general_session_encodedsession | ${RoutePaths.chat}?agent=general&session=$encodedSession
+regex_literal | screen.live_voice_screen.s | \s+
+regex_literal | screen.live_voice_screen.s_2 | (?<=[.!?])\s+
+regex_literal | screen.live_voice_screen.s_2_2 | \s{2,}
+regex_literal | screen.live_voice_screen.s_source_s | \(\s*source\s*:[^)]+\)
+regex_literal | screen.live_voice_screen.s_timestamp_s | \(\s*timestamp\s*:[^)]+\)
+snake_case_token | screen.live_voice_screen.session_id | session_id
+snake_case_token | screen.live_voice_screen.stt_done | stt_done
+snake_case_token | screen.live_voice_screen.tool_evidence | tool_evidence
+snake_case_token | screen.live_voice_screen.transcript_display | transcript_display
+regex_literal | screen.live_voice_screen.u0900_u0d7f | [\u0900-\u0D7F]
+snake_case_token | screen.live_voice_screen.ui_action_card_labels | ui_action_card_labels
+snake_case_token | screen.live_voice_screen.ui_action_cards | ui_action_cards
+snake_case_token | screen.live_voice_screen.ui_redirect_tag | ui_redirect_tag
+snake_case_token | screen.live_voice_screen.wave_stage | wave_stage
+snake_case_token | screen.loan_application_screen.aadhaar_number | aadhaar_number
+snake_case_token | screen.loan_application_screen.account_number | account_number
+snake_case_token | screen.loan_application_screen.applicant_name | applicant_name
+snake_case_token | screen.loan_application_screen.bank_account | bank_account
+snake_case_token | screen.loan_application_screen.bank_name | bank_name
+snake_case_token | screen.loan_application_screen.crop_grown | crop_grown
+snake_case_token | screen.loan_application_screen.crop_name | crop_name
+snake_case_token | screen.loan_application_screen.farmer_name | farmer_name
+snake_case_token | screen.loan_application_screen.form_fields | form_fields
+snake_case_token | screen.loan_application_screen.full_name | full_name
+snake_case_token | screen.loan_application_screen.ifsc_code | ifsc_code
+snake_case_token | screen.loan_application_screen.land_area | land_area
+snake_case_token | screen.loan_application_screen.land_area_acres | land_area_acres
+snake_case_token | screen.loan_application_screen.land_size_acres | land_size_acres
+snake_case_token | screen.loan_application_screen.main_crop | main_crop
+snake_case_token | screen.loan_application_screen.mobile_number | mobile_number
+snake_case_token | screen.loan_application_screen.phone_number | phone_number
+snake_case_token | screen.loan_application_screen.session_id | session_id
+snake_case_token | screen.loan_application_screen.total_land | total_land
+regex_literal | screen.login_screen.6_9 | ^[6-9]
+incomplete_interpolation | screen.login_screen.c | ${c[
+regex_literal | screen.login_screen.creating_your_account_u2026 | Creating your account\u2026
+regex_literal | screen.login_screen.d | [^\d]
+regex_literal | screen.login_screen.logging_you_in_u2026 | Logging you in\u2026
+snake_case_token | screen.market_prices_screen.application_url | application_url
+snake_case_token | screen.market_prices_screen.crop_name | crop_name

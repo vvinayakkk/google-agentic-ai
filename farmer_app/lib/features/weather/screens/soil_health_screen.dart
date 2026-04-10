@@ -3,16 +3,17 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/services/ai_overview_service.dart';
 import '../../../shared/services/farmer_service.dart';
 import '../../../shared/services/weather_soil_service.dart';
+import '../../../shared/widgets/ai_overview_card.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../widgets/glass_widgets.dart';
 
 class SoilHealthScreen extends ConsumerStatefulWidget {
   const SoilHealthScreen({super.key});
@@ -38,7 +39,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
   bool _aiExpanded = false;
   bool _aiLoading = false;
-  bool _aiGenerated = false;
   String _aiSummary = 'Generate AI soil briefing for today\'s farm conditions.';
   String _aiDetails =
       'Combines soil profile, moisture trend, temperature profile, and water outlook. Cached for 24 hours.';
@@ -50,6 +50,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     _loadCachedAiOverview();
     _fetch();
   }
+
+  // ─── Data fetching ────────────────────────────────────────────────────────
 
   Future<void> _fetch({bool forceRefresh = false}) async {
     final hasSnapshot =
@@ -125,9 +127,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                 const <Map<String, dynamic>>[];
           }
 
-          if (latest.isNotEmpty) {
-            legacy = latest.first;
-          }
+          if (latest.isNotEmpty) legacy = latest.first;
         } catch (_) {
           legacy = null;
         }
@@ -182,6 +182,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     }
   }
 
+  // ─── Computed getters ─────────────────────────────────────────────────────
+
   Map<String, dynamic> get _hourly =>
       (_full?['hourly'] as Map?)?.cast<String, dynamic>() ??
       const <String, dynamic>{};
@@ -202,6 +204,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       ((_legacyRecord?['metrics'] as Map?)?.cast<String, dynamic>()) ??
       const <String, dynamic>{};
 
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
   double? _num(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
@@ -217,16 +221,14 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     if (iso == null || iso.isEmpty) return '--';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return '--';
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   String _fmtDate(String? iso) {
     if (iso == null || iso.isEmpty) return '--';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return '--';
-    const months = <String>[
+    const months = [
       'Jan',
       'Feb',
       'Mar',
@@ -252,7 +254,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   int _todayDailyStartIndex() {
     final dates = _list(_daily['date']);
     if (dates.isEmpty) return 0;
-
     final now = DateTime.now();
     for (var i = 0; i < dates.length; i++) {
       final dt = DateTime.tryParse(dates[i].toString());
@@ -277,6 +278,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     return 'Updated at $hh:$mm';
   }
 
+  // ─── AI overview ──────────────────────────────────────────────────────────
+
   Future<void> _loadCachedAiOverview() async {
     final cached = await ref
         .read(aiOverviewServiceProvider)
@@ -286,7 +289,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       _aiSummary = cached.summary;
       _aiDetails = cached.details;
       _aiUpdatedAt = cached.updatedAt;
-      _aiGenerated = true;
     });
   }
 
@@ -335,6 +337,13 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             pageName: 'Soil Health',
             languageCode: Localizations.localeOf(context).languageCode,
             nearbyData: snippets,
+            capabilities: const <String>[
+              'Review soil score, moisture depth trend, and soil temperature trend',
+              'Assess soil composition metrics and nutrient correction priorities',
+              'Plan irrigation windows from rain and ET0 outlook',
+              'Open AI chat for crop-specific soil treatment recommendations',
+              'Track next field action checklist for soil recovery',
+            ],
             forceRefresh: forceRefresh,
           );
 
@@ -343,7 +352,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         _aiSummary = result.summary;
         _aiDetails = result.details;
         _aiUpdatedAt = result.updatedAt;
-        _aiGenerated = true;
         _aiLoading = false;
       });
     } catch (_) {
@@ -352,18 +360,21 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     }
   }
 
+  void _openAiActionCard(String actionText) {
+    final query = Uri.encodeQueryComponent(actionText);
+    context.push('${RoutePaths.chat}?agent=general&q=$query');
+  }
+
+  // ─── Series / metric helpers ──────────────────────────────────────────────
+
   List<double?> _hourlySeriesForKeys(List<String> keys) {
     List<double?> fallback = const <double?>[];
-
     for (final key in keys) {
       final values = _list(_hourly[key]);
       if (values.isNotEmpty) {
         final series = values.map(_num).toList(growable: false);
         fallback = series;
-        final hasMeaningful = series.any(
-          (v) => v != null && v.abs() > 0.000001,
-        );
-        if (hasMeaningful) {
+        if (series.any((v) => v != null && v.abs() > 0.000001)) {
           return series;
         }
       }
@@ -374,11 +385,9 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   double? _hourlyValueAt(List<String> keys, int idx) {
     final series = _hourlySeriesForKeys(keys);
     if (series.isEmpty) return null;
-
     if (idx >= 0 && idx < series.length && series[idx] != null) {
       return series[idx];
     }
-
     for (var delta = 1; delta <= 6; delta++) {
       final back = idx - delta;
       final fwd = idx + delta;
@@ -389,7 +398,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         return series[fwd];
       }
     }
-
     for (final value in series) {
       if (value != null) return value;
     }
@@ -400,7 +408,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final metricDepths = (_soilDepths[depthKey] as Map?)
         ?.cast<String, dynamic>();
     if (metricDepths == null || metricDepths.isEmpty) return null;
-
     var total = 0.0;
     var count = 0;
     for (final value in metricDepths.values) {
@@ -417,9 +424,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     for (final alias in aliases) {
       final wanted = alias.toLowerCase();
       for (final entry in _legacyMetrics.entries) {
-        if (entry.key.toLowerCase() == wanted) {
-          return entry.value;
-        }
+        if (entry.key.toLowerCase() == wanted) return entry.value;
       }
     }
     return null;
@@ -467,7 +472,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   int _currentHourlyIndex() {
     final times = _list(_hourly['time']);
     if (times.isEmpty) return 0;
-
     final now = DateTime.now();
     var best = 0;
     var bestDiff = const Duration(days: 1000);
@@ -487,12 +491,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final m = (_soilMetrics[key] as Map?)?.cast<String, dynamic>();
     final direct = _num(m?['value']);
     if (direct != null) return direct;
-
     if (key == 'clay' || key == 'sand' || key == 'silt') {
       final fromDepth = _depthAverage(key);
       if (fromDepth != null) return fromDepth;
     }
-
     return _legacyMetricValue(key);
   }
 
@@ -536,7 +538,6 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         (full['hourly'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final idx = _currentHourlyIndex();
-
     final rootMoisture = _num(
       _list(hourly['soil_moisture_root']).elementAtOrNull(idx),
     );
@@ -553,15 +554,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
 
     var score = 0.0;
 
-    if (!ph.isNaN) {
-      final p = (1 - ((ph - 6.8).abs() / 2.8)).clamp(0.0, 1.0) * 20;
-      score += p;
-    }
-
-    if (!oc.isNaN) {
-      final ocScore = (oc / 12).clamp(0.0, 1.0) * 15;
-      score += ocScore;
-    }
+    if (!ph.isNaN) score += (1 - ((ph - 6.8).abs() / 2.8)).clamp(0.0, 1.0) * 20;
+    if (!oc.isNaN) score += (oc / 12).clamp(0.0, 1.0) * 15;
 
     var npk = 0.0;
     if (!n.isNaN) npk += (n / 120).clamp(0.0, 1.0) * 10;
@@ -570,8 +564,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     score += npk;
 
     if (rootMoisture != null) {
-      final m = (1 - ((rootMoisture - 0.25).abs() / 0.20)).clamp(0.0, 1.0) * 20;
-      score += m;
+      score += (1 - ((rootMoisture - 0.25).abs() / 0.20)).clamp(0.0, 1.0) * 20;
     }
 
     var textureScore = 8.0;
@@ -587,10 +580,7 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     }
     score += textureScore;
 
-    if (!cec.isNaN) {
-      final c = (cec / 250).clamp(0.0, 1.0) * 10;
-      score += c;
-    }
+    if (!cec.isNaN) score += (cec / 250).clamp(0.0, 1.0) * 10;
 
     return score.clamp(0, 100).round();
   }
@@ -630,9 +620,8 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         28 <= silt &&
         silt < 50 &&
         23 <= sand &&
-        sand <= 52) {
+        sand <= 52)
       return 'Loam';
-    }
     if (sand >= 43 && clay < 20) return 'Sandy Loam';
     return 'Loamy';
   }
@@ -642,59 +631,30 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
   ) {
     final t = rawTexture.trim().toLowerCase();
     if (t.isEmpty) return null;
-
-    if (t.contains('alluvial')) {
-      return (sand: 45, silt: 40, clay: 15);
-    }
-    if (t.contains('black') || t.contains('regur')) {
-      return (sand: 20, silt: 30, clay: 50);
-    }
-    if (t.contains('red')) {
-      return (sand: 45, silt: 30, clay: 25);
-    }
-    if (t.contains('laterite')) {
-      return (sand: 50, silt: 20, clay: 30);
-    }
-    if (t.contains('sandy loam')) {
-      return (sand: 60, silt: 25, clay: 15);
-    }
-    if (t.contains('sandy')) {
-      return (sand: 75, silt: 15, clay: 10);
-    }
-    if (t.contains('silty loam')) {
-      return (sand: 20, silt: 65, clay: 15);
-    }
-    if (t.contains('silty')) {
-      return (sand: 10, silt: 75, clay: 15);
-    }
-    if (t.contains('clay loam')) {
-      return (sand: 35, silt: 30, clay: 35);
-    }
-    if (t.contains('clay')) {
-      return (sand: 20, silt: 20, clay: 60);
-    }
-    if (t.contains('loam')) {
-      return (sand: 40, silt: 40, clay: 20);
-    }
-    if (t.contains('peaty')) {
-      return (sand: 30, silt: 40, clay: 30);
-    }
-    if (t.contains('saline')) {
-      return (sand: 40, silt: 35, clay: 25);
-    }
-
+    if (t.contains('alluvial')) return (sand: 45.0, silt: 40.0, clay: 15.0);
+    if (t.contains('black') || t.contains('regur'))
+      return (sand: 20.0, silt: 30.0, clay: 50.0);
+    if (t.contains('red')) return (sand: 45.0, silt: 30.0, clay: 25.0);
+    if (t.contains('laterite')) return (sand: 50.0, silt: 20.0, clay: 30.0);
+    if (t.contains('sandy loam')) return (sand: 60.0, silt: 25.0, clay: 15.0);
+    if (t.contains('sandy')) return (sand: 75.0, silt: 15.0, clay: 10.0);
+    if (t.contains('silty loam')) return (sand: 20.0, silt: 65.0, clay: 15.0);
+    if (t.contains('silty')) return (sand: 10.0, silt: 75.0, clay: 15.0);
+    if (t.contains('clay loam')) return (sand: 35.0, silt: 30.0, clay: 35.0);
+    if (t.contains('clay')) return (sand: 20.0, silt: 20.0, clay: 60.0);
+    if (t.contains('loam')) return (sand: 40.0, silt: 40.0, clay: 20.0);
+    if (t.contains('peaty')) return (sand: 30.0, silt: 40.0, clay: 30.0);
+    if (t.contains('saline')) return (sand: 40.0, silt: 35.0, clay: 25.0);
     return null;
   }
 
   List<String> _recommendations() {
     final recs = <String>[];
-
     final clay = _metricValue('clay');
     final soc = _metricValue('organic_carbon');
     final ph = _metricValue('ph');
     final nitrogen = _metricValue('nitrogen');
     final bd = _metricValue('bulk_density');
-
     final idx = _currentHourlyIndex();
     final rootMoisture = _num(
       _list(_hourly['soil_moisture_root']).elementAtOrNull(idx),
@@ -735,13 +695,11 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         'Root-zone moisture is high. Delay field operations and improve aeration.',
       );
     }
-
     if (recs.isEmpty) {
       recs.add(
         'Soil indicators are broadly stable. Continue periodic testing and moisture monitoring.',
       );
     }
-
     return recs;
   }
 
@@ -749,12 +707,12 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     final available = _soilComposition?['available'] == true;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.appColors.card,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,12 +741,13 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     );
   }
 
+  // ─── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final bgTop = isDark ? AppColors.darkBackground : const Color(0xFFFBF8F3);
-    final bgBottom = isDark ? AppColors.darkSurface : const Color(0xFFF6F0E8);
 
+    // Derived soil values
     final clayRaw = _metricValue('clay');
     final sandRaw = _metricValue('sand');
     final siltRaw = _metricValue('silt');
@@ -868,10 +827,10 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       (_legacyRecord?['raw'] as Map?)?['Avg_smlvl_at15cm']?.toString(),
     );
 
-    final fieldCapacity = 0.35;
-    final wiltingPoint = 0.12;
+    const fieldCapacity = 0.35;
+    const wiltingPoint = 0.12;
     final rootM = (moistureRoot ?? 0.0).clamp(0.0, 1.0);
-    final rootZoneWaterMm = rootM * 300; // approximate water stock in top 30cm
+    final rootZoneWaterMm = rootM * 300;
     final deficitToFieldCapacityMm =
         ((fieldCapacity - rootM).clamp(0.0, fieldCapacity)) * 300;
 
@@ -924,71 +883,76 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         coarseValue != null;
 
     final chemistryCards = hasChemistryData
-        ? <Widget>[
-            _chemCard('pH', phValue, _metricStatus('ph'), _metricExplain('ph')),
-            _chemCard(
+        ? <_ChemEntry>[
+            _ChemEntry(
+              'pH',
+              phValue,
+              _metricStatus('ph'),
+              _metricExplain('ph'),
+            ),
+            _ChemEntry(
               'Organic Carbon (g/kg)',
               ocValue,
               _metricStatus('organic_carbon'),
               _metricExplain('organic_carbon'),
             ),
-            _chemCard(
+            _ChemEntry(
               'Total Nitrogen (cg/kg)',
               nValue,
               _metricStatus('nitrogen'),
               _metricExplain('nitrogen'),
             ),
-            _chemCard(
+            _ChemEntry(
               'CEC (mmol/kg)',
               cecValue,
               _metricStatus('cec'),
               'Nutrient holding capacity. ${_metricExplain('cec')}',
             ),
-            _chemCard(
+            _ChemEntry(
               'Bulk Density (g/cm3)',
               bdValue,
               _metricStatus('bulk_density'),
               'Soil compaction indicator. ${_metricExplain('bulk_density')}',
             ),
-            _chemCard(
+            _ChemEntry(
               'Coarse Fragments (%)',
               coarseValue,
               _metricStatus('coarse_fragments'),
               'Stone content. ${_metricExplain('coarse_fragments')}',
             ),
           ]
-        : <Widget>[
-            _chemCard(
+        : <_ChemEntry>[
+            _ChemEntry(
               'Legacy Moisture @15cm',
               legacySignal,
               legacySignal == null ? 'Unavailable' : 'Live',
               'From latest historical record (Avg_smlvl_at15cm).',
             ),
-            _chemCard(
+            _ChemEntry(
               'Surface Moisture (%)',
               moistureSurface == null ? null : moistureSurface * 100,
               moistureSurface == null ? 'Unavailable' : 'Live',
               'Current 0-1cm soil moisture from hourly weather feed.',
             ),
-            _chemCard(
+            _ChemEntry(
               'Root Moisture (%)',
               moistureRoot == null ? null : moistureRoot * 100,
               moistureRoot == null ? 'Unavailable' : 'Live',
               'Current 3-9cm root-zone moisture from hourly weather feed.',
             ),
-            _chemCard(
+            _ChemEntry(
               'Deep Moisture (%)',
               moistureDeep == null ? null : moistureDeep * 100,
               moistureDeep == null ? 'Unavailable' : 'Live',
               'Current 9-27cm deep-root moisture from hourly weather feed.',
             ),
-            _chemCard(
+            _ChemEntry(
               'Soil Temp 18cm (C)',
               temp18,
               temp18 == null ? 'Unavailable' : 'Live',
               'Current temperature at 18cm depth from hourly weather feed.',
             ),
-            _chemCard(
+            _ChemEntry(
               'Root-zone Water Stock (mm)',
               rootZoneWaterMm,
               'Live',
@@ -996,739 +960,673 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             ),
           ];
 
+    // ── Colors matching CropDoctorScreen exactly ──
+    final textColor = AppColors.lightText;
+    final subColor = AppColors.lightTextSecondary;
+    final cardColor = Colors.white.withValues(alpha: 0.56);
+
     return Scaffold(
-      backgroundColor: bgTop,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(72),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: GlassIconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.lightText,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Soil Health',
-                      style: context.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      (_farmLabel == null || _farmLabel!.isEmpty)
-                          ? 'Farm location'
-                          : _farmLabel!,
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.appColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GlassIconButton(
-                        icon: _refreshing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.lightText,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.refresh,
-                                color: AppColors.lightText,
-                              ),
-                        onPressed: _refreshing
-                            ? null
-                            : () => _fetch(forceRefresh: true),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      GlassIconButton(
-                        icon: const Icon(
-                          Icons.info_outline,
-                          color: AppColors.lightText,
-                        ),
-                        onPressed: _showSourceInfo,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [bgTop, bgBottom],
+            colors: isDark
+                ? <Color>[AppColors.darkBackground, AppColors.darkSurface]
+                : <Color>[AppColors.lightBackground, AppColors.lightSurface],
           ),
         ),
         child: SafeArea(
           bottom: false,
-          child: _loading && _full == null && _soilComposition == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                )
-              : _error != null && _full == null && _soilComposition == null
-              ? ErrorView(
-                  message: _error!,
-                  onRetry: () => _fetch(forceRefresh: true),
-                )
-              : RefreshIndicator(
-                  onRefresh: () => _fetch(forceRefresh: true),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: AppSpacing.allLg,
+          child: Column(
+            children: [
+              // ── Header ──────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: SizedBox(
+                  height: 56,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      if (_refreshing)
-                        const LinearProgressIndicator(minHeight: 2),
-                      if (_refreshing) const SizedBox(height: AppSpacing.md),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: GlassCard(
-                            child: Text(
-                              _error!,
-                              style: TextStyle(
-                                color: context.appColors.textSecondary,
-                              ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _headerAction(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Soil Health',
+                            style: context.textTheme.titleLarge?.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ),
-                      _aiOverviewSection(),
-                      const SizedBox(height: AppSpacing.xl),
-                      GlassCard(
-                        featured: true,
+                          if (_farmLabel != null && _farmLabel!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              _farmLabel!,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: subColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
-                              width: 102,
-                              height: 102,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 102,
-                                    height: 102,
-                                    child: CircularProgressIndicator(
-                                      value: _score / 100,
-                                      strokeWidth: 10,
-                                      color: AppColors.primary,
-                                      backgroundColor: AppColors.primary
-                                          .withValues(alpha: 0.12),
-                                    ),
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
+                            _headerAction(
+                              icon: Icons.refresh_rounded,
+                              onTap: _refreshing
+                                  ? null
+                                  : () => _fetch(forceRefresh: true),
+                              loading: _refreshing,
+                            ),
+                            const SizedBox(width: 8),
+                            _headerAction(
+                              icon: Icons.info_outline_rounded,
+                              onTap: _showSourceInfo,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Body ─────────────────────────────────────────────────────
+              Expanded(
+                child: _loading && _full == null && _soilComposition == null
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryDark,
+                        ),
+                      )
+                    : _error != null &&
+                          _full == null &&
+                          _soilComposition == null
+                    ? ErrorView(
+                        message: _error!,
+                        onRetry: () => _fetch(forceRefresh: true),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () => _fetch(forceRefresh: true),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_refreshing) ...[
+                                LinearProgressIndicator(
+                                  minHeight: 2,
+                                  color: AppColors.primaryDark,
+                                  backgroundColor: AppColors.primaryDark
+                                      .withValues(alpha: 0.1),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
+                              // Error banner
+                              if (_error != null) ...[
+                                _glassCard(
+                                  cardColor: cardColor,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        '$_score',
-                                        style: context.textTheme.titleLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: AppColors.warning,
+                                        size: 18,
                                       ),
-                                      Text(
-                                        '/100',
-                                        style: context.textTheme.bodySmall,
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _error!,
+                                          style: TextStyle(
+                                            color: subColor,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+
+                              // AI Overview
+                              _aiOverviewSection(
+                                cardColor: cardColor,
+                                textColor: textColor,
+                                subColor: subColor,
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _scoreColor(
-                                        _score,
-                                      ).withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      _scoreStatus(_score),
-                                      style: TextStyle(
-                                        color: _scoreColor(_score),
-                                        fontWeight: FontWeight.w700,
+                              const SizedBox(height: 14),
+
+                              // Score card
+                              _glassCard(
+                                cardColor: cardColor,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 96,
+                                      height: 96,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 96,
+                                            height: 96,
+                                            child: CircularProgressIndicator(
+                                              value: _score / 100,
+                                              strokeWidth: 9,
+                                              color: _scoreColor(_score),
+                                              backgroundColor: _scoreColor(
+                                                _score,
+                                              ).withValues(alpha: 0.12),
+                                            ),
+                                          ),
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '$_score',
+                                                style: context
+                                                    .textTheme
+                                                    .titleLarge
+                                                    ?.copyWith(
+                                                      color: textColor,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                              Text(
+                                                '/100',
+                                                style: context
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(color: subColor),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    'Score combines pH, organic carbon, N-P-K signals, real-time moisture, texture suitability, and CEC.',
-                                    style: context.textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      GlassCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Soil Composition Triangle',
-                              style: context.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            SizedBox(
-                              height: 220,
-                              child: CustomPaint(
-                                painter: _SoilTextureTrianglePainter(
-                                  sand: sand,
-                                  silt: silt,
-                                  clay: clay,
-                                  textColor: context.appColors.textSecondary,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _scoreColor(
+                                                _score,
+                                              ).withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: Text(
+                                              _scoreStatus(_score),
+                                              style: TextStyle(
+                                                color: _scoreColor(_score),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Score combines pH, organic carbon, N-P-K signals, real-time moisture, texture suitability, and CEC.',
+                                            style: context.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: subColor,
+                                                  height: 1.4,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: const SizedBox.expand(),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              'Texture: $texture',
-                              style: context.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              const SizedBox(height: 14),
+
+                              // Texture triangle
+                              _glassCard(
+                                cardColor: cardColor,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Soil Composition Triangle',
+                                      style: context.textTheme.titleSmall
+                                          ?.copyWith(
+                                            color: textColor,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      height: 200,
+                                      child: CustomPaint(
+                                        painter: _SoilTextureTrianglePainter(
+                                          sand: sand,
+                                          silt: silt,
+                                          clay: clay,
+                                          textColor: subColor,
+                                        ),
+                                        child: const SizedBox.expand(),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryDark
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            texture,
+                                            style: TextStyle(
+                                              color: AppColors.primaryDark,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Sand ${_fmtPct(sand)}  Silt ${_fmtPct(silt)}  Clay ${_fmtPct(clay)}',
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(color: subColor),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Sand ${_fmtPct(sand)} • Silt ${_fmtPct(silt)} • Clay ${_fmtPct(clay)}',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.appColors.textSecondary,
+                              const SizedBox(height: 18),
+
+                              // Chemistry panel
+                              Text(
+                                'Chemistry Panel',
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        'Chemistry Panel',
-                        style: context.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      GridView.count(
-                        crossAxisCount: MediaQuery.of(context).size.width < 420
-                            ? 1
-                            : 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: AppSpacing.md,
-                        crossAxisSpacing: AppSpacing.md,
-                        childAspectRatio: 2.4,
-                        children: chemistryCards,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      GlassCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Real-time Soil Temperature Profile',
-                              style: context.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              const SizedBox(height: 10),
+                              GridView.count(
+                                crossAxisCount:
+                                    MediaQuery.of(context).size.width < 420
+                                    ? 1
+                                    : 2,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
+                                childAspectRatio: 2.4,
+                                children: chemistryCards
+                                    .map(
+                                      (e) => _chemCard(
+                                        title: e.title,
+                                        value: e.value,
+                                        status: e.status,
+                                        explain: e.explain,
+                                        cardColor: cardColor,
+                                        textColor: textColor,
+                                        subColor: subColor,
+                                      ),
+                                    )
+                                    .toList(),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            if ([
+                              const SizedBox(height: 18),
+
+                              // Temperature profile
+                              Text(
+                                'Soil Temperature Profile',
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _glassCard(
+                                cardColor: cardColor,
+                                child: Column(
+                                  children: () {
+                                    final temps = [
                                       temp0,
                                       temp6,
                                       temp18,
                                       temp54,
-                                    ].whereType<double>().toList().length >=
-                                    2 &&
-                                _distinctRoundedCount(
-                                      [
+                                    ].whereType<double>().toList();
+                                    final uniform =
+                                        temps.length >= 2 &&
+                                        _distinctRoundedCount(
+                                              temps,
+                                              decimals: 1,
+                                            ) <=
+                                            1;
+                                    if (uniform) {
+                                      return [
+                                        _tempTile(
+                                          '0-54 cm (uniform)',
+                                          temp18 ?? temp6 ?? temp0 ?? temp54,
+                                          textColor,
+                                          subColor,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Provider reports near-uniform temperature across depths.',
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(color: subColor),
+                                        ),
+                                      ];
+                                    }
+                                    return [
+                                      _tempTile(
+                                        '0 cm',
                                         temp0,
+                                        textColor,
+                                        subColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _tempTile(
+                                        '6 cm',
                                         temp6,
+                                        textColor,
+                                        subColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _tempTile(
+                                        '18 cm',
                                         temp18,
+                                        textColor,
+                                        subColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _tempTile(
+                                        '54 cm',
                                         temp54,
-                                      ].whereType<double>().toList(),
-                                      decimals: 1,
-                                    ) <=
-                                    1) ...[
-                              _tempDepthTile(
-                                '0-54 cm (uniform profile)',
-                                temp18 ?? temp6 ?? temp0 ?? temp54,
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Provider currently reports near-uniform temperature across depths for this location/time.',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: context.appColors.textSecondary,
+                                        textColor,
+                                        subColor,
+                                      ),
+                                    ];
+                                  }(),
                                 ),
                               ),
-                            ] else ...[
-                              _tempDepthTile('0 cm', temp0),
-                              const SizedBox(height: AppSpacing.sm),
-                              _tempDepthTile('6 cm', temp6),
-                              const SizedBox(height: AppSpacing.sm),
-                              _tempDepthTile('18 cm', temp18),
-                              const SizedBox(height: AppSpacing.sm),
-                              _tempDepthTile('54 cm', temp54),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      GlassCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Real-time Soil Moisture Profile',
-                              style: context.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              const SizedBox(height: 14),
+
+                              // Moisture profile
+                              Text(
+                                'Soil Moisture Profile',
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            _moistureBar('Surface 0-1cm', moistureSurface),
-                            const SizedBox(height: AppSpacing.sm),
-                            _moistureBar('Shallow 1-3cm', moistureShallow),
-                            const SizedBox(height: AppSpacing.sm),
-                            _moistureBar('Root 3-9cm', moistureRoot),
-                            const SizedBox(height: AppSpacing.sm),
-                            _moistureBar('Deep root 9-27cm', moistureDeep),
-                            const SizedBox(height: AppSpacing.sm),
-                            _moistureBar('Subsoil 27-81cm', moistureSubsoil),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'Field capacity ~${fieldCapacity.toStringAsFixed(2)} • Wilting point ~${wiltingPoint.toStringAsFixed(2)}',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.appColors.textSecondary,
+                              const SizedBox(height: 10),
+                              _glassCard(
+                                cardColor: cardColor,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _moistureBar(
+                                      'Surface 0-1cm',
+                                      moistureSurface,
+                                      textColor,
+                                      subColor,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _moistureBar(
+                                      'Shallow 1-3cm',
+                                      moistureShallow,
+                                      textColor,
+                                      subColor,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _moistureBar(
+                                      'Root 3-9cm',
+                                      moistureRoot,
+                                      textColor,
+                                      subColor,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _moistureBar(
+                                      'Deep root 9-27cm',
+                                      moistureDeep,
+                                      textColor,
+                                      subColor,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _moistureBar(
+                                      'Subsoil 27-81cm',
+                                      moistureSubsoil,
+                                      textColor,
+                                      subColor,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Divider(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      height: 1,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _statPill(
+                                            label: 'Water Stock',
+                                            value:
+                                                '${rootZoneWaterMm.toStringAsFixed(1)} mm',
+                                            color: AppColors.primaryDark,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: _statPill(
+                                            label: 'Deficit to FC',
+                                            value:
+                                                '${deficitToFieldCapacityMm.toStringAsFixed(1)} mm',
+                                            color: AppColors.warning,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Field capacity ~${fieldCapacity.toStringAsFixed(2)} • Wilting point ~${wiltingPoint.toStringAsFixed(2)}',
+                                      style: context.textTheme.bodySmall
+                                          ?.copyWith(color: subColor),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Root-zone Water Stock: ${rootZoneWaterMm.toStringAsFixed(1)} mm',
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              const SizedBox(height: 14),
+
+                              // Trend / Outlook
+                              if (!trendFlat && trendCount > 0) ...[
+                                _soilTrendSection(
+                                  times: trendTimes,
+                                  moisture: trendMoisture,
+                                  temperature: trendTemp,
+                                  cardColor: cardColor,
+                                  textColor: textColor,
+                                  subColor: subColor,
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                              if (trendFlat && outlookDates.isNotEmpty) ...[
+                                _soilWaterOutlookSection(
+                                  dates: outlookDates,
+                                  rain: outlookRain,
+                                  et0: outlookEt0,
+                                  cardColor: cardColor,
+                                  textColor: textColor,
+                                  subColor: subColor,
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+
+                              // Recommendations
+                              Text(
+                                'Recommendations',
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Deficit to Field Capacity: ${deficitToFieldCapacityMm.toStringAsFixed(1)} mm',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.appColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!trendFlat && trendCount > 0) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        _soilTrendSection(
-                          times: trendTimes,
-                          moisture: trendMoisture,
-                          temperature: trendTemp,
-                        ),
-                      ],
-                      if (trendFlat && outlookDates.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        _soilWaterOutlookSection(
-                          dates: outlookDates,
-                          rain: outlookRain,
-                          et0: outlookEt0,
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        'Recommendations',
-                        style: context.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ..._recommendations().map(
-                        (text) => Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: GlassCard(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(6),
+                              const SizedBox(height: 10),
+                              ..._recommendations().map(
+                                (text) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _RecommendationTile(
+                                    text: text,
+                                    cardColor: cardColor,
+                                    textColor: textColor,
+                                    subColor: subColor,
                                   ),
                                 ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(child: Text(text)),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 90),
-                    ],
-                  ),
-                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _aiOverviewSection() {
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'AI Overview',
-                style: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _aiExpanded ? _aiDetails : _aiSummary,
-            maxLines: _aiExpanded ? null : 3,
-            overflow: _aiExpanded
-                ? TextOverflow.visible
-                : TextOverflow.ellipsis,
-            style: context.textTheme.bodyMedium,
-          ),
-          if (_aiLoading) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const LinearProgressIndicator(minHeight: 2),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _formatUpdatedAt(_aiUpdatedAt),
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _aiLoading
-                      ? null
-                      : () => _generateAiOverview(forceRefresh: true),
-                  icon: Icon(_aiGenerated ? Icons.refresh : Icons.auto_awesome),
-                  label: Text(
-                    _aiGenerated ? 'Generate Fresh' : 'Generate AI Overview',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.85),
-                    foregroundColor: AppColors.lightText,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 0,
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              OutlinedButton(
-                onPressed: () => setState(() => _aiExpanded = !_aiExpanded),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.8)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Text(_aiExpanded ? 'Less' : 'More'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // ─── Widget builders ──────────────────────────────────────────────────────
 
-  Widget _soilWaterOutlookSection({
-    required List<String> dates,
-    required List<double> rain,
-    required List<double> et0,
+  Widget _headerAction({
+    required IconData icon,
+    VoidCallback? onTap,
+    bool loading = false,
   }) {
-    final count = dates.length;
-    if (count == 0) {
-      return const SizedBox.shrink();
-    }
-
-    final selected = _selectedOutlookPoint.clamp(0, count - 1).toInt();
-    final mid = count ~/ 2;
-
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '16-Day Soil Water Outlook',
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Historical soil trend is flat for this location right now. Showing forecast rain vs ET0 demand.',
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            height: 196,
-            child: LayoutBuilder(
-              builder: (context, box) {
-                void updateSelection(Offset localPosition) {
-                  if (count <= 1) return;
-                  final width = box.maxWidth <= 1.0 ? 1.0 : box.maxWidth;
-                  final normalized = (localPosition.dx / width).clamp(0.0, 1.0);
-                  final point = (normalized * (count - 1)).round();
-                  setState(() => _selectedOutlookPoint = point);
-                }
-
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) =>
-                      updateSelection(details.localPosition),
-                  onHorizontalDragUpdate: (details) =>
-                      updateSelection(details.localPosition),
-                  child: CustomPaint(
-                    painter: _WaterOutlookPainter(
-                      rain: rain,
-                      et0: et0,
-                      selectedIndex: selected,
-                      textColor: context.appColors.textSecondary,
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _fmtDate(dates.elementAtOrNull(0)),
-                  style: context.textTheme.bodySmall,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primaryDark,
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  _fmtDate(dates.elementAtOrNull(mid)),
-                  textAlign: TextAlign.center,
-                  style: context.textTheme.bodySmall,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  _fmtDate(dates.elementAtOrNull(count - 1)),
-                  textAlign: TextAlign.right,
-                  style: context.textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text('Rain (mm)'),
-              const SizedBox(width: 14),
-              Container(width: 14, height: 2, color: AppColors.warning),
-              const SizedBox(width: 6),
-              const Text('ET0 (mm)'),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Selected ${_fmtDate(dates.elementAtOrNull(selected))}: rain ${rain[selected].toStringAsFixed(1)} mm, ET0 ${et0[selected].toStringAsFixed(1)} mm',
-            style: context.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+              )
+            : Icon(icon, color: AppColors.primaryDark, size: 20),
       ),
     );
   }
 
-  Widget _soilTrendSection({
-    required List<String> times,
-    required List<double> moisture,
-    required List<double> temperature,
+  Widget _glassCard({required Color cardColor, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(padding: const EdgeInsets.all(14), child: child),
+    );
+  }
+
+  Widget _aiOverviewSection({
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
   }) {
-    final count = times.length;
-    if (count == 0) {
-      return const SizedBox.shrink();
-    }
-
-    final selected = _selectedTrendPoint.clamp(0, count - 1).toInt();
-    final mid = count ~/ 2;
-
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hourly Root Moisture + Soil Temp (24h)',
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Bars = root-zone moisture fraction, line = soil temp at depth. Tap/drag to inspect.',
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            height: 196,
-            child: LayoutBuilder(
-              builder: (context, box) {
-                void updateSelection(Offset localPosition) {
-                  if (count <= 1) return;
-                  final width = box.maxWidth <= 1.0 ? 1.0 : box.maxWidth;
-                  final normalized = (localPosition.dx / width).clamp(0.0, 1.0);
-                  final point = (normalized * (count - 1)).round();
-                  setState(() => _selectedTrendPoint = point);
-                }
-
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) =>
-                      updateSelection(details.localPosition),
-                  onHorizontalDragUpdate: (details) =>
-                      updateSelection(details.localPosition),
-                  child: CustomPaint(
-                    painter: _SoilTrendPainter(
-                      moisture: moisture,
-                      temperature: temperature,
-                      selectedIndex: selected,
-                      textColor: context.appColors.textSecondary,
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _fmtTime(times.elementAtOrNull(0)),
-                  style: context.textTheme.bodySmall,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  _fmtTime(times.elementAtOrNull(mid)),
-                  textAlign: TextAlign.center,
-                  style: context.textTheme.bodySmall,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  _fmtTime(times.elementAtOrNull(count - 1)),
-                  textAlign: TextAlign.right,
-                  style: context.textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text('Root moisture'),
-              const SizedBox(width: 14),
-              Container(width: 14, height: 2, color: AppColors.warning),
-              const SizedBox(width: 6),
-              const Text('Soil temp'),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Selected ${_fmtTime(times.elementAtOrNull(selected))}: moisture ${moisture[selected].toStringAsFixed(2)}, temp ${temperature[selected].toStringAsFixed(1)}C',
-            style: context.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+    return AiOverviewCard(
+      title: 'AI Soil Overview',
+      summary: _aiSummary,
+      details: _aiDetails,
+      expanded: _aiExpanded,
+      loading: _aiLoading,
+      updatedLabel: _formatUpdatedAt(_aiUpdatedAt),
+      onToggleExpanded: () => setState(() => _aiExpanded = !_aiExpanded),
+      onGenerateFresh: () => _generateAiOverview(forceRefresh: true),
+      margin: EdgeInsets.zero,
+      cardColor: cardColor,
+      textColor: textColor,
+      subColor: subColor,
+      onActionTap: _openAiActionCard,
     );
   }
 
-  Widget _chemCard(String title, double? value, String status, String explain) {
+  Widget _chemCard({
+    required String title,
+    required double? value,
+    required String status,
+    required String explain,
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
+  }) {
     final color = _statusColor(status);
-    return GlassCard(
-      padding: AppSpacing.allMd,
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1739,43 +1637,46 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodyMedium?.copyWith(
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: textColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   status,
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 4),
           Text(
             value == null ? '--' : value.toStringAsFixed(2),
             style: context.textTheme.titleMedium?.copyWith(
+              color: textColor,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 2),
           Expanded(
             child: Text(
               explain,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: context.textTheme.bodySmall?.copyWith(
-                color: context.appColors.textSecondary,
+                color: subColor,
+                fontSize: 11,
               ),
             ),
           ),
@@ -1798,7 +1699,12 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     return Colors.grey;
   }
 
-  Widget _tempDepthTile(String label, double? value) {
+  Widget _tempTile(
+    String label,
+    double? value,
+    Color textColor,
+    Color subColor,
+  ) {
     final color = value == null
         ? Colors.grey
         : value < 12
@@ -1808,54 +1714,56 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
         : AppColors.success;
 
     String relevance() {
-      if (value == null) {
-        return 'Data unavailable';
-      }
-      if (value >= 15 && value <= 25) {
+      if (value == null) return 'Data unavailable';
+      if (value >= 15 && value <= 25)
         return 'Good for wheat sowing at this depth';
-      }
-      if (value < 15) {
-        return 'Cool soil: germination may slow';
-      }
+      if (value < 15) return 'Cool soil: germination may slow';
       return 'Warm soil: monitor moisture stress';
     }
 
     return Container(
-      padding: AppSpacing.allMd,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.56),
+        color: Colors.white.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
       ),
       child: Row(
         children: [
           Container(
-            width: 10,
+            width: 8,
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: context.textTheme.bodyMedium?.copyWith(
+                  style: TextStyle(
+                    color: textColor,
                     fontWeight: FontWeight.w700,
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(value == null ? '--' : '${value.toStringAsFixed(1)}C'),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: 2),
+                Text(
+                  value == null ? '--' : '${value.toStringAsFixed(1)}°C',
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 2),
                 Text(
                   relevance(),
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: context.appColors.textSecondary,
-                  ),
+                  style: TextStyle(color: subColor, fontSize: 11),
                 ),
               ],
             ),
@@ -1865,14 +1773,18 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
     );
   }
 
-  Widget _moistureBar(String label, double? value) {
+  Widget _moistureBar(
+    String label,
+    double? value,
+    Color textColor,
+    Color subColor,
+  ) {
     final v = (value ?? 0).clamp(0.0, 1.0);
     final tone = Color.lerp(
       const Color(0xFF90CAF9),
       const Color(0xFF1565C0),
       v,
     )!;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1881,19 +1793,28 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
             Expanded(
               child: Text(
                 label,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
             ),
-            Text(value == null ? '--' : value.toStringAsFixed(2)),
+            Text(
+              value == null ? '--' : value.toStringAsFixed(2),
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            minHeight: 9,
+            minHeight: 8,
             value: v,
             color: tone,
             backgroundColor: Colors.white.withValues(alpha: 0.55),
@@ -1902,7 +1823,392 @@ class _SoilHealthScreenState extends ConsumerState<SoilHealthScreen> {
       ],
     );
   }
+
+  Widget _statPill({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _soilTrendSection({
+    required List<String> times,
+    required List<double> moisture,
+    required List<double> temperature,
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    final count = times.length;
+    if (count == 0) return const SizedBox.shrink();
+    final selected = _selectedTrendPoint.clamp(0, count - 1).toInt();
+    final mid = count ~/ 2;
+
+    return _glassCard(
+      cardColor: cardColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hourly Root Moisture + Soil Temp (24h)',
+            style: context.textTheme.titleSmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Bars = root-zone moisture fraction, line = soil temp at depth.',
+            style: context.textTheme.bodySmall?.copyWith(color: subColor),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 180,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                void updateSel(Offset p) {
+                  if (count <= 1) return;
+                  final w = box.maxWidth <= 1 ? 1.0 : box.maxWidth;
+                  final pt = ((p.dx / w).clamp(0.0, 1.0) * (count - 1)).round();
+                  setState(() => _selectedTrendPoint = pt);
+                }
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) => updateSel(d.localPosition),
+                  onHorizontalDragUpdate: (d) => updateSel(d.localPosition),
+                  child: CustomPaint(
+                    painter: _SoilTrendPainter(
+                      moisture: moisture,
+                      temperature: temperature,
+                      selectedIndex: selected,
+                      textColor: subColor,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _fmtTime(times.elementAtOrNull(0)),
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  _fmtTime(times.elementAtOrNull(mid)),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  _fmtTime(times.elementAtOrNull(count - 1)),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _legendDot(
+                AppColors.info.withValues(alpha: 0.7),
+                'Root moisture',
+              ),
+              const SizedBox(width: 14),
+              _legendLine(AppColors.warning, 'Soil temp'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+            ),
+            child: Text(
+              '${_fmtTime(times.elementAtOrNull(selected))} — moisture ${moisture[selected].toStringAsFixed(2)}, temp ${temperature[selected].toStringAsFixed(1)}°C',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _soilWaterOutlookSection({
+    required List<String> dates,
+    required List<double> rain,
+    required List<double> et0,
+    required Color cardColor,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    final count = dates.length;
+    if (count == 0) return const SizedBox.shrink();
+    final selected = _selectedOutlookPoint.clamp(0, count - 1).toInt();
+    final mid = count ~/ 2;
+
+    return _glassCard(
+      cardColor: cardColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '16-Day Soil Water Outlook',
+            style: context.textTheme.titleSmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Showing forecast rain vs ET0 demand. Tap/drag to inspect a day.',
+            style: context.textTheme.bodySmall?.copyWith(color: subColor),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 180,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                void updateSel(Offset p) {
+                  if (count <= 1) return;
+                  final w = box.maxWidth <= 1 ? 1.0 : box.maxWidth;
+                  final pt = ((p.dx / w).clamp(0.0, 1.0) * (count - 1)).round();
+                  setState(() => _selectedOutlookPoint = pt);
+                }
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) => updateSel(d.localPosition),
+                  onHorizontalDragUpdate: (d) => updateSel(d.localPosition),
+                  child: CustomPaint(
+                    painter: _WaterOutlookPainter(
+                      rain: rain,
+                      et0: et0,
+                      selectedIndex: selected,
+                      textColor: subColor,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _fmtDate(dates.elementAtOrNull(0)),
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  _fmtDate(dates.elementAtOrNull(mid)),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  _fmtDate(dates.elementAtOrNull(count - 1)),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _legendDot(AppColors.info.withValues(alpha: 0.7), 'Rain (mm)'),
+              const SizedBox(width: 14),
+              _legendLine(AppColors.warning, 'ET0 (mm)'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+            ),
+            child: Text(
+              '${_fmtDate(dates.elementAtOrNull(selected))} — rain ${rain[selected].toStringAsFixed(1)} mm, ET0 ${et0[selected].toStringAsFixed(1)} mm',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 11,
+        height: 11,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ),
+      const SizedBox(width: 5),
+      Text(
+        label,
+        style: TextStyle(
+          color: AppColors.lightText,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ],
+  );
+
+  Widget _legendLine(Color color, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(width: 14, height: 2, color: color),
+      const SizedBox(width: 5),
+      Text(
+        label,
+        style: TextStyle(
+          color: AppColors.lightText,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ],
+  );
 }
+
+// ─── Data class ────────────────────────────────────────────────────────────
+
+class _ChemEntry {
+  final String title;
+  final double? value;
+  final String status;
+  final String explain;
+
+  const _ChemEntry(this.title, this.value, this.status, this.explain);
+}
+
+// ─── Recommendation tile ────────────────────────────────────────────────────
+
+class _RecommendationTile extends StatelessWidget {
+  final String text;
+  final Color cardColor;
+  final Color textColor;
+  final Color subColor;
+
+  const _RecommendationTile({
+    required this.text,
+    required this.cardColor,
+    required this.textColor,
+    required this.subColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+            ),
+            child: const Icon(
+              Icons.eco_outlined,
+              size: 18,
+              color: AppColors.primaryDark,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: textColor, height: 1.4, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Painters (unchanged logic, same as original) ──────────────────────────
 
 class _SoilTextureTrianglePainter extends CustomPainter {
   final double? sand;
@@ -1928,7 +2234,7 @@ class _SoilTextureTrianglePainter extends CustomPainter {
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    final fill = Paint()..color = AppColors.primary.withValues(alpha: 0.06);
+    final fill = Paint()..color = AppColors.primaryDark.withValues(alpha: 0.06);
 
     final tri = Path()
       ..moveTo(pSand.dx, pSand.dy)
@@ -1959,8 +2265,7 @@ class _SoilTextureTrianglePainter extends CustomPainter {
     drawLabel('Clay', Offset(pClay.dx, pClay.dy - 14));
 
     if (sand == null || silt == null || clay == null) return;
-
-    final sum = (sand! + silt! + clay!);
+    final sum = sand! + silt! + clay!;
     if (sum <= 0) return;
 
     final ws = sand! / sum;
@@ -1972,20 +2277,17 @@ class _SoilTextureTrianglePainter extends CustomPainter {
       pSand.dy * ws + pSilt.dy * wi + pClay.dy * wc,
     );
 
-    canvas.drawCircle(dot, 7, Paint()..color = AppColors.primary);
+    canvas.drawCircle(dot, 7, Paint()..color = AppColors.primaryDark);
     canvas.drawCircle(
       dot,
       12,
-      Paint()..color = AppColors.primary.withValues(alpha: 0.18),
+      Paint()..color = AppColors.primaryDark.withValues(alpha: 0.18),
     );
   }
 
   @override
-  bool shouldRepaint(covariant _SoilTextureTrianglePainter oldDelegate) {
-    return oldDelegate.sand != sand ||
-        oldDelegate.silt != silt ||
-        oldDelegate.clay != clay;
-  }
+  bool shouldRepaint(covariant _SoilTextureTrianglePainter old) =>
+      old.sand != sand || old.silt != silt || old.clay != clay;
 }
 
 class _SoilTrendPainter extends CustomPainter {
@@ -2006,25 +2308,29 @@ class _SoilTrendPainter extends CustomPainter {
     final axisPaint = Paint()
       ..color = textColor.withValues(alpha: 0.32)
       ..strokeWidth = 1;
-
     final barPaint = Paint()..color = AppColors.info.withValues(alpha: 0.65);
     final linePaint = Paint()
       ..color = AppColors.warning
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
     final cursorPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.35)
+      ..color = AppColors.primaryDark.withValues(alpha: 0.35)
       ..strokeWidth = 1.2;
 
-    final left = 30.0;
+    const left = 30.0;
     final right = size.width - 8;
-    final bottom = size.height - 22;
-    final top = 10.0;
+    const bottom = 0.0;
+    final actualBottom = size.height - 22;
+    const top = 10.0;
     final width = right - left;
-    final height = bottom - top;
+    final height = actualBottom - top;
 
-    canvas.drawLine(Offset(left, bottom), Offset(right, bottom), axisPaint);
-    canvas.drawLine(Offset(left, top), Offset(left, bottom), axisPaint);
+    canvas.drawLine(
+      Offset(left, actualBottom),
+      Offset(right, actualBottom),
+      axisPaint,
+    );
+    canvas.drawLine(Offset(left, top), Offset(left, actualBottom), axisPaint);
 
     if (moisture.isEmpty) return;
 
@@ -2043,15 +2349,20 @@ class _SoilTrendPainter extends CustomPainter {
       final x = left + i * barW;
       final m = moisture[i].clamp(0.0, 1.0);
       final h = height * m;
-      final rect = Rect.fromLTWH(x + barW * 0.12, bottom - h, barW * 0.76, h);
+      final rect = Rect.fromLTWH(
+        x + barW * 0.12,
+        actualBottom - h,
+        barW * 0.76,
+        h,
+      );
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(2)),
         barPaint,
       );
 
-      final t = (temperature.length > i ? temperature[i] : minTemp);
+      final t = temperature.length > i ? temperature[i] : minTemp;
       final normalized = ((t - minTemp) / tempRange).clamp(0.0, 1.0);
-      final y = bottom - height * normalized;
+      final y = actualBottom - height * normalized;
       final pt = Offset(x + barW * 0.5, y);
       if (i == 0) {
         path.moveTo(pt.dx, pt.dy);
@@ -2063,25 +2374,24 @@ class _SoilTrendPainter extends CustomPainter {
     canvas.drawPath(path, linePaint);
 
     final cursorX = left + marker * barW + barW * 0.5;
-    canvas.drawLine(Offset(cursorX, top), Offset(cursorX, bottom), cursorPaint);
-
-    final selectedTemp = temperature.length > marker
-        ? temperature[marker]
-        : minTemp;
-    final selectedTempNormalized = ((selectedTemp - minTemp) / tempRange).clamp(
-      0.0,
-      1.0,
+    canvas.drawLine(
+      Offset(cursorX, top),
+      Offset(cursorX, actualBottom),
+      cursorPaint,
     );
-    final selectedY = bottom - height * selectedTempNormalized;
+
+    final selTemp = temperature.length > marker ? temperature[marker] : minTemp;
+    final selNorm = ((selTemp - minTemp) / tempRange).clamp(0.0, 1.0);
+    final selY = actualBottom - height * selNorm;
     canvas.drawCircle(
-      Offset(cursorX, selectedY),
+      Offset(cursorX, selY),
       3.5,
       Paint()..color = AppColors.warning,
     );
 
-    _drawText(canvas, '1.0', Offset(2, top - 6));
-    _drawText(canvas, '0.5', Offset(8, top + height * 0.5 - 8));
-    _drawText(canvas, '0', Offset(12, bottom - 8));
+    _drawText(canvas, '1.0', const Offset(2, 4));
+    _drawText(canvas, '0.5', Offset(2, top + height * 0.5 - 8));
+    _drawText(canvas, '0', Offset(8, actualBottom - 14));
   }
 
   void _drawText(Canvas canvas, String text, Offset offset) {
@@ -2100,11 +2410,10 @@ class _SoilTrendPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SoilTrendPainter oldDelegate) {
-    return oldDelegate.moisture != moisture ||
-        oldDelegate.temperature != temperature ||
-        oldDelegate.selectedIndex != selectedIndex;
-  }
+  bool shouldRepaint(covariant _SoilTrendPainter old) =>
+      old.moisture != moisture ||
+      old.temperature != temperature ||
+      old.selectedIndex != selectedIndex;
 }
 
 class _WaterOutlookPainter extends CustomPainter {
@@ -2125,25 +2434,28 @@ class _WaterOutlookPainter extends CustomPainter {
     final axisPaint = Paint()
       ..color = textColor.withValues(alpha: 0.32)
       ..strokeWidth = 1;
-
     final barPaint = Paint()..color = AppColors.info.withValues(alpha: 0.65);
     final linePaint = Paint()
       ..color = AppColors.warning
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
     final cursorPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.35)
+      ..color = AppColors.primaryDark.withValues(alpha: 0.35)
       ..strokeWidth = 1.2;
 
-    final left = 30.0;
+    const left = 30.0;
     final right = size.width - 8;
-    final bottom = size.height - 22;
-    final top = 10.0;
+    final actualBottom = size.height - 22;
+    const top = 10.0;
     final width = right - left;
-    final height = bottom - top;
+    final height = actualBottom - top;
 
-    canvas.drawLine(Offset(left, bottom), Offset(right, bottom), axisPaint);
-    canvas.drawLine(Offset(left, top), Offset(left, bottom), axisPaint);
+    canvas.drawLine(
+      Offset(left, actualBottom),
+      Offset(right, actualBottom),
+      axisPaint,
+    );
+    canvas.drawLine(Offset(left, top), Offset(left, actualBottom), axisPaint);
 
     if (rain.isEmpty) return;
 
@@ -2161,14 +2473,19 @@ class _WaterOutlookPainter extends CustomPainter {
       final x = left + i * barW;
       final r = (rain[i].clamp(0.0, maxY)) / maxY;
       final h = height * r;
-      final rect = Rect.fromLTWH(x + barW * 0.12, bottom - h, barW * 0.76, h);
+      final rect = Rect.fromLTWH(
+        x + barW * 0.12,
+        actualBottom - h,
+        barW * 0.76,
+        h,
+      );
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(2)),
         barPaint,
       );
 
       final e = ((et0.length > i ? et0[i] : 0).clamp(0.0, maxY)) / maxY;
-      final y = bottom - height * e;
+      final y = actualBottom - height * e;
       final pt = Offset(x + barW * 0.5, y);
       if (i == 0) {
         path.moveTo(pt.dx, pt.dy);
@@ -2180,24 +2497,28 @@ class _WaterOutlookPainter extends CustomPainter {
     canvas.drawPath(path, linePaint);
 
     final cursorX = left + marker * barW + barW * 0.5;
-    canvas.drawLine(Offset(cursorX, top), Offset(cursorX, bottom), cursorPaint);
+    canvas.drawLine(
+      Offset(cursorX, top),
+      Offset(cursorX, actualBottom),
+      cursorPaint,
+    );
 
-    final selectedEt =
+    final selEt =
         ((et0.length > marker ? et0[marker] : 0).clamp(0.0, maxY)) / maxY;
-    final selectedY = bottom - height * selectedEt;
+    final selY = actualBottom - height * selEt;
     canvas.drawCircle(
-      Offset(cursorX, selectedY),
+      Offset(cursorX, selY),
       3.5,
       Paint()..color = AppColors.warning,
     );
 
-    _drawText(canvas, maxY.toStringAsFixed(1), Offset(2, top - 6));
+    _drawText(canvas, maxY.toStringAsFixed(1), const Offset(2, 4));
     _drawText(
       canvas,
       (maxY * 0.5).toStringAsFixed(1),
       Offset(2, top + height * 0.5 - 8),
     );
-    _drawText(canvas, '0', Offset(12, bottom - 8));
+    _drawText(canvas, '0', Offset(8, actualBottom - 14));
   }
 
   void _drawText(Canvas canvas, String text, Offset offset) {
@@ -2216,11 +2537,8 @@ class _WaterOutlookPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WaterOutlookPainter oldDelegate) {
-    return oldDelegate.rain != rain ||
-        oldDelegate.et0 != et0 ||
-        oldDelegate.selectedIndex != selectedIndex;
-  }
+  bool shouldRepaint(covariant _WaterOutlookPainter old) =>
+      old.rain != rain || old.et0 != et0 || old.selectedIndex != selectedIndex;
 }
 
 extension _ListExt<T> on List<T> {
