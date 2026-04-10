@@ -144,6 +144,49 @@ class AppPrefetchService {
       () => docBuilder.listSchemeDocs(),
     ]);
 
+    // Warm individual equipment detail bundles for the first 8 items
+    // so that tapping any equipment card loads instantly from cache.
+    try {
+      final ratesData = await guardValue<Map<String, dynamic>>(
+        () => equipment.listRentalRatesFiltered(
+          state: state.isEmpty ? null : state,
+          district: district.isEmpty ? null : district,
+          limit: 10,
+          preferCache: true,
+          forceRefresh: false,
+        ),
+      );
+      final rows = <Map<String, dynamic>>[];
+      if (ratesData != null) {
+        final raw = ratesData['rows'] ?? ratesData['equipment'] ?? ratesData['items'];
+        if (raw is List) {
+          for (final item in raw) {
+            if (item is Map) rows.add(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+      if (rows.isNotEmpty) {
+        final names = rows
+            .map((r) => (r['equipment_name'] ?? r['name'] ?? '').toString().trim())
+            .where((n) => n.isNotEmpty)
+            .toSet()
+            .take(8)
+            .toList(growable: false);
+        await Future.wait(
+          names.map((name) => guard(
+            () => equipment.warmRentalRateDetailBundle(
+              equipmentName: name,
+              state: state.isEmpty ? null : state,
+              district: district.isEmpty ? null : district,
+            ),
+          )),
+        );
+      }
+    } catch (_) {
+      // Best-effort, never block onboarding.
+    }
+
+
     final docSchemes = await guardValue<List<Map<String, dynamic>>>(
       () => docBuilder.listSchemes(preferCache: true, forceRefresh: false),
     );

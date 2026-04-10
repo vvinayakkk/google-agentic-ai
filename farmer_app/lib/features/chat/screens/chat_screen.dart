@@ -2064,7 +2064,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Thinking',
+                      'screen.chat_screen.thinking'.tr(),
                       style: context.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.colors.onSurface,
@@ -2553,14 +2553,14 @@ Future<void> _showAddOptionsSheet(BuildContext context) async {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Model',
+                      'screen.chat_screen.model'.tr(),
                       style: TextStyle(
                         color: isDark ? Colors.white70 : Colors.black54,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
-                      'Gemini 2.5 Flash',
+                      'screen.chat_screen.gemini_2_5_flash'.tr(),
                       style: TextStyle(
                         color: textColor,
                         fontWeight: FontWeight.w700,

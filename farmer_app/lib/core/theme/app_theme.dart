@@ -34,12 +34,24 @@ abstract final class AppTheme {
     required Color textSecondary,
     required Color border,
   }) {
+    final isDark = brightness == Brightness.dark;
+    final primary = isDark ? AppColors.darkPrimary : AppColors.brandPrimary;
+    final primaryLight = isDark
+      ? AppColors.darkPrimaryLight
+      : AppColors.brandPrimaryLight;
+    final primaryDark = isDark
+      ? AppColors.darkPrimaryDark
+      : AppColors.brandPrimaryDark;
+    final success = isDark ? AppColors.darkSuccess : AppColors.brandSuccess;
+    final info = isDark ? AppColors.darkInfo : AppColors.brandInfo;
+    final accent = isDark ? AppColors.darkAccent : AppColors.brandAccent;
+
     final colorScheme = brightness == Brightness.dark
-        ? const ColorScheme.dark(
-            primary: AppColors.primary,
-            onPrimary: Colors.white,
-        secondary: AppColors.primaryLight,
-        onSecondary: Colors.white,
+      ? ColorScheme.dark(
+        primary: primary,
+        onPrimary: Colors.black,
+        secondary: primaryLight,
+        onSecondary: Colors.black,
             error: AppColors.danger,
             onError: Colors.white,
             surface: AppColors.darkSurface,
@@ -47,9 +59,9 @@ abstract final class AppTheme {
             outline: AppColors.darkBorder,
           ).copyWith(surfaceContainerHighest: card)
         : const ColorScheme.light(
-            primary: AppColors.primary,
+          primary: AppColors.brandPrimary,
             onPrimary: Colors.white,
-            secondary: AppColors.primaryLight,
+          secondary: AppColors.brandPrimaryLight,
             onSecondary: Colors.white,
             error: AppColors.danger,
             onError: Colors.white,
@@ -66,13 +78,11 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
       iconTheme: IconThemeData(
-        color: brightness == Brightness.dark ? AppColors.primary : null,
+        color: isDark ? primary : null,
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: brightness == Brightness.dark
-              ? AppColors.primary
-              : AppColors.primaryDark,
+          foregroundColor: isDark ? primary : AppColors.primaryDark,
         ),
       ),
       textTheme: textTheme,
@@ -94,8 +104,8 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: isDark ? primary : AppColors.primary,
+          foregroundColor: isDark ? Colors.black : Colors.white,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: textTheme.labelLarge,
@@ -103,10 +113,10 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: isDark ? primary : AppColors.primary,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-          side: const BorderSide(color: AppColors.primary),
+          side: BorderSide(color: isDark ? primary : AppColors.primary),
           textStyle: textTheme.labelLarge,
         ),
       ),
@@ -124,13 +134,13 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: isDark ? primary : AppColors.primary, width: 2),
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: textSecondary),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: card,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: isDark ? primary : AppColors.primary,
         unselectedItemColor: textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -138,7 +148,7 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(color: border, thickness: 0.5),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: AppColors.primary.withValues(alpha: 0.15),
+        selectedColor: (isDark ? primary : AppColors.primary).withValues(alpha: 0.15),
         labelStyle: textTheme.labelMedium,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
         side: BorderSide(color: border),
@@ -148,10 +158,10 @@ abstract final class AppTheme {
           card: card,
           border: border,
           textSecondary: textSecondary,
-          success: AppColors.success,
-          warning: AppColors.warning,
-          info: AppColors.info,
-          accent: AppColors.accent,
+          success: success,
+          warning: isDark ? AppColors.darkWarning : AppColors.warning,
+          info: info,
+          accent: accent,
         ),
       ],
     );

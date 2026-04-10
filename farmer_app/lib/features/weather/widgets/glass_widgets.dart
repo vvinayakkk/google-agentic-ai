@@ -25,22 +25,18 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final cardColor = isDark
-        ? Colors.white.withOpacity(0.06)
-        : Colors.white.withOpacity(0.56);
-    final borderColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.white.withOpacity(0.8);
+    final cardColor = isDark ? Colors.black : Colors.white.withOpacity(0.56);
+    final borderColor = isDark ? Colors.white : Colors.white.withOpacity(0.8);
 
     final baseShadow = BoxShadow(
-      color: AppColors.primaryDark.withOpacity(0.08),
+      color: isDark ? Colors.transparent : AppColors.primaryDark.withOpacity(0.08),
       blurRadius: 12,
       offset: const Offset(0, 6),
     );
 
     final glow = featured
         ? BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
+            color: isDark ? Colors.transparent : AppColors.primary.withOpacity(0.18),
             blurRadius: 24,
             spreadRadius: 1,
           )
@@ -86,12 +82,8 @@ class GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final bg = isDark
-        ? Colors.white.withOpacity(0.06)
-        : Colors.white.withOpacity(0.56);
-    final border = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.white.withOpacity(0.8);
+    final bg = isDark ? Colors.black : Colors.white.withOpacity(0.56);
+    final border = isDark ? Colors.white : Colors.white.withOpacity(0.8);
 
     return Material(
       color: Colors.transparent,
@@ -112,7 +104,7 @@ class GlassIconButton extends StatelessWidget {
             border: Border.all(color: border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryDark.withOpacity(0.04),
+                color: isDark ? Colors.transparent : AppColors.primaryDark.withOpacity(0.04),
                 blurRadius: 6,
               ),
             ],

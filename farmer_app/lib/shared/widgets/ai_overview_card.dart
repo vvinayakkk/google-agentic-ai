@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 
 class AiOverviewCard extends StatelessWidget {
   const AiOverviewCard({
@@ -133,9 +134,10 @@ class AiOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = cardColor ?? Colors.white.withValues(alpha: 0.56);
-    final primaryText = textColor ?? AppColors.lightText;
-    final secondaryText = subColor ?? AppColors.lightTextSecondary;
+    final isDark = context.isDark;
+    final surface = cardColor ?? (isDark ? Colors.black : Colors.white.withValues(alpha: 0.56));
+    final primaryText = textColor ?? (isDark ? Colors.white : AppColors.lightText);
+    final secondaryText = subColor ?? (isDark ? Colors.white : AppColors.lightTextSecondary);
     final detailsText = _detailsWithoutActionLines(details);
     final hasDetails = detailsText.isNotEmpty;
     final resolvedActions = _resolvedActionItems();
@@ -146,23 +148,29 @@ class AiOverviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: isDark ? Colors.white : Colors.white.withValues(alpha: 0.5),
           width: 1,
         ),
         color: surface,
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            color: isDark
+                ? Colors.transparent
+                : AppColors.primaryDark.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.18),
+            color: isDark
+                ? Colors.transparent
+                : AppColors.primary.withValues(alpha: 0.18),
             blurRadius: 24,
             spreadRadius: 1,
           ),
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.25),
+            color: isDark
+                ? Colors.transparent
+                : Colors.white.withValues(alpha: 0.25),
             blurRadius: 6,
             spreadRadius: -2,
             offset: const Offset(0, -2),
@@ -176,7 +184,9 @@ class AiOverviewCard extends StatelessWidget {
             children: <Widget>[
               Icon(
                 Icons.auto_awesome,
-                color: AppColors.primaryDark.withValues(alpha: 0.8),
+                color: isDark
+                    ? Colors.white
+                    : AppColors.primaryDark.withValues(alpha: 0.8),
                 size: 18,
               ),
               const SizedBox(width: 8),
@@ -247,10 +257,14 @@ class AiOverviewCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.44),
+                            color: isDark
+                                ? Colors.black
+                                : Colors.white.withValues(alpha: 0.44),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.76),
+                              color: isDark
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.76),
                             ),
                           ),
                           child: Row(

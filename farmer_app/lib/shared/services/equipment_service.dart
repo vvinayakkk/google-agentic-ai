@@ -430,7 +430,7 @@ class EquipmentService {
     String? state,
     String? district,
     int limit = 20,
-    Duration receiveTimeout = const Duration(seconds: 12),
+    Duration receiveTimeout = const Duration(seconds: 25),
     bool preferCache = true,
     bool forceRefresh = false,
   }) async {
@@ -550,7 +550,7 @@ class EquipmentService {
   Future<Map<String, dynamic>> getRateHistory(
     String equipmentName, {
     String? state,
-    Duration receiveTimeout = const Duration(seconds: 8),
+    Duration receiveTimeout = const Duration(seconds: 20),
     bool preferCache = true,
     bool forceRefresh = false,
   }) async {

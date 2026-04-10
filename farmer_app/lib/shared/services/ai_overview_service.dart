@@ -144,8 +144,8 @@ class AiOverviewService {
       pageName: pageName,
       profile: profile,
       snippets: nearbyData,
-      maxSnippets: 8,
-      maxChars: 1400,
+      maxSnippets: 12,
+      maxChars: 2500,
     );
 
     final capabilitiesBlock = capabilities
@@ -158,18 +158,25 @@ class AiOverviewService {
     final prompt = [
       'You are generating a dedicated AI OVERVIEW block for one specific app page.',
       'Page name: $pageName',
-      'This is NOT a general chat response. It must be page-specific and data-aware.',
+      'This is NOT a general chat response. It must be page-specific, data-aware, and COMPREHENSIVE.',
       '',
       'Return ONLY valid JSON with this exact shape:',
-      '{"summary":"...","details":"...","actions":["...","...","..."]}',
+      '{"summary":"...","details":"...","actions":["...","...","...","..."]}',
       '',
       'Rules:',
-      '- summary: 12-28 words, crisp headline for this page right now.',
-      '- details: 120-260 words, practical and clear. Mention one opportunity and one risk signal from current data/context.',
-      '- details should tell user what to do NOW on this page, not generic farming advice.',
+      '- summary: 20-40 words, crisp and informative headline for this page right now. Include a specific data point.',
+      '- details: 250-500 words, COMPREHENSIVE and practical. This is the main content block.',
+      '  * Start with current situation assessment based on the data context provided.',
+      '  * Identify 2-3 specific opportunities with concrete numbers or recommendations.',
+      '  * Highlight 1-2 risk signals or things to watch out for.',
+      '  * Provide step-by-step action guidance specific to this page.',
+      '  * Include seasonal/timing considerations relevant to Indian farming.',
+      '  * End with a forward-looking recommendation for the next 7-14 days.',
+      '- details should tell user what to do NOW on this page with specific data references, not generic farming advice.',
       '- actions: exactly 4 action strings, each 5-14 words, imperative tone.',
       '- actions MUST align with available page capabilities listed below; do not invent unavailable features.',
       '- If uncertain, prefer chat-guided actions like "Ask AI in chat to ...".',
+      '- Write in the language matching the language code below.',
       '- No markdown, no code fences, no extra keys.',
       '',
       'Available page capabilities:',
@@ -230,9 +237,19 @@ class AiOverviewService {
     }
 
     final fallbackSummary =
-        'Local AI overview ready for ${pageName.toLowerCase()}.';
+        'Comprehensive AI overview ready for ${pageName.toLowerCase()} — review current data and take action.';
     final fallbackDetails =
-        'Based on your profile and current page data, prioritize one high-impact action first, then reduce one visible risk signal, and review outcomes after the next update cycle. Use in-app tools to execute and track progress from this page.';
+        'Based on your farm profile and the data available on this page, here is a comprehensive analysis to guide your next steps.\n\n'
+        'Current Situation: Review the latest data points shown on this page to understand your current position. '
+        'Look for any changes compared to your previous visit and note trends that could affect your farming decisions.\n\n'
+        'Opportunities: Identify the highest-impact action you can take right now using the tools on this page. '
+        'Consider seasonal timing — the current agricultural season presents specific windows of opportunity that should not be missed. '
+        'Cross-reference with market conditions and weather forecasts for optimal decision-making.\n\n'
+        'Risk Signals: Watch for any declining metrics or adverse conditions flagged in the data. '
+        'Early intervention is key — addressing small issues now prevents larger problems during critical growth phases.\n\n'
+        'Recommended Actions: Start with the most time-sensitive task, then work through routine maintenance items. '
+        'Use the in-app AI chat for personalized step-by-step guidance on any complex decisions. '
+        'Set calendar reminders for follow-up checks within the next 7 days to track progress on actions taken today.';
     final fallbackActions = capabilities
         .map(_cleanLine)
         .where((c) => c.isNotEmpty)
