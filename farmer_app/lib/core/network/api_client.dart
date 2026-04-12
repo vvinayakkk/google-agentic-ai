@@ -124,7 +124,7 @@ String _defaultBaseUrl() {
   );
   const androidLanHost = String.fromEnvironment(
     'ANDROID_LAN_HOST',
-    defaultValue: '192.168.0.103',
+    defaultValue: '10.61.232.37',
   );
 
   switch (defaultTargetPlatform) {
